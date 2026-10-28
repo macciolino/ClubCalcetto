@@ -1,0 +1,9 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Consenti lettura e scrittura a tutti gli utenti per l'app privata calcetto tra amici
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
