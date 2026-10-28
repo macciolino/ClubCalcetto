@@ -509,21 +509,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const [mockRole, setMockRoleState] = useState<'user' | 'admin' | null>(null);
+
   const setMockRole = (role: 'user' | 'admin') => {
-    startTransition(() => {
-      if (profile) {
-        const updated = { ...profile, role };
-        setProfile(updated);
-        saveLocalSession(user, updated);
-      }
-    });
+    setMockRoleState(role);
+    if (profile) {
+      const updated = { ...profile, role };
+      setProfile(updated);
+      saveLocalSession(user, updated);
+    }
   };
 
-  const isAdmin = Boolean(
-    profile?.role === 'admin' ||
+  const isSuperAdminEmail = Boolean(
     (user?.email && user.email.toLowerCase().includes('macciolino84')) ||
     (profile?.email && profile.email.toLowerCase().includes('macciolino84'))
   );
+
+  // Se Marco ha cliccato lo switcher 'User', mostra la visualizzazione User
+  // Altrimenti, se è super admin o role admin, mostra visualizzazione Admin
+  const isAdmin = mockRole === 'user'
+    ? false
+    : mockRole === 'admin'
+    ? true
+    : Boolean(profile?.role === 'admin' || isSuperAdminEmail);
 
   const authProvider = isFirebaseConfigured ? 'firebase' : 'local';
 

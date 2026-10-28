@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/lib/context/AuthContext';
 import { StatCategory, Profile, Presence } from '@/types/database';
 import { StatCategoriesManager } from '@/components/StatCategoriesManager';
@@ -52,8 +53,11 @@ import {
   UserCheck,
   UserMinus,
   Calendar,
+  CalendarDays,
   Sparkles,
-  Trophy
+  Trophy,
+  ArrowLeft,
+  User
 } from 'lucide-react';
 
 export default function AdminPage() {
@@ -286,12 +290,19 @@ export default function AdminPage() {
         <p className="text-xs text-slate-400 max-w-sm">
           Questa sezione è protetta. Accedi con l&apos;account amministratore <strong className="text-emerald-400">macciolino84@gmail.com</strong> per visualizzare il pannello.
         </p>
+        <Link
+          href="/presenze"
+          className="mt-2 flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs uppercase tracking-wider transition-all shadow-lg"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span>Vai alla Pagina Giocatori (Presenze)</span>
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 pb-16">
+    <div className="space-y-6 pb-16">
       {/* Header Pannello Admin */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-xl">
         <div>
@@ -306,16 +317,56 @@ export default function AdminPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/presenze"
+            className="flex items-center gap-1.5 px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs transition-all border border-slate-700 shadow-md"
+          >
+            <ArrowLeft className="h-4 w-4 text-emerald-400" />
+            <span>Pagine Giocatori</span>
+          </Link>
           <button
             type="button"
             onClick={handleOpenAddModal}
             className="flex items-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/20 transition-all hover:scale-105 cursor-pointer"
           >
             <UserPlus className="h-4 w-4" />
-            Aggiungi Giocatore Ospite
+            <span>Aggiungi Ospite</span>
           </button>
         </div>
+      </div>
+
+      {/* Barra di Navigazione Rapida Utenti per l'Admin */}
+      <div className="flex flex-wrap items-center gap-2 bg-slate-950/80 p-3 rounded-2xl border border-slate-800 text-xs">
+        <span className="text-slate-400 font-medium px-2">Accedi subito alle pagine dei giocatori:</span>
+        <Link
+          href="/presenze"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-850 text-emerald-400 font-bold rounded-lg border border-slate-800 hover:border-emerald-500/40 transition-colors"
+        >
+          <CalendarDays className="h-3.5 w-3.5" />
+          <span>Presenze Partita</span>
+        </Link>
+        <Link
+          href="/giocatori"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-850 text-blue-400 font-bold rounded-lg border border-slate-800 hover:border-blue-500/40 transition-colors"
+        >
+          <Users className="h-3.5 w-3.5" />
+          <span>Rosa Giocatori & Card FIFA</span>
+        </Link>
+        <Link
+          href="/squadre"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-850 text-amber-400 font-bold rounded-lg border border-slate-800 hover:border-amber-500/40 transition-colors"
+        >
+          <Trophy className="h-3.5 w-3.5" />
+          <span>Campo & Squadre 5v5</span>
+        </Link>
+        <Link
+          href="/profilo"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-850 text-purple-400 font-bold rounded-lg border border-slate-800 hover:border-purple-500/40 transition-colors"
+        >
+          <User className="h-3.5 w-3.5" />
+          <span>Profilo Personale</span>
+        </Link>
       </div>
 
       {/* Sezione Statistiche Rapide Database */}

@@ -74,26 +74,26 @@ export function Navbar() {
 
           {/* User Info & Actions */}
           <div className="flex items-center gap-3">
-            {/* Ruolo Switcher per test rapido */}
+            {/* Ruolo Switcher per alternare vista Admin / User */}
             {setMockRole && (
-              <div className="hidden sm:flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-xs">
+              <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-xs">
                 <button
                   type="button"
                   onClick={() => setMockRole('user')}
-                  className={`px-2 py-1 rounded transition-colors ${
+                  className={`px-2 py-1 rounded transition-colors cursor-pointer ${
                     !isAdmin ? 'bg-blue-600 text-white font-bold' : 'text-slate-400 hover:text-white'
                   }`}
-                  title="Simula ruolo User"
+                  title="Passa alla vista Giocatore (User)"
                 >
                   User
                 </button>
                 <button
                   type="button"
                   onClick={() => setMockRole('admin')}
-                  className={`px-2 py-1 rounded transition-colors ${
+                  className={`px-2 py-1 rounded transition-colors cursor-pointer ${
                     isAdmin ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:text-white'
                   }`}
-                  title="Simula ruolo Admin"
+                  title="Passa alla vista Amministratore (Admin)"
                 >
                   Admin
                 </button>
