@@ -12,7 +12,7 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './config';
-import { Profile, Presence, StatCategory, Match, GeneratedTeamRecord } from '@/types/database';
+import { Profile, Presence, StatCategory, Match, GeneratedTeamRecord, AppSettings } from '@/types/database';
 import { DEFAULT_PLAYERS } from '@/lib/services/playerService';
 import { DEFAULT_PRESENCES, getOfficialMatchDate } from '@/lib/services/presenceService';
 import { DEFAULT_BASE_CATEGORIES } from '@/lib/services/statCategoryService';
@@ -160,6 +160,47 @@ export async function clearPresencesForDate(date: string): Promise<void> {
     await batch.commit();
   } catch (err) {
     console.warn('[Firestore] clearPresencesForDate error:', err);
+  }
+}
+
+/**
+ * Esegue in modo atomico (Firestore Batch Write) la rimozione di un titolare
+ * e il subentro automatico della prima riserva in Wishlist a titolare confermato.
+ */
+export async function executeAtomicPresenceSubstitution(
+  deletedPresenceId: string,
+  promotedPresences: Presence[] = []
+): Promise<void> {
+  if (!isFirebaseConfigured) return;
+  try {
+    const batch = writeBatch(db);
+
+    // 1. Eliminazione atomica della presenza rimossa
+    if (deletedPresenceId) {
+      const delRef = doc(db, 'presences', deletedPresenceId);
+      batch.delete(delRef);
+    }
+
+    // 2. Aggiornamento atomico delle riserve promosse a confermati
+    for (const p of promotedPresences) {
+      const pRef = doc(db, 'presences', p.id);
+      batch.set(
+        pRef,
+        {
+          id: p.id,
+          date: p.date,
+          player_id: p.player_id,
+          status: p.status,
+          order_index: p.order_index,
+          created_at: p.created_at,
+        },
+        { merge: true }
+      );
+    }
+
+    await batch.commit();
+  } catch (err) {
+    console.warn('[Firestore] executeAtomicPresenceSubstitution error:', err);
   }
 }
 
@@ -351,3 +392,44 @@ export async function saveGeneratedTeamsDoc(record: GeneratedTeamRecord): Promis
     console.warn('[Firestore] saveGeneratedTeamsDoc error:', err);
   }
 }
+
+
+// ==========================================
+// 8. APP SETTINGS (Collection: 'settings', Doc: 'app_config')
+// ==========================================
+
+export function subscribeAppSettings(
+  callback: (settings: AppSettings) => void
+): Unsubscribe | (() => void) {
+  if (!isFirebaseConfigured || typeof window === 'undefined') {
+    return () => {};
+  }
+
+  try {
+    const docRef = doc(db, 'settings', 'app_config');
+    return onSnapshot(
+      docRef,
+      (snap) => {
+        if (snap.exists()) {
+          callback(snap.data() as AppSettings);
+        }
+      },
+      (err) => {
+        console.warn('[Firestore] subscribeAppSettings warning:', err.message);
+      }
+    );
+  } catch (err) {
+    console.warn('[Firestore] subscribeAppSettings exception:', err);
+    return () => {};
+  }
+}
+
+export async function saveAppSettingsDoc(settings: Partial<AppSettings>): Promise<void> {
+  if (!isFirebaseConfigured) return;
+  try {
+    await setDoc(doc(db, 'settings', 'app_config'), settings, { merge: true });
+  } catch (err) {
+    console.warn('[Firestore] saveAppSettingsDoc error:', err);
+  }
+}
+

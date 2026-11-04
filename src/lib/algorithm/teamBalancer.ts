@@ -97,11 +97,73 @@ function getCombinations<T>(arr: T[], k: number): T[][] {
 }
 
 /**
+ * Ordina una squadra di 5 giocatori per la disposizione a Rombo 1-1-2-1 da calcetto:
+ * [0]: Portiere (vicino porta)
+ * [1]: Difensore (centrale subito sopra)
+ * [2]: Esterno Sinistro (largo a SX)
+ * [3]: Esterno Destro (largo a DX)
+ * [4]: Punta (in alto in attacco)
+ */
+export function orderTeamForDiamondRombo(team: Profile[]): Profile[] {
+  const pool = [...team];
+
+  // 1. Portiere: cerca giocatore con posizione === 'Portiere', altrimenti miglior difensore/fisico
+  let porIndex = pool.findIndex((p) => p.position === 'Portiere');
+  if (porIndex === -1) {
+    let bestScore = -1;
+    pool.forEach((p, i) => {
+      const score = (p.stats?.['Difesa'] || 6) + (p.stats?.['Fisico'] || 6);
+      if (score > bestScore) {
+        bestScore = score;
+        porIndex = i;
+      }
+    });
+  }
+  const por = pool.splice(porIndex >= 0 ? porIndex : 0, 1)[0];
+
+  // 2. Punta: cerca giocatore con posizione === 'Punta', altrimenti maggior tiro/velocità
+  let punIndex = pool.findIndex((p) => p.position === 'Punta');
+  if (punIndex === -1) {
+    let bestScore = -1;
+    pool.forEach((p, i) => {
+      const score = (p.stats?.['Tiro'] || 6) + (p.stats?.['Velocità'] || 6);
+      if (score > bestScore) {
+        bestScore = score;
+        punIndex = i;
+      }
+    });
+  }
+  const pun = pool.splice(punIndex >= 0 ? punIndex : 0, 1)[0];
+
+  // 3. Difensore: cerca giocatore con posizione === 'Difensore', altrimenti miglior difesa
+  let difIndex = pool.findIndex((p) => p.position === 'Difensore');
+  if (difIndex === -1) {
+    let bestScore = -1;
+    pool.forEach((p, i) => {
+      const score = p.stats?.['Difesa'] || 6;
+      if (score > bestScore) {
+        bestScore = score;
+        difIndex = i;
+      }
+    });
+  }
+  const dif = pool.splice(difIndex >= 0 ? difIndex : 0, 1)[0];
+
+  // 4. I rimanenti 2 giocatori sono i due Esterni
+  const est1 = pool[0] || dif;
+  const est2 = pool[1] || por;
+
+  return [por, dif, est1, est2, pun];
+}
+
+/**
  * Algoritmo di Bilanciamento Squadre 5v5 per ClubCalcetto
  * Trova la partizione ottimale tra 252 combinazioni minimizzando il delta medio e secondario
  */
 export function balanceTeams(players: Profile[]): BalancedTeamsResult {
+  console.log('[TeamBalancer Debug] Inizio bilanciamento con giocatori confermati:', players.length);
   if (players.length !== 10) {
+    console.error('[TeamBalancer Debug] Errore: sono richiesti esattamente 10 giocatori, ricevuti:', players.length);
     throw new Error('L\'algoritmo richiede esattamente 10 giocatori.');
   }
 
@@ -148,9 +210,15 @@ export function balanceTeams(players: Profile[]): BalancedTeamsResult {
   // Indice di equità da 0 a 100% (se diffAvg è 0, fairness è 100%)
   const fairnessScore = Math.max(0, Math.min(100, Math.round(100 - diffAvg * 15)));
 
+  // Ordina i giocatori rigidamente nella formazione a rombo 1-1-2-1
+  const orderedWhite = orderTeamForDiamondRombo(bestWhite);
+  const orderedBlack = orderTeamForDiamondRombo(bestBlack);
+
+  console.log('[TeamBalancer Debug] Bilanciamento completato con successo. Delta media:', diffAvg);
+
   return {
-    teamWhite: bestWhite,
-    teamBlack: bestBlack,
+    teamWhite: orderedWhite,
+    teamBlack: orderedBlack,
     whiteStats,
     blackStats,
     difference: Number(diffAvg.toFixed(2)),

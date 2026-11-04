@@ -1,23 +1,57 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/context/AuthContext';
+import { FIELD_POSITIONS, FieldPosition } from '@/types/database';
 import { 
   ShieldCheck, 
   Users, 
-  Trophy, 
-  Sparkles, 
   Loader2, 
   ArrowRight, 
   CheckCircle2, 
-  LogOut
+  LogOut,
+  Mail,
+  Lock,
+  User,
+  Shield,
+  Send,
+  RefreshCw,
+  ExternalLink,
+  Sparkles
 } from 'lucide-react';
 
 export default function LoginPage() {
-  const { signInWithGoogle, profile, isAdmin, signOut } = useAuth();
+  const {
+    signInWithGoogle,
+    signInWithEmailPassword,
+    signUpWithEmailPassword,
+    sendVerificationEmail,
+    checkEmailVerification,
+    simulateEmailVerification,
+    user,
+    profile,
+    isAdmin,
+    isEmailVerified,
+    signOut,
+  } = useAuth();
+
+  const [mounted, setMounted] = useState(false);
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [position, setPosition] = useState<FieldPosition>('Esterno');
+
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [isCheckingVerification, setIsCheckingVerification] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleGoogleLogin = async () => {
     setIsLoading(true);
@@ -25,20 +59,64 @@ export default function LoginPage() {
     try {
       await signInWithGoogle();
     } catch (err: unknown) {
-      console.error('Login error:', err);
+      console.error('Google login error:', err);
       const msg = err instanceof Error ? err.message : 'Errore durante il login con Google';
-      if (
-        msg.toLowerCase().includes('unauthorized-domain') ||
-        msg.toLowerCase().includes('auth/unauthorized-domain')
-      ) {
+      if (msg.includes('auth/unauthorized-domain')) {
+        setErrorMessage('Dominio non autorizzato su Firebase Console. Aggiungi localhost nelle impostazioni Auth.');
+      } else if (!msg.includes('popup-closed-by-user')) {
+        setErrorMessage(msg);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEmailPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage('');
+    setSuccessMessage('');
+
+    if (!email.trim() || !password.trim()) {
+      setErrorMessage('Inserisci email e password.');
+      return;
+    }
+
+    if (authMode === 'signup') {
+      if (!fullName.trim()) {
+        setErrorMessage('Inserisci il tuo nome e cognome.');
+        return;
+      }
+      if (password.length < 6) {
+        setErrorMessage('La password deve contenere almeno 6 caratteri.');
+        return;
+      }
+      if (password !== confirmPassword) {
+        setErrorMessage('Le password non coincidono.');
+        return;
+      }
+    }
+
+    setIsLoading(true);
+    try {
+      if (authMode === 'signin') {
+        await signInWithEmailPassword(email, password);
+      } else {
+        await signUpWithEmailPassword(email, password, fullName, position);
+        setSuccessMessage('Account creato con successo! Ti abbiamo inviato una mail di verifica.');
+      }
+    } catch (err: unknown) {
+      console.error('Auth error:', err);
+      const msg = err instanceof Error ? err.message : 'Errore durante l\'autenticazione';
+      if (msg.includes('auth/email-already-in-use')) {
+        setErrorMessage('Questa email è già registrata. Effettua l\'accesso.');
+      } else if (msg.includes('auth/wrong-password') || msg.includes('auth/user-not-found') || msg.includes('auth/invalid-credential')) {
+        setErrorMessage('Email o password non corretti.');
+      } else if (msg.includes('auth/weak-password')) {
+        setErrorMessage('Password troppo debole (minimo 6 caratteri).');
+      } else if (msg.includes('auth/operation-not-allowed')) {
         setErrorMessage(
-          'Questo dominio non è ancora autorizzato su Firebase Console. Aggiungi il tuo dominio (es. *.vercel.app) in Firebase Console -> Authentication -> Settings -> Authorized Domains.'
+          'Il provider Email/Password non è ancora abilitato nella console Firebase (Authentication > Sign-in method > Email/Password > Abilita).'
         );
-      } else if (
-        msg.toLowerCase().includes('popup-closed-by-user') ||
-        msg.toLowerCase().includes('cancelled-popup-request')
-      ) {
-        // Nessun messaggio di errore se l'utente ha solo chiuso la finestra
       } else {
         setErrorMessage(msg);
       }
@@ -47,30 +125,129 @@ export default function LoginPage() {
     }
   };
 
+  const handleCheckVerification = async () => {
+    setIsCheckingVerification(true);
+    setErrorMessage('');
+    try {
+      const verified = await checkEmailVerification();
+      if (verified) {
+        window.location.href = '/presenze';
+      } else {
+        setErrorMessage('L\'email non risulta ancora verificata. Clicca sul link ricevuto o usa il pulsante di test per ambiente locale.');
+      }
+    } finally {
+      setIsCheckingVerification(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    try {
+      await sendVerificationEmail();
+      setSuccessMessage('Email di verifica inviata di nuovo! Controlla la posta.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Errore invio';
+      setErrorMessage(msg);
+    }
+  };
+
   return (
     <div className="min-h-[85vh] flex flex-col items-center justify-center py-8 px-4">
-      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-7 relative overflow-hidden">
+      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 relative overflow-hidden">
         {/* Glow Effetto Sfondo */}
         <div className="absolute -top-24 -left-24 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-green-500/10 rounded-full blur-3xl pointer-events-none" />
 
         {/* Intestazione e Logo */}
-        <div className="text-center space-y-3 relative">
-          <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-emerald-600 to-green-400 text-slate-950 shadow-xl shadow-emerald-500/30">
-            <span className="text-3xl">⚽</span>
+        <div className="text-center space-y-2 relative">
+          <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-emerald-600 to-green-400 text-slate-950 shadow-xl shadow-emerald-500/30">
+            <span className="text-2xl">⚽</span>
           </div>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+            <h1 className="text-2xl font-black tracking-tight text-white">
               Club<span className="text-emerald-400">Calcetto</span>
             </h1>
-            <p className="text-xs sm:text-sm text-slate-400 font-medium mt-1">
-              Piattaforma ufficiale per la partita settimanale 5v5
+            <p className="text-xs text-slate-400 font-medium">
+              Accesso ufficiale partite 5v5 (Localhost & Web)
             </p>
           </div>
         </div>
 
-        {/* Notifica sessione attiva se l'utente è già loggato */}
-        {profile ? (
+        {!mounted ? (
+          <div className="py-12 flex flex-col items-center justify-center space-y-3">
+            <Loader2 className="h-8 w-8 text-emerald-400 animate-spin" />
+            <p className="text-xs text-slate-400">Caricamento sessione...</p>
+          </div>
+        ) : user && !isEmailVerified ? (
+          <div className="p-5 bg-amber-950/40 border-2 border-amber-500/50 rounded-2xl space-y-4 animate-in fade-in">
+            <div className="flex items-start gap-3">
+              <Mail className="h-6 w-6 text-amber-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <h2 className="text-sm font-black text-amber-300 uppercase tracking-wide">
+                  Verifica Email Richiesta
+                </h2>
+                <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                  Ti abbiamo inviato un link di conferma all&apos;indirizzo <strong className="text-white font-mono">{user.email}</strong>. Clicca sul link nell&apos;email per sbloccare l&apos;accesso completo.
+                </p>
+              </div>
+            </div>
+
+            {errorMessage && (
+              <div className="p-3 bg-rose-500/15 border border-rose-500/30 text-rose-300 rounded-xl text-xs">
+                {errorMessage}
+              </div>
+            )}
+            {successMessage && (
+              <div className="p-3 bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 rounded-xl text-xs">
+                {successMessage}
+              </div>
+            )}
+
+            <div className="space-y-2 pt-2 border-t border-amber-500/20">
+              <button
+                type="button"
+                onClick={handleCheckVerification}
+                disabled={isCheckingVerification}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md disabled:opacity-50"
+              >
+                <RefreshCw className={`h-4 w-4 ${isCheckingVerification ? 'animate-spin' : ''}`} />
+                <span>Ho verificato l&apos;email (Ricarica Stato)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleResendVerification}
+                className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-xs transition-colors cursor-pointer"
+              >
+                <Send className="h-3.5 w-3.5 text-amber-400" />
+                <span>Reinvia email di verifica</span>
+              </button>
+
+              {/* Pulsante dedicato per test locale (localhost) */}
+              <button
+                type="button"
+                onClick={() => {
+                  simulateEmailVerification();
+                  window.location.href = '/presenze';
+                }}
+                className="w-full flex items-center justify-center gap-1.5 py-2 px-3 bg-emerald-500/15 border border-emerald-500/30 hover:bg-emerald-500/25 text-emerald-300 font-bold rounded-xl text-xs transition-all cursor-pointer"
+                title="Bypassa la verifica per testare immediatamente in locale"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
+                <span>Verifica Subito (Modalità Test Locale)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => signOut()}
+                className="w-full flex items-center justify-center gap-1.5 py-2 text-slate-400 hover:text-rose-400 text-xs font-semibold transition-colors cursor-pointer"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                <span>Esci e prova con un altro account</span>
+              </button>
+            </div>
+          </div>
+        ) : profile ? (
+          /* STATO 2: UTENTE GIÀ CONNESSO E VERIFICATO */
           <div className="p-5 bg-emerald-950/40 border border-emerald-500/30 rounded-2xl space-y-4">
             <div className="flex items-center justify-between gap-2.5">
               <div className="flex items-center gap-2.5">
@@ -78,11 +255,18 @@ export default function LoginPage() {
                 <div className="text-xs">
                   <span className="text-slate-400">Attualmente collegato: </span>
                   <div className="text-white font-bold text-sm">{profile.full_name}</div>
-                  <span className={`inline-block mt-0.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                    isAdmin ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-blue-500/20 text-blue-300'
-                  }`}>
-                    {isAdmin ? '★ Super Amministratore' : 'Giocatore'}
-                  </span>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                      isAdmin ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-blue-500/20 text-blue-300'
+                    }`}>
+                      {isAdmin ? '★ Amministratore' : 'Giocatore'}
+                    </span>
+                    {profile.position && (
+                      <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-[10px] font-mono">
+                        {profile.position}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               <button
@@ -96,13 +280,12 @@ export default function LoginPage() {
               </button>
             </div>
 
-            {/* Navigazione rapida per chi è già loggato */}
             <div className="flex flex-col gap-2 pt-1">
               <Link
                 href="/presenze"
                 className="flex items-center justify-center gap-2 py-2.5 px-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs uppercase tracking-wider transition-all shadow-md hover:scale-[1.01]"
               >
-                <span>Vai alle Presenze (Pagina Utenti)</span>
+                <span>Vai alle Presenze</span>
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <div className="grid grid-cols-2 gap-2">
@@ -113,7 +296,7 @@ export default function LoginPage() {
                   <Users className="h-3.5 w-3.5 text-emerald-400" />
                   <span>Rosa Giocatori</span>
                 </Link>
-                {isAdmin && (
+                {mounted && isAdmin && (
                   <Link
                     href="/admin"
                     className="flex items-center justify-center gap-1.5 py-2 px-3 bg-slate-800 hover:bg-slate-700 text-emerald-300 font-bold rounded-xl text-xs transition-colors"
@@ -126,7 +309,7 @@ export default function LoginPage() {
             </div>
           </div>
         ) : (
-          /* Se non collegato: SOLO Accesso Google */
+          /* STATO 3: FORM DI AUTENTICAZIONE COMPLETO (GOOGLE + EMAIL & PASSWORD) */
           <div className="space-y-4">
             {errorMessage && (
               <div className="p-3.5 bg-rose-500/15 border border-rose-500/30 text-rose-300 rounded-2xl text-xs space-y-1 animate-in fade-in">
@@ -136,13 +319,18 @@ export default function LoginPage() {
                 <p className="leading-relaxed">{errorMessage}</p>
               </div>
             )}
+            {successMessage && (
+              <div className="p-3.5 bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 rounded-2xl text-xs animate-in fade-in">
+                {successMessage}
+              </div>
+            )}
 
-            {/* UNICO PULSANTE DI LOGIN: GOOGLE AUTH */}
+            {/* ACCESSO RAPIDO GOOGLE */}
             <button
               type="button"
               onClick={handleGoogleLogin}
               disabled={isLoading}
-              className="w-full flex items-center justify-center gap-3 py-3.5 px-5 bg-white hover:bg-slate-100 text-slate-900 font-bold rounded-2xl text-sm transition-all shadow-lg hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60 cursor-pointer"
+              className="w-full flex items-center justify-center gap-3 py-3 px-5 bg-white hover:bg-slate-100 text-slate-900 font-bold rounded-2xl text-xs sm:text-sm transition-all shadow-lg hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60 cursor-pointer"
             >
               {isLoading ? (
                 <Loader2 className="h-5 w-5 animate-spin text-slate-700" />
@@ -169,46 +357,167 @@ export default function LoginPage() {
               <span>Accedi con Google</span>
             </button>
 
-            <p className="text-[11px] text-center text-slate-400 leading-relaxed px-2">
-              L&apos;accesso alla piattaforma avviene <strong>esclusivamente tramite account Google</strong>. L&apos;indirizzo <strong>macciolino84@gmail.com</strong> accede come Super Admin, tutti gli altri amici accedono come Giocatori.
-            </p>
+            {/* SEPARATORE */}
+            <div className="flex items-center my-3 w-full">
+              <div className="flex-1 border-t border-slate-800" />
+              <span className="px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap shrink-0 select-none">
+                oppure accedi con email
+              </span>
+              <div className="flex-1 border-t border-slate-800" />
+            </div>
+
+            {/* TABS: ACCEDI vs REGISTRATI */}
+            <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode('signin');
+                  setErrorMessage('');
+                  setSuccessMessage('');
+                }}
+                className={`flex-1 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                  authMode === 'signin'
+                    ? 'bg-emerald-500 text-slate-950 shadow-md font-black'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Accedi
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode('signup');
+                  setErrorMessage('');
+                  setSuccessMessage('');
+                }}
+                className={`flex-1 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                  authMode === 'signup'
+                    ? 'bg-emerald-500 text-slate-950 shadow-md font-black'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Crea Nuovo Account
+              </button>
+            </div>
+
+            {/* FORM EMAIL E PASSWORD */}
+            <form onSubmit={handleEmailPasswordSubmit} className="space-y-3 pt-1">
+              {authMode === 'signup' && (
+                <>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">
+                      Nome e Cognome
+                    </label>
+                    <div className="relative">
+                      <User className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                      <input
+                        type="text"
+                        required
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        placeholder="Es. Mario Rossi"
+                        className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">
+                      Ruolo Tattico in Campo
+                    </label>
+                    <select
+                      value={position}
+                      onChange={(e) => setPosition(e.target.value as FieldPosition)}
+                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-xs focus:outline-none focus:border-emerald-500 transition-colors"
+                    >
+                      {FIELD_POSITIONS.map((pos) => (
+                        <option key={pos} value={pos}>
+                          {pos}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-[10px] text-slate-500 mt-0.5">
+                      Ruolo di gioco per il campetto e l&apos;algoritmo (ruolo applicativo di default: Giocatore)
+                    </p>
+                  </div>
+                </>
+              )}
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">
+                  Indirizzo Email
+                </label>
+                <div className="relative">
+                  <Mail className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="nome@esempio.it"
+                    className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 transition-colors"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <input
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Minimo 6 caratteri"
+                    className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 transition-colors"
+                  />
+                </div>
+              </div>
+
+              {authMode === 'signup' && (
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">
+                    Conferma Password
+                  </label>
+                  <div className="relative">
+                    <Lock className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <input
+                      type="password"
+                      required
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Ripeti la password"
+                      className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 transition-colors"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full mt-2 py-2.5 px-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs uppercase tracking-wider transition-all shadow-md hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60 cursor-pointer flex items-center justify-center gap-2"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-slate-950" />
+                ) : authMode === 'signin' ? (
+                  <span>Accedi con Email</span>
+                ) : (
+                  <span>Registrati e Invia Verifica</span>
+                )}
+              </button>
+            </form>
           </div>
         )}
 
-        {/* Box Caratteristiche Chiave */}
-        <div className="grid grid-cols-1 gap-2.5 bg-slate-950/60 p-4 rounded-2xl border border-slate-800/80 text-xs">
-          <div className="flex items-center gap-2.5 text-slate-300">
-            <div className="p-1.5 bg-emerald-500/15 text-emerald-400 rounded-lg">
-              <Users className="h-3.5 w-3.5" />
-            </div>
-            <span>
-              <strong>Presenze Live:</strong> Quorum 10 titolari e subentro waitlist automatico
-            </span>
-          </div>
-          <div className="flex items-center gap-2.5 text-slate-300">
-            <div className="p-1.5 bg-emerald-500/15 text-emerald-400 rounded-lg">
-              <Trophy className="h-3.5 w-3.5" />
-            </div>
-            <span>
-              <strong>Squadre Eque:</strong> Bilanciamento deterministico con statistiche FIFA
-            </span>
-          </div>
-          <div className="flex items-center gap-2.5 text-slate-300">
-            <div className="p-1.5 bg-emerald-500/15 text-emerald-400 rounded-lg">
-              <ShieldCheck className="h-3.5 w-3.5" />
-            </div>
-            <span>
-              <strong>Super Amministratore:</strong> <span className="text-emerald-400 font-bold">macciolino84@gmail.com</span> (Marco B.)
-            </span>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="pt-3 border-t border-slate-800 text-center">
-          <div className="inline-flex items-center gap-1.5 text-xs text-slate-400">
-            <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
-            <span>ClubCalcetto 5v5 con Firebase Google Authentication</span>
-          </div>
+        {/* Footer Informativo */}
+        <div className="pt-2 border-t border-slate-800/80 text-center">
+          <p className="text-[11px] text-slate-500">
+            Ambiente di sviluppo locale attivo su <strong className="text-slate-400">localhost</strong>.
+          </p>
         </div>
       </div>
     </div>

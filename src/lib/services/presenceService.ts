@@ -1,10 +1,12 @@
 'use client';
 
-import { Presence } from '@/types/database';
+import { Presence, Profile, AppSettings } from '@/types/database';
 import { getUpcomingDays } from '@/lib/utils/dateUtils';
-import { DEFAULT_PLAYERS } from './playerService';
+import { DEFAULT_PLAYERS, getStoredPlayers } from './playerService';
 
 const PRESENCES_STORAGE_KEY = 'clubcalcetto_presences_list';
+const SETTINGS_STORAGE_KEY = 'clubcalcetto_app_settings';
+const MATCH_DATE_STORAGE_KEY = 'clubcalcetto_official_match_date';
 
 const TODAY_DATE = getUpcomingDays(7)[0]?.dateString || '2026-10-28';
 
@@ -16,6 +18,10 @@ export const DEFAULT_PRESENCES: Presence[] = DEFAULT_PLAYERS.map((p, idx) => ({
   order_index: idx + 1,
   created_at: new Date().toISOString(),
 }));
+
+// ==========================================
+// 1. GESTIONE PRESENZE
+// ==========================================
 
 export function getStoredPresences(date?: string): Presence[] {
   if (typeof window === 'undefined') {
@@ -58,7 +64,9 @@ export function resetStoredPresences(): Presence[] {
   return [];
 }
 
-const MATCH_DATE_STORAGE_KEY = 'clubcalcetto_official_match_date';
+// ==========================================
+// 2. GIORNO UFFICIALE PARTITA
+// ==========================================
 
 export function getOfficialMatchDate(): string {
   if (typeof window === 'undefined') {
@@ -82,4 +90,136 @@ export function setOfficialMatchDate(date: string) {
   } catch (err) {
     console.warn('Errore salvataggio giorno ufficiale partita:', err);
   }
+}
+
+// ==========================================
+// 3. IMPOSTAZIONI APP
+// ==========================================
+
+const DEFAULT_SETTINGS: AppSettings = {
+  official_match_date: TODAY_DATE,
+};
+
+export function getAppSettings(): AppSettings {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS;
+  try {
+    const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if (raw) {
+      return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+    }
+  } catch (err) {
+    console.warn('Errore lettura app settings:', err);
+  }
+  return DEFAULT_SETTINGS;
+}
+
+export function saveAppSettings(settings: Partial<AppSettings>): AppSettings {
+  const current = getAppSettings();
+  const updated = { ...current, ...settings };
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(updated));
+      window.dispatchEvent(
+        new CustomEvent('clubcalcetto_settings_changed', { detail: updated })
+      );
+    } catch (err) {
+      console.warn('Errore salvataggio app settings:', err);
+    }
+  }
+  return updated;
+}
+
+/**
+ * Rimuove un giocatore confermato o in attesa per una determinata data.
+ * Se il giocatore rimosso era un titolare (order_index <= 10 o status === 'confirmed')
+ * e c'è almeno un giocatore in lista d'attesa (wishlist), il primo in coda ordinato
+ * rigorosamente per iscrizione (joinedAt / created_at ASC) viene promosso
+ * AUTOMATICAMENTE a titolare confermato in modo silenzioso e trasparente.
+ */
+export function processPresenceRemovalWithAutoSubstitution(
+  date: string,
+  presenceIdToRemove: string,
+  currentPresences?: Presence[]
+): {
+  updatedPresences: Presence[];
+  promotedPresences: Presence[];
+} {
+  const basePresences = (currentPresences && currentPresences.length > 0)
+    ? currentPresences
+    : getStoredPresences();
+
+  // Trova la presenza da rimuovere (cercando per id o per player_id)
+  const target = basePresences.find(
+    (p) => (p.id === presenceIdToRemove || p.player_id === presenceIdToRemove) && p.date === date
+  ) || basePresences.find(
+    (p) => p.id === presenceIdToRemove || p.player_id === presenceIdToRemove
+  );
+
+  if (!target) {
+    console.warn('[AutoSub] Presenza da rimuovere non trovata:', presenceIdToRemove);
+    return { updatedPresences: basePresences, promotedPresences: [] };
+  }
+
+  const targetDate = target.date || date;
+  // Tutte le presenze escluso il giocatore rimosso
+  const remainingAll = basePresences.filter((p) => p.id !== target.id);
+  
+  // Presenze rimaste per questa specifica giornata
+  const dayPresences = remainingAll.filter((p) => p.date === targetDate);
+
+  // Titolari confermati rimasti
+  const confirmedList = dayPresences
+    .filter((p) => p.status === 'confirmed')
+    .sort((a, b) => (a.order_index ?? 999) - (b.order_index ?? 999));
+
+  // Coda wishlist ordinata rigidamente per data di iscrizione (joinedAt ASC) e poi ordine
+  const waitlistList = dayPresences
+    .filter((p) => p.status === 'waitlist')
+    .sort((a, b) => {
+      const timeA = new Date(a.created_at || 0).getTime();
+      const timeB = new Date(b.created_at || 0).getTime();
+      if (timeA !== timeB) return timeA - timeB;
+      return (a.order_index ?? 999) - (b.order_index ?? 999);
+    });
+
+  const wasStarter = target.status === 'confirmed' || (target.order_index && target.order_index <= 10);
+  const promotedPresences: Presence[] = [];
+
+  // Se è stato rimosso un titolare (o abbiamo meno di 10 titolari) e ci sono riserve in lista d'attesa:
+  if (wasStarter && confirmedList.length < 10 && waitlistList.length > 0) {
+    const spotsToFill = 10 - confirmedList.length;
+    const candidates = waitlistList.splice(0, spotsToFill);
+
+    for (const sub of candidates) {
+      const promoted: Presence = {
+        ...sub,
+        status: 'confirmed',
+      };
+      confirmedList.push(promoted);
+      promotedPresences.push(promoted);
+    }
+  }
+
+  // Riassegna gli indici rigorosamente: 1..10 per i titolari confermati, 11..N per le riserve in waitlist
+  const reindexedConfirmed: Presence[] = confirmedList.map((p, idx) => ({
+    ...p,
+    order_index: idx + 1,
+    status: 'confirmed' as const,
+  }));
+
+  const reindexedWaitlist: Presence[] = waitlistList.map((p, idx) => ({
+    ...p,
+    order_index: reindexedConfirmed.length + idx + 1,
+    status: 'waitlist' as const,
+  }));
+
+  const finalDayPresences = [...reindexedConfirmed, ...reindexedWaitlist];
+
+  const finalPresences = [
+    ...remainingAll.filter((p) => p.date !== targetDate),
+    ...finalDayPresences,
+  ];
+
+  saveStoredPresences(finalPresences);
+  return { updatedPresences: finalPresences, promotedPresences };
 }

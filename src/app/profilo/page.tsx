@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/context/AuthContext';
+import { FieldPosition, FIELD_POSITIONS, FIELD_POSITION_ABBR, sortStatsByCanonicalOrder } from '@/types/database';
 import { RadarChart } from '@/components/RadarChart';
 import { StatBadge } from '@/components/StatBadge';
 import { getPlayerMatchRecord } from '@/lib/services/playerService';
@@ -29,7 +30,9 @@ const PRESET_AVATARS = ['⚽', '🧤', '🏃', '🥇', '🦁', '⚡', '👑', '�
 
 export default function ProfiloPage() {
   const { user, profile, isAdmin, updateProfile } = useAuth();
+  const [mounted, setMounted] = useState(false);
   const [fullName, setFullName] = useState(profile?.full_name || 'Giocatore');
+  const [position, setPosition] = useState<FieldPosition>(profile?.position || 'Esterno');
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || '');
   const [categories, setCategories] = useState(() => getStoredCategories());
   const [isUploading, setIsUploading] = useState(false);
@@ -40,8 +43,13 @@ export default function ProfiloPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
     if (profile) {
       setFullName(profile.full_name || 'Giocatore');
+      setPosition(profile.position || 'Esterno');
       setAvatarUrl(profile.avatar_url || '');
     }
   }, [profile]);
@@ -55,6 +63,15 @@ export default function ProfiloPage() {
       window.removeEventListener('clubcalcetto_categories_changed', handleCategoriesChanged);
     };
   }, []);
+
+  if (!mounted) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center text-center p-6 space-y-4">
+        <Loader2 className="h-8 w-8 text-emerald-400 animate-spin" />
+        <p className="text-sm text-slate-400 font-medium">Caricamento profilo...</p>
+      </div>
+    );
+  }
 
   if (!profile) {
     return (
@@ -145,6 +162,7 @@ export default function ProfiloPage() {
       await updateProfile({
         full_name: fullName.trim(),
         avatar_url: avatarUrl || null,
+        position,
       });
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 4000);
@@ -284,6 +302,24 @@ export default function ProfiloPage() {
               </div>
             </div>
 
+            {/* Posizione Tattica in Campo (Separata dal ruolo applicativo) */}
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                Posizione Tattica Preferita (Campetto & Rombo 1-1-2-1)
+              </label>
+              <select
+                value={position}
+                onChange={(e) => setPosition(e.target.value as FieldPosition)}
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm font-semibold focus:outline-none focus:border-emerald-500"
+              >
+                {FIELD_POSITIONS.map((pos) => (
+                  <option key={pos} value={pos}>
+                    {pos} ({FIELD_POSITION_ABBR[pos]})
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
               <div className="flex items-center gap-2">
                 <span className="text-xs text-slate-400">Ruolo Piattaforma:</span>
@@ -343,20 +379,23 @@ export default function ProfiloPage() {
             <RadarChart stats={profileStats} size={220} color="emerald" showLabels={true} />
           </div>
 
-          {/* Dettaglio barre statistiche */}
+          {/* Dettaglio barre statistiche in ordine canonico fisso */}
           <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800">
-            {Object.entries(profileStats).map(([statName, val]) => (
-              <div key={statName} className="bg-slate-950/70 border border-slate-800 p-2 rounded-xl flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-slate-300">{statName}</span>
-                <span
-                  className={`text-xs font-mono font-black ${
-                    val >= 8 ? 'text-emerald-400' : val >= 6 ? 'text-white' : 'text-rose-400'
-                  }`}
-                >
-                  {val}/10
-                </span>
-              </div>
-            ))}
+            {sortStatsByCanonicalOrder(Object.keys(profileStats)).map((statName) => {
+              const val = profileStats[statName] ?? 6;
+              return (
+                <div key={statName} className="bg-slate-950/70 border border-slate-800 p-2 rounded-xl flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-slate-300">{statName}</span>
+                  <span
+                    className={`text-xs font-mono font-black ${
+                      val >= 8 ? 'text-emerald-400' : val >= 6 ? 'text-white' : 'text-rose-400'
+                    }`}
+                  >
+                    {val}/10
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
 

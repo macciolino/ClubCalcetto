@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/context/AuthContext';
-import { StatCategory, Profile, Presence } from '@/types/database';
+import { StatCategory, Profile, Presence, FIELD_POSITION_ABBR } from '@/types/database';
 import { StatCategoriesManager } from '@/components/StatCategoriesManager';
 import { PlayerModal } from '@/components/PlayerModal';
 import { StatBadge } from '@/components/StatBadge';
@@ -12,10 +13,14 @@ import {
   subscribeStatCategories, 
   subscribePresences, 
   deletePresenceDoc, 
+  savePresenceDoc,
   clearPresencesForDate, 
   saveProfileDoc, 
   deleteProfileDoc, 
-  saveOfficialMatchDateDoc 
+  saveOfficialMatchDateDoc,
+  subscribeAppSettings,
+  saveAppSettingsDoc,
+  executeAtomicPresenceSubstitution
 } from '@/lib/firebase/firestoreService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { 
@@ -29,7 +34,8 @@ import {
   saveStoredPresences, 
   resetStoredPresences,
   getOfficialMatchDate,
-  setOfficialMatchDate
+  setOfficialMatchDate,
+  processPresenceRemovalWithAutoSubstitution
 } from '@/lib/services/presenceService';
 import { getStoredCategories } from '@/lib/services/statCategoryService';
 import { formatItalianDate, getUpcomingDays } from '@/lib/utils/dateUtils';
@@ -61,7 +67,9 @@ import {
 } from 'lucide-react';
 
 export default function AdminPage() {
+  const router = useRouter();
   const { user, profile, isAdmin } = useAuth();
+  const [mounted, setMounted] = useState(false);
   const [categories, setCategories] = useState<StatCategory[]>(() => getStoredCategories());
   const [players, setPlayers] = useState<Profile[]>(() => getStoredPlayers());
   const [presences, setPresences] = useState<Presence[]>(() => getStoredPresences());
@@ -76,7 +84,15 @@ export default function AdminPage() {
   const upcomingDays = getUpcomingDays(7);
   const [activeDate, setActiveDate] = useState<string>(() => getOfficialMatchDate());
 
+  // Protezione Route: Reindirizza immediatamente i non-admin a /presenze
   useEffect(() => {
+    if (mounted && !isAdmin) {
+      router.replace('/presenze');
+    }
+  }, [mounted, isAdmin, router]);
+
+  useEffect(() => {
+    setMounted(true);
     // 1. Carica dallo store locale
     setPlayers(getStoredPlayers());
     setCategories(getStoredCategories());
@@ -150,31 +166,19 @@ export default function AdminPage() {
     saveOfficialMatchDateDoc(dateString);
   };
 
-  // Rimozione singola presenza da parte dell'Admin
+  // Rimozione singola presenza da parte dell'Admin con subentro automatico silenzioso Wishlist
   const handleRemovePresence = async (presenceId: string, playerName: string) => {
     if (!confirm(`Vuoi rimuovere la presenza di "${playerName}" per la partita del ${formatItalianDate(activeDate)}?`)) {
       return;
     }
 
-    const remaining = presences.filter((p) => p.id !== presenceId);
-    // Riordina le presenze del giorno attivo: le prime 10 sono confirmed, le altre waitlist
-    const activeRemaining = remaining
-      .filter((p) => p.date === activeDate)
-      .sort((a, b) => a.order_index - b.order_index)
-      .map((p, idx) => ({
-        ...p,
-        order_index: idx + 1,
-        status: (idx < 10 ? 'confirmed' : 'waitlist') as 'confirmed' | 'waitlist',
-      }));
-
-    const updatedPresences = [
-      ...remaining.filter((p) => p.date !== activeDate),
-      ...activeRemaining,
-    ];
-
-    saveStoredPresences(updatedPresences);
+    const { updatedPresences, promotedPresences } = processPresenceRemovalWithAutoSubstitution(
+      activeDate,
+      presenceId,
+      presences
+    );
     setPresences(updatedPresences);
-    deletePresenceDoc(presenceId);
+    await executeAtomicPresenceSubstitution(presenceId, promotedPresences);
   };
 
   // Azzera tutte le votazioni della settimana
@@ -231,14 +235,18 @@ export default function AdminPage() {
     }
   };
 
-  // Cambio ruolo utente (Promuovi ad Admin / Rendi User)
+  // Promozione Admin: Solo un admin esistente ha il potere di promuovere un utente (entrato come 'player') ad admin
   const handleToggleUserRole = async (targetPlayer: Profile) => {
+    if (!isAdmin) {
+      alert('Solo un amministratore esistente ha il potere di promuovere un altro utente ad admin.');
+      return;
+    }
     if (targetPlayer.email && targetPlayer.email.toLowerCase().includes('macciolino84')) {
       alert('Non è possibile modificare il ruolo di Marco B. (Super Amministratore permanente).');
       return;
     }
 
-    const newRole = targetPlayer.role === 'admin' ? 'user' : 'admin';
+    const newRole = targetPlayer.role === 'admin' ? 'player' : 'admin';
     const updated: Profile = { ...targetPlayer, role: newRole };
 
     updateStoredPlayer(updated);
@@ -280,23 +288,11 @@ export default function AdminPage() {
     );
   });
 
-  if (!isAdmin) {
+  if (!mounted || !isAdmin) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center text-center p-6 space-y-4">
-        <div className="p-4 bg-rose-500/15 text-rose-400 rounded-3xl border border-rose-500/30">
-          <ShieldAlert className="h-10 w-10" />
-        </div>
-        <h2 className="text-xl font-bold text-white">Accesso Riservato agli Amministratori</h2>
-        <p className="text-xs text-slate-400 max-w-sm">
-          Questa sezione è protetta. Accedi con l&apos;account amministratore <strong className="text-emerald-400">macciolino84@gmail.com</strong> per visualizzare il pannello.
-        </p>
-        <Link
-          href="/presenze"
-          className="mt-2 flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs uppercase tracking-wider transition-all shadow-lg"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span>Vai alla Pagina Giocatori (Presenze)</span>
-        </Link>
+        <Loader2 className="h-8 w-8 text-emerald-400 animate-spin" />
+        <p className="text-sm text-slate-400 font-medium">Verifica permessi amministratore in corso...</p>
       </div>
     );
   }
@@ -679,7 +675,8 @@ export default function AdminPage() {
               <tr className="bg-slate-950/80 border-b border-slate-800 text-slate-400 font-bold uppercase tracking-wider text-[11px]">
                 <th className="py-3 px-4">Giocatore</th>
                 <th className="py-3 px-4">Email Account</th>
-                <th className="py-3 px-4">Ruolo Piattaforma</th>
+                <th className="py-3 px-4">Ruolo App</th>
+                <th className="py-3 px-4 text-center">Posizione Campo</th>
                 <th className="py-3 px-4">Tipo Profilo</th>
                 <th className="py-3 px-4 text-center">Media OVR</th>
                 <th className="py-3 px-4 text-right">Azioni Admin</th>
@@ -688,7 +685,7 @@ export default function AdminPage() {
             <tbody className="divide-y divide-slate-800/60">
               {filteredPlayers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-slate-500">
+                  <td colSpan={7} className="py-8 text-center text-slate-500">
                     Nessun utente o giocatore trovato per la ricerca &quot;{searchQuery}&quot;.
                   </td>
                 </tr>
@@ -736,7 +733,7 @@ export default function AdminPage() {
                         )}
                       </td>
 
-                      {/* Ruolo */}
+                      {/* Ruolo Applicativo */}
                       <td className="py-3 px-4">
                         <span
                           className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
@@ -745,8 +742,16 @@ export default function AdminPage() {
                               : 'bg-blue-500/15 text-blue-300 border border-blue-500/30'
                           }`}
                         >
-                          {isPlayerAdmin ? '★ Admin' : 'User'}
+                          {isPlayerAdmin ? '★ Admin' : 'Player'}
                         </span>
+                      </td>
+
+                      {/* Posizione Tattica in Campo (Separata dai ruoli) */}
+                      <td className="py-3 px-4 text-center">
+                        <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-emerald-400 border border-slate-700">
+                          {FIELD_POSITION_ABBR[p.position || 'Esterno']}
+                        </span>
+                        <span className="text-[10px] text-slate-400 block mt-0.5">{p.position || 'Esterno'}</span>
                       </td>
 
                       {/* Tipo Profilo */}
@@ -767,22 +772,22 @@ export default function AdminPage() {
                         <StatBadge score={p.overall_rating || 6.0} size="sm" />
                       </td>
 
-                      {/* Azioni Admin */}
+                      {/* Azioni Admin (Promozione / Modifica / Elimina) */}
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          {/* Pulsante Cambio Ruolo (Promuovi / Demote) */}
+                          {/* Pulsante Promozione Admin */}
                           {!isMarcoSuperAdmin && (
                             <button
                               type="button"
                               onClick={() => handleToggleUserRole(p)}
-                              className={`px-2 py-1 rounded text-[10px] font-bold transition-colors ${
+                              className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer border ${
                                 isPlayerAdmin
-                                  ? 'bg-slate-800 hover:bg-slate-700 text-amber-300'
-                                  : 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300'
+                                  ? 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-amber-500/30'
+                                  : 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border-emerald-500/30'
                               }`}
-                              title={isPlayerAdmin ? 'Rendi utente standard' : 'Promuovi ad Admin'}
+                              title={isPlayerAdmin ? 'Revoca ruolo Admin e riporta a Player' : 'Promuovi questo utente a ruolo Amministratore'}
                             >
-                              {isPlayerAdmin ? 'Rendi User' : 'Fai Admin'}
+                              {isPlayerAdmin ? 'Rendi Player' : '★ Fai Admin'}
                             </button>
                           )}
 

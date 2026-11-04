@@ -10,7 +10,8 @@ import {
   subscribeOfficialMatchDate, 
   savePresenceDoc, 
   deletePresenceDoc,
-  saveOfficialMatchDateDoc 
+  saveOfficialMatchDateDoc,
+  executeAtomicPresenceSubstitution
 } from '@/lib/firebase/firestoreService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { getStoredPlayers } from '@/lib/services/playerService';
@@ -18,7 +19,8 @@ import {
   getStoredPresences, 
   saveStoredPresences, 
   getOfficialMatchDate, 
-  setOfficialMatchDate 
+  setOfficialMatchDate,
+  processPresenceRemovalWithAutoSubstitution
 } from '@/lib/services/presenceService';
 import { getUpcomingDays, CalendarDay, formatItalianDate } from '@/lib/utils/dateUtils';
 import { PresenceCard } from '@/components/PresenceCard';
@@ -193,11 +195,12 @@ const DEFAULT_PRESENCES: Presence[] = INITIAL_DEMO_PLAYERS.map((p, idx) => ({
 
 export default function PresenzePage() {
   const { user, profile, isAdmin } = useAuth();
+  const [mounted, setMounted] = useState(false);
   const [days, setDays] = useState<CalendarDay[]>(DEFAULT_UPCOMING_DAYS);
-  const [presences, setPresences] = useState<Presence[]>(() => getStoredPresences());
-  const [profiles, setProfiles] = useState<Profile[]>(() => getStoredPlayers());
-  const [selectedDayString, setSelectedDayString] = useState<string>(() =>
-    getOfficialMatchDate()
+  const [presences, setPresences] = useState<Presence[]>(DEFAULT_PRESENCES);
+  const [profiles, setProfiles] = useState<Profile[]>(INITIAL_DEMO_PLAYERS);
+  const [selectedDayString, setSelectedDayString] = useState<string>(
+    DEFAULT_UPCOMING_DAYS[0]?.dateString || '2026-10-28'
   );
   const [viewMode, setViewMode] = useState<'focus' | 'grid'>('focus');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -205,7 +208,12 @@ export default function PresenzePage() {
 
   // Sottoscrizione Real-Time a Firebase Firestore
   useEffect(() => {
-    // 1. Carica dallo store locale
+    setMounted(true);
+    // 1. Carica dallo store locale al mount sul client
+    const clientDate = getOfficialMatchDate();
+    if (clientDate) {
+      setSelectedDayString(clientDate);
+    }
     setProfiles(getStoredPlayers());
     setPresences(getStoredPresences());
 
@@ -252,11 +260,12 @@ export default function PresenzePage() {
       unsubProfiles();
       unsubMatchDate();
     };
-  }, []);
+  }, [selectedDayString]);
 
   // Sottoscrizione alle presenze per il giorno selezionato da Firestore
   useEffect(() => {
     if (!isFirebaseConfigured) return;
+
     const unsubPres = subscribePresences(selectedDayString, (dayPresences) => {
       if (dayPresences && dayPresences.length > 0) {
         setPresences((prev) => {
@@ -267,6 +276,7 @@ export default function PresenzePage() {
         });
       }
     });
+
     return () => {
       unsubPres();
     };
@@ -297,30 +307,18 @@ export default function PresenzePage() {
     );
 
     if (existingIndex !== -1) {
-      // 1. RIMOZIONE / ANNULLA PRESENZA
+      // 1. RIMOZIONE / ANNULLA PRESENZA CON SUBENTRO AUTOMATICO SILENZIOSO WISHLIST
       const removed = presences[existingIndex];
-      const remaining = presences.filter((p) => p.id !== removed.id);
+      const { updatedPresences, promotedPresences } = processPresenceRemovalWithAutoSubstitution(
+        dateString,
+        removed.id,
+        presences
+      );
 
-      // Logica Waitlist: se era un titolare (order_index <= 10), promuovi il primo in attesa
-      const updatedDayPresences = remaining
-        .filter((p) => p.date === dateString)
-        .sort((a, b) => a.order_index - b.order_index)
-        .map((p, idx) => ({
-          ...p,
-          order_index: idx + 1,
-          status: (idx < 10 ? 'confirmed' : 'waitlist') as 'confirmed' | 'waitlist',
-        }));
-
-      const newPresences = [
-        ...remaining.filter((p) => p.date !== dateString),
-        ...updatedDayPresences,
-      ];
-
-      saveStoredPresences(newPresences);
       startTransition(() => {
-        setPresences(newPresences);
+        setPresences(updatedPresences);
       });
-      deletePresenceDoc(removed.id);
+      await executeAtomicPresenceSubstitution(removed.id, promotedPresences);
     } else {
       // 2. AGGIUNGI PRESENZA
       const dayExisting = presences.filter((p) => p.date === dateString);
@@ -366,28 +364,19 @@ export default function PresenzePage() {
     savePresenceDoc(newPresenceItem);
   };
 
-  // Azione Admin: Rimuovi singola presenza
-  const handleRemovePresence = (presenceId: string) => {
-    const target = presences.find((p) => p.id === presenceId);
+  // Azione Admin: Rimuovi singola presenza con subentro automatico silenzioso
+  const handleRemovePresence = async (presenceId: string) => {
+    const target = presences.find((p) => p.id === presenceId || p.player_id === presenceId);
     if (!target) return;
 
-    const remaining = presences.filter((p) => p.id !== presenceId);
-    const updatedDayPresences = remaining
-      .filter((p) => p.date === target.date)
-      .sort((a, b) => a.order_index - b.order_index)
-      .map((p, idx) => ({
-        ...p,
-        order_index: idx + 1,
-        status: (idx < 10 ? 'confirmed' : 'waitlist') as 'confirmed' | 'waitlist',
-      }));
+    const { updatedPresences, promotedPresences } = processPresenceRemovalWithAutoSubstitution(
+      target.date,
+      presenceId,
+      presences
+    );
 
-    const newPres = [
-      ...remaining.filter((p) => p.date !== target.date),
-      ...updatedDayPresences,
-    ];
-    saveStoredPresences(newPres);
-    setPresences(newPres);
-    deletePresenceDoc(presenceId);
+    setPresences(updatedPresences);
+    await executeAtomicPresenceSubstitution(target.id, promotedPresences);
   };
 
   // Controlla se la data selezionata ha 10 giocatori
@@ -431,7 +420,7 @@ export default function PresenzePage() {
       </div>
 
       {/* BANNER DECISIONE ADMIN: SE CI SONO PIÙ GIORNI CON 10 GIOCATORI */}
-      {daysWithQuorum.length > 1 && isAdmin && (
+      {daysWithQuorum.length > 1 && mounted && isAdmin && (
         <div className="bg-gradient-to-r from-amber-950/80 via-slate-900 to-amber-950/80 border-2 border-amber-500/70 rounded-3xl p-5 shadow-2xl space-y-3.5 animate-in fade-in duration-300">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-amber-500/20 pb-3">
             <div className="flex items-center gap-3">
@@ -516,14 +505,16 @@ export default function PresenzePage() {
             </div>
           </div>
 
-          <Link
-            href={`/squadre?date=${selectedDayString}`}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-2xl text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/30 transition-all hover:scale-105"
-          >
-            <Sparkles className="h-4 w-4" />
-            Genera Squadre 5v5
-            <ArrowRight className="h-4 w-4" />
-          </Link>
+          {mounted && isAdmin && (
+            <Link
+              href={`/squadre?date=${selectedDayString}`}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-2xl text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/30 transition-all hover:scale-105"
+            >
+              <Sparkles className="h-4 w-4" />
+              Genera Squadre 5v5
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          )}
         </div>
       )}
 
@@ -628,8 +619,8 @@ export default function PresenzePage() {
                   day={currentDay}
                   presences={dayPresences}
                   allProfiles={profiles}
-                  currentUserId={profile?.id || (user as any)?.uid || (user as any)?.id || 'dev-admin-user'}
-                  isAdmin={isAdmin}
+                  currentUserId={mounted ? (profile?.id || (user as any)?.uid || (user as any)?.id) : undefined}
+                  isAdmin={mounted && isAdmin}
                   onTogglePresence={handleTogglePresence}
                   onAddGuestPresence={handleAddGuestPresence}
                   onRemovePresence={handleRemovePresence}
@@ -647,8 +638,8 @@ export default function PresenzePage() {
                   day={day}
                   presences={dayPresences}
                   allProfiles={profiles}
-                  currentUserId={profile?.id || (user as any)?.uid || (user as any)?.id || 'dev-admin-user'}
-                  isAdmin={isAdmin}
+                  currentUserId={mounted ? (profile?.id || (user as any)?.uid || (user as any)?.id) : undefined}
+                  isAdmin={mounted && isAdmin}
                   onTogglePresence={handleTogglePresence}
                   onAddGuestPresence={handleAddGuestPresence}
                   onRemovePresence={handleRemovePresence}

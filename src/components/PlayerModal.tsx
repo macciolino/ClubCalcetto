@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Profile, StatCategory } from '@/types/database';
+import { Profile, StatCategory, FieldPosition, FIELD_POSITIONS, STAT_CANONICAL_ORDER } from '@/types/database';
 import { addStoredPlayer, updateStoredPlayer } from '@/lib/services/playerService';
 import { saveProfileDoc } from '@/lib/firebase/firestoreService';
 import { uploadPlayerAvatar } from '@/lib/firebase/storageService';
@@ -23,6 +23,7 @@ export function PlayerModal({
   onSaved,
 }: PlayerModalProps) {
   const [fullName, setFullName] = useState('');
+  const [position, setPosition] = useState<FieldPosition>('Esterno');
   const [isGuest, setIsGuest] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState('');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -33,9 +34,20 @@ export function PlayerModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
+  // Ordina categorie secondo l'ordine canonico
+  const sortedCategories = [...statCategories].sort((a, b) => {
+    const idxA = STAT_CANONICAL_ORDER.indexOf(a.name as any);
+    const idxB = STAT_CANONICAL_ORDER.indexOf(b.name as any);
+    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+    if (idxA !== -1) return -1;
+    if (idxB !== -1) return 1;
+    return a.name.localeCompare(b.name);
+  });
+
   useEffect(() => {
     if (playerToEdit) {
       setFullName(playerToEdit.full_name || '');
+      setPosition(playerToEdit.position || 'Esterno');
       setIsGuest(playerToEdit.is_guest || false);
       setAvatarUrl(playerToEdit.avatar_url || '');
       setMatchesWon(playerToEdit.matches_won ?? 0);
@@ -49,6 +61,7 @@ export function PlayerModal({
       setStats(initialStats);
     } else {
       setFullName('');
+      setPosition('Esterno');
       setIsGuest(true);
       setAvatarUrl('');
       setMatchesWon(0);
@@ -131,6 +144,7 @@ export function PlayerModal({
         const updated: Profile = {
           ...playerToEdit,
           full_name: fullName.trim(),
+          position,
           avatar_url: avatarUrl || null,
           stats,
           overall_rating: calculatedOvr,
@@ -140,12 +154,11 @@ export function PlayerModal({
           updated_at: new Date().toISOString(),
         };
 
-        // Salva subito nello store locale e Firestore
         updateStoredPlayer(updated);
         saveProfileDoc(updated);
         onSaved(updated);
       } else {
-        // Crea nuovo giocatore ospite/manuale
+        // Crea nuovo giocatore manuale / ospite (default role: 'player')
         const newGuestId = `guest-${Date.now()}`;
         const newPlayer: Profile = {
           id: newGuestId,
@@ -153,7 +166,8 @@ export function PlayerModal({
           email: null,
           full_name: fullName.trim(),
           avatar_url: avatarUrl || null,
-          role: 'user',
+          role: 'player',
+          position,
           is_guest: true,
           stats,
           overall_rating: calculatedOvr,
@@ -164,7 +178,6 @@ export function PlayerModal({
           updated_at: new Date().toISOString(),
         };
 
-        // Salva subito nello store locale e Firestore
         addStoredPlayer(newPlayer);
         saveProfileDoc(newPlayer);
         onSaved(newPlayer);
@@ -196,21 +209,21 @@ export function PlayerModal({
                 {playerToEdit ? 'Modifica Scheda Giocatore' : 'Crea Giocatore Manuale / Ospite'}
               </h2>
               <p className="text-xs text-slate-400">
-                {playerToEdit ? 'Aggiorna voti e parametri da 1 a 10' : 'Aggiungi un compagno senza account Google'}
+                {playerToEdit ? 'Aggiorna voti, ruolo tattico e parametri da 1 a 10' : 'Aggiungi un compagno di calcetto'}
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Form Body (Scrollable) */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
           {errorMsg && (
             <div className="p-3 text-xs bg-rose-500/15 border border-rose-500/30 text-rose-300 rounded-xl">
               {errorMsg}
@@ -276,6 +289,27 @@ export function PlayerModal({
             </div>
           </div>
 
+          {/* Posizione Tattica in Campo (Field Position) */}
+          <div className="bg-slate-950/40 p-3.5 rounded-xl border border-slate-800/80 space-y-1.5">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-300">
+              Posizione Tattica in Campo
+            </label>
+            <p className="text-[11px] text-slate-500">
+              Serve all&apos;algoritmo di bilanciamento e alla disposizione a rombo (1-1-2-1) sul campetto.
+            </p>
+            <select
+              value={position}
+              onChange={(e) => setPosition(e.target.value as FieldPosition)}
+              className="w-full mt-1 px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white text-xs font-bold focus:outline-none focus:border-emerald-500 transition-colors"
+            >
+              {FIELD_POSITIONS.map((pos) => (
+                <option key={pos} value={pos}>
+                  {pos}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Storico Partite: Vittorie, Pareggi, Sconfitte */}
           <div className="bg-slate-950/40 p-4 rounded-xl border border-slate-800/80 space-y-3">
             <div className="flex items-center justify-between">
@@ -329,17 +363,17 @@ export function PlayerModal({
             </div>
           </div>
 
-          {/* Griglia Valutazioni Statistiche 1-10 */}
+          {/* Griglia Valutazioni Statistiche 1-10 in Ordine Canonico */}
           <div>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
                 Statistiche Abilità (Scala da 1 a 10)
               </h3>
-              <span className="text-[11px] text-slate-500">Trascina lo slider o digita</span>
+              <span className="text-[11px] text-slate-500">Trascina lo slider</span>
             </div>
 
             <div className="space-y-3 bg-slate-950/40 p-4 rounded-xl border border-slate-800/80">
-              {statCategories.map((cat) => {
+              {sortedCategories.map((cat) => {
                 const val = stats[cat.name] ?? cat.default_value ?? 6;
                 return (
                   <div key={cat.id || cat.name} className="flex items-center gap-3">
@@ -370,14 +404,14 @@ export function PlayerModal({
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
             >
               Annulla
             </button>
             <button
               type="submit"
               disabled={isSubmitting || uploadingAvatar}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/25 transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/25 transition-all disabled:opacity-50 cursor-pointer"
             >
               {isSubmitting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

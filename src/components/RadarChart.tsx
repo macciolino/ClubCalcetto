@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { sortStatsByCanonicalOrder } from '@/types/database';
 
 interface RadarStat {
   key: string;
@@ -32,7 +33,7 @@ export function RadarChart({
   color = 'emerald',
   showLabels = true,
 }: RadarChartProps) {
-  const statKeys = Object.keys(stats);
+  const statKeys = sortStatsByCanonicalOrder(Object.keys(stats));
   const totalAxes = Math.max(statKeys.length, 3);
 
   const radius = size * 0.36;

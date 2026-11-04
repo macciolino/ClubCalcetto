@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Presence, Profile } from '@/types/database';
 import { StatBadge } from './StatBadge';
 import { CalendarDay } from '@/lib/utils/dateUtils';
@@ -29,6 +29,15 @@ export function PresenceCard({
   onRemovePresence,
   isToggling = false,
 }: PresenceCardProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const showAdminActions = mounted && isAdmin;
+  const effectiveUserId = mounted ? currentUserId : undefined;
+
   // Ordina per order_index
   const sortedPresences = [...presences].sort((a, b) => a.order_index - b.order_index);
 
@@ -44,12 +53,12 @@ export function PresenceCard({
   const starters = enrichedPresences.filter((p) => p.status === 'confirmed');
   const waitlist = enrichedPresences.filter((p) => p.status === 'waitlist');
 
-  const isUserPresent = currentUserId
-    ? presences.some((p) => p.player_id === currentUserId)
+  const isUserPresent = effectiveUserId
+    ? presences.some((p) => p.player_id === effectiveUserId)
     : false;
 
-  const userPresence = currentUserId
-    ? presences.find((p) => p.player_id === currentUserId)
+  const userPresence = effectiveUserId
+    ? presences.find((p) => p.player_id === effectiveUserId)
     : null;
 
   const isFull = starters.length >= 10;
@@ -130,7 +139,7 @@ export function PresenceCard({
             {starters.map((item, idx) => {
               const name = item.profile?.full_name || 'Giocatore';
               const rating = item.profile?.overall_rating || 6.0;
-              const isCurrentUser = item.player_id === currentUserId;
+              const isCurrentUser = Boolean(effectiveUserId && item.player_id === effectiveUserId);
 
               return (
                 <div
@@ -157,7 +166,7 @@ export function PresenceCard({
                   </div>
                   <div className="flex items-center gap-2">
                     <StatBadge score={rating} size="sm" />
-                    {isAdmin && onRemovePresence && (
+                    {showAdminActions && onRemovePresence && (
                       <button
                         type="button"
                         onClick={() => onRemovePresence(item.id)}
@@ -190,7 +199,7 @@ export function PresenceCard({
               {waitlist.map((item, idx) => {
                 const name = item.profile?.full_name || 'Riserva';
                 const rating = item.profile?.overall_rating || 6.0;
-                const isCurrentUser = item.player_id === currentUserId;
+                const isCurrentUser = Boolean(effectiveUserId && item.player_id === effectiveUserId);
 
                 return (
                   <div
@@ -209,7 +218,7 @@ export function PresenceCard({
                     </div>
                     <div className="flex items-center gap-2">
                       <StatBadge score={rating} size="sm" />
-                      {isAdmin && onRemovePresence && (
+                      {showAdminActions && onRemovePresence && (
                         <button
                           type="button"
                           onClick={() => onRemovePresence(item.id)}
@@ -261,7 +270,7 @@ export function PresenceCard({
         </button>
 
         {/* Per l'Admin: Assegna giocatore ospite */}
-        {isAdmin && onAddGuestPresence && (
+        {showAdminActions && onAddGuestPresence && (
           <div className="flex items-center gap-1.5 mt-1">
             <select
               className="flex-1 text-xs bg-slate-950 border border-slate-800 text-slate-300 rounded-lg px-2 py-1.5 focus:outline-none focus:border-emerald-500"

@@ -182,22 +182,26 @@ function SquadreContent() {
   const searchParams = useSearchParams();
   const dateParam = searchParams.get('date');
   const { user, profile, isAdmin } = useAuth();
+  const [mounted, setMounted] = useState(false);
 
-  const [selectedDate, setSelectedDate] = useState<string>(() =>
-    dateParam || getOfficialMatchDate()
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isClientAdmin = mounted && isAdmin;
+
+  const [selectedDate, setSelectedDate] = useState<string>(
+    dateParam || getUpcomingDays(7)[0]?.dateString || '2026-10-28'
   );
   const [matchTime, setMatchTime] = useState('20:30');
   const [matchLocation, setMatchLocation] = useState('Centro Sportivo Calcetto - Campo 3');
   const [totalCost, setTotalCost] = useState(80.0);
 
-  const [presences, setPresences] = useState<Presence[]>(() =>
-    getStoredPresences(dateParam || getUpcomingDays(7)[0]?.dateString)
+  const [presences, setPresences] = useState<Presence[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>(DEMO_10_PLAYERS);
+  const [balancedResult, setBalancedResult] = useState<BalancedTeamsResult | null>(() =>
+    balanceTeams(DEMO_10_PLAYERS)
   );
-  const [profiles, setProfiles] = useState<Profile[]>(() => getStoredPlayers());
-  const [balancedResult, setBalancedResult] = useState<BalancedTeamsResult | null>(() => {
-    const p = getStoredPlayers();
-    return p.length >= 10 ? balanceTeams(p.slice(0, 10)) : null;
-  });
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
@@ -336,11 +340,26 @@ function SquadreContent() {
     };
   }, [selectedDate]);
 
-  // Calcola i 10 titolari
-  const confirmedPresences = presences.filter((p) => p.status === 'confirmed');
+  // Calcola i 10 titolari specifici per la data selezionata
+  const confirmedPresences = presences.filter((p) => p.date === selectedDate && p.status === 'confirmed');
   const starterProfiles: Profile[] = confirmedPresences
-    .map((p) => profiles.find((prof) => prof.id === p.player_id || prof.user_id === p.player_id))
+    .map((p) => {
+      const found = profiles.find((prof) => prof.id === p.player_id || prof.user_id === p.player_id);
+      if (!found) {
+        console.warn(`[TeamBalancer Debug] Giocatore ID "${p.player_id}" ha presenza confermata ma non è presente nella lista profili.`);
+      }
+      return found;
+    })
     .filter((prof): prof is Profile => prof !== undefined);
+
+  useEffect(() => {
+    console.log(`[TeamBalancer Debug] Data: ${selectedDate}`, {
+      totaliPresenze: presences.length,
+      confermatiPerData: confirmedPresences.length,
+      profiliTrovati: starterProfiles.length,
+      bottoneAbilitato: starterProfiles.length >= 10,
+    });
+  }, [selectedDate, presences.length, confirmedPresences.length, starterProfiles.length]);
 
   // Helper per l'Admin: completa i 10 titolari con 1-click per questa data
   const handleFillDemoStarters = () => {
@@ -366,8 +385,11 @@ function SquadreContent() {
   // Esecuzione Algoritmo di Bilanciamento Squadre
   const handleGenerateTeams = () => {
     setErrorMsg('');
+    console.log('[TeamBalancer Debug] Tentativo generazione squadre. Titolari pronti:', starterProfiles.length);
     if (starterProfiles.length < 10) {
-      setErrorMsg(`Sono necessari esattamente 10 giocatori confermati per generare le squadre. Attualmente: ${starterProfiles.length}/10.`);
+      const msg = `Sono necessari esattamente 10 giocatori confermati per generare le squadre. Attualmente: ${starterProfiles.length}/10 per la data ${selectedDate}.`;
+      console.warn('[TeamBalancer Debug] Impossibile generare:', msg);
+      setErrorMsg(msg);
       return;
     }
 
@@ -375,8 +397,10 @@ function SquadreContent() {
     try {
       // Esegui algoritmo deterministico sui primi 10 titolari
       const tenStarters = starterProfiles.slice(0, 10);
+      console.log('[TeamBalancer Debug] Esecuzione balanceTeams con:', tenStarters.map((p) => p.full_name));
       const result = balanceTeams(tenStarters);
       setBalancedResult(result);
+      console.log('[TeamBalancer Debug] Generazione completata con successo!');
 
       // Salva match e squadre generate su Firebase Firestore se connesso
       saveMatchDoc({
@@ -546,7 +570,7 @@ function SquadreContent() {
               type="time"
               value={matchTime}
               onChange={(e) => setMatchTime(e.target.value)}
-              disabled={!isAdmin}
+              disabled={!isClientAdmin}
               className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-medium focus:outline-none focus:border-emerald-500 disabled:opacity-70"
             />
           </div>
@@ -558,7 +582,7 @@ function SquadreContent() {
               type="text"
               value={matchLocation}
               onChange={(e) => setMatchLocation(e.target.value)}
-              disabled={!isAdmin}
+              disabled={!isClientAdmin}
               placeholder="Es. Centro Sportivo"
               className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-medium focus:outline-none focus:border-emerald-500 disabled:opacity-70"
             />
@@ -572,7 +596,7 @@ function SquadreContent() {
               step="5"
               value={totalCost}
               onChange={(e) => setTotalCost(parseFloat(e.target.value) || 0)}
-              disabled={!isAdmin}
+              disabled={!isClientAdmin}
               className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-medium focus:outline-none focus:border-emerald-500 disabled:opacity-70"
             />
           </div>
@@ -591,7 +615,7 @@ function SquadreContent() {
               </span>
             )}
 
-            {isAdmin && starterProfiles.length < 10 && (
+            {isClientAdmin && starterProfiles.length < 10 && (
               <button
                 type="button"
                 onClick={handleFillDemoStarters}
@@ -603,7 +627,7 @@ function SquadreContent() {
             )}
           </div>
 
-          {isAdmin ? (
+          {isClientAdmin ? (
             <button
               type="button"
               onClick={handleGenerateTeams}
@@ -753,7 +777,7 @@ function SquadreContent() {
                 </button>
               </div>
 
-              {isAdmin && (
+              {isClientAdmin && (
                 <button
                   type="button"
                   onClick={handleShareWhatsApp}

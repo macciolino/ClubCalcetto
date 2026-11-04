@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Profile } from '@/types/database';
+import { Profile, FIELD_POSITION_ABBR, sortStatsByCanonicalOrder } from '@/types/database';
 import { RadarChart } from './RadarChart';
 import { StatBadge } from './StatBadge';
 import { getPlayerMatchRecord } from '@/lib/services/playerService';
@@ -53,10 +53,15 @@ export function PlayerCardFifa({
               </span>
               <span className="text-[10px] font-bold text-slate-400 uppercase">OVR</span>
             </div>
+            {/* Ruolo Tattico (POR, DIF, EST, PUN) */}
             <span className="text-[11px] font-black text-emerald-400 uppercase tracking-widest mt-0.5">
-              {player.role === 'admin' ? 'CAP' : 'CALC'}
+              {FIELD_POSITION_ABBR[player.position || 'Esterno']}
             </span>
-            <span className="text-base mt-1">⚽</span>
+            {player.role === 'admin' ? (
+              <span className="text-[9px] font-bold text-amber-400 uppercase tracking-wide">CAP</span>
+            ) : (
+              <span className="text-base mt-0.5">⚽</span>
+            )}
           </div>
 
           {/* Avatar Giocatore */}
@@ -137,9 +142,10 @@ export function PlayerCardFifa({
           <div className="mt-3 py-2 flex flex-col items-center justify-center animate-in fade-in duration-200">
             <RadarChart stats={player.stats} size={180} color="emerald" showLabels={true} />
 
-            {/* Griglia mini pill delle 8 abilità */}
+            {/* Griglia mini pill delle abilità in ordine canonico */}
             <div className="mt-3 grid grid-cols-4 gap-1.5 w-full text-center">
-              {Object.entries(player.stats).map(([name, val]) => {
+              {sortStatsByCanonicalOrder(Object.keys(player.stats)).map((name) => {
+                const val = player.stats[name] ?? 6;
                 const abbr = name.slice(0, 3).toUpperCase();
                 return (
                   <div

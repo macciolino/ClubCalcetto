@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/context/AuthContext';
@@ -17,18 +17,33 @@ import {
 export function Navbar() {
   const pathname = usePathname();
   const { user, profile, isAdmin, signOut, setMockRole } = useAuth();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   if (pathname === '/login') {
     return null;
   }
+
+  // Durante l'SSR e il primo render di idratazione client, non includere link condizionati a localStorage/auth
+  // per garantire che l'HTML del server e del client siano identici al 100%.
+  const showAdminLink = mounted && isAdmin;
 
   const navItems = [
     { href: '/presenze', label: 'Presenze', icon: CalendarDays },
     { href: '/giocatori', label: 'Giocatori', icon: Users },
     { href: '/squadre', label: 'Squadre', icon: Trophy },
     { href: '/profilo', label: 'Profilo', icon: User },
-    ...(isAdmin ? [{ href: '/admin', label: 'Admin', icon: ShieldAlert }] : []),
+    ...(showAdminLink ? [{ href: '/admin', label: 'Admin', icon: ShieldAlert }] : []),
   ];
+
+  const displayName = mounted && profile?.full_name ? profile.full_name : 'Ospite';
+  const roleLabel = mounted && isAdmin ? 'Admin' : 'Giocatore';
+  const showAdminBadge = mounted && isAdmin;
+  const avatarChar = mounted && profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : 'U';
+  const avatarUrl = mounted ? profile?.avatar_url : null;
 
   return (
     <>
@@ -74,18 +89,18 @@ export function Navbar() {
 
           {/* User Info & Actions */}
           <div className="flex items-center gap-3">
-            {/* Ruolo Switcher per alternare vista Admin / User */}
-            {setMockRole && (
+            {/* Ruolo Switcher per alternare vista Admin / Player (solo se montato) */}
+            {mounted && setMockRole && (
               <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-xs">
                 <button
                   type="button"
-                  onClick={() => setMockRole('user')}
+                  onClick={() => setMockRole('player')}
                   className={`px-2 py-1 rounded transition-colors cursor-pointer ${
                     !isAdmin ? 'bg-blue-600 text-white font-bold' : 'text-slate-400 hover:text-white'
                   }`}
-                  title="Passa alla vista Giocatore (User)"
+                  title="Passa alla vista Giocatore (Player)"
                 >
-                  User
+                  Player
                 </button>
                 <button
                   type="button"
@@ -108,18 +123,18 @@ export function Navbar() {
                 title="Gestisci il tuo Profilo"
               >
                 <div className="relative">
-                  {profile?.avatar_url ? (
+                  {avatarUrl ? (
                     <img
-                      src={profile.avatar_url}
-                      alt={profile.full_name}
+                      src={avatarUrl}
+                      alt={displayName}
                       className="h-9 w-9 rounded-full object-cover ring-2 ring-emerald-500/40 group-hover:ring-emerald-400 transition-all"
                     />
                   ) : (
                     <div className="h-9 w-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-emerald-400 text-sm group-hover:border-emerald-500 transition-colors">
-                      {profile?.full_name?.charAt(0).toUpperCase() || 'U'}
+                      {avatarChar}
                     </div>
                   )}
-                  {isAdmin && (
+                  {showAdminBadge && (
                     <span
                       className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-black text-slate-950 ring-2 ring-slate-950"
                       title="Amministratore"
@@ -131,10 +146,10 @@ export function Navbar() {
 
                 <div className="hidden sm:block text-left">
                   <div className="text-sm font-semibold text-white leading-tight max-w-[120px] truncate group-hover:text-emerald-300 transition-colors">
-                    {profile?.full_name || 'Ospite'}
+                    {displayName}
                   </div>
                   <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">
-                    {isAdmin ? 'Admin' : 'Giocatore'}
+                    {roleLabel}
                   </div>
                 </div>
               </Link>
@@ -142,7 +157,7 @@ export function Navbar() {
               <button
                 type="button"
                 onClick={() => signOut()}
-                className="p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-900 rounded-lg transition-colors"
+                className="p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-900 rounded-lg transition-colors cursor-pointer"
                 title="Disconnetti"
               >
                 <LogOut className="h-4 w-4" />

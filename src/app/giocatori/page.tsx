@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/context/AuthContext';
-import { Profile, StatCategory } from '@/types/database';
+import { Profile, StatCategory, FIELD_POSITION_ABBR, STAT_CANONICAL_ORDER } from '@/types/database';
 import { subscribeProfiles, subscribeStatCategories, deleteProfileDoc } from '@/lib/firebase/firestoreService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { getStoredPlayers, removeStoredPlayer, saveStoredPlayers, getPlayerMatchRecord } from '@/lib/services/playerService';
@@ -173,8 +173,9 @@ const DEFAULT_PLAYERS_LIST: Profile[] = [
 
 export default function GiocatoriPage() {
   const { user, profile, isAdmin } = useAuth();
-  const [players, setPlayers] = useState<Profile[]>(() => getStoredPlayers());
-  const [categories, setCategories] = useState<StatCategory[]>(() => getStoredCategories());
+  const [mounted, setMounted] = useState(false);
+  const [players, setPlayers] = useState<Profile[]>(DEFAULT_PLAYERS_LIST);
+  const [categories, setCategories] = useState<StatCategory[]>(DEFAULT_CATEGORIES);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPlayerToEdit, setSelectedPlayerToEdit] = useState<Profile | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -182,7 +183,10 @@ export default function GiocatoriPage() {
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [sortBy, setSortBy] = useState<'ovr' | 'wins' | 'name'>('ovr');
 
+  const isClientAdmin = mounted && isAdmin;
+
   useEffect(() => {
+    setMounted(true);
     // 1. Carica dallo store locale
     setPlayers(getStoredPlayers());
     setCategories(getStoredCategories());
@@ -267,6 +271,16 @@ export default function GiocatoriPage() {
       return a.full_name.localeCompare(b.full_name);
     });
 
+  // Ordinamento canonico fisso per le categorie statistiche
+  const sortedCategories = [...categories].sort((a, b) => {
+    const idxA = STAT_CANONICAL_ORDER.indexOf(a.name as any);
+    const idxB = STAT_CANONICAL_ORDER.indexOf(b.name as any);
+    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+    if (idxA !== -1) return -1;
+    if (idxB !== -1) return 1;
+    return a.name.localeCompare(b.name);
+  });
+
   return (
     <div className="space-y-6 pb-12">
       {/* Header & Azioni */}
@@ -279,14 +293,14 @@ export default function GiocatoriPage() {
             </h1>
           </div>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            {isAdmin
+            {isClientAdmin
               ? 'Pannello Amministratore: gestisci abilità, analizza gli ottagoni radar ed elimina profili.'
               : 'Card stile FIFA/PES con radar ottagonale e statistiche di vittoria, pareggio e sconfitta.'}
           </p>
         </div>
 
         {/* Pulsanti Admin */}
-        {isAdmin && (
+        {isClientAdmin && (
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
@@ -309,7 +323,7 @@ export default function GiocatoriPage() {
       </div>
 
       {/* Gestore Categorie Statistiche (Se attivato da Admin) */}
-      {isAdmin && showCatManager && (
+      {isClientAdmin && showCatManager && (
         <div className="animate-in fade-in duration-200">
           <StatCategoriesManager
             categories={categories}
@@ -414,7 +428,7 @@ export default function GiocatoriPage() {
               <PlayerCardFifa
                 key={player.id}
                 player={player}
-                isAdmin={isAdmin}
+                isAdmin={isClientAdmin}
                 onEdit={handleOpenEditModal}
                 onDelete={(p) => handleDeletePlayer(p.id, p.full_name)}
               />
@@ -430,9 +444,10 @@ export default function GiocatoriPage() {
                 <tr className="border-b border-slate-800 bg-slate-950/70 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                   <th className="py-3.5 px-4 w-12 text-center">#</th>
                   <th className="py-3.5 px-4">Giocatore</th>
+                  <th className="py-3.5 px-3 text-center">Ruolo</th>
                   <th className="py-3.5 px-3 text-center">OVR</th>
                   <th className="py-3.5 px-3 text-center">V-P-S</th>
-                  {categories.map((cat) => {
+                  {sortedCategories.map((cat) => {
                     const shortName = cat.name.length > 5 ? cat.name.slice(0, 3).toUpperCase() : cat.name;
                     return (
                       <th
@@ -446,8 +461,8 @@ export default function GiocatoriPage() {
                       </th>
                     );
                   })}
-                  {isAdmin && (
-                    <th className="sticky right-0 z-20 py-3.5 px-4 text-center bg-slate-950 border-l border-slate-800 shadow-[-6px_0_12px_rgba(0,0,0,0.6)] min-w-[96px]">
+                  {isClientAdmin && (
+                    <th className="sticky right-0 z-30 py-3.5 px-4 text-center bg-slate-950 border-l border-slate-800 shadow-[-8px_0_12px_rgba(0,0,0,0.8)] min-w-[100px]">
                       Azioni
                     </th>
                   )}
@@ -457,7 +472,7 @@ export default function GiocatoriPage() {
                 {filteredPlayers.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={4 + categories.length + (isAdmin ? 1 : 0)}
+                      colSpan={5 + sortedCategories.length + (isClientAdmin ? 1 : 0)}
                       className="py-8 text-center text-slate-500 italic"
                     >
                       Nessun giocatore trovato con questi filtri.
@@ -508,7 +523,7 @@ export default function GiocatoriPage() {
                             <div>
                               <div className="font-bold text-white flex items-center gap-1.5">
                                 <span>{player.full_name}</span>
-                                {isAdmin && (
+                                {isClientAdmin && (
                                   <button
                                     type="button"
                                     onClick={() => handleOpenEditModal(player)}
@@ -536,6 +551,13 @@ export default function GiocatoriPage() {
                           </div>
                         </td>
 
+                        {/* Ruolo Tattico */}
+                        <td className="py-3 px-3 text-center">
+                          <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-emerald-400 border border-slate-700">
+                            {FIELD_POSITION_ABBR[player.position || 'Esterno']}
+                          </span>
+                        </td>
+
                         {/* Overall Rating (OVR) */}
                         <td className="py-3 px-3 text-center">
                           <StatBadge score={player.overall_rating || 6.0} size="md" />
@@ -550,8 +572,8 @@ export default function GiocatoriPage() {
                           <span className="text-rose-400 font-bold">{rec.lost}S</span>
                         </td>
 
-                        {/* Statistiche Individuali da 1 a 10 */}
-                        {categories.map((cat) => {
+                        {/* Statistiche Individuali da 1 a 10 in Ordine Canonico */}
+                        {sortedCategories.map((cat) => {
                           const val = player.stats?.[cat.name] ?? cat.default_value ?? 6;
                           return (
                             <td
@@ -575,12 +597,8 @@ export default function GiocatoriPage() {
                         })}
 
                         {/* Azioni Admin (PINNED STICKY RIGHT - MAI NASCOSTE) */}
-                        {isAdmin && (
-                          <td
-                            className={`sticky right-0 z-10 py-3 px-4 text-center border-l border-slate-800 shadow-[-6px_0_12px_rgba(0,0,0,0.6)] min-w-[96px] ${
-                              isCurrent ? 'bg-slate-900' : 'bg-slate-900 group-hover:bg-slate-850'
-                            }`}
-                          >
+                        {isClientAdmin && (
+                          <td className="sticky right-0 z-20 py-3 px-4 text-center border-l border-slate-800 bg-slate-900 shadow-[-8px_0_12px_rgba(0,0,0,0.8)] min-w-[100px]">
                             <div className="flex items-center justify-center gap-1.5">
                               <button
                                 type="button"
