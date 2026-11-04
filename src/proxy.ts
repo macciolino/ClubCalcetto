@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const isDemoSession = request.cookies.get('demo_session')?.value === 'true';
   const isPublicRoute =
     request.nextUrl.pathname.startsWith('/login') ||
