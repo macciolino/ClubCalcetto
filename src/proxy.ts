@@ -1,15 +1,31 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 export function proxy(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+
+  // 1. ISOLAMENTO RIGIDO /admin:
+  // Se la route richiesta è /admin o qualsiasi sotto-percorso di /admin,
+  // controlla il cookie 'user_role'. Se non è presente o non è strettamente 'admin',
+  // blocca immediatamente la richiesta ed esegui un redirect forzato a /presenze.
+  if (pathname.startsWith('/admin')) {
+    const userRole = request.cookies.get('user_role')?.value;
+    if (userRole !== 'admin') {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = '/presenze';
+      return NextResponse.redirect(redirectUrl);
+    }
+    return NextResponse.next();
+  }
+
   const isDemoSession = request.cookies.get('demo_session')?.value === 'true';
   const isPublicRoute =
-    request.nextUrl.pathname.startsWith('/login') ||
-    request.nextUrl.pathname.startsWith('/auth') ||
-    request.nextUrl.pathname.startsWith('/api') ||
-    request.nextUrl.pathname.startsWith('/_next') ||
-    request.nextUrl.pathname.includes('.');
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/auth') ||
+    pathname.startsWith('/api') ||
+    pathname.startsWith('/_next') ||
+    pathname.includes('.');
 
-  // In localhost consentiamo sempre l'esplorazione
+  // In localhost o sessione attiva consentiamo la navigazione pubblica
   if (
     request.nextUrl.hostname === 'localhost' ||
     request.nextUrl.hostname === '127.0.0.1' ||
@@ -24,6 +40,10 @@ export function proxy(request: NextRequest) {
   url.pathname = '/login';
   return NextResponse.redirect(url);
 }
+
+// Supporto convenzione middleware Next.js
+export const middleware = proxy;
+export default proxy;
 
 export const config = {
   matcher: [

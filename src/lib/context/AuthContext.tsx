@@ -176,7 +176,9 @@ function saveLocalSession(user: any, profile: Profile) {
     try {
       localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(user));
       localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(profile));
-      document.cookie = 'demo_session=true; path=/; max-age=604800';
+      const role = profile?.role === 'admin' ? 'admin' : 'player';
+      document.cookie = `user_role=${role}; path=/; max-age=604800; SameSite=Lax`;
+      document.cookie = 'demo_session=true; path=/; max-age=604800; SameSite=Lax';
     } catch (e) {
       console.warn('Storage save error:', e);
     }
@@ -189,7 +191,8 @@ function clearLocalSession() {
       localStorage.removeItem(STORAGE_KEY_USER);
       localStorage.removeItem(STORAGE_KEY_PROFILE);
       localStorage.removeItem(STORAGE_KEY_LOCAL_VERIFIED);
-      document.cookie = 'demo_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      document.cookie = 'user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
+      document.cookie = 'demo_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
     } catch (e) {
       console.warn('Storage clear error:', e);
     }
@@ -204,13 +207,14 @@ function getLocalSession(): { user: any; profile: Profile } | null {
     if (rawUser && rawProfile) {
       const parsedUser = JSON.parse(rawUser);
       const parsedProfile = JSON.parse(rawProfile);
-      const { role, name } = determineRoleAndName(parsedProfile.email || parsedUser.email, parsedProfile.full_name);
+      const isMarco = (parsedProfile.email || parsedUser.email || '').toLowerCase().trim() === MARCO_ADMIN_EMAIL.toLowerCase();
+      const strictRole: UserRole = isMarco ? 'admin' : (parsedProfile.role === 'admin' ? 'admin' : 'player');
       return {
         user: parsedUser,
         profile: {
           ...parsedProfile,
-          role: parsedProfile.role === 'admin' ? 'admin' : role,
-          full_name: (role === 'admin' && parsedProfile.email?.includes('macciolino84')) ? 'Marco B.' : (parsedProfile.full_name || name),
+          role: strictRole,
+          full_name: (strictRole === 'admin' && isMarco) ? 'Marco B.' : (parsedProfile.full_name || 'Giocatore'),
         },
       };
     }
@@ -239,7 +243,6 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   updateProfile: (updatedData: Partial<Profile>) => Promise<void>;
-  setMockRole?: (role: 'player' | 'admin' | 'user') => void;
   authProvider: 'firebase' | 'local';
 }
 
@@ -248,13 +251,13 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<FirebaseUser | SimpleUser | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [localVerifiedBypass, setLocalVerifiedBypass] = useState<boolean>(false);
 
   const syncProfileWithFirestore = async (fbUser: FirebaseUser) => {
     if (!isFirebaseConfigured) return;
     try {
-      const isMarco = (fbUser.email || '').toLowerCase().includes('macciolino84');
+      const isMarco = (fbUser.email || '').toLowerCase().trim() === MARCO_ADMIN_EMAIL.toLowerCase();
       const docRef = doc(db, 'profiles', isMarco ? 'p-1' : fbUser.uid);
       const snap = await getDoc(docRef);
 
@@ -267,11 +270,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           firestoreData.avatar_url || fbUser.photoURL,
           firestoreData.position
         );
+        // RUOLO DA FIRESTORE: Admin solo se il campo 'role' nel documento è esattamente 'admin', altrimenti 'player'
+        const strictRole: UserRole = isMarco ? 'admin' : (firestoreData.role === 'admin' ? 'admin' : 'player');
         const merged: Profile = {
           ...resolved,
           ...firestoreData,
           id: isMarco ? 'p-1' : firestoreData.id || fbUser.uid,
-          role: isMarco ? 'admin' : (firestoreData.role === 'admin' ? 'admin' : 'player'),
+          role: strictRole,
           position: firestoreData.position || resolved.position || 'Esterno',
           full_name: isMarco ? 'Marco B.' : (firestoreData.full_name || resolved.full_name),
         };
@@ -309,6 +314,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
+    if (!isFirebaseConfigured) {
+      setIsLoading(false);
+    }
+
     // 2. Ascolta Firebase Auth se configurato
     let unsubscribeFirebase: (() => void) | undefined;
     if (isFirebaseConfigured) {
@@ -326,10 +335,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setProfile(fbProfile);
             saveLocalSession(fbUser, fbProfile);
             await syncProfileWithFirestore(fbUser);
+          } else {
+            if (!local) {
+              setUser(null);
+              setProfile(null);
+              clearLocalSession();
+            }
+          }
+          if (mounted) {
+            setIsLoading(false);
           }
         });
       } catch (e) {
         console.warn('Firebase listener error:', e);
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
     }
 
@@ -709,28 +730,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const [mockRole, setMockRoleState] = useState<'player' | 'admin' | 'user' | null>(null);
-
-  const setMockRole = (role: 'player' | 'admin' | 'user') => {
-    setMockRoleState(role);
-    if (profile) {
-      const normalizedRole: UserRole = role === 'admin' ? 'admin' : 'player';
-      const updated: Profile = { ...profile, role: normalizedRole };
-      setProfile(updated);
-      saveLocalSession(user, updated);
-    }
-  };
-
   const isSuperAdminEmail = Boolean(
-    (user?.email && user.email.toLowerCase().includes('macciolino84')) ||
-    (profile?.email && profile.email.toLowerCase().includes('macciolino84'))
+    (user?.email && user.email.toLowerCase().trim() === MARCO_ADMIN_EMAIL.toLowerCase()) ||
+    (profile?.email && profile.email.toLowerCase().trim() === MARCO_ADMIN_EMAIL.toLowerCase())
   );
 
-  const isAdmin = (mockRole === 'player' || mockRole === 'user')
-    ? false
-    : mockRole === 'admin'
-    ? true
-    : Boolean(profile?.role === 'admin' || isSuperAdminEmail);
+  // Isolamento Rigido: L'utente è admin SOLO SE è autenticato (user !== null)
+  // E il suo profilo ha tassativamente role === 'admin' oppure la sua email corrisponde a MARCO_ADMIN_EMAIL.
+  // In qualsiasi altro caso (compresi unhandled/undefined/player) il valore è RIGOROSAMENTE false.
+  const isAdmin = Boolean(
+    user && ((profile && profile.role === 'admin') || isSuperAdminEmail)
+  );
 
   const authProvider = isFirebaseConfigured ? 'firebase' : 'local';
 
@@ -755,7 +765,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signOut,
         refreshProfile,
         updateProfile,
-        setMockRole,
         authProvider,
       }}
     >

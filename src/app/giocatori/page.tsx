@@ -58,7 +58,7 @@ const DEFAULT_PLAYERS_LIST: Profile[] = [
     email: null,
     full_name: 'Luca B.',
     avatar_url: null,
-    role: 'user',
+    role: 'player',
     is_guest: true,
     stats: { Resistenza: 9, Velocità: 8, Difesa: 8, Tiro: 7, Passaggio: 7, Tecnica: 7, Fisico: 8, Dribbling: 7 },
     overall_rating: 7.8,
@@ -71,7 +71,7 @@ const DEFAULT_PLAYERS_LIST: Profile[] = [
     email: null,
     full_name: 'Andrea M.',
     avatar_url: null,
-    role: 'user',
+    role: 'player',
     is_guest: true,
     stats: { Resistenza: 7, Velocità: 9, Difesa: 6, Tiro: 8, Passaggio: 8, Tecnica: 9, Fisico: 6, Dribbling: 9 },
     overall_rating: 7.6,
@@ -84,7 +84,7 @@ const DEFAULT_PLAYERS_LIST: Profile[] = [
     email: null,
     full_name: 'Giovanni R.',
     avatar_url: null,
-    role: 'user',
+    role: 'player',
     is_guest: true,
     stats: { Resistenza: 6, Velocità: 6, Difesa: 9, Tiro: 6, Passaggio: 7, Tecnica: 6, Fisico: 9, Dribbling: 6 },
     overall_rating: 6.9,
@@ -97,7 +97,7 @@ const DEFAULT_PLAYERS_LIST: Profile[] = [
     email: null,
     full_name: 'Davide P.',
     avatar_url: null,
-    role: 'user',
+    role: 'player',
     is_guest: true,
     stats: { Resistenza: 8, Velocità: 7, Difesa: 7, Tiro: 8, Passaggio: 7, Tecnica: 7, Fisico: 7, Dribbling: 7 },
     overall_rating: 7.3,
@@ -110,7 +110,7 @@ const DEFAULT_PLAYERS_LIST: Profile[] = [
     email: null,
     full_name: 'Matteo C.',
     avatar_url: null,
-    role: 'user',
+    role: 'player',
     is_guest: true,
     stats: { Resistenza: 7, Velocità: 7, Difesa: 8, Tiro: 6, Passaggio: 8, Tecnica: 8, Fisico: 7, Dribbling: 7 },
     overall_rating: 7.3,
@@ -123,7 +123,7 @@ const DEFAULT_PLAYERS_LIST: Profile[] = [
     email: null,
     full_name: 'Francesco L.',
     avatar_url: null,
-    role: 'user',
+    role: 'player',
     is_guest: true,
     stats: { Resistenza: 6, Velocità: 7, Difesa: 6, Tiro: 9, Passaggio: 7, Tecnica: 8, Fisico: 6, Dribbling: 8 },
     overall_rating: 7.1,
@@ -136,7 +136,7 @@ const DEFAULT_PLAYERS_LIST: Profile[] = [
     email: null,
     full_name: 'Alessandro S.',
     avatar_url: null,
-    role: 'user',
+    role: 'player',
     is_guest: true,
     stats: { Resistenza: 9, Velocità: 8, Difesa: 7, Tiro: 7, Passaggio: 8, Tecnica: 8, Fisico: 8, Dribbling: 8 },
     overall_rating: 7.9,
@@ -149,7 +149,7 @@ const DEFAULT_PLAYERS_LIST: Profile[] = [
     email: null,
     full_name: 'Simone T.',
     avatar_url: null,
-    role: 'user',
+    role: 'player',
     is_guest: true,
     stats: { Resistenza: 8, Velocità: 6, Difesa: 8, Tiro: 6, Passaggio: 7, Tecnica: 7, Fisico: 8, Dribbling: 6 },
     overall_rating: 7.0,
@@ -162,7 +162,7 @@ const DEFAULT_PLAYERS_LIST: Profile[] = [
     email: null,
     full_name: 'Federico N.',
     avatar_url: null,
-    role: 'user',
+    role: 'player',
     is_guest: true,
     stats: { Resistenza: 7, Velocità: 8, Difesa: 7, Tiro: 8, Passaggio: 8, Tecnica: 8, Fisico: 7, Dribbling: 7 },
     overall_rating: 7.5,
@@ -183,7 +183,8 @@ export default function GiocatoriPage() {
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [sortBy, setSortBy] = useState<'ovr' | 'wins' | 'name'>('ovr');
 
-  const isClientAdmin = mounted && isAdmin;
+  const isStrictAdmin = Boolean(mounted && user && (profile?.role === 'admin' || isAdmin));
+  const isClientAdmin = isStrictAdmin;
 
   useEffect(() => {
     setMounted(true);
@@ -243,7 +244,7 @@ export default function GiocatoriPage() {
   };
 
   const handleDeletePlayer = async (playerId: string, name: string) => {
-    if (!isAdmin) {
+    if (!isStrictAdmin) {
       alert('Solo l\'amministratore può eliminare i giocatori.');
       return;
     }

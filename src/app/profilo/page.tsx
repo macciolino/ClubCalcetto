@@ -46,6 +46,8 @@ export default function ProfiloPage() {
     setMounted(true);
   }, []);
 
+  const isStrictAdmin = Boolean(mounted && user && (profile?.role === 'admin' || isAdmin));
+
   useEffect(() => {
     if (profile) {
       setFullName(profile.full_name || 'Giocatore');
@@ -325,12 +327,12 @@ export default function ProfiloPage() {
                 <span className="text-xs text-slate-400">Ruolo Piattaforma:</span>
                 <span
                   className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
-                    isAdmin
+                    isStrictAdmin
                       ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
                       : 'bg-blue-500/15 text-blue-300 border border-blue-500/30'
                   }`}
                 >
-                  {isAdmin ? '★ Amministratore' : 'Giocatore'}
+                  {isStrictAdmin ? '★ Amministratore' : 'Giocatore'}
                 </span>
                 <StatBadge score={profile.overall_rating || 6.0} size="md" />
               </div>

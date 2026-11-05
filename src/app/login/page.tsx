@@ -53,6 +53,8 @@ export default function LoginPage() {
     setMounted(true);
   }, []);
 
+  const isStrictAdmin = Boolean(mounted && user && (profile?.role === 'admin' || isAdmin));
+
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     setErrorMessage('');
@@ -257,9 +259,9 @@ export default function LoginPage() {
                   <div className="text-white font-bold text-sm">{profile.full_name}</div>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                      isAdmin ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-blue-500/20 text-blue-300'
+                      isStrictAdmin ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-blue-500/20 text-blue-300'
                     }`}>
-                      {isAdmin ? '★ Amministratore' : 'Giocatore'}
+                      {isStrictAdmin ? '★ Amministratore' : 'Giocatore'}
                     </span>
                     {profile.position && (
                       <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-[10px] font-mono">
@@ -288,7 +290,7 @@ export default function LoginPage() {
                 <span>Vai alle Presenze</span>
                 <ArrowRight className="h-4 w-4" />
               </Link>
-              <div className="grid grid-cols-2 gap-2">
+              <div className={isStrictAdmin ? "grid grid-cols-2 gap-2" : "flex flex-col gap-2"}>
                 <Link
                   href="/giocatori"
                   className="flex items-center justify-center gap-1.5 py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-xl text-xs transition-colors"
@@ -296,7 +298,7 @@ export default function LoginPage() {
                   <Users className="h-3.5 w-3.5 text-emerald-400" />
                   <span>Rosa Giocatori</span>
                 </Link>
-                {mounted && isAdmin && (
+                {isStrictAdmin && (
                   <Link
                     href="/admin"
                     className="flex items-center justify-center gap-1.5 py-2 px-3 bg-slate-800 hover:bg-slate-700 text-emerald-300 font-bold rounded-xl text-xs transition-colors"

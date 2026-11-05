@@ -68,7 +68,7 @@ import {
 
 export default function AdminPage() {
   const router = useRouter();
-  const { user, profile, isAdmin } = useAuth();
+  const { user, profile, isAdmin, isLoading } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [categories, setCategories] = useState<StatCategory[]>(() => getStoredCategories());
   const [players, setPlayers] = useState<Profile[]>(() => getStoredPlayers());
@@ -84,12 +84,15 @@ export default function AdminPage() {
   const upcomingDays = getUpcomingDays(7);
   const [activeDate, setActiveDate] = useState<string>(() => getOfficialMatchDate());
 
-  // Protezione Route: Reindirizza immediatamente i non-admin a /presenze
+  // Protezione Rotte Rigida: Se l'utente non è confermato al 100% come admin, redirect forzato immediato
   useEffect(() => {
-    if (mounted && !isAdmin) {
-      router.replace('/presenze');
+    if (mounted && !isLoading) {
+      const isStrictAdmin = Boolean(user && (profile?.role === 'admin' || isAdmin));
+      if (!isStrictAdmin) {
+        router.replace('/presenze');
+      }
     }
-  }, [mounted, isAdmin, router]);
+  }, [mounted, isLoading, user, profile, isAdmin, router]);
 
   useEffect(() => {
     setMounted(true);
@@ -288,7 +291,11 @@ export default function AdminPage() {
     );
   });
 
-  if (!mounted || !isAdmin) {
+  const isStrictAdmin = Boolean(mounted && !isLoading && user && (profile?.role === 'admin' || isAdmin));
+
+  // Non mostrare neppure per un millisecondo il contenuto della dashboard prima del redirect:
+  // mantieni lo stato di loading finché il ruolo non è confermato al 100% come 'admin'.
+  if (!isStrictAdmin) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center text-center p-6 space-y-4">
         <Loader2 className="h-8 w-8 text-emerald-400 animate-spin" />

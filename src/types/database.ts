@@ -7,7 +7,7 @@ export type Json =
   | Json[];
 
 // Ruoli Applicativi di Sistema (distinti dai ruoli tattici in campo)
-export type UserRole = 'admin' | 'player' | 'user';
+export type UserRole = 'admin' | 'player';
 
 // Posizioni Tattiche in Campo (Field Positions per il campetto e l'algoritmo)
 export type FieldPosition = 'Portiere' | 'Difensore' | 'Esterno' | 'Punta';

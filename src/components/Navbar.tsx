@@ -16,7 +16,7 @@ import {
 
 export function Navbar() {
   const pathname = usePathname();
-  const { user, profile, isAdmin, signOut, setMockRole } = useAuth();
+  const { user, profile, isAdmin, signOut } = useAuth();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -27,21 +27,22 @@ export function Navbar() {
     return null;
   }
 
-  // Durante l'SSR e il primo render di idratazione client, non includere link condizionati a localStorage/auth
-  // per garantire che l'HTML del server e del client siano identici al 100%.
-  const showAdminLink = mounted && isAdmin;
+  // Condizionale Rigido nella UI (Navbar e Menu):
+  // Il link o tab che porta a /admin viene renderizzato ESCLUSIVAMENTE se user && (profile.role === 'admin' || isAdmin).
+  // Per chiunque altro (role === 'player' o non profilato) il link non esiste affatto nel DOM.
+  const isStrictAdmin = Boolean(mounted && user && (profile?.role === 'admin' || isAdmin));
 
   const navItems = [
     { href: '/presenze', label: 'Presenze', icon: CalendarDays },
     { href: '/giocatori', label: 'Giocatori', icon: Users },
     { href: '/squadre', label: 'Squadre', icon: Trophy },
     { href: '/profilo', label: 'Profilo', icon: User },
-    ...(showAdminLink ? [{ href: '/admin', label: 'Admin', icon: ShieldAlert }] : []),
+    ...(isStrictAdmin ? [{ href: '/admin', label: 'Admin', icon: ShieldAlert }] : []),
   ];
 
   const displayName = mounted && profile?.full_name ? profile.full_name : 'Ospite';
-  const roleLabel = mounted && isAdmin ? 'Admin' : 'Giocatore';
-  const showAdminBadge = mounted && isAdmin;
+  const roleLabel = isStrictAdmin ? 'Admin' : 'Giocatore';
+  const showAdminBadge = isStrictAdmin;
   const avatarChar = mounted && profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : 'U';
   const avatarUrl = mounted ? profile?.avatar_url : null;
 
@@ -89,32 +90,6 @@ export function Navbar() {
 
           {/* User Info & Actions */}
           <div className="flex items-center gap-3">
-            {/* Ruolo Switcher per alternare vista Admin / Player (solo se montato) */}
-            {mounted && setMockRole && (
-              <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setMockRole('player')}
-                  className={`px-2 py-1 rounded transition-colors cursor-pointer ${
-                    !isAdmin ? 'bg-blue-600 text-white font-bold' : 'text-slate-400 hover:text-white'
-                  }`}
-                  title="Passa alla vista Giocatore (Player)"
-                >
-                  Player
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMockRole('admin')}
-                  className={`px-2 py-1 rounded transition-colors cursor-pointer ${
-                    isAdmin ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:text-white'
-                  }`}
-                  title="Passa alla vista Amministratore (Admin)"
-                >
-                  Admin
-                </button>
-              </div>
-            )}
-
             {/* Profilo Badge con link a /profilo */}
             <div className="flex items-center gap-2.5">
               <Link

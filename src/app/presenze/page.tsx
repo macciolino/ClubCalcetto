@@ -57,7 +57,7 @@ const INITIAL_DEMO_PLAYERS: Profile[] = [
     email: null,
     full_name: 'Luca B.',
     avatar_url: null,
-    role: 'user',
+    role: 'player',
     is_guest: true,
     stats: { Resistenza: 9, Velocità: 8, Difesa: 8, Tiro: 7, Passaggio: 7, Tecnica: 7, Fisico: 8, Dribbling: 7 },
     overall_rating: 7.8,
@@ -70,7 +70,7 @@ const INITIAL_DEMO_PLAYERS: Profile[] = [
     email: null,
     full_name: 'Andrea M.',
     avatar_url: null,
-    role: 'user',
+    role: 'player',
     is_guest: true,
     stats: { Resistenza: 7, Velocità: 9, Difesa: 6, Tiro: 8, Passaggio: 8, Tecnica: 9, Fisico: 6, Dribbling: 9 },
     overall_rating: 7.6,
@@ -83,7 +83,7 @@ const INITIAL_DEMO_PLAYERS: Profile[] = [
     email: null,
     full_name: 'Giovanni R.',
     avatar_url: null,
-    role: 'user',
+    role: 'player',
     is_guest: true,
     stats: { Resistenza: 6, Velocità: 6, Difesa: 9, Tiro: 6, Passaggio: 7, Tecnica: 6, Fisico: 9, Dribbling: 6 },
     overall_rating: 6.9,
@@ -96,7 +96,7 @@ const INITIAL_DEMO_PLAYERS: Profile[] = [
     email: null,
     full_name: 'Davide P.',
     avatar_url: null,
-    role: 'user',
+    role: 'player',
     is_guest: true,
     stats: { Resistenza: 8, Velocità: 7, Difesa: 7, Tiro: 8, Passaggio: 7, Tecnica: 7, Fisico: 7, Dribbling: 7 },
     overall_rating: 7.3,
@@ -109,7 +109,7 @@ const INITIAL_DEMO_PLAYERS: Profile[] = [
     email: null,
     full_name: 'Matteo C.',
     avatar_url: null,
-    role: 'user',
+    role: 'player',
     is_guest: true,
     stats: { Resistenza: 7, Velocità: 7, Difesa: 8, Tiro: 6, Passaggio: 8, Tecnica: 8, Fisico: 7, Dribbling: 7 },
     overall_rating: 7.3,
@@ -122,7 +122,7 @@ const INITIAL_DEMO_PLAYERS: Profile[] = [
     email: null,
     full_name: 'Francesco L.',
     avatar_url: null,
-    role: 'user',
+    role: 'player',
     is_guest: true,
     stats: { Resistenza: 6, Velocità: 7, Difesa: 6, Tiro: 9, Passaggio: 7, Tecnica: 8, Fisico: 6, Dribbling: 8 },
     overall_rating: 7.1,
@@ -135,7 +135,7 @@ const INITIAL_DEMO_PLAYERS: Profile[] = [
     email: null,
     full_name: 'Alessandro S.',
     avatar_url: null,
-    role: 'user',
+    role: 'player',
     is_guest: true,
     stats: { Resistenza: 9, Velocità: 8, Difesa: 7, Tiro: 7, Passaggio: 8, Tecnica: 8, Fisico: 8, Dribbling: 8 },
     overall_rating: 7.9,
@@ -148,7 +148,7 @@ const INITIAL_DEMO_PLAYERS: Profile[] = [
     email: null,
     full_name: 'Simone T.',
     avatar_url: null,
-    role: 'user',
+    role: 'player',
     is_guest: true,
     stats: { Resistenza: 8, Velocità: 6, Difesa: 8, Tiro: 6, Passaggio: 7, Tecnica: 7, Fisico: 8, Dribbling: 6 },
     overall_rating: 7.0,
@@ -161,7 +161,7 @@ const INITIAL_DEMO_PLAYERS: Profile[] = [
     email: null,
     full_name: 'Federico N.',
     avatar_url: null,
-    role: 'user',
+    role: 'player',
     is_guest: true,
     stats: { Resistenza: 7, Velocità: 8, Difesa: 7, Tiro: 8, Passaggio: 8, Tecnica: 8, Fisico: 7, Dribbling: 7 },
     overall_rating: 7.5,
@@ -174,7 +174,7 @@ const INITIAL_DEMO_PLAYERS: Profile[] = [
     email: null,
     full_name: 'Gabriele E. (Waitlist)',
     avatar_url: null,
-    role: 'user',
+    role: 'player',
     is_guest: true,
     stats: { Resistenza: 6, Velocità: 7, Difesa: 6, Tiro: 7, Passaggio: 6, Tecnica: 6, Fisico: 6, Dribbling: 6 },
     overall_rating: 6.3,
@@ -384,6 +384,9 @@ export default function PresenzePage() {
   const selectedStarters = selectedDayPresences.filter((p) => p.status === 'confirmed');
   const isMatchReady = selectedStarters.length >= 10;
 
+  // Isolamento Rigido Permessi Admin
+  const isStrictAdmin = Boolean(mounted && user && (profile?.role === 'admin' || isAdmin));
+
   // Giorni che hanno raggiunto il quorum dei 10 titolari
   const daysWithQuorum = days.filter((d) => {
     const dayP = presences.filter((p) => p.date === d.dateString);
@@ -420,7 +423,7 @@ export default function PresenzePage() {
       </div>
 
       {/* BANNER DECISIONE ADMIN: SE CI SONO PIÙ GIORNI CON 10 GIOCATORI */}
-      {daysWithQuorum.length > 1 && mounted && isAdmin && (
+      {daysWithQuorum.length > 1 && isStrictAdmin && (
         <div className="bg-gradient-to-r from-amber-950/80 via-slate-900 to-amber-950/80 border-2 border-amber-500/70 rounded-3xl p-5 shadow-2xl space-y-3.5 animate-in fade-in duration-300">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-amber-500/20 pb-3">
             <div className="flex items-center gap-3">
@@ -505,7 +508,7 @@ export default function PresenzePage() {
             </div>
           </div>
 
-          {mounted && isAdmin && (
+          {isStrictAdmin && (
             <Link
               href={`/squadre?date=${selectedDayString}`}
               className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-2xl text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/30 transition-all hover:scale-105"
@@ -620,7 +623,7 @@ export default function PresenzePage() {
                   presences={dayPresences}
                   allProfiles={profiles}
                   currentUserId={mounted ? (profile?.id || (user as any)?.uid || (user as any)?.id) : undefined}
-                  isAdmin={mounted && isAdmin}
+                  isAdmin={isStrictAdmin}
                   onTogglePresence={handleTogglePresence}
                   onAddGuestPresence={handleAddGuestPresence}
                   onRemovePresence={handleRemovePresence}
@@ -639,7 +642,7 @@ export default function PresenzePage() {
                   presences={dayPresences}
                   allProfiles={profiles}
                   currentUserId={mounted ? (profile?.id || (user as any)?.uid || (user as any)?.id) : undefined}
-                  isAdmin={mounted && isAdmin}
+                  isAdmin={isStrictAdmin}
                   onTogglePresence={handleTogglePresence}
                   onAddGuestPresence={handleAddGuestPresence}
                   onRemovePresence={handleRemovePresence}
