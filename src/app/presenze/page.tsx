@@ -260,7 +260,10 @@ export default function PresenzePage() {
       unsubProfiles();
       unsubMatchDate();
     };
-  }, [selectedDayString]);
+    // Solo al mount: prima dipendeva da selectedDayString e ad ogni cambio di giorno
+    // riportava la selezione alla data ufficiale (bloccando la scelta del giorno ai giocatori).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Sottoscrizione alle presenze per il giorno selezionato da Firestore
   useEffect(() => {
