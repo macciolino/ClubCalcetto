@@ -496,6 +496,31 @@ export async function saveMatchResult(input: MatchResultInput): Promise<void> {
   });
 }
 
+/**
+ * Deletes an archived match from the history and UNDOES what it added to players' W/D/L
+ * (using the profile_effects saved with the match), in one transaction.
+ * Presences, payments and generated teams of that day are not touched.
+ */
+export async function deleteMatchResult(date: string): Promise<void> {
+  if (!isFirebaseConfigured) return;
+  await runTransaction(db, async (tx) => {
+    const matchRef = doc(db, 'matches', date);
+    const matchSnap = await tx.get(matchRef);
+    if (!matchSnap.exists()) return;
+    const effects: Record<string, MatchOutcome> = (matchSnap.data() as Match).profile_effects || {};
+    const ids = Object.keys(effects);
+    const snaps = await Promise.all(ids.map((id) => tx.get(doc(db, 'profiles', id))));
+    snaps.forEach((snap, i) => {
+      if (!snap.exists()) return;
+      tx.update(snap.ref, {
+        [OUTCOME_FIELD[effects[ids[i]]]]: increment(-1),
+        updated_at: new Date().toISOString(),
+      });
+    });
+    tx.delete(matchRef);
+  });
+}
+
 // ==========================================
 // 6. SQUADRE GENERATE (Collection: 'generated_teams')
 // ==========================================

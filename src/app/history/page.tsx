@@ -2,10 +2,11 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { Match, Profile } from '@/types/database';
-import { subscribeMatches, subscribeProfiles } from '@/lib/firebase/firestoreService';
+import { subscribeMatches, subscribeProfiles, deleteMatchResult } from '@/lib/firebase/firestoreService';
+import { useAuth } from '@/lib/context/AuthContext';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { formatItalianDate } from '@/lib/utils/dateUtils';
-import { History, Trophy, Star, ListOrdered, CalendarDays, Coins } from 'lucide-react';
+import { History, Trophy, Star, ListOrdered, CalendarDays, Coins, Trash2, Loader2 } from 'lucide-react';
 
 interface PlayerLine {
   id: string;
@@ -66,6 +67,9 @@ function buildLeaderboard(matches: Match[], nameOf: (id: string, fallback?: stri
 }
 
 export default function HistoryPage() {
+  const { user, profile, isAdmin: ctxIsAdmin } = useAuth();
+  const isAdmin = Boolean(user && (ctxIsAdmin || profile?.role === 'admin'));
+  const [deleting, setDeleting] = useState<string | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -109,6 +113,37 @@ export default function HistoryPage() {
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleMatches, profiles, sortBy]);
+
+  // Cancellazione (solo admin): toglie anche le V/P/S che la partita aveva aggiunto ai profili
+  const handleDeleteMatch = async (m: Match) => {
+    if (!confirm(`Cancellare dallo storico la partita del ${formatItalianDate(m.match_date || m.id)}? Vittorie/pareggi/sconfitte di questa partita verranno tolti dai profili.`)) return;
+    setDeleting(m.id);
+    try {
+      await deleteMatchResult(m.match_date || m.id);
+    } catch (err) {
+      console.warn('[Storico] cancellazione non riuscita:', err);
+      alert('Cancellazione non riuscita. Riprova.');
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    const label = season === 'all' ? 'TUTTO lo storico' : `lo storico ${season}`;
+    const typed = prompt(`Stai per cancellare ${label} (${visibleMatches.length} partite). Le V/P/S verranno tolte dai profili. Scrivi CANCELLA per confermare.`);
+    if (typed?.trim().toUpperCase() !== 'CANCELLA') return;
+    setDeleting('all');
+    try {
+      for (const m of visibleMatches) {
+        await deleteMatchResult(m.match_date || m.id);
+      }
+    } catch (err) {
+      console.warn('[Storico] cancellazione non riuscita:', err);
+      alert('Cancellazione interrotta. Alcune partite potrebbero essere ancora presenti: riprova.');
+    } finally {
+      setDeleting(null);
+    }
+  };
 
   const totalGoals = visibleMatches.reduce((acc, m) => acc + (m.score_white ?? 0) + (m.score_black ?? 0), 0);
 
@@ -183,6 +218,20 @@ export default function HistoryPage() {
           <CalendarDays className="h-4 w-4" /> Partite
         </button>
       </div>
+
+      {isAdmin && visibleMatches.length > 0 && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={handleDeleteAll}
+            disabled={deleting !== null}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold border border-rose-500/40 text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 disabled:opacity-50"
+          >
+            {deleting === 'all' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+            {season === 'all' ? 'Cancella tutto lo storico' : `Cancella storico ${season}`}
+          </button>
+        </div>
+      )}
 
       {!loaded ? (
         <p className="text-sm text-slate-400">Caricamento…</p>
@@ -261,6 +310,18 @@ export default function HistoryPage() {
               <article key={m.id} className="bg-slate-900 border border-slate-800 rounded-3xl p-5 space-y-4">
                 <header className="flex items-center justify-between gap-2">
                   <h2 className="text-sm font-bold text-white">{formatItalianDate(m.match_date || m.id)}</h2>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteMatch(m)}
+                      disabled={deleting !== null}
+                      aria-label="Cancella partita dallo storico"
+                      className="ml-auto flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-rose-300 hover:bg-rose-500/15 disabled:opacity-50"
+                    >
+                      {deleting === m.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                      Cancella
+                    </button>
+                  )}
                   {m.total_cost ? (
                     <span className="flex items-center gap-1 text-xs text-slate-400">
                       <Coins className="h-3.5 w-3.5" />€{Number(m.total_cost).toFixed(0)} · €

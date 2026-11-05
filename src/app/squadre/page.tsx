@@ -5,7 +5,8 @@ import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/context/AuthContext';
 import { Profile, Presence, Match, GeneratedTeamRecord, SportField } from '@/types/database';
-import { getStoredFields } from '@/lib/services/fieldService';
+import { getStoredFields, subscribeSportFields } from '@/lib/services/fieldService';
+import { effectiveMatchCost, effectiveMatchTime, effectiveMatchLocation, fieldLabel } from '@/lib/utils/matchUtils';
 import { 
   subscribeMatch, 
   saveMatchFields,
@@ -57,21 +58,21 @@ function SquadreContent() {
   const isStrictAdmin = Boolean(mounted && user && (profile?.role === 'admin' || isAdmin));
   const isClientAdmin = isStrictAdmin;
 
-  const [fields] = useState<SportField[]>(() => getStoredFields());
+  const [fields, setFields] = useState<SportField[]>(() => getStoredFields());
+  const [defaultFieldId, setDefaultFieldId] = useState<string | undefined>(undefined);
   const [selectedDate, setSelectedDate] = useState<string>(
     dateParam || getOfficialMatchDate()
   );
   const [matchTime, setMatchTime] = useState('20:30');
-  const [matchLocation, setMatchLocation] = useState(
-    () => getStoredFields()[0]?.name || 'Centro Sportivo Green Club - Campo 3'
-  );
+  const [matchLocation, setMatchLocation] = useState('');
   const [totalCost, setTotalCost] = useState(80.0);
   // Valori standard decisi dall'admin (Admin > Campi & Regole) e partita salvata per la data
   const [standardCost, setStandardCost] = useState(80);
   const [standardTime, setStandardTime] = useState('20:30');
   const [savedMatch, setSavedMatch] = useState<Match | null>(null);
-  // true quando l'admin modifica ora/luogo/costo: le modifiche vengono salvate sulla partita
-  const matchInfoDirty = useRef(false);
+  // Campi modificati dall'admin e non ancora salvati sulla partita
+  const dirtyFields = useRef<Set<'cost' | 'time' | 'location'>>(new Set());
+  const markDirty = (f: 'cost' | 'time' | 'location') => dirtyFields.current.add(f);
 
   const [presences, setPresences] = useState<Presence[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -148,7 +149,7 @@ function SquadreContent() {
     if (!isFirebaseConfigured || !selectedDate) return;
     setPresences([]);
     setSavedMatch(null);
-    matchInfoDirty.current = false;
+    dirtyFields.current.clear();
     const unsubMatch = subscribeMatch(selectedDate, (m) => setSavedMatch(m));
     const unsubPres = subscribePresences(selectedDate, (pres) => setPresences(pres));
     return () => {
@@ -157,41 +158,65 @@ function SquadreContent() {
     };
   }, [selectedDate]);
 
-  // Costo e orario standard dell'admin
+  // Valori standard dell'admin (Admin > Campi & Regole) e campi sportivi, in tempo reale
   useEffect(() => {
     if (!isFirebaseConfigured) return;
-    const unsub = subscribeAppSettings((st) => {
+    const unsubSettings = subscribeAppSettings((st) => {
       if (st.standard_total_cost) setStandardCost(Number(st.standard_total_cost));
       if (st.standard_match_time) setStandardTime(st.standard_match_time);
+      setDefaultFieldId(st.default_field_id);
     });
-    return () => unsub();
+    const unsubFields = subscribeSportFields((list) => {
+      if (list && list.length > 0) setFields(list);
+    });
+    return () => {
+      unsubSettings();
+      unsubFields();
+    };
   }, []);
 
-  // Valori mostrati: quelli salvati sulla partita, altrimenti gli standard dell'admin
+  // Valori mostrati: personalizzati per questa partita dall'admin, altrimenti gli standard
   useEffect(() => {
-    if (matchInfoDirty.current) return; // non sovrascrivere mentre l'admin sta scrivendo
-    setTotalCost(Number(savedMatch?.total_cost || standardCost || 80));
-    setMatchTime(savedMatch?.match_time?.slice(0, 5) || standardTime || '20:30');
-    if (savedMatch?.location) setMatchLocation(savedMatch.location);
-  }, [savedMatch, standardCost, standardTime]);
+    const dirty = dirtyFields.current;
+    if (!dirty.has('cost')) setTotalCost(effectiveMatchCost(savedMatch, standardCost));
+    if (!dirty.has('time')) setMatchTime(effectiveMatchTime(savedMatch, standardTime));
+    if (!dirty.has('location')) setMatchLocation(effectiveMatchLocation(savedMatch, fields, defaultFieldId));
+  }, [savedMatch, standardCost, standardTime, fields, defaultFieldId]);
 
-  // Salvataggio automatico (solo admin) di ora, luogo e costo della partita
+  // Salvataggio automatico (solo admin) dei valori personalizzati per questa partita
   useEffect(() => {
-    if (!matchInfoDirty.current || !isClientAdmin || !selectedDate) return;
+    const dirty = dirtyFields.current;
+    if (dirty.size === 0 || !isClientAdmin || !selectedDate) return;
     const t = setTimeout(() => {
-      saveMatchFields(selectedDate, {
-        match_time: matchTime,
-        location: matchLocation,
-        total_cost: Number(totalCost) || standardCost,
-      })
-        .then(() => {
-          matchInfoDirty.current = false;
-        })
+      const patch: Partial<Match> = {};
+      if (dirty.has('cost')) {
+        patch.total_cost = Number(totalCost) || standardCost;
+        patch.cost_override = true;
+      }
+      if (dirty.has('time')) {
+        patch.match_time = matchTime;
+        patch.time_override = true;
+      }
+      if (dirty.has('location')) patch.location = matchLocation;
+      const saving = new Set(dirty);
+      saveMatchFields(selectedDate, patch)
+        .then(() => saving.forEach((f) => dirty.delete(f)))
         .catch((err) => console.warn('[Squadre] salvataggio partita non riuscito:', err));
     }, 800);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchTime, matchLocation, totalCost]);
+
+  // L'admin torna ai valori standard per questa partita
+  const handleResetToStandard = async () => {
+    dirtyFields.current.clear();
+    try {
+      await saveMatchFields(selectedDate, { cost_override: false, time_override: false });
+    } catch (err) {
+      console.warn('[Squadre] reset valori standard non riuscito:', err);
+    }
+  };
+  const hasCustomValues = Boolean(savedMatch?.cost_override || savedMatch?.time_override);
 
   // Calcola i 10 titolari specifici per la data selezionata
   const confirmedPresences = presences.filter((p) => p.date === selectedDate && p.status === 'confirmed');
@@ -247,13 +272,6 @@ function SquadreContent() {
       console.log('[TeamBalancer Debug] Generazione completata con successo!');
 
       // Salva match e squadre generate su Firebase Firestore se connesso
-      // Salva solo i dettagli: lo stato/risultato di una partita già chiusa non viene toccato
-      saveMatchFields(selectedDate, {
-        match_time: matchTime,
-        location: matchLocation,
-        total_cost: totalCost,
-      }).catch((err) => console.warn('[Squadre] salvataggio partita non riuscito:', err));
-
       saveGeneratedTeamsDoc({
         id: selectedDate,
         date: selectedDate,
@@ -409,7 +427,7 @@ function SquadreContent() {
               type="time"
               value={matchTime}
               onChange={(e) => {
-                matchInfoDirty.current = true;
+                markDirty('time');
                 setMatchTime(e.target.value);
               }}
               disabled={!isClientAdmin}
@@ -424,14 +442,17 @@ function SquadreContent() {
               <select
                 value={matchLocation}
                 onChange={(e) => {
-                  matchInfoDirty.current = true;
+                  markDirty('location');
                   setMatchLocation(e.target.value);
                 }}
                 disabled={!isClientAdmin}
                 className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-medium focus:outline-none focus:border-emerald-500 disabled:opacity-70 text-xs"
               >
+                {matchLocation && !fields.some((f) => fieldLabel(f) === matchLocation) && (
+                  <option value={matchLocation}>{matchLocation}</option>
+                )}
                 {fields.map((f) => (
-                  <option key={f.id} value={`${f.name} (${f.address})`}>
+                  <option key={f.id} value={fieldLabel(f)}>
                     {f.name}
                   </option>
                 ))}
@@ -441,7 +462,7 @@ function SquadreContent() {
                 type="text"
                 value={matchLocation}
                 onChange={(e) => {
-                  matchInfoDirty.current = true;
+                  markDirty('location');
                   setMatchLocation(e.target.value);
                 }}
                 disabled={!isClientAdmin}
@@ -457,7 +478,7 @@ function SquadreContent() {
             <NumberInput
               value={totalCost}
               onValueChange={(v) => {
-                matchInfoDirty.current = true;
+                markDirty('cost');
                 setTotalCost(v);
               }}
               decimal
@@ -466,6 +487,25 @@ function SquadreContent() {
             />
           </div>
         </div>
+
+        {isClientAdmin && (
+          <p className="text-xs text-slate-400">
+            {hasCustomValues ? (
+              <>
+                Questa partita ha costo/orario personalizzati.{' '}
+                <button
+                  type="button"
+                  onClick={handleResetToStandard}
+                  className="text-emerald-400 underline font-semibold"
+                >
+                  Usa valori standard
+                </button>
+              </>
+            ) : (
+              'Costo e orario seguono i valori standard (Admin → Campi & Regole). Se li modifichi qui valgono solo per questa partita.'
+            )}
+          </p>
+        )}
 
         {/* Pulsante di Calcolo / Generazione Squadre */}
         <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3">

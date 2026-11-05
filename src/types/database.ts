@@ -187,6 +187,9 @@ export interface Match {
   team_black?: MatchTeamPlayer[];
   /** Result already applied to each player's W/D/L counters (makes re-saving a result safe) */
   profile_effects?: Record<string, MatchOutcome>;
+  /** true only when an admin set a custom cost / time for THIS match (otherwise the standard settings apply) */
+  cost_override?: boolean;
+  time_override?: boolean;
   closed_at?: string;
   closed_by?: string;
   created_at: string;

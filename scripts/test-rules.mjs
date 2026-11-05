@@ -196,6 +196,14 @@ await expectAllowed('saves a match result + W/D/L increments in one transaction'
     tx.update(ref, { matches_won: increment(1), updated_at: 'z' });
     tx.set(doc(adminC.db, 'matches', TODAY), { id: TODAY, match_date: TODAY, status: 'completed', score_white: 3, score_black: 1, profile_effects: { [playerA.uid]: 'won' } }, { merge: true });
   }));
+await expectDenied('player deletes a match from history', () => deleteDoc(doc(playerA.db, 'matches', TODAY)));
+await expectAllowed('admin deletes a match from history and undoes the win', () =>
+  runTransaction(adminC.db, async (tx) => {
+    const ref = doc(adminC.db, 'profiles', playerA.uid);
+    await tx.get(ref);
+    tx.update(ref, { matches_won: increment(-1), updated_at: 'z' });
+    tx.delete(doc(adminC.db, 'matches', TODAY));
+  }));
 await expectAllowed('deletes a guest player', () => deleteDoc(doc(adminC.db, 'profiles', 'guest-1')));
 
 console.log('\nPlayer A after voting is open');

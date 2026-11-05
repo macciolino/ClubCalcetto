@@ -5,6 +5,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Profile, Presence, Match, GeneratedTeamRecord, MatchScorer, MatchAssist, MatchTeamPlayer } from '@/types/database';
 import { useAuth } from '@/lib/context/AuthContext';
+import { effectiveMatchCost } from '@/lib/utils/matchUtils';
 import { subscribeMatch, subscribeMatches, saveMatchResult } from '@/lib/firebase/firestoreService';
 import { CalendarDay, formatItalianDate } from '@/lib/utils/dateUtils';
 import { 
@@ -64,7 +65,7 @@ export function TabOverviewMatch({
   }, [activeDate]);
 
   // Quota: quella della partita se impostata, altrimenti il costo standard dell'admin
-  const totalMatchCost = Number(savedMatch?.total_cost || standardMatchCost || 80);
+  const totalMatchCost = effectiveMatchCost(savedMatch, standardMatchCost);
 
   // Titolari confermati per la data attiva
   const dayPresences = presences.filter((p) => p.date === activeDate);
