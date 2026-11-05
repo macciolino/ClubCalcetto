@@ -191,9 +191,23 @@ export interface Presence {
   date: string;
   player_id: string;
   status: PresenceStatus;
+  /** Hint only: the real status is computed by rankDayPresences() from the join order. */
   order_index: number;
   created_at: string;
+  /** Firestore server timestamp written on sign-up (presences created after the 2026-11 redesign). */
+  joined_at?: unknown;
+  /** Client-side only: joined_at converted to epoch millis (never written to Firestore). */
+  joined_ms?: number;
+  /** Set only by admins: force a player into the starters or onto the waitlist. */
+  admin_override?: 'starter' | 'waitlist' | null;
   profile?: Profile;
+}
+
+export interface CalendarSettings {
+  /** Last date (YYYY-MM-DD) players can sign up for beyond the current week. Empty = next week locked. */
+  open_until?: string;
+  updated_at?: string;
+  updated_by?: string;
 }
 
 export interface GeneratedTeamRecord {

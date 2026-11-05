@@ -15,16 +15,11 @@ import {
 } from '@/lib/firebase/firestoreService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { getStoredPlayers } from '@/lib/services/playerService';
-import { 
-  getStoredPresences, 
-  saveStoredPresences, 
-  getOfficialMatchDate, 
-  setOfficialMatchDate 
-} from '@/lib/services/presenceService';
+import { getOfficialMatchDate } from '@/lib/services/presenceService';
 import { balanceTeams, BalancedTeamsResult, getPlayerOverallRating } from '@/lib/algorithm/teamBalancer';
 import { VirtualPitch } from '@/components/VirtualPitch';
 import { StatBadge } from '@/components/StatBadge';
-import { getUpcomingDays, formatItalianDate } from '@/lib/utils/dateUtils';
+import { formatItalianDate } from '@/lib/utils/dateUtils';
 import { generateWhatsAppMessage, getWhatsAppShareUrl, copyToClipboard } from '@/lib/utils/whatsapp';
 import { toPng } from 'html-to-image';
 import { TacticalAnalysisResult } from '@/lib/gemini/client';
@@ -46,138 +41,6 @@ import {
   Bot
 } from 'lucide-react';
 
-const DEMO_10_PLAYERS: Profile[] = [
-  {
-    id: 'p-1',
-    user_id: 'u-1',
-    email: 'macciolino84@gmail.com',
-    full_name: 'Marco B.',
-    avatar_url: null,
-    role: 'admin',
-    is_guest: false,
-    stats: { Resistenza: 8, Velocità: 8, Difesa: 7, Tiro: 8, Passaggio: 8, Tecnica: 9, Fisico: 7, Dribbling: 8 },
-    overall_rating: 7.9,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'p-2',
-    user_id: null,
-    email: null,
-    full_name: 'Luca B.',
-    avatar_url: null,
-    role: 'player',
-    is_guest: true,
-    stats: { Resistenza: 9, Velocità: 8, Difesa: 8, Tiro: 7, Passaggio: 7, Tecnica: 7, Fisico: 8, Dribbling: 7 },
-    overall_rating: 7.8,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'p-3',
-    user_id: null,
-    email: null,
-    full_name: 'Andrea M.',
-    avatar_url: null,
-    role: 'player',
-    is_guest: true,
-    stats: { Resistenza: 7, Velocità: 9, Difesa: 6, Tiro: 8, Passaggio: 8, Tecnica: 9, Fisico: 6, Dribbling: 9 },
-    overall_rating: 7.6,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'p-4',
-    user_id: null,
-    email: null,
-    full_name: 'Giovanni R.',
-    avatar_url: null,
-    role: 'player',
-    is_guest: true,
-    stats: { Resistenza: 6, Velocità: 6, Difesa: 9, Tiro: 6, Passaggio: 7, Tecnica: 6, Fisico: 9, Dribbling: 6 },
-    overall_rating: 6.9,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'p-5',
-    user_id: null,
-    email: null,
-    full_name: 'Davide P.',
-    avatar_url: null,
-    role: 'player',
-    is_guest: true,
-    stats: { Resistenza: 8, Velocità: 7, Difesa: 7, Tiro: 8, Passaggio: 7, Tecnica: 7, Fisico: 7, Dribbling: 7 },
-    overall_rating: 7.3,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'p-6',
-    user_id: null,
-    email: null,
-    full_name: 'Matteo C.',
-    avatar_url: null,
-    role: 'player',
-    is_guest: true,
-    stats: { Resistenza: 7, Velocità: 7, Difesa: 8, Tiro: 6, Passaggio: 8, Tecnica: 8, Fisico: 7, Dribbling: 7 },
-    overall_rating: 7.3,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'p-7',
-    user_id: null,
-    email: null,
-    full_name: 'Francesco L.',
-    avatar_url: null,
-    role: 'player',
-    is_guest: true,
-    stats: { Resistenza: 6, Velocità: 7, Difesa: 6, Tiro: 9, Passaggio: 7, Tecnica: 8, Fisico: 6, Dribbling: 8 },
-    overall_rating: 7.1,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'p-8',
-    user_id: null,
-    email: null,
-    full_name: 'Alessandro S.',
-    avatar_url: null,
-    role: 'player',
-    is_guest: true,
-    stats: { Resistenza: 9, Velocità: 8, Difesa: 7, Tiro: 7, Passaggio: 8, Tecnica: 8, Fisico: 8, Dribbling: 8 },
-    overall_rating: 7.9,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'p-9',
-    user_id: null,
-    email: null,
-    full_name: 'Simone T.',
-    avatar_url: null,
-    role: 'player',
-    is_guest: true,
-    stats: { Resistenza: 8, Velocità: 6, Difesa: 8, Tiro: 6, Passaggio: 7, Tecnica: 7, Fisico: 8, Dribbling: 6 },
-    overall_rating: 7.0,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'p-10',
-    user_id: null,
-    email: null,
-    full_name: 'Federico N.',
-    avatar_url: null,
-    role: 'player',
-    is_guest: true,
-    stats: { Resistenza: 7, Velocità: 8, Difesa: 7, Tiro: 8, Passaggio: 8, Tecnica: 8, Fisico: 7, Dribbling: 7 },
-    overall_rating: 7.5,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-];
 
 function SquadreContent() {
   const searchParams = useSearchParams();
@@ -194,7 +57,7 @@ function SquadreContent() {
 
   const [fields] = useState<SportField[]>(() => getStoredFields());
   const [selectedDate, setSelectedDate] = useState<string>(
-    dateParam || getUpcomingDays(7)[0]?.dateString || '2026-10-28'
+    dateParam || getOfficialMatchDate()
   );
   const [matchTime, setMatchTime] = useState('20:30');
   const [matchLocation, setMatchLocation] = useState(
@@ -203,10 +66,8 @@ function SquadreContent() {
   const [totalCost, setTotalCost] = useState(80.0);
 
   const [presences, setPresences] = useState<Presence[]>([]);
-  const [profiles, setProfiles] = useState<Profile[]>(DEMO_10_PLAYERS);
-  const [balancedResult, setBalancedResult] = useState<BalancedTeamsResult | null>(() =>
-    balanceTeams(DEMO_10_PLAYERS)
-  );
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [balancedResult, setBalancedResult] = useState<BalancedTeamsResult | null>(null);
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
@@ -266,81 +127,28 @@ function SquadreContent() {
     };
   }, [selectedDate]);
 
-  // Caricamento presenze e profili per la data
+  // Profili: realtime da Firestore (la copia locale serve solo per il primo render)
   useEffect(() => {
-    function loadMatchAndPresenceData() {
-      try {
-        // Carica tutti i profili dallo store
-        const currentProfs = getStoredPlayers();
-        setProfiles(currentProfs);
+    setProfiles(getStoredPlayers());
+    if (!isFirebaseConfigured) return;
+    const unsubProfiles = subscribeProfiles((list) => setProfiles(list || []));
+    return () => unsubProfiles();
+  }, []);
 
-        // Carica presenze per la data
-        const currentPres = getStoredPresences(selectedDate);
-        setPresences(currentPres);
-
-        // Calcola i 10 titolari
-        const confirmed = currentPres.filter((p) => p.status === 'confirmed');
-        const starters = confirmed
-          .map((p) => currentProfs.find((prof) => prof.id === p.player_id || prof.user_id === p.player_id))
-          .filter((prof): prof is Profile => prof !== undefined);
-
-        if (starters.length >= 10) {
-          // AUTO-GENERA SUBITO LE SQUADRE BILANCIATE QUANDO CI SONO 10 TITOLARI!
-          const autoRes = balanceTeams(starters.slice(0, 10));
-          setBalancedResult(autoRes);
-        } else {
-          setBalancedResult(null);
-        }
-      } catch (err) {
-        console.warn('Load match error:', err);
+  // Dettagli partita e presenze (già ordinate: titolari 1..10, poi waitlist) per la data selezionata
+  useEffect(() => {
+    if (!isFirebaseConfigured || !selectedDate) return;
+    setPresences([]);
+    const unsubMatch = subscribeMatch(selectedDate, (m) => {
+      if (m) {
+        setMatchTime(m.match_time?.slice(0, 5) || '20:30');
+        setMatchLocation(m.location || 'Centro Sportivo Calcetto');
+        setTotalCost(Number(m.total_cost || 80.0));
       }
-    }
-
-    if (selectedDate) {
-      loadMatchAndPresenceData();
-    }
-
-    // Sottoscrizioni Firestore opzionali
-    let unsubMatch = () => {};
-    let unsubTeams = () => {};
-    let unsubPres = () => {};
-
-    if (isFirebaseConfigured && selectedDate) {
-      unsubMatch = subscribeMatch(selectedDate, (m) => {
-        if (m) {
-          setMatchTime(m.match_time?.slice(0, 5) || '20:30');
-          setMatchLocation(m.location || 'Centro Sportivo Calcetto');
-          setTotalCost(Number(m.total_cost || 80.0));
-        }
-      });
-
-      unsubPres = subscribePresences(selectedDate, (pres) => {
-        if (pres && pres.length > 0) {
-          setPresences(pres);
-          const currentProfs = getStoredPlayers();
-          const confirmed = pres.filter((p) => p.status === 'confirmed');
-          const starters = confirmed
-            .map((p) => currentProfs.find((prof) => prof.id === p.player_id || prof.user_id === p.player_id))
-            .filter((prof): prof is Profile => prof !== undefined);
-
-          if (starters.length >= 10) {
-            setBalancedResult(balanceTeams(starters.slice(0, 10)));
-          }
-        }
-      });
-    }
-
-    const handlePresChange = () => {
-      loadMatchAndPresenceData();
-    };
-
-    window.addEventListener('clubcalcetto_presences_changed', handlePresChange);
-    window.addEventListener('clubcalcetto_players_changed', handlePresChange);
+    });
+    const unsubPres = subscribePresences(selectedDate, (pres) => setPresences(pres));
     return () => {
-      window.removeEventListener('clubcalcetto_presences_changed', handlePresChange);
-      window.removeEventListener('clubcalcetto_players_changed', handlePresChange);
       unsubMatch();
-      unsubTeams();
       unsubPres();
     };
   }, [selectedDate]);
@@ -357,6 +165,14 @@ function SquadreContent() {
     })
     .filter((prof): prof is Profile => prof !== undefined);
 
+  // Genera in automatico le squadre bilanciate quando ci sono 10 titolari (si ricalcola se cambiano i titolari)
+  const startersKey = starterProfiles.slice(0, 10).map((p) => p.id).join('|');
+  useEffect(() => {
+    const ten = starterProfiles.slice(0, 10);
+    setBalancedResult(ten.length >= 10 ? balanceTeams(ten) : null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startersKey]);
+
   useEffect(() => {
     console.log(`[TeamBalancer Debug] Data: ${selectedDate}`, {
       totaliPresenze: presences.length,
@@ -365,27 +181,6 @@ function SquadreContent() {
       bottoneAbilitato: starterProfiles.length >= 10,
     });
   }, [selectedDate, presences.length, confirmedPresences.length, starterProfiles.length]);
-
-  // Helper per l'Admin: completa i 10 titolari con 1-click per questa data
-  const handleFillDemoStarters = () => {
-    const storedProfs = getStoredPlayers();
-    const ten = storedProfs.slice(0, 10);
-    const newPresences: Presence[] = ten.map((p, idx) => ({
-      id: `pres-${p.id}-${Date.now()}`,
-      date: selectedDate,
-      player_id: p.id,
-      status: 'confirmed',
-      order_index: idx + 1,
-      created_at: new Date().toISOString(),
-    }));
-    const allPres = getStoredPresences();
-    const otherDates = allPres.filter((p) => p.date !== selectedDate);
-    const updated = [...otherDates, ...newPresences];
-    saveStoredPresences(updated);
-    setPresences(newPresences);
-    const res = balanceTeams(ten);
-    setBalancedResult(res);
-  };
 
   // Esecuzione Algoritmo di Bilanciamento Squadre
   const handleGenerateTeams = () => {
@@ -566,7 +361,6 @@ function SquadreContent() {
               value={selectedDate}
               onChange={(e) => {
                 setSelectedDate(e.target.value);
-                setOfficialMatchDate(e.target.value);
               }}
               className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-medium focus:outline-none focus:border-emerald-500"
             />
@@ -639,16 +433,6 @@ function SquadreContent() {
               </span>
             )}
 
-            {isClientAdmin && starterProfiles.length < 10 && (
-              <button
-                type="button"
-                onClick={handleFillDemoStarters}
-                className="flex items-center gap-1.5 px-3 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-300 font-bold rounded-xl text-xs transition-colors cursor-pointer"
-              >
-                <Sparkles className="h-3.5 w-3.5 text-amber-300" />
-                <span>Completa 10 titolari per oggi</span>
-              </button>
-            )}
           </div>
 
           {isClientAdmin ? (

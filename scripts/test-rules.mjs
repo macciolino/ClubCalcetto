@@ -7,7 +7,7 @@
  */
 import { initializeApp } from 'firebase/app';
 import {
-  getFirestore, connectFirestoreEmulator, doc, getDoc, setDoc, deleteDoc, collection, getDocs,
+  getFirestore, connectFirestoreEmulator, doc, getDoc, setDoc, deleteDoc, collection, getDocs, serverTimestamp, updateDoc,
 } from 'firebase/firestore';
 import {
   getAuth, connectAuthEmulator, signInWithCredential, GoogleAuthProvider, createUserWithEmailAndPassword,
@@ -70,6 +70,25 @@ async function expectDenied(label, fn) {
   }
 }
 
+// ---------- dates (local time, same logic as the app) ----------
+const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const now = new Date();
+const thisSunday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + ((7 - now.getDay()) % 7));
+const plusDays = (n) => ymd(new Date(thisSunday.getFullYear(), thisSunday.getMonth(), thisSunday.getDate() + n));
+const TODAY = ymd(now);
+const THIS_SUNDAY = ymd(thisSunday);
+const NEXT_MONDAY = plusDays(1);
+const NEXT_SUNDAY = plusDays(7);
+const IN_TWO_WEEKS = plusDays(8);
+
+// A presence as the app writes it (doc id = date_player, joined_at = server time)
+const presence = (date, playerId, extra = {}) => ({
+  id: `${date}_${playerId}`, date, player_id: playerId, status: 'waitlist', order_index: 0,
+  created_at: 'x', joined_at: serverTimestamp(), ...extra,
+});
+const join = (client, date, playerId, extra) =>
+  setDoc(doc(client.db, 'presences', `${date}_${playerId}`), presence(date, playerId, extra));
+
 const baseProfile = (id, extra = {}) => ({
   id, user_id: id, email: `${id}@example.com`, full_name: id, avatar_url: null, role: 'player',
   position: 'Esterno', is_guest: false, stats: { Tiro: 6, Difesa: 6 }, overall_rating: 6,
@@ -95,8 +114,8 @@ await expectAllowed('super admin creates a legacy "user" profile for player B', 
   setDoc(doc(superAdmin.db, 'profiles', playerB.uid), baseProfile(playerB.uid, { role: 'user', matches_won: 5 })));
 await expectAllowed('super admin writes settings', () =>
   setDoc(doc(superAdmin.db, 'settings', 'official_match'), { date: '2026-11-10' }));
-await expectAllowed('super admin creates presence of player B', () =>
-  setDoc(doc(superAdmin.db, 'presences', 'pres-b'), { id: 'pres-b', date: '2026-11-10', player_id: playerB.uid, status: 'waitlist', order_index: 11, created_at: 'x' }));
+await expectAllowed('super admin signs up player B (today)', () => join(superAdmin, TODAY, playerB.uid));
+const presB = `${TODAY}_${playerB.uid}`;
 
 console.log('\nNot signed in');
 await expectDenied('anonymous reads profiles', () => getDocs(collection(anon.db, 'profiles')));
@@ -123,16 +142,25 @@ await expectDenied('promotes self to admin', () =>
 await expectDenied('edits player B\'s profile', () =>
   setDoc(doc(playerA.db, 'profiles', playerB.uid), { full_name: 'Hacked' }, { merge: true }));
 await expectDenied('deletes player B\'s profile', () => deleteDoc(doc(playerA.db, 'profiles', playerB.uid)));
-await expectAllowed('signs up for a match (own presence)', () =>
-  setDoc(doc(playerA.db, 'presences', 'pres-a'), { id: 'pres-a', date: '2026-11-10', player_id: playerA.uid, status: 'confirmed', order_index: 1, created_at: 'x' }));
-await expectDenied('signs up player B', () =>
-  setDoc(doc(playerA.db, 'presences', 'pres-fake'), { id: 'pres-fake', date: '2026-11-10', player_id: playerB.uid, status: 'confirmed', order_index: 2, created_at: 'x' }));
-await expectAllowed('promotes B from waitlist (status/order only — automatic substitution)', () =>
-  setDoc(doc(playerA.db, 'presences', 'pres-b'), { status: 'confirmed', order_index: 2 }, { merge: true }));
-await expectDenied('reassigns B\'s presence to someone else', () =>
-  setDoc(doc(playerA.db, 'presences', 'pres-b'), { player_id: playerA.uid }, { merge: true }));
-await expectDenied('deletes B\'s presence', () => deleteDoc(doc(playerA.db, 'presences', 'pres-b')));
-await expectAllowed('withdraws own presence', () => deleteDoc(doc(playerA.db, 'presences', 'pres-a')));
+await expectAllowed(`signs up for this week (${THIS_SUNDAY})`, () => join(playerA, THIS_SUNDAY, playerA.uid));
+await expectDenied('signs up for next week before voting is open', () => join(playerA, NEXT_MONDAY, playerA.uid));
+await expectDenied('signs up with a non-standard doc id', () =>
+  setDoc(doc(playerA.db, 'presences', 'pres-a'), presence(TODAY, playerA.uid, { id: 'pres-a' })));
+await expectDenied('signs up with a fake (client) join time to jump the queue', () =>
+  join(playerA, TODAY, playerA.uid, { joined_at: new Date('2020-01-01') }));
+await expectDenied('signs up with an admin override', () =>
+  join(playerA, TODAY, playerA.uid, { admin_override: 'starter' }));
+await expectDenied('signs up player B', () => join(playerA, THIS_SUNDAY, playerB.uid));
+await expectDenied('changes B status (no more client-side promotions)', () =>
+  updateDoc(doc(playerA.db, 'presences', presB), { status: 'confirmed', order_index: 1 }));
+await expectDenied('reassigns B presence to someone else', () =>
+  updateDoc(doc(playerA.db, 'presences', presB), { player_id: playerA.uid }));
+await expectDenied('forces self into the starters', () =>
+  updateDoc(doc(playerA.db, 'presences', `${THIS_SUNDAY}_${playerA.uid}`), { admin_override: 'starter' }));
+await expectDenied('deletes B presence', () => deleteDoc(doc(playerA.db, 'presences', presB)));
+await expectAllowed('withdraws own presence', () => deleteDoc(doc(playerA.db, 'presences', `${THIS_SUNDAY}_${playerA.uid}`)));
+await expectDenied('opens next week voting', () =>
+  setDoc(doc(playerA.db, 'settings', 'calendar'), { open_until: NEXT_SUNDAY }));
 for (const col of ['settings', 'stat_categories', 'matches', 'generated_teams', 'match_payments', 'sport_fields']) {
   await expectDenied(`writes ${col}`, () => setDoc(doc(playerA.db, col, 'hack'), { a: 1 }));
 }
@@ -154,9 +182,16 @@ await expectDenied('creates a guest as admin', () =>
   setDoc(doc(adminC.db, 'profiles', 'guest-2'), baseProfile('guest-2', { role: 'admin' })));
 await expectAllowed('writes settings', () =>
   setDoc(doc(adminC.db, 'settings', 'app_config'), { standard_total_cost: 80 }, { merge: true }));
-await expectAllowed('adds player B presence', () =>
-  setDoc(doc(adminC.db, 'presences', 'pres-b2'), { id: 'pres-b2', date: '2026-11-11', player_id: playerB.uid, status: 'confirmed', order_index: 1, created_at: 'x' }));
+await expectAllowed('adds player B on a locked day (next week)', () => join(adminC, NEXT_MONDAY, playerB.uid));
+await expectAllowed('forces player B into the starters', () =>
+  updateDoc(doc(adminC.db, 'presences', presB), { admin_override: 'starter' }));
+await expectAllowed('opens next week voting', () =>
+  setDoc(doc(adminC.db, 'settings', 'calendar'), { open_until: NEXT_SUNDAY }));
 await expectAllowed('deletes a guest player', () => deleteDoc(doc(adminC.db, 'profiles', 'guest-1')));
+
+console.log('\nPlayer A after voting is open');
+await expectAllowed(`signs up for next week (${NEXT_MONDAY})`, () => join(playerA, NEXT_MONDAY, playerA.uid));
+await expectDenied('signs up beyond the opened range', () => join(playerA, IN_TWO_WEEKS, playerA.uid));
 
 console.log('\nImpostor (email/password account using the super admin address, NOT verified)');
 await expectDenied('writes settings', () => setDoc(doc(impostor.db, 'settings', 'official_match'), { date: 'x' }));

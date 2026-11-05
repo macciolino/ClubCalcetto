@@ -74,19 +74,57 @@ service cloud.firestore {
     }
 
     // ---------- presences ----------
+    // Titolari / waitlist are COMPUTED by the app from the sign-up order (joined_at = server time),
+    // so a player only ever creates or deletes their OWN presence, never edits anyone else's.
+
+    function calendarPath() {
+      return /databases/$(database)/documents/settings/calendar;
+    }
+
+    // 'YYYY-MM-DD' -> timestamp (midnight UTC)
+    function dateToTimestamp(d) {
+      let parts = d.split('-');
+      return timestamp.date(int(parts[0]), int(parts[1]), int(parts[2]));
+    }
+
+    // Start of next week (Monday 00:00), using Italian time approximated as UTC+1
+    function nextMondayStart() {
+      let now = request.time + duration.value(1, 'h');
+      return now.date() + duration.value(8 - now.dayOfWeek(), 'd');
+    }
+
+    // Current week is always open; later days only up to settings/calendar.open_until (set by an admin)
+    function isDateOpenForPlayers(d) {
+      return dateToTimestamp(d) < nextMondayStart()
+        || (exists(calendarPath()) && d <= get(calendarPath()).data.get('open_until', ''));
+    }
+
+    function isValidNewPresence(presenceId) {
+      let data = request.resource.data;
+      return data.date is string
+        && data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && data.player_id is string
+        && presenceId == data.date + '_' + data.player_id   // one presence per player per day
+        && data.joined_at == request.time                   // queue position = server time, cannot be faked
+        && data.keys().hasOnly(['id', 'date', 'player_id', 'status', 'order_index', 'created_at', 'joined_at']);
+    }
+
     match /presences/{presenceId} {
       allow read: if signedIn();
 
-      // A player signs up / withdraws only themselves; admins manage everyone.
-      allow create: if isAdmin()
-        || (signedIn() && request.resource.data.player_id == request.auth.uid);
+      // Players sign up only themselves, only on open days. Admins can add anyone on any day.
+      allow create: if signedIn()
+        && isValidNewPresence(presenceId)
+        && (isAdmin()
+            || (request.resource.data.player_id == request.auth.uid
+                && isDateOpenForPlayers(request.resource.data.date)));
+
+      // Withdraw: own presence, or anyone's for admins (the waitlist moves up automatically)
       allow delete: if isAdmin()
         || (signedIn() && resource.data.player_id == request.auth.uid);
 
-      // TEMPORARY (until the presence redesign): the automatic waitlist promotion runs in the
-      // browser of whoever withdraws, so any signed-in user may change ONLY status/order_index.
-      allow update: if isAdmin()
-        || (signedIn() && onlyChanges(['status', 'order_index']));
+      // Only admins edit a presence (e.g. admin_override to force starter / waitlist)
+      allow update: if isAdmin();
     }
 
     // ---------- club data: everyone signed in reads, only admins write ----------

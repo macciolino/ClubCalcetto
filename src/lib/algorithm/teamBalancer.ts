@@ -61,7 +61,7 @@ export function calculateTeamSummary(team: Profile[]): TeamStatsSummary {
     defSum += Number(stats['Difesa'] || ovr);
     atkSum += Number(stats['Tiro'] || ovr);
     staSum += Number(stats['Resistenza'] || ovr);
-    tecSum += Number(stats['Tecnica'] || stats['Dribbling'] || ovr);
+    tecSum += Number(stats['Visione'] || stats['Tecnica'] || stats['Dribbling'] || ovr);
   });
 
   return {

@@ -17,6 +17,8 @@ interface PresenceCardProps {
   onAddGuestPresence?: (dateString: string, guestId: string) => void;
   onRemovePresence?: (presenceId: string) => void;
   isToggling?: boolean;
+  /** Day not open yet for players (next week before the admin opens voting) */
+  isLocked?: boolean;
 }
 
 export function PresenceCard({
@@ -29,6 +31,7 @@ export function PresenceCard({
   onAddGuestPresence,
   onRemovePresence,
   isToggling = false,
+  isLocked = false,
 }: PresenceCardProps) {
   const [mounted, setMounted] = useState(false);
 
@@ -242,7 +245,14 @@ export function PresenceCard({
 
       {/* Pulsante Azione Partecipazione */}
       <div className="mt-5 pt-3 border-t border-slate-800 flex flex-col gap-2">
-        {isCancelLocked ? (
+        {isLocked && !isUserPresent ? (
+          <div className="w-full py-2.5 px-3 rounded-xl bg-slate-800/60 border border-slate-700 text-slate-300 text-xs text-center flex items-center justify-center gap-2">
+            <Lock className="h-4 w-4 text-slate-400 flex-shrink-0" />
+            <span className="font-semibold text-[11px] leading-tight">
+              Votazioni non ancora aperte: l&apos;admin le apre per la settimana prossima.
+            </span>
+          </div>
+        ) : isCancelLocked ? (
           <div className="w-full py-2.5 px-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs text-center flex items-center justify-center gap-2">
             <Lock className="h-4 w-4 text-amber-400 flex-shrink-0" />
             <span className="font-semibold text-[11px] leading-tight">
@@ -254,7 +264,7 @@ export function PresenceCard({
             type="button"
             onClick={() => onTogglePresence(day.dateString)}
             disabled={isToggling}
-            className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer ${
+            className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer disabled:opacity-50 disabled:cursor-wait ${
               isUserPresent
                 ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30'
                 : isFull

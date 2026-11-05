@@ -13,15 +13,16 @@ import { TabClubConfigFields } from '@/components/admin/TabClubConfigFields';
 import { 
   subscribeProfiles, 
   subscribeStatCategories, 
-  subscribePresences, 
-  savePresenceDoc,
+  subscribePresencesRange,
+  joinPresence,
+  leavePresence,
+  setPresenceOverride,
   clearPresencesForDate, 
   saveProfileDoc, 
   deleteProfileDoc, 
   saveOfficialMatchDateDoc,
   subscribeAppSettings,
   saveAppSettingsDoc,
-  executeAtomicPresenceSubstitution,
   subscribeGeneratedTeams
 } from '@/lib/firebase/firestoreService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
@@ -32,13 +33,10 @@ import {
   saveStoredPlayers 
 } from '@/lib/services/playerService';
 import { 
-  getStoredPresences, 
-  saveStoredPresences, 
   getOfficialMatchDate, 
   setOfficialMatchDate, 
   getAppSettings, 
   saveAppSettings,
-  processPresenceRemovalWithAutoSubstitution 
 } from '@/lib/services/presenceService';
 import { 
   getStoredCategories, 
@@ -51,7 +49,7 @@ import {
   removeStoredField,
   subscribeSportFields 
 } from '@/lib/services/fieldService';
-import { getUpcomingDays } from '@/lib/utils/dateUtils';
+import { getCalendarDays } from '@/lib/utils/dateUtils';
 import { 
   ShieldAlert, 
   LayoutDashboard, 
@@ -76,11 +74,11 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
 
   // Stato Dati Globali
-  const upcomingDays = getUpcomingDays(7);
+  const [upcomingDays] = useState(() => getCalendarDays());
   const [activeDate, setActiveDate] = useState<string>(() => getOfficialMatchDate());
   const [categories, setCategories] = useState<StatCategory[]>(() => getStoredCategories());
   const [players, setPlayers] = useState<Profile[]>(() => getStoredPlayers());
-  const [presences, setPresences] = useState<Presence[]>(() => getStoredPresences());
+  const [presences, setPresences] = useState<Presence[]>([]);
   const [fields, setFields] = useState<SportField[]>(() => getStoredFields());
   const [appSettings, setAppSettingsState] = useState(() => getAppSettings());
   const [generatedTeams, setGeneratedTeams] = useState<GeneratedTeamRecord | null>(null);
@@ -107,12 +105,10 @@ export default function AdminPage() {
     setMounted(true);
     setPlayers(getStoredPlayers());
     setCategories(getStoredCategories());
-    setPresences(getStoredPresences());
     setFields(getStoredFields());
     setAppSettingsState(getAppSettings());
 
     const handlePlayers = () => setPlayers(getStoredPlayers());
-    const handlePres = () => setPresences(getStoredPresences());
     const handleCats = () => setCategories(getStoredCategories());
     const handleFields = () => setFields(getStoredFields());
     const handleSettings = (e: any) => {
@@ -125,7 +121,6 @@ export default function AdminPage() {
     };
 
     window.addEventListener('clubcalcetto_players_changed', handlePlayers);
-    window.addEventListener('clubcalcetto_presences_changed', handlePres);
     window.addEventListener('clubcalcetto_categories_changed', handleCats);
     window.addEventListener('clubcalcetto_fields_changed', handleFields);
     window.addEventListener('clubcalcetto_settings_changed', handleSettings);
@@ -160,7 +155,6 @@ export default function AdminPage() {
 
     return () => {
       window.removeEventListener('clubcalcetto_players_changed', handlePlayers);
-      window.removeEventListener('clubcalcetto_presences_changed', handlePres);
       window.removeEventListener('clubcalcetto_categories_changed', handleCats);
       window.removeEventListener('clubcalcetto_fields_changed', handleFields);
       window.removeEventListener('clubcalcetto_settings_changed', handleSettings);
@@ -176,16 +170,14 @@ export default function AdminPage() {
   useEffect(() => {
     if (!isFirebaseConfigured) return;
 
-    const unsubPres = subscribePresences(activeDate, (remotePres) => {
-      if (remotePres && remotePres.length > 0) {
-        setPresences((prev) => {
-          const others = prev.filter((p) => p.date !== activeDate);
-          const merged = [...others, ...remotePres];
-          saveStoredPresences(merged);
-          return merged;
-        });
-      }
-    });
+    // Presenze del calendario visibile (+ la data attiva, anche se passata), in tempo reale
+    const first = upcomingDays[0]?.dateString || activeDate;
+    const last = upcomingDays[upcomingDays.length - 1]?.dateString || activeDate;
+    const unsubPres = subscribePresencesRange(
+      activeDate < first ? activeDate : first,
+      activeDate > last ? activeDate : last,
+      (list) => setPresences(list)
+    );
 
     const unsubTeams = subscribeGeneratedTeams(activeDate, (record) => {
       setGeneratedTeams(record);
@@ -215,82 +207,33 @@ export default function AdminPage() {
   };
 
   // Handlers Tab 2: Presenze & Time-lock
+  const runPresenceAction = async (action: () => Promise<void>, errorMsg: string) => {
+    try {
+      await action();
+    } catch (err) {
+      console.warn('[Admin] presence action error:', err);
+      alert(errorMsg);
+    }
+  };
+
+  // La prima riserva in attesa subentra da sola: l'ordine è calcolato dall'iscrizione
   const handleRemovePresence = async (presenceId: string, playerName: string) => {
     if (!confirm(`Rimuovere la presenza di "${playerName}"? La prima riserva in attesa subentrerà in automatico.`)) {
       return;
     }
-    const { updatedPresences, promotedPresences } = processPresenceRemovalWithAutoSubstitution(
-      activeDate,
-      presenceId,
-      presences
-    );
-    setPresences(updatedPresences);
-    await executeAtomicPresenceSubstitution(presenceId, promotedPresences);
+    await runPresenceAction(() => leavePresence(presenceId), 'Impossibile rimuovere la presenza.');
   };
 
-  const handlePromoteWaitlistToStarter = (presenceId: string) => {
-    const target = presences.find((p) => p.id === presenceId);
-    if (!target) return;
+  const handlePromoteWaitlistToStarter = (presenceId: string) =>
+    runPresenceAction(() => setPresenceOverride(presenceId, 'starter'), 'Impossibile promuovere il giocatore.');
 
-    const dayOther = presences.filter((p) => p.date === activeDate && p.id !== presenceId);
-    const dayConfirmed = dayOther.filter((p) => p.status === 'confirmed');
-    const newOrder = dayConfirmed.length + 1;
+  const handleDemoteStarterToWaitlist = (presenceId: string) =>
+    runPresenceAction(() => setPresenceOverride(presenceId, 'waitlist'), 'Impossibile spostare il giocatore in waitlist.');
 
-    const updated: Presence = {
-      ...target,
-      status: 'confirmed',
-      order_index: newOrder,
-    };
-
-    const newAll = presences.map((p) => (p.id === presenceId ? updated : p));
-    saveStoredPresences(newAll);
-    setPresences(newAll);
-    savePresenceDoc(updated);
-  };
-
-  const handleDemoteStarterToWaitlist = (presenceId: string) => {
-    const target = presences.find((p) => p.id === presenceId);
-    if (!target) return;
-
-    const dayOther = presences.filter((p) => p.date === activeDate && p.id !== presenceId);
-    const maxOrder = Math.max(10, ...dayOther.map((p) => p.order_index || 0));
-
-    const updated: Presence = {
-      ...target,
-      status: 'waitlist',
-      order_index: maxOrder + 1,
-    };
-
-    const newAll = presences.map((p) => (p.id === presenceId ? updated : p));
-    saveStoredPresences(newAll);
-    setPresences(newAll);
-    savePresenceDoc(updated);
-  };
-
-  const handleAddGuestPresence = (dateString: string, guestId: string) => {
-    const dayExisting = presences.filter((p) => p.date === dateString);
-    const newOrderIndex = dayExisting.length + 1;
-    const status = newOrderIndex <= 10 ? 'confirmed' : 'waitlist';
-
-    const newPresenceItem: Presence = {
-      id: `pres-${Date.now()}`,
-      date: dateString,
-      player_id: guestId,
-      status,
-      order_index: newOrderIndex,
-      created_at: new Date().toISOString(),
-    };
-
-    const updated = [...presences, newPresenceItem];
-    saveStoredPresences(updated);
-    setPresences(updated);
-    savePresenceDoc(newPresenceItem);
-  };
+  const handleAddGuestPresence = (dateString: string, guestId: string) =>
+    runPresenceAction(() => joinPresence(dateString, guestId), 'Impossibile aggiungere il giocatore (forse è già iscritto).');
 
   const handleResetPresences = async (dateString: string) => {
-    const updated = presences.filter((p) => p.date !== dateString);
-    saveStoredPresences(updated);
-    setPresences(updated);
     await clearPresencesForDate(dateString);
   };
 

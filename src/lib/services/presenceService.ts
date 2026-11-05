@@ -1,67 +1,77 @@
 'use client';
 
-import { Presence, Profile, AppSettings } from '@/types/database';
-import { getUpcomingDays } from '@/lib/utils/dateUtils';
-import { DEFAULT_PLAYERS, getStoredPlayers } from './playerService';
+import { Presence, AppSettings } from '@/types/database';
+import { toDateString } from '@/lib/utils/dateUtils';
 
-const PRESENCES_STORAGE_KEY = 'clubcalcetto_presences_list';
-const SETTINGS_STORAGE_KEY = 'clubcalcetto_app_settings';
 const MATCH_DATE_STORAGE_KEY = 'clubcalcetto_official_match_date';
+const SETTINGS_STORAGE_KEY = 'clubcalcetto_app_settings';
+const LEGACY_PRESENCES_STORAGE_KEY = 'clubcalcetto_presences_list';
 
-const TODAY_DATE = getUpcomingDays(7)[0]?.dateString || '2026-10-28';
+const TODAY_DATE = toDateString(new Date());
 
-export const DEFAULT_PRESENCES: Presence[] = DEFAULT_PLAYERS.map((p, idx) => ({
-  id: `pres-${p.id}`,
-  date: TODAY_DATE,
-  player_id: p.id,
-  status: (idx < 10 ? 'confirmed' : 'waitlist') as 'confirmed' | 'waitlist',
-  order_index: idx + 1,
-  created_at: new Date().toISOString(),
-}));
+export const MAX_STARTERS = 10;
 
-// ==========================================
-// 1. GESTIONE PRESENZE
-// ==========================================
-
-export function getStoredPresences(date?: string): Presence[] {
-  if (typeof window === 'undefined') {
-    return date ? DEFAULT_PRESENCES.filter((p) => p.date === date) : DEFAULT_PRESENCES;
-  }
+// Presences now live ONLY in Firestore (realtime). Drop the old local copy, which could contain demo data.
+if (typeof window !== 'undefined') {
   try {
-    const raw = localStorage.getItem(PRESENCES_STORAGE_KEY);
-    if (raw) {
-      const parsed: Presence[] = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return date ? parsed.filter((p) => p.date === date) : parsed;
-      }
-    }
-  } catch (err) {
-    console.warn('Errore lettura presenze da localStorage:', err);
-  }
-
-  // Se non presente, inizializza con i 10 di default per la prima giornata
-  saveStoredPresences(DEFAULT_PRESENCES);
-  return date ? DEFAULT_PRESENCES.filter((p) => p.date === date) : DEFAULT_PRESENCES;
+    localStorage.removeItem(LEGACY_PRESENCES_STORAGE_KEY);
+  } catch {}
 }
 
-export function saveStoredPresences(presences: Presence[]) {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(PRESENCES_STORAGE_KEY, JSON.stringify(presences));
-    window.dispatchEvent(new Event('clubcalcetto_presences_changed'));
-  } catch (err) {
-    console.warn('Errore salvataggio presenze in localStorage:', err);
-  }
+// ==========================================
+// 1. ORDINE PRESENZE (titolari / waitlist)
+// ==========================================
+//
+// Status and position are COMPUTED from the sign-up order, never trusted from the stored fields:
+//  - presences created before the redesign (no joined_at) keep their historical order_index and come first;
+//  - newer ones are ordered by joined_at (Firestore server time, so nobody can jump the queue);
+//  - an admin override can force a player into the starters or onto the waitlist.
+// Withdrawing simply deletes one's own presence: the first in waitlist moves up automatically.
+
+function createdMillis(p: Presence): number {
+  const t = new Date(p.created_at || 0).getTime();
+  return Number.isFinite(t) ? t : 0;
 }
 
-export function resetStoredPresences(): Presence[] {
-  if (typeof window !== 'undefined') {
-    try {
-      localStorage.removeItem(PRESENCES_STORAGE_KEY);
-      window.dispatchEvent(new Event('clubcalcetto_presences_changed'));
-    } catch {}
+export function rankDayPresences(dayPresences: Presence[]): Presence[] {
+  const legacy = dayPresences
+    .filter((p) => typeof p.joined_ms !== 'number')
+    .sort((a, b) => (a.order_index ?? 999) - (b.order_index ?? 999) || createdMillis(a) - createdMillis(b));
+  const modern = dayPresences
+    .filter((p) => typeof p.joined_ms === 'number')
+    .sort((a, b) => (a.joined_ms as number) - (b.joined_ms as number) || a.id.localeCompare(b.id));
+  const queue = [...legacy, ...modern];
+  const ordered = [
+    ...queue.filter((p) => p.admin_override === 'starter'),
+    ...queue.filter((p) => !p.admin_override),
+    ...queue.filter((p) => p.admin_override === 'waitlist'),
+  ];
+  return ordered.map((p, idx) => ({
+    ...p,
+    status: idx < MAX_STARTERS ? 'confirmed' : 'waitlist',
+    order_index: idx + 1,
+  }));
+}
+
+/** Ranks a list that may contain several dates (each date ranked on its own). */
+export function rankPresencesByDate(presences: Presence[]): Presence[] {
+  const byDate = new Map<string, Presence[]>();
+  for (const p of presences) {
+    const list = byDate.get(p.date) || [];
+    list.push(p);
+    byDate.set(p.date, list);
   }
-  return [];
+  return Array.from(byDate.values()).flatMap(rankDayPresences);
+}
+
+/**
+ * Who would be promoted from the waitlist if `presenceId` were removed (used for notifications).
+ */
+export function getPromotedOnRemoval(dayPresences: Presence[], presenceId: string): Presence[] {
+  const before = rankDayPresences(dayPresences);
+  const after = rankDayPresences(dayPresences.filter((p) => p.id !== presenceId));
+  const wasWaitlist = new Set(before.filter((p) => p.status === 'waitlist').map((p) => p.id));
+  return after.filter((p) => p.status === 'confirmed' && wasWaitlist.has(p.id));
 }
 
 // ==========================================
@@ -159,99 +169,4 @@ export function isTimelockActive(
   }
 
   return { locked: false };
-}
-
-/**
- * Rimuove un giocatore confermato o in attesa per una determinata data.
- * Se il giocatore rimosso era un titolare (order_index <= 10 o status === 'confirmed')
- * e c'è almeno un giocatore in lista d'attesa (wishlist), il primo in coda ordinato
- * rigorosamente per iscrizione (joinedAt / created_at ASC) viene promosso
- * AUTOMATICAMENTE a titolare confermato in modo silenzioso e trasparente.
- */
-export function processPresenceRemovalWithAutoSubstitution(
-  date: string,
-  presenceIdToRemove: string,
-  currentPresences?: Presence[]
-): {
-  updatedPresences: Presence[];
-  promotedPresences: Presence[];
-} {
-  const basePresences = (currentPresences && currentPresences.length > 0)
-    ? currentPresences
-    : getStoredPresences();
-
-  // Trova la presenza da rimuovere (cercando per id o per player_id)
-  const target = basePresences.find(
-    (p) => (p.id === presenceIdToRemove || p.player_id === presenceIdToRemove) && p.date === date
-  ) || basePresences.find(
-    (p) => p.id === presenceIdToRemove || p.player_id === presenceIdToRemove
-  );
-
-  if (!target) {
-    console.warn('[AutoSub] Presenza da rimuovere non trovata:', presenceIdToRemove);
-    return { updatedPresences: basePresences, promotedPresences: [] };
-  }
-
-  const targetDate = target.date || date;
-  // Tutte le presenze escluso il giocatore rimosso
-  const remainingAll = basePresences.filter((p) => p.id !== target.id);
-  
-  // Presenze rimaste per questa specifica giornata
-  const dayPresences = remainingAll.filter((p) => p.date === targetDate);
-
-  // Titolari confermati rimasti
-  const confirmedList = dayPresences
-    .filter((p) => p.status === 'confirmed')
-    .sort((a, b) => (a.order_index ?? 999) - (b.order_index ?? 999));
-
-  // Coda wishlist ordinata rigidamente per data di iscrizione (joinedAt ASC) e poi ordine
-  const waitlistList = dayPresences
-    .filter((p) => p.status === 'waitlist')
-    .sort((a, b) => {
-      const timeA = new Date(a.created_at || 0).getTime();
-      const timeB = new Date(b.created_at || 0).getTime();
-      if (timeA !== timeB) return timeA - timeB;
-      return (a.order_index ?? 999) - (b.order_index ?? 999);
-    });
-
-  const wasStarter = target.status === 'confirmed' || (target.order_index && target.order_index <= 10);
-  const promotedPresences: Presence[] = [];
-
-  // Se è stato rimosso un titolare (o abbiamo meno di 10 titolari) e ci sono riserve in lista d'attesa:
-  if (wasStarter && confirmedList.length < 10 && waitlistList.length > 0) {
-    const spotsToFill = 10 - confirmedList.length;
-    const candidates = waitlistList.splice(0, spotsToFill);
-
-    for (const sub of candidates) {
-      const promoted: Presence = {
-        ...sub,
-        status: 'confirmed',
-      };
-      confirmedList.push(promoted);
-      promotedPresences.push(promoted);
-    }
-  }
-
-  // Riassegna gli indici rigorosamente: 1..10 per i titolari confermati, 11..N per le riserve in waitlist
-  const reindexedConfirmed: Presence[] = confirmedList.map((p, idx) => ({
-    ...p,
-    order_index: idx + 1,
-    status: 'confirmed' as const,
-  }));
-
-  const reindexedWaitlist: Presence[] = waitlistList.map((p, idx) => ({
-    ...p,
-    order_index: reindexedConfirmed.length + idx + 1,
-    status: 'waitlist' as const,
-  }));
-
-  const finalDayPresences = [...reindexedConfirmed, ...reindexedWaitlist];
-
-  const finalPresences = [
-    ...remainingAll.filter((p) => p.date !== targetDate),
-    ...finalDayPresences,
-  ];
-
-  saveStoredPresences(finalPresences);
-  return { updatedPresences: finalPresences, promotedPresences };
 }

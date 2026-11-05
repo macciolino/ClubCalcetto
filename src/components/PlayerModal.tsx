@@ -1,5 +1,6 @@
 'use client';
 
+import { getStatValue } from '@/lib/utils/statUtils';
 import React, { useState, useEffect } from 'react';
 import { Profile, StatCategory, FieldPosition, FIELD_POSITIONS, STAT_CANONICAL_ORDER } from '@/types/database';
 import { addStoredPlayer, updateStoredPlayer } from '@/lib/services/playerService';
@@ -56,7 +57,7 @@ export function PlayerModal({
 
       const initialStats: Record<string, number> = {};
       statCategories.forEach((cat) => {
-        initialStats[cat.name] = Number(playerToEdit.stats?.[cat.name] ?? cat.default_value ?? 6);
+        initialStats[cat.name] = Number(getStatValue(playerToEdit.stats, cat.name, cat.default_value ?? 6));
       });
       setStats(initialStats);
     } else {

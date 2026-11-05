@@ -21,212 +21,25 @@ export function getPlayerMatchRecord(p: Profile): PlayerMatchRecord {
   return { won, drawn, lost, total, winRate, points };
 }
 
-export const DEFAULT_PLAYERS: Profile[] = [
-  {
-    id: 'p-1',
-    user_id: 'u-1',
-    email: 'macciolino84@gmail.com',
-    full_name: 'Marco B.',
-    avatar_url: null,
-    role: 'admin',
-    position: 'Esterno',
-    is_guest: false,
-    stats: { Fisico: 7, Velocità: 8, Tiro: 8, Difesa: 7, Passaggio: 8, Resistenza: 8, Tecnica: 9, Dribbling: 8 },
-    overall_rating: 7.9,
-    matches_won: 15,
-    matches_drawn: 4,
-    matches_lost: 5,
-    created_at: '2026-10-01T10:00:00Z',
-    updated_at: '2026-10-01T10:00:00Z',
-  },
-  {
-    id: 'p-2',
-    user_id: null,
-    email: null,
-    full_name: 'Luca B.',
-    avatar_url: null,
-    role: 'player',
-    position: 'Difensore',
-    is_guest: true,
-    stats: { Fisico: 8, Velocità: 8, Tiro: 7, Difesa: 8, Passaggio: 7, Resistenza: 9, Tecnica: 7, Dribbling: 7 },
-    overall_rating: 7.8,
-    matches_won: 13,
-    matches_drawn: 3,
-    matches_lost: 7,
-    created_at: '2026-10-02T10:00:00Z',
-    updated_at: '2026-10-02T10:00:00Z',
-  },
-  {
-    id: 'p-3',
-    user_id: null,
-    email: null,
-    full_name: 'Andrea M.',
-    avatar_url: null,
-    role: 'player',
-    position: 'Punta',
-    is_guest: true,
-    stats: { Fisico: 6, Velocità: 9, Tiro: 8, Difesa: 6, Passaggio: 8, Resistenza: 7, Tecnica: 9, Dribbling: 9 },
-    overall_rating: 7.6,
-    matches_won: 12,
-    matches_drawn: 5,
-    matches_lost: 6,
-    created_at: '2026-10-03T10:00:00Z',
-    updated_at: '2026-10-03T10:00:00Z',
-  },
-  {
-    id: 'p-4',
-    user_id: null,
-    email: null,
-    full_name: 'Giovanni R.',
-    avatar_url: null,
-    role: 'player',
-    position: 'Difensore',
-    is_guest: true,
-    stats: { Fisico: 9, Velocità: 6, Tiro: 6, Difesa: 9, Passaggio: 7, Resistenza: 6, Tecnica: 6, Dribbling: 6 },
-    overall_rating: 6.9,
-    matches_won: 9,
-    matches_drawn: 6,
-    matches_lost: 8,
-    created_at: '2026-10-04T10:00:00Z',
-    updated_at: '2026-10-04T10:00:00Z',
-  },
-  {
-    id: 'p-5',
-    user_id: null,
-    email: null,
-    full_name: 'Davide P.',
-    avatar_url: null,
-    role: 'player',
-    position: 'Esterno',
-    is_guest: true,
-    stats: { Fisico: 7, Velocità: 7, Tiro: 8, Difesa: 7, Passaggio: 7, Resistenza: 8, Tecnica: 7, Dribbling: 7 },
-    overall_rating: 7.3,
-    matches_won: 11,
-    matches_drawn: 4,
-    matches_lost: 8,
-    created_at: '2026-10-05T10:00:00Z',
-    updated_at: '2026-10-05T10:00:00Z',
-  },
-  {
-    id: 'p-6',
-    user_id: null,
-    email: null,
-    full_name: 'Matteo C.',
-    avatar_url: null,
-    role: 'player',
-    position: 'Portiere',
-    is_guest: true,
-    stats: { Fisico: 7, Velocità: 7, Tiro: 6, Difesa: 8, Passaggio: 8, Resistenza: 7, Tecnica: 8, Dribbling: 7 },
-    overall_rating: 7.3,
-    matches_won: 10,
-    matches_drawn: 5,
-    matches_lost: 7,
-    created_at: '2026-10-06T10:00:00Z',
-    updated_at: '2026-10-06T10:00:00Z',
-  },
-  {
-    id: 'p-7',
-    user_id: null,
-    email: null,
-    full_name: 'Francesco L.',
-    avatar_url: null,
-    role: 'player',
-    position: 'Punta',
-    is_guest: true,
-    stats: { Fisico: 6, Velocità: 7, Tiro: 9, Difesa: 6, Passaggio: 7, Resistenza: 6, Tecnica: 8, Dribbling: 8 },
-    overall_rating: 7.1,
-    matches_won: 10,
-    matches_drawn: 3,
-    matches_lost: 9,
-    created_at: '2026-10-07T10:00:00Z',
-    updated_at: '2026-10-07T10:00:00Z',
-  },
-  {
-    id: 'p-8',
-    user_id: null,
-    email: null,
-    full_name: 'Alessandro S.',
-    avatar_url: null,
-    role: 'player',
-    position: 'Esterno',
-    is_guest: true,
-    stats: { Fisico: 8, Velocità: 8, Tiro: 7, Difesa: 7, Passaggio: 8, Resistenza: 9, Tecnica: 8, Dribbling: 8 },
-    overall_rating: 7.9,
-    matches_won: 14,
-    matches_drawn: 2,
-    matches_lost: 6,
-    created_at: '2026-10-08T10:00:00Z',
-    updated_at: '2026-10-08T10:00:00Z',
-  },
-  {
-    id: 'p-9',
-    user_id: null,
-    email: null,
-    full_name: 'Simone T.',
-    avatar_url: null,
-    role: 'player',
-    position: 'Difensore',
-    is_guest: true,
-    stats: { Fisico: 8, Velocità: 6, Tiro: 6, Difesa: 8, Passaggio: 7, Resistenza: 8, Tecnica: 7, Dribbling: 6 },
-    overall_rating: 7.0,
-    matches_won: 8,
-    matches_drawn: 6,
-    matches_lost: 9,
-    created_at: '2026-10-09T10:00:00Z',
-    updated_at: '2026-10-09T10:00:00Z',
-  },
-  {
-    id: 'p-10',
-    user_id: null,
-    email: null,
-    full_name: 'Federico N.',
-    avatar_url: null,
-    role: 'player',
-    position: 'Portiere',
-    is_guest: true,
-    stats: { Fisico: 7, Velocità: 8, Tiro: 8, Difesa: 7, Passaggio: 8, Resistenza: 7, Tecnica: 8, Dribbling: 7 },
-    overall_rating: 7.5,
-    matches_won: 12,
-    matches_drawn: 4,
-    matches_lost: 7,
-    created_at: '2026-10-10T10:00:00Z',
-    updated_at: '2026-10-10T10:00:00Z',
-  },
-  {
-    id: 'p-11',
-    user_id: null,
-    email: null,
-    full_name: 'Gabriele E. (Riserva)',
-    avatar_url: null,
-    role: 'player',
-    position: 'Esterno',
-    is_guest: true,
-    stats: { Fisico: 6, Velocità: 7, Tiro: 7, Difesa: 6, Passaggio: 6, Resistenza: 6, Tecnica: 6, Dribbling: 6 },
-    overall_rating: 6.3,
-    matches_won: 5,
-    matches_drawn: 1,
-    matches_lost: 4,
-    created_at: '2026-10-11T10:00:00Z',
-    updated_at: '2026-10-11T10:00:00Z',
-  },
-];
 
 const STORAGE_KEY = 'clubcalcetto_players_list';
 
 export function getStoredPlayers(): Profile[] {
-  if (typeof window === 'undefined') return DEFAULT_PLAYERS;
+  if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
-      const parsed: Profile[] = JSON.parse(raw);
+      // Old builds cached demo players p-2..p-11 locally: they never existed in Firestore, drop them.
+      const parsed: Profile[] = (JSON.parse(raw) as Profile[]).filter(
+        (p) => p && (p.id === 'p-1' || !/^p-\d+$/.test(p.id))
+      );
       if (Array.isArray(parsed) && parsed.length > 0) {
         // Assicura che Marco B. mantenga sempre il ruolo Admin, che i ruoli 'user' siano 'player' e che le posizioni siano valorizzate
         return parsed.map((p) => {
-          const defaultRef = DEFAULT_PLAYERS.find((dp) => dp.id === p.id);
-          const won = p.matches_won ?? defaultRef?.matches_won ?? 0;
-          const drawn = p.matches_drawn ?? defaultRef?.matches_drawn ?? 0;
-          const lost = p.matches_lost ?? defaultRef?.matches_lost ?? 0;
-          const position = p.position || defaultRef?.position || 'Esterno';
+          const won = p.matches_won ?? 0;
+          const drawn = p.matches_drawn ?? 0;
+          const lost = p.matches_lost ?? 0;
+          const position = p.position || 'Esterno';
 
           if (p.email && p.email.toLowerCase().includes('macciolino84')) {
             return {
@@ -263,9 +76,8 @@ export function getStoredPlayers(): Profile[] {
   } catch (err) {
     console.warn('Errore lettura player da localStorage:', err);
   }
-  // Se vuoto, inizializza con DEFAULT_PLAYERS
-  saveStoredPlayers(DEFAULT_PLAYERS);
-  return DEFAULT_PLAYERS;
+  // Nessun dato demo: i giocatori arrivano solo da Firestore
+  return [];
 }
 
 export function isPlayerMatch(p: Profile, target: Partial<Profile>): boolean {

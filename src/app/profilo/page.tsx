@@ -1,5 +1,6 @@
 'use client';
 
+import { getStatValue } from '@/lib/utils/statUtils';
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/context/AuthContext';
@@ -100,7 +101,7 @@ export default function ProfiloPage() {
   // Mappatura dinamica delle statistiche per includere in tempo reale ogni categoria attiva
   const profileStats: Record<string, number> = {};
   categories.forEach((cat) => {
-    profileStats[cat.name] = profile?.stats?.[cat.name] ?? cat.default_value ?? 6;
+    profileStats[cat.name] = getStatValue(profile?.stats, cat.name, cat.default_value ?? 6);
   });
 
   // Caricamento immagine dal dispositivo

@@ -43,6 +43,63 @@ export function getUpcomingDays(count = 7): CalendarDay[] {
   return days;
 }
 
+/** Local date -> 'YYYY-MM-DD' */
+export function toDateString(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** Sunday (YYYY-MM-DD) of the week (Mon-Sun) containing `from` */
+export function getWeekEndDateString(from: Date = new Date()): string {
+  const d = new Date(from);
+  d.setHours(0, 0, 0, 0);
+  const daysToSunday = (7 - d.getDay()) % 7; // getDay(): 0 = Sunday
+  d.setDate(d.getDate() + daysToSunday);
+  return toDateString(d);
+}
+
+/** Sunday (YYYY-MM-DD) of NEXT week */
+export function getNextWeekEndDateString(from: Date = new Date()): string {
+  const d = new Date(from);
+  d.setDate(d.getDate() + 7);
+  return getWeekEndDateString(d);
+}
+
+/**
+ * Calendar shown to everyone: from today to the end of NEXT week (Sunday).
+ * Days of next week are locked for players until an admin opens voting.
+ */
+export function getCalendarDays(from: Date = new Date()): CalendarDay[] {
+  const today = new Date(from);
+  today.setHours(0, 0, 0, 0);
+  const lastDay = getNextWeekEndDateString(today);
+  const days: CalendarDay[] = [];
+  for (let i = 0; i < 14; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    const dateString = toDateString(d);
+    if (dateString > lastDay) break;
+    days.push({
+      dateString,
+      dayName: ITALIAN_DAYS[d.getDay()],
+      dayNumber: d.getDate(),
+      monthName: ITALIAN_MONTHS[d.getMonth()],
+      isToday: i === 0,
+      isPast: false,
+      dateObj: d,
+    });
+  }
+  return days;
+}
+
+/**
+ * Players may sign up for a day if it is in the current week, or if an admin opened voting up to `openUntil`.
+ * (Same rule is enforced server-side in firestore.rules.)
+ */
+export function isDateOpenForPlayers(dateString: string, openUntil?: string | null, now: Date = new Date()): boolean {
+  if (dateString <= getWeekEndDateString(now)) return true;
+  return Boolean(openUntil && dateString <= openUntil);
+}
+
 /**
  * Formatta una data YYYY-MM-DD in formato leggibile italiano (es: "Lunedì 15 Novembre 2026")
  */

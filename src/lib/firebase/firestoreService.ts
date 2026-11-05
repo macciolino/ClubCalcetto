@@ -10,9 +10,15 @@ import {
   onSnapshot,
   Unsubscribe,
   writeBatch,
+  updateDoc,
+  serverTimestamp,
+  QueryDocumentSnapshot,
+  DocumentData,
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './config';
-import { Profile, Presence, StatCategory, Match, GeneratedTeamRecord, AppSettings } from '@/types/database';
+import { Profile, Presence, StatCategory, Match, GeneratedTeamRecord, AppSettings, CalendarSettings } from '@/types/database';
+import { rankDayPresences, rankPresencesByDate } from '@/lib/services/presenceService';
+import { normalizeCategories } from '@/lib/utils/statUtils';
 
 // ==========================================
 // 1. PROFILI & GIOCATORI (Collection: 'profiles')
@@ -84,32 +90,29 @@ export async function deleteProfileDoc(id: string): Promise<void> {
 // 2. PRESENZE (Collection: 'presences')
 // ==========================================
 
+/** Firestore doc -> Presence, converting the server timestamp joined_at into joined_ms. */
+function toPresence(docSnap: QueryDocumentSnapshot<DocumentData>): Presence {
+  // 'estimate' gives a local time for our own just-written (still pending) sign-up
+  const data = docSnap.data({ serverTimestamps: 'estimate' }) as Presence & { joined_at?: { toMillis?: () => number } };
+  const { joined_at, ...rest } = data;
+  const joined_ms = joined_at && typeof joined_at.toMillis === 'function' ? joined_at.toMillis() : undefined;
+  return { ...rest, id: rest.id || docSnap.id, joined_ms };
+}
+
+/** Realtime presences of ONE day, already ranked (titolari 1..10, then waitlist). Always calls back, also with []. */
 export function subscribePresences(
   date: string,
   callback: (presences: Presence[]) => void
 ): Unsubscribe | (() => void) {
-  if (!isFirebaseConfigured || typeof window === 'undefined') {
+  if (!isFirebaseConfigured || typeof window === 'undefined' || !date) {
     return () => {};
   }
-
   try {
-    const colRef = collection(db, 'presences');
-    const q = query(colRef, where('date', '==', date));
-
+    const q = query(collection(db, 'presences'), where('date', '==', date));
     return onSnapshot(
       q,
-      (snapshot) => {
-        const list: Presence[] = [];
-        snapshot.forEach((docSnap) => {
-          list.push(docSnap.data() as Presence);
-        });
-        // Ordina per order_index
-        list.sort((a, b) => a.order_index - b.order_index);
-        callback(list);
-      },
-      (err) => {
-        console.warn('[Firestore] subscribePresences warning:', err.message);
-      }
+      (snapshot) => callback(rankDayPresences(snapshot.docs.map(toPresence))),
+      (err) => console.warn('[Firestore] subscribePresences warning:', err.message)
     );
   } catch (err) {
     console.warn('[Firestore] subscribePresences exception:', err);
@@ -117,22 +120,65 @@ export function subscribePresences(
   }
 }
 
-export async function savePresenceDoc(presence: Presence): Promise<void> {
-  if (!isFirebaseConfigured) return;
+/** Realtime presences between two dates (inclusive), each day ranked. Always calls back, also with []. */
+export function subscribePresencesRange(
+  fromDate: string,
+  toDate: string,
+  callback: (presences: Presence[]) => void
+): Unsubscribe | (() => void) {
+  if (!isFirebaseConfigured || typeof window === 'undefined') {
+    return () => {};
+  }
   try {
-    await setDoc(doc(db, 'presences', presence.id), presence, { merge: true });
+    const q = query(collection(db, 'presences'), where('date', '>=', fromDate), where('date', '<=', toDate));
+    return onSnapshot(
+      q,
+      (snapshot) => callback(rankPresencesByDate(snapshot.docs.map(toPresence))),
+      (err) => console.warn('[Firestore] subscribePresencesRange warning:', err.message)
+    );
   } catch (err) {
-    console.warn('[Firestore] savePresenceDoc error:', err);
+    console.warn('[Firestore] subscribePresencesRange exception:', err);
+    return () => {};
   }
 }
 
-export async function deletePresenceDoc(presenceId: string): Promise<void> {
+/** One presence per player per day: the doc id makes double sign-ups impossible. */
+export function presenceDocId(date: string, playerId: string): string {
+  return `${date}_${playerId}`;
+}
+
+/**
+ * Signs a player up for a day. The position in the queue comes from the SERVER time (joined_at),
+ * so it cannot be faked and simultaneous sign-ups are ordered correctly.
+ * Throws if the security rules refuse it (e.g. day not open yet).
+ */
+export async function joinPresence(date: string, playerId: string): Promise<void> {
   if (!isFirebaseConfigured) return;
-  try {
-    await deleteDoc(doc(db, 'presences', presenceId));
-  } catch (err) {
-    console.warn('[Firestore] deletePresenceDoc error:', err);
-  }
+  const id = presenceDocId(date, playerId);
+  await setDoc(doc(db, 'presences', id), {
+    id,
+    date,
+    player_id: playerId,
+    status: 'waitlist', // hint only, the real status is computed on read
+    order_index: 0, // hint only
+    created_at: new Date().toISOString(),
+    joined_at: serverTimestamp(),
+  });
+}
+
+/** Withdraws a presence (own, or anyone's for admins). The waitlist moves up automatically. */
+export async function leavePresence(presenceId: string): Promise<void> {
+  if (!isFirebaseConfigured) return;
+  await deleteDoc(doc(db, 'presences', presenceId));
+}
+
+/** Admin only: force a player into the starters / onto the waitlist, or clear the override (null). */
+export async function setPresenceOverride(
+  presenceId: string,
+  override: 'starter' | 'waitlist' | null
+): Promise<void> {
+  if (!isFirebaseConfigured) return;
+  await updateDoc(doc(db, 'presences', presenceId), { admin_override: override });
 }
 
 export async function clearPresencesForDate(date: string): Promise<void> {
@@ -145,47 +191,6 @@ export async function clearPresencesForDate(date: string): Promise<void> {
     await batch.commit();
   } catch (err) {
     console.warn('[Firestore] clearPresencesForDate error:', err);
-  }
-}
-
-/**
- * Esegue in modo atomico (Firestore Batch Write) la rimozione di un titolare
- * e il subentro automatico della prima riserva in Wishlist a titolare confermato.
- */
-export async function executeAtomicPresenceSubstitution(
-  deletedPresenceId: string,
-  promotedPresences: Presence[] = []
-): Promise<void> {
-  if (!isFirebaseConfigured) return;
-  try {
-    const batch = writeBatch(db);
-
-    // 1. Eliminazione atomica della presenza rimossa
-    if (deletedPresenceId) {
-      const delRef = doc(db, 'presences', deletedPresenceId);
-      batch.delete(delRef);
-    }
-
-    // 2. Aggiornamento atomico delle riserve promosse a confermati
-    for (const p of promotedPresences) {
-      const pRef = doc(db, 'presences', p.id);
-      batch.set(
-        pRef,
-        {
-          id: p.id,
-          date: p.date,
-          player_id: p.player_id,
-          status: p.status,
-          order_index: p.order_index,
-          created_at: p.created_at,
-        },
-        { merge: true }
-      );
-    }
-
-    await batch.commit();
-  } catch (err) {
-    console.warn('[Firestore] executeAtomicPresenceSubstitution error:', err);
   }
 }
 
@@ -210,7 +215,7 @@ export function subscribeStatCategories(
           snapshot.forEach((docSnap) => {
             list.push(docSnap.data() as StatCategory);
           });
-          callback(list);
+          callback(normalizeCategories(list));
         }
         // NOTE: no automatic seeding; the admin can use "Ripristina Default 8" 
       },
@@ -280,6 +285,35 @@ export async function saveOfficialMatchDateDoc(date: string): Promise<void> {
   } catch (err) {
     console.warn('[Firestore] saveOfficialMatchDateDoc error:', err);
   }
+}
+
+/** Calendar lock: which days beyond the current week players may sign up for. */
+export function subscribeCalendarSettings(
+  callback: (settings: CalendarSettings) => void
+): Unsubscribe | (() => void) {
+  if (!isFirebaseConfigured || typeof window === 'undefined') {
+    return () => {};
+  }
+  try {
+    return onSnapshot(
+      doc(db, 'settings', 'calendar'),
+      (snap) => callback(snap.exists() ? (snap.data() as CalendarSettings) : {}),
+      (err) => console.warn('[Firestore] subscribeCalendarSettings warning:', err.message)
+    );
+  } catch (err) {
+    console.warn('[Firestore] subscribeCalendarSettings exception:', err);
+    return () => {};
+  }
+}
+
+/** Admin only. openUntil = '' locks next week again. Throws if refused. */
+export async function saveCalendarOpenUntil(openUntil: string, updatedBy: string): Promise<void> {
+  if (!isFirebaseConfigured) return;
+  await setDoc(
+    doc(db, 'settings', 'calendar'),
+    { open_until: openUntil, updated_at: new Date().toISOString(), updated_by: updatedBy },
+    { merge: true }
+  );
 }
 
 // ==========================================

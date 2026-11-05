@@ -1,5 +1,6 @@
 'use client';
 
+import { getStatValue } from '@/lib/utils/statUtils';
 import React, { useState } from 'react';
 import { Profile, StatCategory, FIELD_POSITION_ABBR, STAT_DETAILS, sortStatsByCanonicalOrder } from '@/types/database';
 import { RadarChart } from './RadarChart';
@@ -42,7 +43,7 @@ export function PlayerCardFifa({
   const displayStats: Record<string, number> = {};
   if (categories && categories.length > 0) {
     categories.forEach((cat) => {
-      displayStats[cat.name] = player.stats?.[cat.name] ?? cat.default_value ?? 6;
+      displayStats[cat.name] = getStatValue(player.stats, cat.name, cat.default_value ?? 6);
     });
   } else {
     Object.assign(displayStats, player.stats || {});

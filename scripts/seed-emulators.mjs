@@ -9,7 +9,7 @@
  * Usage (with `npm run dev:emulators` already running): npm run seed:emulators
  */
 import { initializeApp } from 'firebase/app';
-import { getFirestore, connectFirestoreEmulator, doc, writeBatch } from 'firebase/firestore';
+import { getFirestore, connectFirestoreEmulator, doc, writeBatch, setDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth, connectAuthEmulator, signInWithCredential, GoogleAuthProvider } from 'firebase/auth';
 
 const PROJECT_ID = 'demo-clubcalcetto';
@@ -107,15 +107,8 @@ const categories = [
   ['Visione', 'Visione di gioco / Tattica'],
 ].map(([name, label], i) => ({ id: String(i + 1), name, label, default_value: 7 }));
 
-// --- Presences for today: 12 players -> 10 starters + 2 waitlist ---
-const presences = profiles.slice(0, 12).map((p, i) => ({
-  id: `pres-test-${i + 1}`,
-  date: today,
-  player_id: p.id,
-  status: i < 10 ? 'confirmed' : 'waitlist',
-  order_index: i + 1,
-  created_at: new Date(Date.now() - (12 - i) * 60000).toISOString(),
-}));
+// --- Presences for today: 12 players -> 10 starters + 2 waitlist (written one by one, see below) ---
+const presencePlayers = profiles.slice(0, 12);
 
 // --- Fields & settings ---
 const fields = [
@@ -126,7 +119,6 @@ const fields = [
 const batch = writeBatch(db);
 profiles.forEach((p) => batch.set(doc(db, 'profiles', p.id), p));
 categories.forEach((c) => batch.set(doc(db, 'stat_categories', c.id), c));
-presences.forEach((p) => batch.set(doc(db, 'presences', p.id), p));
 fields.forEach((f) => batch.set(doc(db, 'sport_fields', f.id), f));
 batch.set(doc(db, 'settings', 'official_match'), { date: today, updated_at: now });
 batch.set(doc(db, 'settings', 'app_config'), {
@@ -135,5 +127,14 @@ batch.set(doc(db, 'settings', 'app_config'), {
 });
 await batch.commit();
 
-console.log(`Seeded emulator (${PROJECT_ID}): ${profiles.length} profiles, ${categories.length} categories, ${presences.length} presences (date ${today}), ${fields.length} fields.`);
+// Same format as the app: doc id = date_player, queue order = server time of each sign-up
+for (const p of presencePlayers) {
+  const id = `${today}_${p.id}`;
+  await setDoc(doc(db, 'presences', id), {
+    id, date: today, player_id: p.id, status: 'waitlist', order_index: 0,
+    created_at: new Date().toISOString(), joined_at: serverTimestamp(),
+  });
+}
+
+console.log(`Seeded emulator (${PROJECT_ID}): ${profiles.length} profiles, ${categories.length} categories, ${presencePlayers.length} presences (date ${today}), ${fields.length} fields.`);
 process.exit(0);

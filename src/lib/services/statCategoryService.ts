@@ -17,6 +17,9 @@ export const DEFAULT_BASE_CATEGORIES: StatCategory[] = [
 
 const CATEGORIES_STORAGE_KEY = 'clubcalcetto_stat_categories';
 
+export { normalizeCategories, getStatValue } from '@/lib/utils/statUtils';
+import { normalizeCategories } from '@/lib/utils/statUtils';
+
 export function getStoredCategories(): StatCategory[] {
   if (typeof window === 'undefined') return DEFAULT_BASE_CATEGORIES;
   try {
@@ -24,7 +27,7 @@ export function getStoredCategories(): StatCategory[] {
     if (raw) {
       const parsed: StatCategory[] = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+        return normalizeCategories(parsed);
       }
     }
   } catch (err) {

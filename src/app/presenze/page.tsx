@@ -1,299 +1,97 @@
 'use client';
 
-import React, { useEffect, useState, useTransition } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/context/AuthContext';
 import { Presence, Profile } from '@/types/database';
-import { 
-  subscribePresences, 
-  subscribeProfiles, 
-  subscribeOfficialMatchDate, 
-  savePresenceDoc, 
-  deletePresenceDoc,
+import {
+  subscribePresencesRange,
+  subscribeProfiles,
+  subscribeOfficialMatchDate,
+  subscribeCalendarSettings,
+  saveCalendarOpenUntil,
+  joinPresence,
+  leavePresence,
   saveOfficialMatchDateDoc,
-  executeAtomicPresenceSubstitution
 } from '@/lib/firebase/firestoreService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
-import { getStoredPlayers } from '@/lib/services/playerService';
-import { 
-  getStoredPresences, 
-  saveStoredPresences, 
-  getOfficialMatchDate, 
-  setOfficialMatchDate,
-  processPresenceRemovalWithAutoSubstitution
-} from '@/lib/services/presenceService';
-import { getUpcomingDays, CalendarDay, formatItalianDate } from '@/lib/utils/dateUtils';
+import { getOfficialMatchDate, setOfficialMatchDate } from '@/lib/services/presenceService';
+import {
+  getCalendarDays,
+  getWeekEndDateString,
+  getNextWeekEndDateString,
+  isDateOpenForPlayers,
+  toDateString,
+  formatItalianDate,
+} from '@/lib/utils/dateUtils';
 import { PresenceCard } from '@/components/PresenceCard';
-import { 
-  CalendarDays, 
-  Trophy, 
-  Users, 
-  Sparkles, 
-  RefreshCw, 
+import {
+  CalendarDays,
+  Trophy,
+  Users,
+  Sparkles,
   ArrowRight,
-  ShieldCheck,
   Crown,
-  Star
+  Lock,
+  Unlock,
 } from 'lucide-react';
-
-// Giocatori demo iniziali per popolare la visualizzazione se il DB è nuovo
-const INITIAL_DEMO_PLAYERS: Profile[] = [
-  {
-    id: 'p-1',
-    user_id: 'u-1',
-    email: 'macciolino84@gmail.com',
-    full_name: 'Marco B.',
-    avatar_url: null,
-    role: 'admin',
-    is_guest: false,
-    stats: { Resistenza: 8, Velocità: 8, Difesa: 7, Tiro: 8, Passaggio: 8, Tecnica: 9, Fisico: 7, Dribbling: 8 },
-    overall_rating: 7.9,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'p-2',
-    user_id: null,
-    email: null,
-    full_name: 'Luca B.',
-    avatar_url: null,
-    role: 'player',
-    is_guest: true,
-    stats: { Resistenza: 9, Velocità: 8, Difesa: 8, Tiro: 7, Passaggio: 7, Tecnica: 7, Fisico: 8, Dribbling: 7 },
-    overall_rating: 7.8,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'p-3',
-    user_id: null,
-    email: null,
-    full_name: 'Andrea M.',
-    avatar_url: null,
-    role: 'player',
-    is_guest: true,
-    stats: { Resistenza: 7, Velocità: 9, Difesa: 6, Tiro: 8, Passaggio: 8, Tecnica: 9, Fisico: 6, Dribbling: 9 },
-    overall_rating: 7.6,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'p-4',
-    user_id: null,
-    email: null,
-    full_name: 'Giovanni R.',
-    avatar_url: null,
-    role: 'player',
-    is_guest: true,
-    stats: { Resistenza: 6, Velocità: 6, Difesa: 9, Tiro: 6, Passaggio: 7, Tecnica: 6, Fisico: 9, Dribbling: 6 },
-    overall_rating: 6.9,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'p-5',
-    user_id: null,
-    email: null,
-    full_name: 'Davide P.',
-    avatar_url: null,
-    role: 'player',
-    is_guest: true,
-    stats: { Resistenza: 8, Velocità: 7, Difesa: 7, Tiro: 8, Passaggio: 7, Tecnica: 7, Fisico: 7, Dribbling: 7 },
-    overall_rating: 7.3,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'p-6',
-    user_id: null,
-    email: null,
-    full_name: 'Matteo C.',
-    avatar_url: null,
-    role: 'player',
-    is_guest: true,
-    stats: { Resistenza: 7, Velocità: 7, Difesa: 8, Tiro: 6, Passaggio: 8, Tecnica: 8, Fisico: 7, Dribbling: 7 },
-    overall_rating: 7.3,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'p-7',
-    user_id: null,
-    email: null,
-    full_name: 'Francesco L.',
-    avatar_url: null,
-    role: 'player',
-    is_guest: true,
-    stats: { Resistenza: 6, Velocità: 7, Difesa: 6, Tiro: 9, Passaggio: 7, Tecnica: 8, Fisico: 6, Dribbling: 8 },
-    overall_rating: 7.1,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'p-8',
-    user_id: null,
-    email: null,
-    full_name: 'Alessandro S.',
-    avatar_url: null,
-    role: 'player',
-    is_guest: true,
-    stats: { Resistenza: 9, Velocità: 8, Difesa: 7, Tiro: 7, Passaggio: 8, Tecnica: 8, Fisico: 8, Dribbling: 8 },
-    overall_rating: 7.9,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'p-9',
-    user_id: null,
-    email: null,
-    full_name: 'Simone T.',
-    avatar_url: null,
-    role: 'player',
-    is_guest: true,
-    stats: { Resistenza: 8, Velocità: 6, Difesa: 8, Tiro: 6, Passaggio: 7, Tecnica: 7, Fisico: 8, Dribbling: 6 },
-    overall_rating: 7.0,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'p-10',
-    user_id: null,
-    email: null,
-    full_name: 'Federico N.',
-    avatar_url: null,
-    role: 'player',
-    is_guest: true,
-    stats: { Resistenza: 7, Velocità: 8, Difesa: 7, Tiro: 8, Passaggio: 8, Tecnica: 8, Fisico: 7, Dribbling: 7 },
-    overall_rating: 7.5,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: 'p-11',
-    user_id: null,
-    email: null,
-    full_name: 'Gabriele E. (Waitlist)',
-    avatar_url: null,
-    role: 'player',
-    is_guest: true,
-    stats: { Resistenza: 6, Velocità: 7, Difesa: 6, Tiro: 7, Passaggio: 6, Tecnica: 6, Fisico: 6, Dribbling: 6 },
-    overall_rating: 6.3,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-];
-
-const DEFAULT_UPCOMING_DAYS = getUpcomingDays(7);
-const DEFAULT_PRESENCES: Presence[] = INITIAL_DEMO_PLAYERS.map((p, idx) => ({
-  id: `pres-${p.id}`,
-  date: DEFAULT_UPCOMING_DAYS[0]?.dateString || '2026-10-28',
-  player_id: p.id,
-  status: idx < 10 ? 'confirmed' : 'waitlist',
-  order_index: idx + 1,
-  created_at: new Date().toISOString(),
-}));
 
 export default function PresenzePage() {
   const { user, profile, isAdmin } = useAuth();
   const [mounted, setMounted] = useState(false);
-  const [days, setDays] = useState<CalendarDay[]>(DEFAULT_UPCOMING_DAYS);
-  const [presences, setPresences] = useState<Presence[]>(DEFAULT_PRESENCES);
-  const [profiles, setProfiles] = useState<Profile[]>(INITIAL_DEMO_PLAYERS);
-  const [selectedDayString, setSelectedDayString] = useState<string>(
-    DEFAULT_UPCOMING_DAYS[0]?.dateString || '2026-10-28'
-  );
+  const days = useMemo(() => getCalendarDays(), []);
+  const [presences, setPresences] = useState<Presence[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [openUntil, setOpenUntil] = useState<string>('');
+  const [selectedDayString, setSelectedDayString] = useState<string>(days[0]?.dateString || '');
   const [viewMode, setViewMode] = useState<'focus' | 'grid'>('focus');
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [, startTransition] = useTransition();
+  const [busyDate, setBusyDate] = useState<string | null>(null);
+  const [isSavingCalendar, setIsSavingCalendar] = useState(false);
 
-  // Sottoscrizione Real-Time a Firebase Firestore
+  const firstDay = days[0]?.dateString || '';
+  const lastDay = days[days.length - 1]?.dateString || '';
+  const nextWeekEnd = getNextWeekEndDateString();
+  const isNextWeekOpen = Boolean(openUntil && openUntil >= nextWeekEnd);
+  const nextWeekStart = (() => {
+    const [y, m, d] = getWeekEndDateString().split('-').map(Number);
+    return toDateString(new Date(y, m - 1, d + 1)); // lunedì della settimana prossima
+  })();
+
+  // Isolamento Rigido Permessi Admin
+  const isStrictAdmin = Boolean(mounted && user && (profile?.role === 'admin' || isAdmin));
+
+  // Mount: data ufficiale, profili, calendario (solo una volta)
   useEffect(() => {
     setMounted(true);
-    // 1. Carica dallo store locale al mount sul client
     const clientDate = getOfficialMatchDate();
-    if (clientDate) {
+    if (clientDate && clientDate >= firstDay && clientDate <= lastDay) {
       setSelectedDayString(clientDate);
     }
-    setProfiles(getStoredPlayers());
-    setPresences(getStoredPresences());
 
-    const handlePresencesChange = () => {
-      setPresences(getStoredPresences());
-    };
-    const handlePlayersChange = () => {
-      setProfiles(getStoredPlayers());
-    };
-    const handleMatchDateChange = (e: any) => {
-      const newDate = e.detail?.date || getOfficialMatchDate();
-      if (newDate) {
-        setSelectedDayString(newDate);
+    if (!isFirebaseConfigured) return;
+    const unsubProfiles = subscribeProfiles((remoteProfiles) => setProfiles(remoteProfiles || []));
+    const unsubMatchDate = subscribeOfficialMatchDate((remoteDate) => {
+      if (remoteDate) {
+        setOfficialMatchDate(remoteDate);
+        if (remoteDate >= firstDay && remoteDate <= lastDay) setSelectedDayString(remoteDate);
       }
-    };
-
-    window.addEventListener('clubcalcetto_presences_changed', handlePresencesChange);
-    window.addEventListener('clubcalcetto_players_changed', handlePlayersChange);
-    window.addEventListener('clubcalcetto_match_date_changed', handleMatchDateChange);
-
-    // 2. Real-time Firestore Listeners
-    let unsubProfiles = () => {};
-    let unsubMatchDate = () => {};
-
-    if (isFirebaseConfigured) {
-      unsubProfiles = subscribeProfiles((remoteProfiles) => {
-        if (remoteProfiles && remoteProfiles.length > 0) {
-          setProfiles(remoteProfiles);
-        }
-      });
-
-      unsubMatchDate = subscribeOfficialMatchDate((remoteDate) => {
-        if (remoteDate) {
-          setSelectedDayString(remoteDate);
-          setOfficialMatchDate(remoteDate);
-        }
-      });
-    }
+    });
+    const unsubCalendar = subscribeCalendarSettings((cal) => setOpenUntil(cal.open_until || ''));
+    // Presenze di tutto il calendario visibile, in tempo reale (fonte unica: Firestore)
+    const unsubPres = subscribePresencesRange(firstDay, lastDay, (list) => setPresences(list));
 
     return () => {
-      window.removeEventListener('clubcalcetto_presences_changed', handlePresencesChange);
-      window.removeEventListener('clubcalcetto_players_changed', handlePlayersChange);
-      window.removeEventListener('clubcalcetto_match_date_changed', handleMatchDateChange);
       unsubProfiles();
       unsubMatchDate();
+      unsubCalendar();
+      unsubPres();
     };
-    // Solo al mount: prima dipendeva da selectedDayString e ad ogni cambio di giorno
-    // riportava la selezione alla data ufficiale (bloccando la scelta del giorno ai giocatori).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Sottoscrizione alle presenze per il giorno selezionato da Firestore
-  useEffect(() => {
-    if (!isFirebaseConfigured) return;
+  const isDayLocked = (dateString: string) => !isStrictAdmin && !isDateOpenForPlayers(dateString, openUntil);
 
-    const unsubPres = subscribePresences(selectedDayString, (dayPresences) => {
-      if (dayPresences && dayPresences.length > 0) {
-        setPresences((prev) => {
-          const otherDays = prev.filter((p) => p.date !== selectedDayString);
-          const merged = [...otherDays, ...dayPresences];
-          saveStoredPresences(merged);
-          return merged;
-        });
-      }
-    });
-
-    return () => {
-      unsubPres();
-    };
-  }, [selectedDayString]);
-
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    setProfiles(getStoredPlayers());
-    setPresences(getStoredPresences());
-    setTimeout(() => setIsRefreshing(false), 500);
-  };
-
-  // Selezione giorno che sincronizza istantaneamente anche Squadre e Admin
-  // Solo gli admin possono cambiare la data ufficiale della partita (per tutti)
+  // Selezione giorno. Solo gli admin cambiano la data ufficiale della partita (per tutti)
   const handleSelectDay = (dateString: string) => {
     setSelectedDayString(dateString);
     if (isStrictAdmin) {
@@ -302,96 +100,75 @@ export default function PresenzePage() {
     }
   };
 
-  // Toggle presenza utente corrente per un giorno
+  // Iscrizione / ritiro dell'utente corrente
   const handleTogglePresence = async (dateString: string) => {
-    const currentAuthId = (user as any)?.uid || (user as any)?.id;
-    const currentId = profile?.id || currentAuthId || 'dev-admin-user';
-    const currentName = profile?.full_name || 'Io';
-
-    const existingIndex = presences.findIndex(
-      (p) => p.date === dateString && p.player_id === currentId
-    );
-
-    if (existingIndex !== -1) {
-      // 1. RIMOZIONE / ANNULLA PRESENZA CON SUBENTRO AUTOMATICO SILENZIOSO WISHLIST
-      const removed = presences[existingIndex];
-      const { updatedPresences, promotedPresences } = processPresenceRemovalWithAutoSubstitution(
-        dateString,
-        removed.id,
-        presences
-      );
-
-      startTransition(() => {
-        setPresences(updatedPresences);
-      });
-      await executeAtomicPresenceSubstitution(removed.id, promotedPresences);
-    } else {
-      // 2. AGGIUNGI PRESENZA
-      const dayExisting = presences.filter((p) => p.date === dateString);
-      const newOrderIndex = dayExisting.length + 1;
-      const status = newOrderIndex <= 10 ? 'confirmed' : 'waitlist';
-
-      const newPresenceItem: Presence = {
-        id: `pres-${Date.now()}`,
-        date: dateString,
-        player_id: currentId,
-        status,
-        order_index: newOrderIndex,
-        created_at: new Date().toISOString(),
-      };
-
-      const updated = [...presences, newPresenceItem];
-      saveStoredPresences(updated);
-      startTransition(() => {
-        setPresences(updated);
-      });
-      savePresenceDoc(newPresenceItem);
+    const currentId = profile?.id;
+    if (!currentId) {
+      alert('Profilo non ancora caricato, riprova tra un attimo.');
+      return;
+    }
+    const existing = presences.find((p) => p.date === dateString && p.player_id === currentId);
+    if (!existing && isDayLocked(dateString)) {
+      alert('Le votazioni per questo giorno non sono ancora aperte.');
+      return;
+    }
+    setBusyDate(dateString);
+    try {
+      if (existing) {
+        await leavePresence(existing.id); // la prima riserva sale da sola
+      } else {
+        await joinPresence(dateString, currentId);
+      }
+    } catch (err) {
+      console.warn('[Presenze] toggle error:', err);
+      alert('Operazione non riuscita. Controlla la connessione e riprova.');
+    } finally {
+      setBusyDate(null);
     }
   };
 
-  // Azione Admin: Assegna un giocatore ospite/manuale
-  const handleAddGuestPresence = (dateString: string, guestId: string) => {
-    const dayExisting = presences.filter((p) => p.date === dateString);
-    const newOrderIndex = dayExisting.length + 1;
-    const status = newOrderIndex <= 10 ? 'confirmed' : 'waitlist';
-
-    const newPresenceItem: Presence = {
-      id: `pres-guest-${Date.now()}`,
-      date: dateString,
-      player_id: guestId,
-      status,
-      order_index: newOrderIndex,
-      created_at: new Date().toISOString(),
-    };
-
-    const updated = [...presences, newPresenceItem];
-    saveStoredPresences(updated);
-    setPresences(updated);
-    savePresenceDoc(newPresenceItem);
+  // Azione Admin: aggiungi un giocatore (anche ospite) al giorno
+  const handleAddGuestPresence = async (dateString: string, guestId: string) => {
+    try {
+      await joinPresence(dateString, guestId);
+    } catch (err) {
+      console.warn('[Presenze] add guest error:', err);
+      alert('Impossibile aggiungere il giocatore (forse è già iscritto).');
+    }
   };
 
-  // Azione Admin: Rimuovi singola presenza con subentro automatico silenzioso
+  // Azione Admin: rimuovi una presenza (la prima riserva subentra da sola)
   const handleRemovePresence = async (presenceId: string) => {
-    const target = presences.find((p) => p.id === presenceId || p.player_id === presenceId);
-    if (!target) return;
+    try {
+      await leavePresence(presenceId);
+    } catch (err) {
+      console.warn('[Presenze] remove error:', err);
+      alert('Impossibile rimuovere la presenza.');
+    }
+  };
 
-    const { updatedPresences, promotedPresences } = processPresenceRemovalWithAutoSubstitution(
-      target.date,
-      presenceId,
-      presences
-    );
-
-    setPresences(updatedPresences);
-    await executeAtomicPresenceSubstitution(target.id, promotedPresences);
+  // Azione Admin: apri / chiudi le votazioni della settimana prossima
+  const handleToggleNextWeek = async () => {
+    const next = isNextWeekOpen ? '' : nextWeekEnd;
+    const msg = isNextWeekOpen
+      ? 'Richiudere le votazioni della settimana prossima? Chi è già iscritto resta iscritto.'
+      : `Aprire le votazioni fino a ${formatItalianDate(nextWeekEnd)}?`;
+    if (!confirm(msg)) return;
+    setIsSavingCalendar(true);
+    try {
+      await saveCalendarOpenUntil(next, profile?.id || '');
+    } catch (err) {
+      console.warn('[Presenze] calendar error:', err);
+      alert('Impossibile aggiornare il calendario.');
+    } finally {
+      setIsSavingCalendar(false);
+    }
   };
 
   // Controlla se la data selezionata ha 10 giocatori
   const selectedDayPresences = presences.filter((p) => p.date === selectedDayString);
   const selectedStarters = selectedDayPresences.filter((p) => p.status === 'confirmed');
   const isMatchReady = selectedStarters.length >= 10;
-
-  // Isolamento Rigido Permessi Admin
-  const isStrictAdmin = Boolean(mounted && user && (profile?.role === 'admin' || isAdmin));
 
   // Giorni che hanno raggiunto il quorum dei 10 titolari
   const daysWithQuorum = days.filter((d) => {
@@ -411,21 +188,32 @@ export default function PresenzePage() {
             </h1>
           </div>
           <p className="text-xs sm:text-sm text-slate-400">
-            Iscriviti ai giorni in cui puoi giocare. Primi 10 sono Titolari, dall&apos;11° in Waitlist con subentro in tempo reale.
+            Iscriviti ai giorni in cui puoi giocare. I primi 10 iscritti sono titolari, dall&apos;11° in waitlist con subentro automatico. La settimana prossima si apre quando l&apos;admin avvia le votazioni.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-850 hover:bg-slate-800 border border-slate-700 rounded-xl text-xs font-semibold text-slate-300 transition-colors"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Sincronizza
-          </button>
-        </div>
+        {isStrictAdmin && (
+          <div className="flex flex-col items-stretch sm:items-end gap-1">
+            <button
+              type="button"
+              onClick={handleToggleNextWeek}
+              disabled={isSavingCalendar}
+              className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-colors disabled:opacity-50 ${
+                isNextWeekOpen
+                  ? 'bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200'
+                  : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
+              }`}
+            >
+              {isNextWeekOpen ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
+              {isNextWeekOpen ? 'Chiudi votazioni settimana prossima' : 'Apri votazioni settimana prossima'}
+            </button>
+            <span className="text-[11px] text-slate-400 text-center sm:text-right">
+              {isNextWeekOpen
+                ? `Aperte fino a ${formatItalianDate(openUntil)}`
+                : 'Settimana prossima bloccata per i giocatori'}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* BANNER DECISIONE ADMIN: SE CI SONO PIÙ GIORNI CON 10 GIOCATORI */}
@@ -439,7 +227,7 @@ export default function PresenzePage() {
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-black uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/30">
-                    Decisione Amministratore (Marco B.)
+                    Decisione Amministratore
                   </span>
                   <span className="text-xs text-slate-400 font-bold">
                     {daysWithQuorum.length} date con Quorum 10/10 raggiunto
@@ -532,7 +320,7 @@ export default function PresenzePage() {
         <div className="flex items-center justify-between">
           <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
             <CalendarDays className="h-4 w-4 text-emerald-400" />
-            Calendario Prossima Settimana
+            Calendario (settimana corrente e prossima)
           </h2>
           <span className="text-[11px] text-slate-500">Seleziona un giorno per focalizzare</span>
         </div>
@@ -543,15 +331,24 @@ export default function PresenzePage() {
             const confirmedCount = dayPresences.filter((p) => p.status === 'confirmed').length;
             const isSelected = selectedDayString === day.dateString;
             const isFull = confirmedCount >= 10;
+            const locked = isDayLocked(day.dateString);
+            const startsNextWeek = day.dateString === nextWeekStart;
 
             return (
+              <React.Fragment key={day.dateString}>
+              {startsNextWeek && (
+                <div className="flex-shrink-0 w-px bg-slate-700 mx-1" aria-hidden="true" />
+              )}
               <button
-                key={day.dateString}
                 type="button"
                 onClick={() => handleSelectDay(day.dateString)}
+                aria-pressed={isSelected}
+                title={locked ? 'Votazioni non ancora aperte' : undefined}
                 className={`flex-shrink-0 flex flex-col items-center justify-between w-24 sm:w-28 p-3 rounded-2xl border transition-all ${
                   isSelected
                     ? 'bg-emerald-500/15 border-emerald-500 text-white shadow-lg ring-2 ring-emerald-500/60'
+                    : locked
+                    ? 'bg-slate-950 border-slate-800 text-slate-500 opacity-60'
                     : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
                 }`}
               >
@@ -576,8 +373,10 @@ export default function PresenzePage() {
                   >
                     {confirmedCount}/10
                   </span>
+                  {locked && <Lock className="h-3 w-3 text-slate-500" aria-label="Bloccato" />}
                 </div>
               </button>
+              </React.Fragment>
             );
           })}
         </div>
@@ -612,7 +411,7 @@ export default function PresenzePage() {
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              Tutti i 7 Giorni
+              Tutti i Giorni
             </button>
           </div>
         </div>
@@ -633,6 +432,8 @@ export default function PresenzePage() {
                   onTogglePresence={handleTogglePresence}
                   onAddGuestPresence={handleAddGuestPresence}
                   onRemovePresence={handleRemovePresence}
+                  isLocked={isDayLocked(currentDay.dateString)}
+                  isToggling={busyDate === currentDay.dateString}
                 />
               </div>
             );
@@ -652,6 +453,8 @@ export default function PresenzePage() {
                   onTogglePresence={handleTogglePresence}
                   onAddGuestPresence={handleAddGuestPresence}
                   onRemovePresence={handleRemovePresence}
+                  isLocked={isDayLocked(day.dateString)}
+                  isToggling={busyDate === day.dateString}
                 />
               );
             })}
