@@ -8,7 +8,8 @@ import { Profile, Presence, Match, GeneratedTeamRecord, SportField } from '@/typ
 import { getStoredFields } from '@/lib/services/fieldService';
 import { 
   subscribeMatch, 
-  saveMatchDoc, 
+  saveMatchFields,
+  subscribeAppSettings,
   subscribeGeneratedTeams, 
   saveGeneratedTeamsDoc, 
   subscribePresences, 
@@ -65,6 +66,12 @@ function SquadreContent() {
     () => getStoredFields()[0]?.name || 'Centro Sportivo Green Club - Campo 3'
   );
   const [totalCost, setTotalCost] = useState(80.0);
+  // Valori standard decisi dall'admin (Admin > Campi & Regole) e partita salvata per la data
+  const [standardCost, setStandardCost] = useState(80);
+  const [standardTime, setStandardTime] = useState('20:30');
+  const [savedMatch, setSavedMatch] = useState<Match | null>(null);
+  // true quando l'admin modifica ora/luogo/costo: le modifiche vengono salvate sulla partita
+  const matchInfoDirty = useRef(false);
 
   const [presences, setPresences] = useState<Presence[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -140,19 +147,51 @@ function SquadreContent() {
   useEffect(() => {
     if (!isFirebaseConfigured || !selectedDate) return;
     setPresences([]);
-    const unsubMatch = subscribeMatch(selectedDate, (m) => {
-      if (m) {
-        setMatchTime(m.match_time?.slice(0, 5) || '20:30');
-        setMatchLocation(m.location || 'Centro Sportivo Calcetto');
-        setTotalCost(Number(m.total_cost || 80.0));
-      }
-    });
+    setSavedMatch(null);
+    matchInfoDirty.current = false;
+    const unsubMatch = subscribeMatch(selectedDate, (m) => setSavedMatch(m));
     const unsubPres = subscribePresences(selectedDate, (pres) => setPresences(pres));
     return () => {
       unsubMatch();
       unsubPres();
     };
   }, [selectedDate]);
+
+  // Costo e orario standard dell'admin
+  useEffect(() => {
+    if (!isFirebaseConfigured) return;
+    const unsub = subscribeAppSettings((st) => {
+      if (st.standard_total_cost) setStandardCost(Number(st.standard_total_cost));
+      if (st.standard_match_time) setStandardTime(st.standard_match_time);
+    });
+    return () => unsub();
+  }, []);
+
+  // Valori mostrati: quelli salvati sulla partita, altrimenti gli standard dell'admin
+  useEffect(() => {
+    if (matchInfoDirty.current) return; // non sovrascrivere mentre l'admin sta scrivendo
+    setTotalCost(Number(savedMatch?.total_cost || standardCost || 80));
+    setMatchTime(savedMatch?.match_time?.slice(0, 5) || standardTime || '20:30');
+    if (savedMatch?.location) setMatchLocation(savedMatch.location);
+  }, [savedMatch, standardCost, standardTime]);
+
+  // Salvataggio automatico (solo admin) di ora, luogo e costo della partita
+  useEffect(() => {
+    if (!matchInfoDirty.current || !isClientAdmin || !selectedDate) return;
+    const t = setTimeout(() => {
+      saveMatchFields(selectedDate, {
+        match_time: matchTime,
+        location: matchLocation,
+        total_cost: Number(totalCost) || standardCost,
+      })
+        .then(() => {
+          matchInfoDirty.current = false;
+        })
+        .catch((err) => console.warn('[Squadre] salvataggio partita non riuscito:', err));
+    }, 800);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchTime, matchLocation, totalCost]);
 
   // Calcola i 10 titolari specifici per la data selezionata
   const confirmedPresences = presences.filter((p) => p.date === selectedDate && p.status === 'confirmed');
@@ -208,16 +247,12 @@ function SquadreContent() {
       console.log('[TeamBalancer Debug] Generazione completata con successo!');
 
       // Salva match e squadre generate su Firebase Firestore se connesso
-      saveMatchDoc({
-        id: selectedDate,
-        match_date: selectedDate,
+      // Salva solo i dettagli: lo stato/risultato di una partita già chiusa non viene toccato
+      saveMatchFields(selectedDate, {
         match_time: matchTime,
         location: matchLocation,
         total_cost: totalCost,
-        status: 'open',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      });
+      }).catch((err) => console.warn('[Squadre] salvataggio partita non riuscito:', err));
 
       saveGeneratedTeamsDoc({
         id: selectedDate,
@@ -373,7 +408,10 @@ function SquadreContent() {
             <input
               type="time"
               value={matchTime}
-              onChange={(e) => setMatchTime(e.target.value)}
+              onChange={(e) => {
+                matchInfoDirty.current = true;
+                setMatchTime(e.target.value);
+              }}
               disabled={!isClientAdmin}
               className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-medium focus:outline-none focus:border-emerald-500 disabled:opacity-70"
             />
@@ -385,7 +423,10 @@ function SquadreContent() {
             {fields.length > 0 ? (
               <select
                 value={matchLocation}
-                onChange={(e) => setMatchLocation(e.target.value)}
+                onChange={(e) => {
+                  matchInfoDirty.current = true;
+                  setMatchLocation(e.target.value);
+                }}
                 disabled={!isClientAdmin}
                 className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-medium focus:outline-none focus:border-emerald-500 disabled:opacity-70 text-xs"
               >
@@ -399,7 +440,10 @@ function SquadreContent() {
               <input
                 type="text"
                 value={matchLocation}
-                onChange={(e) => setMatchLocation(e.target.value)}
+                onChange={(e) => {
+                  matchInfoDirty.current = true;
+                  setMatchLocation(e.target.value);
+                }}
                 disabled={!isClientAdmin}
                 placeholder="Es. Centro Sportivo"
                 className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-medium focus:outline-none focus:border-emerald-500 disabled:opacity-70 text-xs"
@@ -412,7 +456,10 @@ function SquadreContent() {
             <label className="block text-slate-400 font-semibold mb-1">Costo Totale (€)</label>
             <NumberInput
               value={totalCost}
-              onValueChange={setTotalCost}
+              onValueChange={(v) => {
+                matchInfoDirty.current = true;
+                setTotalCost(v);
+              }}
               decimal
               disabled={!isClientAdmin}
               className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-medium focus:outline-none focus:border-emerald-500 disabled:opacity-70"

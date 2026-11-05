@@ -1,7 +1,7 @@
 'use client';
 
 import { NumberInput } from '@/components/NumberInput';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SportField, StatCategory, STAT_DETAILS, STAT_CANONICAL_ORDER } from '@/types/database';
 import { FieldModal } from './FieldModal';
 import { StatsLegendModal } from './StatsLegendModal';
@@ -71,6 +71,14 @@ export function TabClubConfigFields({
   const [costInput, setCostInput] = useState<number>(standardCost || 80);
   const [timeInput, setTimeInput] = useState<string>(standardTime || '20:30');
   const [saveSuccessMsg, setSaveSuccessMsg] = useState(false);
+
+  // Allinea il modulo quando arrivano i valori salvati (es. caricamento da Firestore)
+  useEffect(() => {
+    setCostInput(standardCost || 80);
+  }, [standardCost]);
+  useEffect(() => {
+    setTimeInput(standardTime || '20:30');
+  }, [standardTime]);
 
   const costPerPerson = (Number(costInput || 80) / 10).toFixed(2);
 

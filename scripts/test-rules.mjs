@@ -7,7 +7,7 @@
  */
 import { initializeApp } from 'firebase/app';
 import {
-  getFirestore, connectFirestoreEmulator, doc, getDoc, setDoc, deleteDoc, collection, getDocs, serverTimestamp, updateDoc,
+  getFirestore, connectFirestoreEmulator, doc, getDoc, setDoc, deleteDoc, collection, getDocs, serverTimestamp, updateDoc, increment, runTransaction,
 } from 'firebase/firestore';
 import {
   getAuth, connectAuthEmulator, signInWithCredential, GoogleAuthProvider, createUserWithEmailAndPassword,
@@ -161,6 +161,8 @@ await expectDenied('deletes B presence', () => deleteDoc(doc(playerA.db, 'presen
 await expectAllowed('withdraws own presence', () => deleteDoc(doc(playerA.db, 'presences', `${THIS_SUNDAY}_${playerA.uid}`)));
 await expectDenied('opens next week voting', () =>
   setDoc(doc(playerA.db, 'settings', 'calendar'), { open_until: NEXT_SUNDAY }));
+await expectDenied('adds a win to own record', () =>
+  updateDoc(doc(playerA.db, 'profiles', playerA.uid), { matches_won: increment(1) }));
 for (const col of ['settings', 'stat_categories', 'matches', 'generated_teams', 'match_payments', 'sport_fields']) {
   await expectDenied(`writes ${col}`, () => setDoc(doc(playerA.db, col, 'hack'), { a: 1 }));
 }
@@ -187,6 +189,13 @@ await expectAllowed('forces player B into the starters', () =>
   updateDoc(doc(adminC.db, 'presences', presB), { admin_override: 'starter' }));
 await expectAllowed('opens next week voting', () =>
   setDoc(doc(adminC.db, 'settings', 'calendar'), { open_until: NEXT_SUNDAY }));
+await expectAllowed('saves a match result + W/D/L increments in one transaction', () =>
+  runTransaction(adminC.db, async (tx) => {
+    const ref = doc(adminC.db, 'profiles', playerA.uid);
+    await tx.get(ref);
+    tx.update(ref, { matches_won: increment(1), updated_at: 'z' });
+    tx.set(doc(adminC.db, 'matches', TODAY), { id: TODAY, match_date: TODAY, status: 'completed', score_white: 3, score_black: 1, profile_effects: { [playerA.uid]: 'won' } }, { merge: true });
+  }));
 await expectAllowed('deletes a guest player', () => deleteDoc(doc(adminC.db, 'profiles', 'guest-1')));
 
 console.log('\nPlayer A after voting is open');

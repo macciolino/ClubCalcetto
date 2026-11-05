@@ -11,7 +11,8 @@ import {
   LogOut, 
   Sparkles,
   Trophy,
-  User
+  User,
+  History
 } from 'lucide-react';
 
 export function Navbar() {
@@ -36,6 +37,7 @@ export function Navbar() {
     { href: '/presenze', label: 'Presenze', icon: CalendarDays },
     { href: '/giocatori', label: 'Giocatori', icon: Users },
     { href: '/squadre', label: 'Squadre', icon: Trophy },
+    { href: '/history', label: 'Storico', icon: History },
     { href: '/profilo', label: 'Profilo', icon: User },
     ...(isStrictAdmin ? [{ href: '/admin', label: 'Admin', icon: ShieldAlert }] : []),
   ];
@@ -152,7 +154,7 @@ export function Navbar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all ${
+                className={`flex-1 min-w-0 flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-all ${
                   isActive
                     ? 'text-emerald-400 font-bold scale-105'
                     : 'text-slate-400 hover:text-slate-200 font-medium'

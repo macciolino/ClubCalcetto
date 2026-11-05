@@ -182,8 +182,22 @@ export interface Match {
   mvp_player_id?: string;
   scorers?: MatchScorer[];
   assists?: MatchAssist[];
+  /** Teams as they played (names kept so the history stays readable even if a player is deleted) */
+  team_white?: MatchTeamPlayer[];
+  team_black?: MatchTeamPlayer[];
+  /** Result already applied to each player's W/D/L counters (makes re-saving a result safe) */
+  profile_effects?: Record<string, MatchOutcome>;
+  closed_at?: string;
+  closed_by?: string;
   created_at: string;
   updated_at: string;
+}
+
+export type MatchOutcome = 'won' | 'drawn' | 'lost';
+
+export interface MatchTeamPlayer {
+  id: string;
+  name: string;
 }
 
 export interface Presence {

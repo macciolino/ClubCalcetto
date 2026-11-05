@@ -1,9 +1,11 @@
 'use client';
 
 import { NumberInput } from '@/components/NumberInput';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { Profile, Presence, Match, GeneratedTeamRecord, MatchScorer, MatchAssist } from '@/types/database';
+import { Profile, Presence, Match, GeneratedTeamRecord, MatchScorer, MatchAssist, MatchTeamPlayer } from '@/types/database';
+import { useAuth } from '@/lib/context/AuthContext';
+import { subscribeMatch, subscribeMatches, saveMatchResult } from '@/lib/firebase/firestoreService';
 import { CalendarDay, formatItalianDate } from '@/lib/utils/dateUtils';
 import { 
   getMatchPayments, 
@@ -12,7 +14,6 @@ import {
   resetMatchPayments,
   subscribeMatchPayments 
 } from '@/lib/services/paymentService';
-import { executeCloseAndArchiveMatch, getArchivedMatches } from '@/lib/services/matchArchiveService';
 import { 
   Trophy, 
   Users, 
@@ -50,8 +51,21 @@ export function TabOverviewMatch({
   players,
   presences,
   generatedTeamRecord,
-  totalMatchCost = 80,
+  totalMatchCost: standardMatchCost = 80,
 }: TabOverviewMatchProps) {
+  const { profile } = useAuth();
+
+  // Partita salvata in Firestore per la data attiva (fonte unica per risultato e quota)
+  const [savedMatch, setSavedMatch] = useState<Match | null>(null);
+  useEffect(() => {
+    setSavedMatch(null);
+    const unsub = subscribeMatch(activeDate, (m) => setSavedMatch(m));
+    return () => unsub();
+  }, [activeDate]);
+
+  // Quota: quella della partita se impostata, altrimenti il costo standard dell'admin
+  const totalMatchCost = Number(savedMatch?.total_cost || standardMatchCost || 80);
+
   // Titolari confermati per la data attiva
   const dayPresences = presences.filter((p) => p.date === activeDate);
   const starterPresences = dayPresences
@@ -115,15 +129,39 @@ export function TabOverviewMatch({
   const [archivedMatchesCount, setArchivedMatchesCount] = useState(0);
 
   useEffect(() => {
-    setArchivedMatchesCount(getArchivedMatches().length);
-    const handleMatches = () => {
-      setArchivedMatchesCount(getArchivedMatches().length);
-    };
-    window.addEventListener('clubcalcetto_matches_changed', handleMatches);
-    return () => {
-      window.removeEventListener('clubcalcetto_matches_changed', handleMatches);
-    };
+    const unsub = subscribeMatches((list) =>
+      setArchivedMatchesCount(list.filter((m) => m.status === 'completed').length)
+    );
+    return () => unsub();
   }, []);
+
+  // Ricarica nel modulo il tabellino già salvato (una volta per data, senza cancellare ciò che stai scrivendo)
+  const prefilledFor = useRef<string | null>(null);
+  useEffect(() => {
+    // Cambio data: modulo vuoto, poi eventualmente ricaricato dalla partita salvata
+    prefilledFor.current = null;
+    setScoreWhite(0);
+    setScoreBlack(0);
+    setMvpPlayerId('');
+    setScorers([]);
+    setAssists([]);
+  }, [activeDate]);
+  useEffect(() => {
+    if (
+      savedMatch?.status === 'completed' &&
+      savedMatch.match_date === activeDate &&
+      prefilledFor.current !== activeDate
+    ) {
+      prefilledFor.current = activeDate;
+      setScoreWhite(savedMatch.score_white ?? 0);
+      setScoreBlack(savedMatch.score_black ?? 0);
+      setMvpPlayerId(savedMatch.mvp_player_id || '');
+      setScorers(savedMatch.scorers || []);
+      setAssists(savedMatch.assists || []);
+    }
+  }, [activeDate, savedMatch]);
+
+  const isAlreadyClosed = savedMatch?.status === 'completed';
 
   // Handlers Cassa
   const handleTogglePayment = (playerId: string) => {
@@ -196,45 +234,54 @@ export function TabOverviewMatch({
     setAssists((prev) => prev.filter((a) => a.player_id !== playerId));
   };
 
-  // Chiusura & Archiviazione Partita
+  // Chiusura & Archiviazione Partita (si può risalvare per correggere: nulla viene contato due volte)
+  const toTeam = (list: Profile[]): MatchTeamPlayer[] => list.map((p) => ({ id: p.id, name: p.full_name }));
+  const resolveTeams = (): { white: MatchTeamPlayer[]; black: MatchTeamPlayer[] } | null => {
+    if (savedMatch?.team_white?.length && savedMatch?.team_black?.length) {
+      return { white: savedMatch.team_white, black: savedMatch.team_black };
+    }
+    if (generatedTeamRecord?.team_white?.length && generatedTeamRecord?.team_black?.length) {
+      return { white: toTeam(generatedTeamRecord.team_white), black: toTeam(generatedTeamRecord.team_black) };
+    }
+    if (starterProfiles.length >= 10) {
+      return { white: toTeam(starterProfiles.slice(0, 5)), black: toTeam(starterProfiles.slice(5, 10)) };
+    }
+    return null;
+  };
+  const canArchive = Boolean(resolveTeams());
+
   const handleArchiveMatch = async () => {
-    if (starterProfiles.length < 10) {
-      alert('Sono necessari 10 convocati confermati per archiviare la partita.');
+    const teams = resolveTeams();
+    if (!teams) {
+      alert('Servono 10 convocati confermati (o le squadre generate) per archiviare la partita.');
+      return;
+    }
+    if (isAlreadyClosed && !confirm('Questa partita è già archiviata. Vuoi aggiornare il risultato? Vittorie/pareggi/sconfitte verranno corretti, non sommati di nuovo.')) {
       return;
     }
 
-    // Se le squadre generate esistono già prendi quelle, altrimenti dividi i 10 convocati
-    const whiteIds = generatedTeamRecord?.team_white?.length
-      ? generatedTeamRecord.team_white.map((p) => p.id)
-      : starterProfiles.slice(0, 5).map((p) => p.id);
-
-    const blackIds = generatedTeamRecord?.team_black?.length
-      ? generatedTeamRecord.team_black.map((p) => p.id)
-      : starterProfiles.slice(5, 10).map((p) => p.id);
-
     setIsArchiving(true);
     setArchiveSuccessMessage('');
-
     try {
-      await executeCloseAndArchiveMatch({
+      await saveMatchResult({
         date: activeDate,
         scoreWhite,
         scoreBlack,
-        teamWhitePlayerIds: whiteIds,
-        teamBlackPlayerIds: blackIds,
+        teamWhite: teams.white,
+        teamBlack: teams.black,
         mvpPlayerId: mvpPlayerId || null,
         scorers,
         assists,
         totalCost: totalMatchCost,
+        closedBy: profile?.id || '',
       });
-
       setArchiveSuccessMessage(
-        `Partita del ${formatItalianDate(activeDate)} archiviata con successo! Punti classifica e statistiche V/P/S aggiornati nei profili.`
+        `Partita del ${formatItalianDate(activeDate)} salvata! V/P/S aggiornati nei profili. La trovi nella pagina Storico.`
       );
       setTimeout(() => setArchiveSuccessMessage(''), 8000);
     } catch (err) {
       console.error('Archiviazione fallita:', err);
-      alert('Errore durante l\'archiviazione della partita.');
+      alert('Errore durante il salvataggio della partita. Controlla la connessione e riprova.');
     } finally {
       setIsArchiving(false);
     }
@@ -505,6 +552,16 @@ export function TabOverviewMatch({
           </p>
         </div>
 
+        {isAlreadyClosed && !archiveSuccessMessage && (
+          <div className="p-3 bg-slate-800/60 border border-slate-700 text-slate-300 rounded-2xl text-xs font-semibold flex items-center gap-2">
+            <Check className="h-4 w-4 text-emerald-400" />
+            <span>
+              Partita già archiviata ({savedMatch?.score_white ?? 0} - {savedMatch?.score_black ?? 0}). Puoi correggere i dati e risalvare.{' '}
+              <Link href="/history" className="text-emerald-400 underline">Vai allo Storico</Link>
+            </span>
+          </div>
+        )}
+
         {archiveSuccessMessage && (
           <div className="p-3.5 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 rounded-2xl text-xs font-bold flex items-center gap-2 animate-in fade-in">
             <Check className="h-4 w-4 text-emerald-400" />
@@ -708,7 +765,7 @@ export function TabOverviewMatch({
           <button
             type="button"
             onClick={handleArchiveMatch}
-            disabled={isArchiving || starterProfiles.length < 10}
+            disabled={isArchiving || !canArchive}
             className="flex items-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/25 transition-all hover:scale-105 disabled:opacity-40 cursor-pointer"
           >
             {isArchiving ? (
@@ -716,7 +773,7 @@ export function TabOverviewMatch({
             ) : (
               <Trophy className="h-4 w-4" />
             )}
-            <span>Salva e Archivia Partita</span>
+            <span>{isAlreadyClosed ? 'Aggiorna Risultato' : 'Salva e Archivia Partita'}</span>
           </button>
         </div>
       </div>
