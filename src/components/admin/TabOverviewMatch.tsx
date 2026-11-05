@@ -1,5 +1,6 @@
 'use client';
 
+import { NumberInput } from '@/components/NumberInput';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Profile, Presence, Match, GeneratedTeamRecord, MatchScorer, MatchAssist } from '@/types/database';
@@ -521,12 +522,11 @@ export function TabOverviewMatch({
             <div className="flex items-center justify-around gap-3 pt-2">
               <div className="text-center space-y-1">
                 <span className="text-xs font-bold text-white block">⚪ Bianca</span>
-                <input
-                  type="number"
-                  min="0"
-                  max="50"
+                <NumberInput
+                  min={0}
+                  max={50}
                   value={scoreWhite}
-                  onChange={(e) => setScoreWhite(parseInt(e.target.value) || 0)}
+                  onValueChange={setScoreWhite}
                   className="w-16 h-14 bg-slate-900 border-2 border-slate-700 text-center text-2xl font-black text-white rounded-xl focus:border-emerald-500 focus:outline-none"
                 />
               </div>
@@ -535,12 +535,11 @@ export function TabOverviewMatch({
 
               <div className="text-center space-y-1">
                 <span className="text-xs font-bold text-white block">⚫ Nera</span>
-                <input
-                  type="number"
-                  min="0"
-                  max="50"
+                <NumberInput
+                  min={0}
+                  max={50}
                   value={scoreBlack}
-                  onChange={(e) => setScoreBlack(parseInt(e.target.value) || 0)}
+                  onValueChange={setScoreBlack}
                   className="w-16 h-14 bg-slate-900 border-2 border-slate-700 text-center text-2xl font-black text-white rounded-xl focus:border-emerald-500 focus:outline-none"
                 />
               </div>
@@ -612,12 +611,11 @@ export function TabOverviewMatch({
                     </option>
                   ))}
                 </select>
-                <input
-                  type="number"
-                  min="1"
-                  max="15"
+                <NumberInput
+                  min={1}
+                  max={15}
                   value={newScorerGoals}
-                  onChange={(e) => setNewScorerGoals(parseInt(e.target.value) || 1)}
+                  onValueChange={setNewScorerGoals}
                   className="w-12 px-1.5 py-1.5 bg-slate-900 border border-slate-800 text-white rounded-lg text-xs text-center"
                 />
                 <button
@@ -666,12 +664,11 @@ export function TabOverviewMatch({
                     </option>
                   ))}
                 </select>
-                <input
-                  type="number"
-                  min="1"
-                  max="15"
+                <NumberInput
+                  min={1}
+                  max={15}
                   value={newAssistCount}
-                  onChange={(e) => setNewAssistCount(parseInt(e.target.value) || 1)}
+                  onValueChange={setNewAssistCount}
                   className="w-12 px-1.5 py-1.5 bg-slate-900 border border-slate-800 text-white rounded-lg text-xs text-center"
                 />
                 <button

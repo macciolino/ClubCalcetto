@@ -1,5 +1,6 @@
 'use client';
 
+import { NumberInput } from '@/components/NumberInput';
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/context/AuthContext';
@@ -409,11 +410,10 @@ function SquadreContent() {
           {/* Costo Totale */}
           <div>
             <label className="block text-slate-400 font-semibold mb-1">Costo Totale (€)</label>
-            <input
-              type="number"
-              step="5"
+            <NumberInput
               value={totalCost}
-              onChange={(e) => setTotalCost(parseFloat(e.target.value) || 0)}
+              onValueChange={setTotalCost}
+              decimal
               disabled={!isClientAdmin}
               className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-medium focus:outline-none focus:border-emerald-500 disabled:opacity-70"
             />

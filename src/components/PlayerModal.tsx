@@ -1,5 +1,6 @@
 'use client';
 
+import { NumberInput } from '@/components/NumberInput';
 import { getStatValue } from '@/lib/utils/statUtils';
 import React, { useState, useEffect } from 'react';
 import { Profile, StatCategory, FieldPosition, FIELD_POSITIONS, STAT_CANONICAL_ORDER } from '@/types/database';
@@ -327,11 +328,10 @@ export function PlayerModal({
                 <label className="block text-[11px] font-bold text-emerald-400 mb-1">
                   Vittorie (V)
                 </label>
-                <input
-                  type="number"
-                  min="0"
+                <NumberInput
+                  min={0}
                   value={matchesWon}
-                  onChange={(e) => setMatchesWon(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                  onValueChange={setMatchesWon}
                   className="w-full text-center bg-slate-900 border border-emerald-500/30 rounded-lg py-1 text-emerald-300 font-mono font-bold text-base focus:outline-none focus:border-emerald-400"
                 />
               </div>
@@ -340,11 +340,10 @@ export function PlayerModal({
                 <label className="block text-[11px] font-bold text-amber-400 mb-1">
                   Pareggi (P)
                 </label>
-                <input
-                  type="number"
-                  min="0"
+                <NumberInput
+                  min={0}
                   value={matchesDrawn}
-                  onChange={(e) => setMatchesDrawn(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                  onValueChange={setMatchesDrawn}
                   className="w-full text-center bg-slate-900 border border-amber-500/30 rounded-lg py-1 text-amber-300 font-mono font-bold text-base focus:outline-none focus:border-amber-400"
                 />
               </div>
@@ -353,11 +352,10 @@ export function PlayerModal({
                 <label className="block text-[11px] font-bold text-rose-400 mb-1">
                   Sconfitte (S)
                 </label>
-                <input
-                  type="number"
-                  min="0"
+                <NumberInput
+                  min={0}
                   value={matchesLost}
-                  onChange={(e) => setMatchesLost(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                  onValueChange={setMatchesLost}
                   className="w-full text-center bg-slate-900 border border-rose-500/30 rounded-lg py-1 text-rose-300 font-mono font-bold text-base focus:outline-none focus:border-rose-400"
                 />
               </div>

@@ -1,5 +1,6 @@
 'use client';
 
+import { NumberInput } from '@/components/NumberInput';
 import React, { useState } from 'react';
 import { SportField, StatCategory, STAT_DETAILS, STAT_CANONICAL_ORDER } from '@/types/database';
 import { FieldModal } from './FieldModal';
@@ -316,13 +317,12 @@ export function TabClubConfigFields({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-slate-400 font-bold mb-1">Costo Totale Campo (€)</label>
-                <input
-                  type="number"
-                  min="30"
-                  max="300"
-                  step="5"
+                <NumberInput
+                  min={30}
+                  max={300}
                   value={costInput}
-                  onChange={(e) => setCostInput(parseFloat(e.target.value) || 0)}
+                  onValueChange={setCostInput}
+                  decimal
                   className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono font-bold focus:outline-none focus:border-emerald-500"
                 />
               </div>

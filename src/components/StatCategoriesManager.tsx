@@ -1,5 +1,6 @@
 'use client';
 
+import { NumberInput } from '@/components/NumberInput';
 import React, { useState } from 'react';
 import { StatCategory } from '@/types/database';
 import { addStoredCategory, removeStoredCategory } from '@/lib/services/statCategoryService';
@@ -103,12 +104,11 @@ export function StatCategoriesManager({
         />
         <div className="flex items-center gap-1.5 bg-slate-950 px-3 rounded-xl border border-slate-700">
           <span className="text-xs text-slate-400">Def:</span>
-          <input
-            type="number"
-            min="1"
-            max="10"
+          <NumberInput
+            min={1}
+            max={10}
             value={newCatDefault}
-            onChange={(e) => setNewCatDefault(parseInt(e.target.value, 10))}
+            onValueChange={setNewCatDefault}
             className="w-12 bg-transparent text-white font-mono text-sm text-center focus:outline-none font-bold"
           />
         </div>
