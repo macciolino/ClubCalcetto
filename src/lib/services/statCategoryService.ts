@@ -1,18 +1,18 @@
 'use client';
 
-import { StatCategory, Profile } from '@/types/database';
+import { StatCategory, Profile, STAT_DETAILS } from '@/types/database';
 import { getStoredPlayers, saveStoredPlayers } from './playerService';
 import { saveStatCategoryDoc, deleteStatCategoryDoc } from '@/lib/firebase/firestoreService';
 
 export const DEFAULT_BASE_CATEGORIES: StatCategory[] = [
-  { id: '1', name: 'Resistenza', label: 'Resistenza', default_value: 7 },
-  { id: '2', name: 'Velocità', label: 'Velocità', default_value: 7 },
-  { id: '3', name: 'Difesa', label: 'Difesa', default_value: 7 },
-  { id: '4', name: 'Tiro', label: 'Tiro', default_value: 7 },
-  { id: '5', name: 'Passaggio', label: 'Passaggio', default_value: 7 },
-  { id: '6', name: 'Tecnica', label: 'Tecnica', default_value: 7 },
-  { id: '7', name: 'Fisico', label: 'Fisico', default_value: 7 },
-  { id: '8', name: 'Dribbling', label: 'Dribbling', default_value: 7 },
+  { id: '1', name: 'Velocità', label: 'Velocità / Scatto breve', default_value: 7 },
+  { id: '2', name: 'Fisico', label: 'Fisico / Protezione palla e contrasti', default_value: 7 },
+  { id: '3', name: 'Resistenza', label: 'Resistenza / Fiato', default_value: 7 },
+  { id: '4', name: 'Tiro', label: 'Tiro / Conclusione', default_value: 7 },
+  { id: '5', name: 'Passaggio', label: 'Passaggio / Sponde', default_value: 7 },
+  { id: '6', name: 'Dribbling', label: 'Dribbling / Controllo nello stretto', default_value: 7 },
+  { id: '7', name: 'Difesa', label: 'Difesa / 1v1', default_value: 7 },
+  { id: '8', name: 'Visione', label: 'Visione di gioco / Tattica', default_value: 7 },
 ];
 
 const CATEGORIES_STORAGE_KEY = 'clubcalcetto_stat_categories';
@@ -44,6 +44,11 @@ export function saveStoredCategories(categories: StatCategory[]) {
   }
 }
 
+export function resetToDefault8Categories(): StatCategory[] {
+  saveStoredCategories(DEFAULT_BASE_CATEGORIES);
+  return DEFAULT_BASE_CATEGORIES;
+}
+
 export async function addStoredCategory(newCat: {
   name: string;
   label?: string;
@@ -54,7 +59,7 @@ export async function addStoredCategory(newCat: {
     id: `cat-${Date.now()}`,
     name: newCat.name.trim(),
     label: newCat.label?.trim() || newCat.name.trim(),
-    default_value: newCat.default_value ?? 6,
+    default_value: newCat.default_value ?? 7,
   };
 
   const updatedCats = [...currentCats, catObj];
@@ -99,26 +104,27 @@ export async function removeStoredCategory(
   );
   saveStoredCategories(updatedCats);
 
-  // Rimuovi la statistica dai giocatori e ricalcola il rating
+  // Rimuove la statistica dai profili
   const currentPlayers = getStoredPlayers();
-  const updatedPlayers = currentPlayers.map((p) => {
-    const newStats = { ...(p.stats || {}) };
-    delete newStats[categoryName];
-    const values = Object.values(newStats).filter((v) => typeof v === 'number');
+  const updatedPlayers: Profile[] = currentPlayers.map((p) => {
+    const existingStats = { ...(p.stats || {}) };
+    delete existingStats[categoryName];
+    const values = Object.values(existingStats).filter((v) => typeof v === 'number');
     const avg =
       values.length > 0
         ? Number((values.reduce((a, b) => a + b, 0) / values.length).toFixed(1))
         : p.overall_rating;
+
     return {
       ...p,
-      stats: newStats,
+      stats: existingStats,
       overall_rating: avg,
       updated_at: new Date().toISOString(),
     };
   });
 
   saveStoredPlayers(updatedPlayers);
-  deleteStatCategoryDoc(categoryId);
+  await deleteStatCategoryDoc(categoryId);
 
   return updatedCats;
 }

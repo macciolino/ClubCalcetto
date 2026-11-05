@@ -6,7 +6,7 @@ import { Profile, StatCategory, FIELD_POSITION_ABBR, STAT_CANONICAL_ORDER } from
 import { subscribeProfiles, subscribeStatCategories, deleteProfileDoc } from '@/lib/firebase/firestoreService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { getStoredPlayers, removeStoredPlayer, saveStoredPlayers, getPlayerMatchRecord } from '@/lib/services/playerService';
-import { getStoredCategories } from '@/lib/services/statCategoryService';
+import { getStoredCategories, DEFAULT_BASE_CATEGORIES } from '@/lib/services/statCategoryService';
 import { StatBadge } from '@/components/StatBadge';
 import { PlayerModal } from '@/components/PlayerModal';
 import { StatCategoriesManager } from '@/components/StatCategoriesManager';
@@ -27,16 +27,7 @@ import {
   Sparkles
 } from 'lucide-react';
 
-const DEFAULT_CATEGORIES: StatCategory[] = [
-  { id: '1', name: 'Resistenza', label: 'Resistenza', default_value: 6 },
-  { id: '2', name: 'Velocità', label: 'Velocità', default_value: 6 },
-  { id: '3', name: 'Difesa', label: 'Difesa', default_value: 6 },
-  { id: '4', name: 'Tiro', label: 'Tiro', default_value: 6 },
-  { id: '5', name: 'Passaggio', label: 'Passaggio', default_value: 6 },
-  { id: '6', name: 'Tecnica', label: 'Tecnica', default_value: 6 },
-  { id: '7', name: 'Fisico', label: 'Fisico', default_value: 6 },
-  { id: '8', name: 'Dribbling', label: 'Dribbling', default_value: 6 },
-];
+const DEFAULT_CATEGORIES: StatCategory[] = DEFAULT_BASE_CATEGORIES;
 
 const DEFAULT_PLAYERS_LIST: Profile[] = [
   {
@@ -430,6 +421,7 @@ export default function GiocatoriPage() {
                 key={player.id}
                 player={player}
                 isAdmin={isClientAdmin}
+                categories={sortedCategories}
                 onEdit={handleOpenEditModal}
                 onDelete={(p) => handleDeletePlayer(p.id, p.full_name)}
               />

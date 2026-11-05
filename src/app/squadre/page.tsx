@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/context/AuthContext';
-import { Profile, Presence, Match, GeneratedTeamRecord } from '@/types/database';
+import { Profile, Presence, Match, GeneratedTeamRecord, SportField } from '@/types/database';
+import { getStoredFields } from '@/lib/services/fieldService';
 import { 
   subscribeMatch, 
   saveMatchDoc, 
@@ -191,11 +192,14 @@ function SquadreContent() {
   const isStrictAdmin = Boolean(mounted && user && (profile?.role === 'admin' || isAdmin));
   const isClientAdmin = isStrictAdmin;
 
+  const [fields] = useState<SportField[]>(() => getStoredFields());
   const [selectedDate, setSelectedDate] = useState<string>(
     dateParam || getUpcomingDays(7)[0]?.dateString || '2026-10-28'
   );
   const [matchTime, setMatchTime] = useState('20:30');
-  const [matchLocation, setMatchLocation] = useState('Centro Sportivo Calcetto - Campo 3');
+  const [matchLocation, setMatchLocation] = useState(
+    () => getStoredFields()[0]?.name || 'Centro Sportivo Green Club - Campo 3'
+  );
   const [totalCost, setTotalCost] = useState(80.0);
 
   const [presences, setPresences] = useState<Presence[]>([]);
@@ -580,17 +584,32 @@ function SquadreContent() {
             />
           </div>
 
-          {/* Luogo Campo */}
+          {/* Luogo Campo con Dropdown Centri Censiti */}
           <div>
             <label className="block text-slate-400 font-semibold mb-1">Luogo / Campo</label>
-            <input
-              type="text"
-              value={matchLocation}
-              onChange={(e) => setMatchLocation(e.target.value)}
-              disabled={!isClientAdmin}
-              placeholder="Es. Centro Sportivo"
-              className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-medium focus:outline-none focus:border-emerald-500 disabled:opacity-70"
-            />
+            {fields.length > 0 ? (
+              <select
+                value={matchLocation}
+                onChange={(e) => setMatchLocation(e.target.value)}
+                disabled={!isClientAdmin}
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-medium focus:outline-none focus:border-emerald-500 disabled:opacity-70 text-xs"
+              >
+                {fields.map((f) => (
+                  <option key={f.id} value={`${f.name} (${f.address})`}>
+                    {f.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={matchLocation}
+                onChange={(e) => setMatchLocation(e.target.value)}
+                disabled={!isClientAdmin}
+                placeholder="Es. Centro Sportivo"
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-medium focus:outline-none focus:border-emerald-500 disabled:opacity-70 text-xs"
+              />
+            )}
           </div>
 
           {/* Costo Totale */}

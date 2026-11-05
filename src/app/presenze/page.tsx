@@ -290,10 +290,13 @@ export default function PresenzePage() {
   };
 
   // Selezione giorno che sincronizza istantaneamente anche Squadre e Admin
+  // Solo gli admin possono cambiare la data ufficiale della partita (per tutti)
   const handleSelectDay = (dateString: string) => {
     setSelectedDayString(dateString);
-    setOfficialMatchDate(dateString);
-    saveOfficialMatchDateDoc(dateString);
+    if (isStrictAdmin) {
+      setOfficialMatchDate(dateString);
+      saveOfficialMatchDateDoc(dateString);
+    }
   };
 
   // Toggle presenza utente corrente per un giorno

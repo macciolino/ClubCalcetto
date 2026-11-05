@@ -29,9 +29,18 @@ yarn-error.log*
 .env*.local
 .env
 
+# firestore backups (contain personal data)
+/backups/
+
 # vercel
 .vercel
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# firebase emulators (local fake data & logs)
+/emulator-data/
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*

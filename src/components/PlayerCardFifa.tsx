@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Profile, FIELD_POSITION_ABBR, sortStatsByCanonicalOrder } from '@/types/database';
+import { Profile, StatCategory, FIELD_POSITION_ABBR, STAT_DETAILS, sortStatsByCanonicalOrder } from '@/types/database';
 import { RadarChart } from './RadarChart';
 import { StatBadge } from './StatBadge';
 import { getPlayerMatchRecord } from '@/lib/services/playerService';
@@ -23,6 +23,8 @@ interface PlayerCardFifaProps {
   isAdmin: boolean;
   onEdit?: (player: Profile) => void;
   onDelete?: (player: Profile) => void;
+  /** Parametri ufficiali configurati dall'admin (Campi & Regole). Se assenti usa le chiavi del giocatore. */
+  categories?: StatCategory[];
 }
 
 export function PlayerCardFifa({
@@ -30,10 +32,21 @@ export function PlayerCardFifa({
   isAdmin,
   onEdit,
   onDelete,
+  categories,
 }: PlayerCardFifaProps) {
   const [activeTab, setActiveTab] = useState<'radar' | 'stats'>('radar');
   const record = getPlayerMatchRecord(player);
   const isSuperAdmin = player.email?.toLowerCase().includes('macciolino84');
+
+  // Statistiche mostrate: solo i parametri ufficiali dell'admin, con fallback al valore di default
+  const displayStats: Record<string, number> = {};
+  if (categories && categories.length > 0) {
+    categories.forEach((cat) => {
+      displayStats[cat.name] = player.stats?.[cat.name] ?? cat.default_value ?? 6;
+    });
+  } else {
+    Object.assign(displayStats, player.stats || {});
+  }
 
   const ovrDisplay = Math.round(player.overall_rating * 10); // stile FIFA (es. 7.9 -> 79)
 
@@ -140,13 +153,13 @@ export function PlayerCardFifa({
         {/* CONTENUTO SCHEDA 1: RADAR OTTAGONALE STILE PES/FIFA */}
         {activeTab === 'radar' ? (
           <div className="mt-3 py-2 flex flex-col items-center justify-center animate-in fade-in duration-200">
-            <RadarChart stats={player.stats} size={180} color="emerald" showLabels={true} />
+            <RadarChart stats={displayStats} size={180} color="emerald" showLabels={true} />
 
             {/* Griglia mini pill delle abilità in ordine canonico */}
             <div className="mt-3 grid grid-cols-4 gap-1.5 w-full text-center">
-              {sortStatsByCanonicalOrder(Object.keys(player.stats)).map((name) => {
-                const val = player.stats[name] ?? 6;
-                const abbr = name.slice(0, 3).toUpperCase();
+              {sortStatsByCanonicalOrder(Object.keys(displayStats)).map((name) => {
+                const val = displayStats[name] ?? 6;
+                const abbr = STAT_DETAILS[name]?.code || name.slice(0, 3).toUpperCase();
                 return (
                   <div
                     key={name}

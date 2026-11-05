@@ -17,14 +17,15 @@ interface RadarChartProps {
 }
 
 const STAT_ABBR_MAP: Record<string, string> = {
-  Resistenza: 'RES',
   Velocità: 'VEL',
-  Difesa: 'DIF',
+  Fisico: 'FIS',
+  Resistenza: 'RES',
   Tiro: 'TIR',
   Passaggio: 'PAS',
-  Tecnica: 'TEC',
-  Fisico: 'FIS',
   Dribbling: 'DRI',
+  Difesa: 'DIF',
+  Visione: 'VIS',
+  Tecnica: 'TEC',
 };
 
 export function RadarChart({

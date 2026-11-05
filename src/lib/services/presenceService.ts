@@ -98,6 +98,10 @@ export function setOfficialMatchDate(date: string) {
 
 const DEFAULT_SETTINGS: AppSettings = {
   official_match_date: TODAY_DATE,
+  timelock_enabled: false,
+  timelock_hours_before: 4,
+  standard_match_time: '20:30',
+  standard_total_cost: 80,
 };
 
 export function getAppSettings(): AppSettings {
@@ -127,6 +131,34 @@ export function saveAppSettings(settings: Partial<AppSettings>): AppSettings {
     }
   }
   return updated;
+}
+
+export function isTimelockActive(
+  matchDate: string,
+  matchTime = '20:30'
+): { locked: boolean; reason?: string } {
+  const settings = getAppSettings();
+  if (!settings.timelock_enabled) {
+    return { locked: false };
+  }
+
+  const hoursBefore = settings.timelock_hours_before || 4;
+  try {
+    const matchDateTime = new Date(`${matchDate}T${matchTime}:00`);
+    const lockThreshold = new Date(matchDateTime.getTime() - hoursBefore * 60 * 60 * 1000);
+    const now = new Date();
+
+    if (now >= lockThreshold) {
+      return {
+        locked: true,
+        reason: `Disdette bloccate automaticamente a meno di ${hoursBefore}h dalla partita (${matchTime}). Contatta l'Amministratore per disdire.`,
+      };
+    }
+  } catch (err) {
+    console.warn('Errore calcolo timelock:', err);
+  }
+
+  return { locked: false };
 }
 
 /**

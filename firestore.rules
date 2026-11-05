@@ -1,9 +1,120 @@
 rules_version = '2';
+
+// ============================================================================
+// ClubCalcetto - Firestore Security Rules
+// ----------------------------------------------------------------------------
+// Roles
+//  - Super admin : the verified account macciolino84@gmail.com (profile doc 'p-1')
+//  - Admin       : a profile whose role == 'admin' (promoted ONLY by the super admin)
+//  - Player      : any other signed-in user
+// Nobody who is not signed in can read or write anything.
+// ============================================================================
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Consenti lettura e scrittura a tutti gli utenti per l'app privata calcetto tra amici
-    match /{document=**} {
-      allow read, write: if true;
+
+    // ---------- helpers ----------
+    function signedIn() {
+      return request.auth != null;
     }
+
+    function isSuperAdmin() {
+      return signedIn()
+        && request.auth.token.email == 'macciolino84@gmail.com'
+        && request.auth.token.email_verified == true;
+    }
+
+    function myProfilePath() {
+      return /databases/$(database)/documents/profiles/$(request.auth.uid);
+    }
+
+    function isAdmin() {
+      return isSuperAdmin()
+        || (signedIn() && exists(myProfilePath()) && get(myProfilePath()).data.role == 'admin');
+    }
+
+    function changedKeys() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    function onlyChanges(keys) {
+      return changedKeys().hasOnly(keys);
+    }
+
+    // Admins (not super admin) may not change roles, except normalising the legacy value 'user' -> 'player'
+    function roleUntouchedOrLegacyFix() {
+      return !('role' in changedKeys())
+        || (resource.data.role == 'user' && request.resource.data.role == 'player');
+    }
+
+    // ---------- profiles ----------
+    match /profiles/{profileId} {
+      allow read: if signedIn();
+
+      // A user creates ONLY their own profile (doc id = their uid), always as a plain player with no match history.
+      // Admins can create guest/manual players, but only the super admin can create another admin.
+      allow create: if isSuperAdmin()
+        || (isAdmin() && request.resource.data.role != 'admin')
+        || (signedIn()
+            && profileId == request.auth.uid
+            && request.resource.data.role == 'player'
+            && request.resource.data.get('matches_won', 0) == 0
+            && request.resource.data.get('matches_drawn', 0) == 0
+            && request.resource.data.get('matches_lost', 0) == 0);
+
+      // Super admin: everything. Admin: stats, records, data (not roles). Player: only cosmetic fields of their own profile.
+      allow update: if isSuperAdmin()
+        || (isAdmin() && roleUntouchedOrLegacyFix())
+        || (signedIn()
+            && profileId == request.auth.uid
+            && onlyChanges(['full_name', 'avatar_url', 'position', 'updated_at']));
+
+      // The super admin profile can never be deleted; only the super admin can delete an admin.
+      allow delete: if profileId != 'p-1'
+        && (isSuperAdmin() || (isAdmin() && resource.data.role != 'admin'));
+    }
+
+    // ---------- presences ----------
+    match /presences/{presenceId} {
+      allow read: if signedIn();
+
+      // A player signs up / withdraws only themselves; admins manage everyone.
+      allow create: if isAdmin()
+        || (signedIn() && request.resource.data.player_id == request.auth.uid);
+      allow delete: if isAdmin()
+        || (signedIn() && resource.data.player_id == request.auth.uid);
+
+      // TEMPORARY (until the presence redesign): the automatic waitlist promotion runs in the
+      // browser of whoever withdraws, so any signed-in user may change ONLY status/order_index.
+      allow update: if isAdmin()
+        || (signedIn() && onlyChanges(['status', 'order_index']));
+    }
+
+    // ---------- club data: everyone signed in reads, only admins write ----------
+    match /stat_categories/{id} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+    match /settings/{id} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+    match /matches/{id} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+    match /generated_teams/{id} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+    match /match_payments/{id} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+    match /sport_fields/{id} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    // Anything else is denied by default.
   }
 }

@@ -3,6 +3,9 @@ import { NextResponse, type NextRequest } from 'next/server';
 export function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
+  // NOTE: these cookies are set by the browser and are only for routing/UX.
+  // The real security boundary is firestore.rules (data access is enforced server-side by Firebase).
+
   // 1. ISOLAMENTO RIGIDO /admin:
   // Se la route richiesta è /admin o qualsiasi sotto-percorso di /admin,
   // controlla il cookie 'user_role'. Se non è presente o non è strettamente 'admin',
@@ -17,7 +20,7 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const isDemoSession = request.cookies.get('demo_session')?.value === 'true';
+  const hasSession = request.cookies.get('cc_session')?.value === '1';
   const isPublicRoute =
     pathname.startsWith('/login') ||
     pathname.startsWith('/auth') ||
@@ -30,7 +33,7 @@ export function proxy(request: NextRequest) {
     request.nextUrl.hostname === 'localhost' ||
     request.nextUrl.hostname === '127.0.0.1' ||
     isPublicRoute ||
-    isDemoSession
+    hasSession
   ) {
     return NextResponse.next();
   }

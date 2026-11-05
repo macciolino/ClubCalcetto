@@ -13,9 +13,6 @@ import {
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './config';
 import { Profile, Presence, StatCategory, Match, GeneratedTeamRecord, AppSettings } from '@/types/database';
-import { DEFAULT_PLAYERS } from '@/lib/services/playerService';
-import { DEFAULT_PRESENCES, getOfficialMatchDate } from '@/lib/services/presenceService';
-import { DEFAULT_BASE_CATEGORIES } from '@/lib/services/statCategoryService';
 
 // ==========================================
 // 1. PROFILI & GIOCATORI (Collection: 'profiles')
@@ -33,15 +30,13 @@ export function subscribeProfiles(
     return onSnapshot(
       colRef,
       (snapshot) => {
+        // NOTE: no automatic seeding of demo players into the real database
         if (!snapshot.empty) {
           const list: Profile[] = [];
           snapshot.forEach((docSnap) => {
             list.push(docSnap.data() as Profile);
           });
           callback(list);
-        } else {
-          // Se la collezione è vuota (primo avvio), inizializzala con i giocatori di default
-          seedInitialProfiles();
         }
       },
       (err) => {
@@ -51,16 +46,6 @@ export function subscribeProfiles(
   } catch (err) {
     console.warn('[Firestore] subscribeProfiles exception:', err);
     return () => {};
-  }
-}
-
-async function seedInitialProfiles() {
-  try {
-    for (const player of DEFAULT_PLAYERS) {
-      await setDoc(doc(db, 'profiles', player.id), player, { merge: true });
-    }
-  } catch (e) {
-    console.warn('[Firestore] Error seeding profiles:', e);
   }
 }
 
@@ -226,10 +211,8 @@ export function subscribeStatCategories(
             list.push(docSnap.data() as StatCategory);
           });
           callback(list);
-        } else {
-          // Inizializza categorie di default
-          seedInitialCategories();
         }
+        // NOTE: no automatic seeding; the admin can use "Ripristina Default 8" 
       },
       (err) => {
         console.warn('[Firestore] subscribeStatCategories warning:', err.message);
@@ -238,16 +221,6 @@ export function subscribeStatCategories(
   } catch (err) {
     console.warn('[Firestore] subscribeStatCategories exception:', err);
     return () => {};
-  }
-}
-
-async function seedInitialCategories() {
-  try {
-    for (const cat of DEFAULT_BASE_CATEGORIES) {
-      await setDoc(doc(db, 'stat_categories', cat.id), cat, { merge: true });
-    }
-  } catch (e) {
-    console.warn('[Firestore] Error seeding categories:', e);
   }
 }
 

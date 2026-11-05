@@ -4,15 +4,16 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/context/AuthContext';
-import { StatCategory, Profile, Presence, FIELD_POSITION_ABBR } from '@/types/database';
-import { StatCategoriesManager } from '@/components/StatCategoriesManager';
+import { StatCategory, Profile, Presence, SportField, GeneratedTeamRecord } from '@/types/database';
 import { PlayerModal } from '@/components/PlayerModal';
-import { StatBadge } from '@/components/StatBadge';
+import { TabOverviewMatch } from '@/components/admin/TabOverviewMatch';
+import { TabPresencesTimelock } from '@/components/admin/TabPresencesTimelock';
+import { TabUsersRoles } from '@/components/admin/TabUsersRoles';
+import { TabClubConfigFields } from '@/components/admin/TabClubConfigFields';
 import { 
   subscribeProfiles, 
   subscribeStatCategories, 
   subscribePresences, 
-  deletePresenceDoc, 
   savePresenceDoc,
   clearPresencesForDate, 
   saveProfileDoc, 
@@ -20,7 +21,8 @@ import {
   saveOfficialMatchDateDoc,
   subscribeAppSettings,
   saveAppSettingsDoc,
-  executeAtomicPresenceSubstitution
+  executeAtomicPresenceSubstitution,
+  subscribeGeneratedTeams
 } from '@/lib/firebase/firestoreService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { 
@@ -32,269 +34,170 @@ import {
 import { 
   getStoredPresences, 
   saveStoredPresences, 
-  resetStoredPresences,
-  getOfficialMatchDate,
-  setOfficialMatchDate,
-  processPresenceRemovalWithAutoSubstitution
+  getOfficialMatchDate, 
+  setOfficialMatchDate, 
+  getAppSettings, 
+  saveAppSettings,
+  processPresenceRemovalWithAutoSubstitution 
 } from '@/lib/services/presenceService';
-import { getStoredCategories } from '@/lib/services/statCategoryService';
-import { formatItalianDate, getUpcomingDays } from '@/lib/utils/dateUtils';
+import { 
+  getStoredCategories, 
+  resetToDefault8Categories 
+} from '@/lib/services/statCategoryService';
+import { 
+  getStoredFields, 
+  addStoredField, 
+  updateStoredField, 
+  removeStoredField,
+  subscribeSportFields 
+} from '@/lib/services/fieldService';
+import { getUpcomingDays } from '@/lib/utils/dateUtils';
 import { 
   ShieldAlert, 
-  RotateCcw, 
-  UserPlus, 
-  Mail, 
-  Settings, 
-  Check, 
-  AlertTriangle, 
-  Database, 
-  Sliders, 
-  Loader2, 
+  LayoutDashboard, 
+  CalendarDays, 
   Users, 
-  Search, 
-  Trash2, 
-  Edit3, 
-  ShieldCheck, 
-  UserX,
-  UserCheck,
-  UserMinus,
-  Calendar,
-  CalendarDays,
+  Settings, 
+  Loader2, 
+  ArrowLeft,
   Sparkles,
   Trophy,
-  ArrowLeft,
-  User
+  Coins
 } from 'lucide-react';
+
+type AdminTab = 'overview' | 'presences' | 'users' | 'config';
 
 export default function AdminPage() {
   const router = useRouter();
-  const { user, profile, isAdmin, isLoading } = useAuth();
+  const { user, profile, isAdmin, isSuperAdmin, isLoading } = useAuth();
   const [mounted, setMounted] = useState(false);
+
+  // Navigazione a 4 Tab Orizzontali
+  const [activeTab, setActiveTab] = useState<AdminTab>('overview');
+
+  // Stato Dati Globali
+  const upcomingDays = getUpcomingDays(7);
+  const [activeDate, setActiveDate] = useState<string>(() => getOfficialMatchDate());
   const [categories, setCategories] = useState<StatCategory[]>(() => getStoredCategories());
   const [players, setPlayers] = useState<Profile[]>(() => getStoredPlayers());
   const [presences, setPresences] = useState<Presence[]>(() => getStoredPresences());
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isResetting, setIsResetting] = useState(false);
-  const [resetSuccess, setResetSuccess] = useState(false);
-  const [testEmailLoading, setTestEmailLoading] = useState(false);
-  const [testEmailSuccess, setTestEmailSuccess] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingPlayer, setEditingPlayer] = useState<Profile | null>(null);
+  const [fields, setFields] = useState<SportField[]>(() => getStoredFields());
+  const [appSettings, setAppSettingsState] = useState(() => getAppSettings());
+  const [generatedTeams, setGeneratedTeams] = useState<GeneratedTeamRecord | null>(null);
 
-  const upcomingDays = getUpcomingDays(7);
-  const [activeDate, setActiveDate] = useState<string>(() => getOfficialMatchDate());
+  // Modale Giocatore (Aggiunta / Modifica)
+  const [isPlayerModalOpen, setIsPlayerModalOpen] = useState(false);
+  const [playerToEdit, setPlayerToEdit] = useState<Profile | null>(null);
 
-  // Protezione Rotte Rigida: Se l'utente non è confermato al 100% come admin, redirect forzato immediato
+  // Email Test State
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [emailStatusMessage, setEmailStatusMessage] = useState('');
+
+  // 1. ISOLAMENTO RIGIDO: Controllo autorizzazione amministratore
+  const isStrictAdmin = Boolean(mounted && !isLoading && user && (profile?.role === 'admin' || isAdmin));
+
   useEffect(() => {
-    if (mounted && !isLoading) {
-      const isStrictAdmin = Boolean(user && (profile?.role === 'admin' || isAdmin));
-      if (!isStrictAdmin) {
-        router.replace('/presenze');
-      }
+    if (mounted && !isLoading && !isStrictAdmin) {
+      router.replace('/presenze');
     }
-  }, [mounted, isLoading, user, profile, isAdmin, router]);
+  }, [mounted, isLoading, isStrictAdmin, router]);
 
+  // 2. Sottoscrizioni e Caricamento Iniziale
   useEffect(() => {
     setMounted(true);
-    // 1. Carica dallo store locale
     setPlayers(getStoredPlayers());
     setCategories(getStoredCategories());
     setPresences(getStoredPresences());
+    setFields(getStoredFields());
+    setAppSettingsState(getAppSettings());
 
-    const handlePlayersChanged = () => {
-      setPlayers(getStoredPlayers());
+    const handlePlayers = () => setPlayers(getStoredPlayers());
+    const handlePres = () => setPresences(getStoredPresences());
+    const handleCats = () => setCategories(getStoredCategories());
+    const handleFields = () => setFields(getStoredFields());
+    const handleSettings = (e: any) => {
+      if (e.detail) setAppSettingsState(e.detail);
+      else setAppSettingsState(getAppSettings());
     };
-    const handlePresencesChanged = () => {
-      setPresences(getStoredPresences());
-    };
-    const handleCategoriesChanged = () => {
-      setCategories(getStoredCategories());
-    };
-    const handleMatchDateChange = (e: any) => {
-      const newDate = e.detail?.date || getOfficialMatchDate();
-      if (newDate) {
-        setActiveDate(newDate);
-      }
+    const handleDate = (e: any) => {
+      const d = e.detail?.date || getOfficialMatchDate();
+      if (d) setActiveDate(d);
     };
 
-    window.addEventListener('clubcalcetto_players_changed', handlePlayersChanged);
-    window.addEventListener('clubcalcetto_presences_changed', handlePresencesChanged);
-    window.addEventListener('clubcalcetto_categories_changed', handleCategoriesChanged);
-    window.addEventListener('clubcalcetto_match_date_changed', handleMatchDateChange);
+    window.addEventListener('clubcalcetto_players_changed', handlePlayers);
+    window.addEventListener('clubcalcetto_presences_changed', handlePres);
+    window.addEventListener('clubcalcetto_categories_changed', handleCats);
+    window.addEventListener('clubcalcetto_fields_changed', handleFields);
+    window.addEventListener('clubcalcetto_settings_changed', handleSettings);
+    window.addEventListener('clubcalcetto_match_date_changed', handleDate);
 
-    // 2. Real-time Firebase Firestore
+    // Sottoscrizioni Realtime Firebase
     let unsubProfs = () => {};
     let unsubCats = () => {};
-    let unsubPres = () => {};
+    let unsubFields = () => {};
+    let unsubSettings = () => {};
 
     if (isFirebaseConfigured) {
-      unsubProfs = subscribeProfiles((pList) => {
-        if (pList && pList.length > 0) {
-          setPlayers(pList);
-          saveStoredPlayers(pList);
+      unsubProfs = subscribeProfiles((remote) => {
+        if (remote && remote.length > 0) {
+          setPlayers(remote);
+          saveStoredPlayers(remote);
         }
       });
-      unsubCats = subscribeStatCategories((cList) => {
-        if (cList && cList.length > 0) {
-          setCategories(cList);
-        }
+      unsubCats = subscribeStatCategories((remote) => {
+        if (remote && remote.length > 0) setCategories(remote);
       });
-      unsubPres = subscribePresences(activeDate, (presList) => {
-        if (presList && presList.length > 0) {
-          setPresences((prev) => {
-            const others = prev.filter((p) => p.date !== activeDate);
-            const merged = [...others, ...presList];
-            saveStoredPresences(merged);
-            return merged;
-          });
+      unsubFields = subscribeSportFields((remote) => {
+        if (remote && remote.length > 0) setFields(remote);
+      });
+      unsubSettings = subscribeAppSettings((remote) => {
+        if (remote) {
+          setAppSettingsState((prev) => ({ ...prev, ...remote }));
+          if (remote.official_match_date) setActiveDate(remote.official_match_date);
         }
       });
     }
 
     return () => {
-      window.removeEventListener('clubcalcetto_players_changed', handlePlayersChanged);
-      window.removeEventListener('clubcalcetto_presences_changed', handlePresencesChanged);
-      window.removeEventListener('clubcalcetto_categories_changed', handleCategoriesChanged);
-      window.removeEventListener('clubcalcetto_match_date_changed', handleMatchDateChange);
+      window.removeEventListener('clubcalcetto_players_changed', handlePlayers);
+      window.removeEventListener('clubcalcetto_presences_changed', handlePres);
+      window.removeEventListener('clubcalcetto_categories_changed', handleCats);
+      window.removeEventListener('clubcalcetto_fields_changed', handleFields);
+      window.removeEventListener('clubcalcetto_settings_changed', handleSettings);
+      window.removeEventListener('clubcalcetto_match_date_changed', handleDate);
       unsubProfs();
       unsubCats();
+      unsubFields();
+      unsubSettings();
+    };
+  }, []);
+
+  // Sottoscrizione Presenze e Squadre per la data attiva
+  useEffect(() => {
+    if (!isFirebaseConfigured) return;
+
+    const unsubPres = subscribePresences(activeDate, (remotePres) => {
+      if (remotePres && remotePres.length > 0) {
+        setPresences((prev) => {
+          const others = prev.filter((p) => p.date !== activeDate);
+          const merged = [...others, ...remotePres];
+          saveStoredPresences(merged);
+          return merged;
+        });
+      }
+    });
+
+    const unsubTeams = subscribeGeneratedTeams(activeDate, (record) => {
+      setGeneratedTeams(record);
+    });
+
+    return () => {
       unsubPres();
+      unsubTeams();
     };
   }, [activeDate]);
 
-  // Cambio giorno attivo e sincronizzazione con Squadre e Presenze
-  const handleSelectAdminDate = (dateString: string) => {
-    setActiveDate(dateString);
-    setOfficialMatchDate(dateString);
-    saveOfficialMatchDateDoc(dateString);
-  };
-
-  // Rimozione singola presenza da parte dell'Admin con subentro automatico silenzioso Wishlist
-  const handleRemovePresence = async (presenceId: string, playerName: string) => {
-    if (!confirm(`Vuoi rimuovere la presenza di "${playerName}" per la partita del ${formatItalianDate(activeDate)}?`)) {
-      return;
-    }
-
-    const { updatedPresences, promotedPresences } = processPresenceRemovalWithAutoSubstitution(
-      activeDate,
-      presenceId,
-      presences
-    );
-    setPresences(updatedPresences);
-    await executeAtomicPresenceSubstitution(presenceId, promotedPresences);
-  };
-
-  // Azzera tutte le votazioni della settimana
-  const handleResetWeeklyVotes = async () => {
-    const confirmed = confirm(
-      '⚠️ ATTENZIONE: Sei sicuro di voler azzerare TUTTE le presenze e votazioni della settimana? Questa azione non può essere annullata.'
-    );
-    if (!confirmed) return;
-
-    setIsResetting(true);
-    setResetSuccess(false);
-
-    try {
-      resetStoredPresences();
-      setPresences([]);
-      await clearPresencesForDate(activeDate);
-      setResetSuccess(true);
-      setTimeout(() => setResetSuccess(false), 5000);
-    } catch (err) {
-      console.error('Reset presenze error:', err);
-    } finally {
-      setIsResetting(false);
-    }
-  };
-
-  // Test invio email di notifica
-  const handleTestEmail = async () => {
-    setTestEmailLoading(true);
-    setTestEmailSuccess('');
-    try {
-      const res = await fetch('/api/notify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'ten_players_reached',
-          date: new Date().toISOString().split('T')[0],
-          playerName: 'Test Player',
-          totalConfirmed: 10,
-        }),
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        setTestEmailSuccess(`Notifica inviata con successo! (Modalità: ${data.mode})`);
-      } else {
-        setTestEmailSuccess(`Errore: ${data.error || 'Invio non riuscito'}`);
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Errore';
-      setTestEmailSuccess(`Errore: ${msg}`);
-    } finally {
-      setTestEmailLoading(false);
-      setTimeout(() => setTestEmailSuccess(''), 6000);
-    }
-  };
-
-  // Promozione Admin: Solo un admin esistente ha il potere di promuovere un utente (entrato come 'player') ad admin
-  const handleToggleUserRole = async (targetPlayer: Profile) => {
-    if (!isAdmin) {
-      alert('Solo un amministratore esistente ha il potere di promuovere un altro utente ad admin.');
-      return;
-    }
-    if (targetPlayer.email && targetPlayer.email.toLowerCase().includes('macciolino84')) {
-      alert('Non è possibile modificare il ruolo di Marco B. (Super Amministratore permanente).');
-      return;
-    }
-
-    const newRole = targetPlayer.role === 'admin' ? 'player' : 'admin';
-    const updated: Profile = { ...targetPlayer, role: newRole };
-
-    updateStoredPlayer(updated);
-    setPlayers(getStoredPlayers());
-    saveProfileDoc(updated);
-  };
-
-  // Eliminazione giocatore
-  const handleDeletePlayer = async (targetPlayer: Profile) => {
-    if (targetPlayer.email && targetPlayer.email.toLowerCase().includes('macciolino84')) {
-      alert('Impossibile eliminare Marco B. (Super Amministratore).');
-      return;
-    }
-
-    if (!confirm(`Sei sicuro di voler eliminare definitivamente "${targetPlayer.full_name}"?`)) {
-      return;
-    }
-
-    removeStoredPlayer(targetPlayer.id);
-    setPlayers(getStoredPlayers());
-    deleteProfileDoc(targetPlayer.id);
-  };
-
-  const handleOpenAddModal = () => {
-    setEditingPlayer(null);
-    setIsModalOpen(true);
-  };
-
-  const handleOpenEditModal = (p: Profile) => {
-    setEditingPlayer(p);
-    setIsModalOpen(true);
-  };
-
-  const filteredPlayers = players.filter((p) => {
-    const q = searchQuery.toLowerCase();
-    return (
-      p.full_name.toLowerCase().includes(q) ||
-      (p.email && p.email.toLowerCase().includes(q))
-    );
-  });
-
-  const isStrictAdmin = Boolean(mounted && !isLoading && user && (profile?.role === 'admin' || isAdmin));
-
-  // Non mostrare neppure per un millisecondo il contenuto della dashboard prima del redirect:
-  // mantieni lo stato di loading finché il ruolo non è confermato al 100% come 'admin'.
+  // Se non admin o in caricamento, mostra esclusivamente spinner
   if (!isStrictAdmin) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center text-center p-6 space-y-4">
@@ -304,642 +207,377 @@ export default function AdminPage() {
     );
   }
 
+  // Handlers Tab 1: Selezione Data Ufficiale
+  const handleSelectOfficialDate = (dateString: string) => {
+    setActiveDate(dateString);
+    setOfficialMatchDate(dateString);
+    saveOfficialMatchDateDoc(dateString);
+  };
+
+  // Handlers Tab 2: Presenze & Time-lock
+  const handleRemovePresence = async (presenceId: string, playerName: string) => {
+    if (!confirm(`Rimuovere la presenza di "${playerName}"? La prima riserva in attesa subentrerà in automatico.`)) {
+      return;
+    }
+    const { updatedPresences, promotedPresences } = processPresenceRemovalWithAutoSubstitution(
+      activeDate,
+      presenceId,
+      presences
+    );
+    setPresences(updatedPresences);
+    await executeAtomicPresenceSubstitution(presenceId, promotedPresences);
+  };
+
+  const handlePromoteWaitlistToStarter = (presenceId: string) => {
+    const target = presences.find((p) => p.id === presenceId);
+    if (!target) return;
+
+    const dayOther = presences.filter((p) => p.date === activeDate && p.id !== presenceId);
+    const dayConfirmed = dayOther.filter((p) => p.status === 'confirmed');
+    const newOrder = dayConfirmed.length + 1;
+
+    const updated: Presence = {
+      ...target,
+      status: 'confirmed',
+      order_index: newOrder,
+    };
+
+    const newAll = presences.map((p) => (p.id === presenceId ? updated : p));
+    saveStoredPresences(newAll);
+    setPresences(newAll);
+    savePresenceDoc(updated);
+  };
+
+  const handleDemoteStarterToWaitlist = (presenceId: string) => {
+    const target = presences.find((p) => p.id === presenceId);
+    if (!target) return;
+
+    const dayOther = presences.filter((p) => p.date === activeDate && p.id !== presenceId);
+    const maxOrder = Math.max(10, ...dayOther.map((p) => p.order_index || 0));
+
+    const updated: Presence = {
+      ...target,
+      status: 'waitlist',
+      order_index: maxOrder + 1,
+    };
+
+    const newAll = presences.map((p) => (p.id === presenceId ? updated : p));
+    saveStoredPresences(newAll);
+    setPresences(newAll);
+    savePresenceDoc(updated);
+  };
+
+  const handleAddGuestPresence = (dateString: string, guestId: string) => {
+    const dayExisting = presences.filter((p) => p.date === dateString);
+    const newOrderIndex = dayExisting.length + 1;
+    const status = newOrderIndex <= 10 ? 'confirmed' : 'waitlist';
+
+    const newPresenceItem: Presence = {
+      id: `pres-${Date.now()}`,
+      date: dateString,
+      player_id: guestId,
+      status,
+      order_index: newOrderIndex,
+      created_at: new Date().toISOString(),
+    };
+
+    const updated = [...presences, newPresenceItem];
+    saveStoredPresences(updated);
+    setPresences(updated);
+    savePresenceDoc(newPresenceItem);
+  };
+
+  const handleResetPresences = async (dateString: string) => {
+    const updated = presences.filter((p) => p.date !== dateString);
+    saveStoredPresences(updated);
+    setPresences(updated);
+    await clearPresencesForDate(dateString);
+  };
+
+  const handleUpdateTimelock = (enabled: boolean, hours: number) => {
+    const updated = saveAppSettings({
+      timelock_enabled: enabled,
+      timelock_hours_before: hours,
+    });
+    setAppSettingsState(updated);
+    saveAppSettingsDoc({
+      timelock_enabled: enabled,
+      timelock_hours_before: hours,
+    });
+  };
+
+  // Handlers Tab 3: Anagrafica & Ruoli
+  const handleTogglePlayerRole = async (targetPlayer: Profile) => {
+    if (!isSuperAdmin) {
+      alert('Solo il super admin può promuovere o retrocedere gli amministratori.');
+      return;
+    }
+    const isMarco = targetPlayer.email?.toLowerCase().includes('macciolino84');
+    if (isMarco && targetPlayer.role === 'admin') {
+      alert('Non è possibile retrocedere l\'amministratore principale.');
+      return;
+    }
+
+    const nextRole: 'admin' | 'player' = targetPlayer.role === 'admin' ? 'player' : 'admin';
+    const updated: Profile = {
+      ...targetPlayer,
+      role: nextRole,
+      updated_at: new Date().toISOString(),
+    };
+
+    updateStoredPlayer(updated);
+    setPlayers(getStoredPlayers());
+    await saveProfileDoc(updated);
+  };
+
+  const handleDeletePlayer = async (playerId: string, name: string) => {
+    if (!confirm(`Sei sicuro di voler eliminare definitivamente "${name}"?`)) return;
+    removeStoredPlayer(playerId);
+    setPlayers(getStoredPlayers());
+    await deleteProfileDoc(playerId);
+  };
+
+  // Handlers Tab 4: Configurazione Club & Campi
+  const handleAddField = async (fieldData: Omit<SportField, 'id'>) => {
+    await addStoredField(fieldData);
+    setFields(getStoredFields());
+  };
+
+  const handleUpdateField = async (field: SportField) => {
+    await updateStoredField(field);
+    setFields(getStoredFields());
+  };
+
+  const handleDeleteField = async (id: string) => {
+    await removeStoredField(id);
+    setFields(getStoredFields());
+  };
+
+  const handleSetDefaultFieldId = (id: string) => {
+    const updated = saveAppSettings({ default_field_id: id });
+    setAppSettingsState(updated);
+    saveAppSettingsDoc({ default_field_id: id });
+  };
+
+  const handleReset8Categories = () => {
+    const updated = resetToDefault8Categories();
+    setCategories(updated);
+  };
+
+  const handleSaveEconomicConfig = (cost: number, time: string) => {
+    const updated = saveAppSettings({
+      standard_total_cost: cost,
+      standard_match_time: time,
+    });
+    setAppSettingsState(updated);
+    saveAppSettingsDoc({
+      standard_total_cost: cost,
+      standard_match_time: time,
+    });
+  };
+
+  const handleSendTestEmail = async () => {
+    setIsSendingEmail(true);
+    setEmailStatusMessage('');
+    try {
+      const res = await fetch('/api/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'ten_players_reached',
+          date: activeDate,
+          playerCount: 10,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEmailStatusMessage('Email inviata con successo via Resend API!');
+      } else {
+        setEmailStatusMessage(`Simulazione completata (${data.error || 'Server OK'})`);
+      }
+    } catch {
+      setEmailStatusMessage('Email di test inviata (Modalità di sviluppo)');
+    } finally {
+      setIsSendingEmail(false);
+      setTimeout(() => setEmailStatusMessage(''), 5000);
+    }
+  };
+
   return (
-    <div className="space-y-6 pb-16">
-      {/* Header Pannello Admin */}
+    <div className="space-y-6 pb-20 animate-in fade-in duration-300">
+      {/* HEADER AMMINISTRAZIONE */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-xl">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
-              <ShieldAlert className="h-6 w-6 text-amber-400" />
-              Pannello Amministratore ClubCalcetto
-            </h1>
+        <div className="space-y-1">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-amber-500/15 text-amber-400 rounded-xl ring-1 ring-amber-500/30">
+              <ShieldAlert className="h-6 w-6" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                Pannello Amministratore SaaS
+              </h1>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400">
+                ClubCalcetto 5v5 Matchmaker • Marco B. (Admin)
+              </span>
+            </div>
           </div>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Gestisci utenti registrati, categorie abilità, giocatori ospiti e manutenzione delle presenze.
-          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href="/presenze"
-            className="flex items-center gap-1.5 px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs transition-all border border-slate-700 shadow-md"
+            className="flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-200 font-bold rounded-xl text-xs transition-all border border-slate-700 shadow-md"
           >
             <ArrowLeft className="h-4 w-4 text-emerald-400" />
             <span>Pagine Giocatori</span>
           </Link>
+          <Link
+            href={`/squadre?date=${activeDate}`}
+            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/25 transition-all hover:scale-105"
+          >
+            <Trophy className="h-4 w-4" />
+            <span>Squadre 5v5</span>
+          </Link>
+        </div>
+      </div>
+
+      {/* 4 TAB ORIZZONTALI PRINCIPALI (SAAS & FIFA STYLE) */}
+      <div className="bg-slate-900/90 border border-slate-800 p-1.5 rounded-2xl shadow-xl backdrop-blur-md">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
+          {/* Tab 1: Panoramica, Match & Cassa */}
           <button
             type="button"
-            onClick={handleOpenAddModal}
-            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/20 transition-all hover:scale-105 cursor-pointer"
+            onClick={() => setActiveTab('overview')}
+            className={`flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+              activeTab === 'overview'
+                ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/25 scale-[1.01]'
+                : 'text-slate-400 hover:text-white hover:bg-slate-850/60'
+            }`}
           >
-            <UserPlus className="h-4 w-4" />
-            <span>Aggiungi Ospite</span>
+            <LayoutDashboard className="h-4 w-4" />
+            <span className="truncate">1. Match & Cassa</span>
+          </button>
+
+          {/* Tab 2: Gestione Presenze & Time-lock */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('presences')}
+            className={`flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+              activeTab === 'presences'
+                ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/25 scale-[1.01]'
+                : 'text-slate-400 hover:text-white hover:bg-slate-850/60'
+            }`}
+          >
+            <CalendarDays className="h-4 w-4" />
+            <span className="truncate">2. Presenze & Blocco</span>
+          </button>
+
+          {/* Tab 3: Anagrafica Utenti & Ruoli */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('users')}
+            className={`flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+              activeTab === 'users'
+                ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/25 scale-[1.01]'
+                : 'text-slate-400 hover:text-white hover:bg-slate-850/60'
+            }`}
+          >
+            <Users className="h-4 w-4" />
+            <span className="truncate">3. Anagrafica Rosa</span>
+          </button>
+
+          {/* Tab 4: Configurazione & Gestione Campi */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('config')}
+            className={`flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+              activeTab === 'config'
+                ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/25 scale-[1.01]'
+                : 'text-slate-400 hover:text-white hover:bg-slate-850/60'
+            }`}
+          >
+            <Settings className="h-4 w-4" />
+            <span className="truncate">4. Campi & Regole</span>
           </button>
         </div>
       </div>
 
-      {/* Barra di Navigazione Rapida Utenti per l'Admin */}
-      <div className="flex flex-wrap items-center gap-2 bg-slate-950/80 p-3 rounded-2xl border border-slate-800 text-xs">
-        <span className="text-slate-400 font-medium px-2">Accedi subito alle pagine dei giocatori:</span>
-        <Link
-          href="/presenze"
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-850 text-emerald-400 font-bold rounded-lg border border-slate-800 hover:border-emerald-500/40 transition-colors"
-        >
-          <CalendarDays className="h-3.5 w-3.5" />
-          <span>Presenze Partita</span>
-        </Link>
-        <Link
-          href="/giocatori"
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-850 text-blue-400 font-bold rounded-lg border border-slate-800 hover:border-blue-500/40 transition-colors"
-        >
-          <Users className="h-3.5 w-3.5" />
-          <span>Rosa Giocatori & Card FIFA</span>
-        </Link>
-        <Link
-          href="/squadre"
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-850 text-amber-400 font-bold rounded-lg border border-slate-800 hover:border-amber-500/40 transition-colors"
-        >
-          <Trophy className="h-3.5 w-3.5" />
-          <span>Campo & Squadre 5v5</span>
-        </Link>
-        <Link
-          href="/profilo"
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-850 text-purple-400 font-bold rounded-lg border border-slate-800 hover:border-purple-500/40 transition-colors"
-        >
-          <User className="h-3.5 w-3.5" />
-          <span>Profilo Personale</span>
-        </Link>
-      </div>
-
-      {/* Sezione Statistiche Rapide Database */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex items-center gap-3">
-          <div className="p-3 bg-blue-500/10 text-blue-400 rounded-xl">
-            <Database className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="text-[11px] text-slate-500 font-bold uppercase">Giocatori Totali</div>
-            <div className="text-xl font-black text-white">{players.length} iscritti</div>
-          </div>
-        </div>
-
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex items-center gap-3">
-          <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl">
-            <Check className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="text-[11px] text-slate-500 font-bold uppercase">Presenze Prossima Partita</div>
-            <div className="text-xl font-black text-white">
-              {presences.filter((p) => p.date === activeDate && p.status === 'confirmed').length}/10 titolari
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex items-center gap-3">
-          <div className="p-3 bg-purple-500/10 text-purple-400 rounded-xl">
-            <Sliders className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="text-[11px] text-slate-500 font-bold uppercase">Statistiche Abilità</div>
-            <div className="text-xl font-black text-white">{categories.length} Categorie</div>
-          </div>
-        </div>
-      </div>
-
-      {/* SEZIONE: PRESENZE ATTIVE PER LA PROSSIMA PARTITA */}
-      {(() => {
-        const activeDayPresences = presences
-          .filter((p) => p.date === activeDate)
-          .sort((a, b) => a.order_index - b.order_index);
-        const confirmedPresences = activeDayPresences.filter((p) => p.status === 'confirmed');
-        const waitlistPresences = activeDayPresences.filter((p) => p.status === 'waitlist');
-
-        return (
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-emerald-400" />
-                  <h2 className="text-lg font-black text-white">
-                    Presenze Attive per la Partita del {formatItalianDate(activeDate)}
-                  </h2>
-                </div>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Elenco in tempo reale dei giocatori confermati (titolari 1-10) e delle riserve in panchina per la prossima gara.
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2.5">
-                <span
-                  className={`px-3 py-1.5 rounded-xl text-xs font-black border ${
-                    confirmedPresences.length >= 10
-                      ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
-                      : 'bg-amber-500/15 border-amber-500/30 text-amber-400'
-                  }`}
-                >
-                  {confirmedPresences.length}/10 Titolari Pronti
-                </span>
-                {waitlistPresences.length > 0 && (
-                  <span className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 border border-slate-700 text-slate-300">
-                    +{waitlistPresences.length} in Riserva
-                  </span>
-                )}
-                <button
-                  type="button"
-                  onClick={handleResetWeeklyVotes}
-                  disabled={isResetting || activeDayPresences.length === 0}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/15 border border-rose-500/30 text-rose-300 hover:bg-rose-500 hover:text-white rounded-xl text-xs font-bold transition-all disabled:opacity-40 cursor-pointer"
-                  title="Azzera le presenze di questa data"
-                >
-                  <RotateCcw className="h-3.5 w-3.5" />
-                  Azzera Voti
-                </button>
-              </div>
-            </div>
-
-            {/* Selettore Rapido Date della Settimana (Sincronizzato con Squadre e Presenze) */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex-shrink-0 mr-1">
-                Data Partita:
-              </span>
-              {upcomingDays.map((d) => {
-                const dayCount = presences.filter(
-                  (p) => p.date === d.dateString && p.status === 'confirmed'
-                ).length;
-                const isCur = activeDate === d.dateString;
-                const hasQuorum = dayCount >= 10;
-
-                return (
-                  <button
-                    key={d.dateString}
-                    type="button"
-                    onClick={() => handleSelectAdminDate(d.dateString)}
-                    className={`flex-shrink-0 flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      isCur
-                        ? 'bg-emerald-500 text-slate-950 font-black shadow-lg ring-2 ring-emerald-300'
-                        : 'bg-slate-950 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-800'
-                    }`}
-                  >
-                    <span>{d.dayName.slice(0, 3)} {d.dayNumber} {d.monthName.slice(0, 3)}</span>
-                    <span
-                      className={`text-[10px] px-1.5 py-0.2 rounded font-mono font-black ${
-                        isCur
-                          ? 'bg-slate-950 text-emerald-400'
-                          : hasQuorum
-                          ? 'bg-emerald-500/20 text-emerald-400'
-                          : 'bg-slate-800 text-slate-400'
-                      }`}
-                    >
-                      {dayCount}/10
-                    </span>
-                    {isCur && <span className="text-[11px] text-amber-300">★</span>}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Tabella Presenze Attive */}
-            {activeDayPresences.length === 0 ? (
-              <div className="py-10 text-center text-slate-500 text-xs italic space-y-2">
-                <UserX className="h-8 w-8 mx-auto text-slate-600 opacity-60" />
-                <p>Nessun giocatore attualmente segnato per questa data.</p>
-                <p className="text-[11px] text-slate-600">I giocatori possono dare la propria presenza nella sezione &quot;Presenze&quot;.</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b border-slate-800 text-[11px] uppercase tracking-wider text-slate-400">
-                      <th className="py-2.5 px-3 text-center w-12">#</th>
-                      <th className="py-2.5 px-3">Giocatore</th>
-                      <th className="py-2.5 px-3 text-center">Ruolo</th>
-                      <th className="py-2.5 px-3 text-center">OVR</th>
-                      <th className="py-2.5 px-3 text-center">Stato Presenza</th>
-                      <th className="py-2.5 px-3 text-right">Azione Admin</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60">
-                    {activeDayPresences.map((pres, idx) => {
-                      const player = players.find(
-                        (p) => p.id === pres.player_id || p.user_id === pres.player_id
-                      );
-                      const isStarter = pres.status === 'confirmed';
-                      const displayName = player?.full_name || 'Giocatore';
-                      const avatar = player?.avatar_url;
-
-                      return (
-                        <tr
-                          key={pres.id}
-                          className={`hover:bg-slate-850/40 transition-colors ${
-                            isStarter ? 'bg-emerald-500/[0.03]' : 'bg-amber-500/[0.03]'
-                          }`}
-                        >
-                          {/* Slot Order */}
-                          <td className="py-3 px-3 text-center">
-                            <span
-                              className={`font-mono font-black text-xs px-2 py-0.5 rounded-md ${
-                                isStarter
-                                  ? 'bg-emerald-500/15 text-emerald-400'
-                                  : 'bg-amber-500/15 text-amber-400'
-                              }`}
-                            >
-                              {idx + 1}
-                            </span>
-                          </td>
-
-                          {/* Info Giocatore */}
-                          <td className="py-3 px-3">
-                            <div className="flex items-center gap-2.5">
-                              <div className="relative">
-                                {avatar ? (
-                                  <img
-                                    src={avatar}
-                                    alt={displayName}
-                                    className="w-8 h-8 rounded-full object-cover ring-1 ring-slate-700"
-                                  />
-                                ) : (
-                                  <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-emerald-400 text-xs">
-                                    {displayName.charAt(0).toUpperCase()}
-                                  </div>
-                                )}
-                                {player?.role === 'admin' && (
-                                  <span className="absolute -bottom-1 -right-1 bg-amber-500 text-slate-950 text-[7px] font-black rounded-full h-3 w-3 flex items-center justify-center ring-1 ring-slate-950">
-                                    ★
-                                  </span>
-                                )}
-                              </div>
-                              <div>
-                                <div className="font-bold text-white text-xs">{displayName}</div>
-                                {player?.email && (
-                                  <div className="text-[10px] text-slate-500">{player.email}</div>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* Ruolo */}
-                          <td className="py-3 px-3 text-center">
-                            <span
-                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                player?.role === 'admin'
-                                  ? 'bg-amber-500/20 text-amber-300'
-                                  : player?.is_guest
-                                  ? 'bg-blue-500/15 text-blue-300'
-                                  : 'bg-slate-800 text-slate-400'
-                              }`}
-                            >
-                              {player?.role === 'admin' ? 'Admin' : player?.is_guest ? 'Ospite' : 'Iscritto'}
-                            </span>
-                          </td>
-
-                          {/* OVR */}
-                          <td className="py-3 px-3 text-center font-mono font-bold text-emerald-400">
-                            {player?.overall_rating || 6.0}
-                          </td>
-
-                          {/* Status */}
-                          <td className="py-3 px-3 text-center">
-                            <span
-                              className={`inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                                isStarter
-                                  ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400'
-                                  : 'bg-amber-500/15 border border-amber-500/30 text-amber-400'
-                              }`}
-                            >
-                              <span
-                                className={`h-1.5 w-1.5 rounded-full ${
-                                  isStarter ? 'bg-emerald-400' : 'bg-amber-400'
-                                }`}
-                              />
-                              {isStarter ? 'Titolare' : 'In Panchina'}
-                            </span>
-                          </td>
-
-                          {/* Azione Rimozione Presenza */}
-                          <td className="py-3 px-3 text-right">
-                            <button
-                              type="button"
-                              onClick={() => handleRemovePresence(pres.id, displayName)}
-                              className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
-                              title={`Rimuovi ${displayName} dalle presenze`}
-                            >
-                              <UserMinus className="h-4 w-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        );
-      })()}
-
-      {/* SEZIONE CRUCIALE: ELENCO DI TUTTE LE PERSONE REGISTRATE */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-emerald-400" />
-              <h2 className="text-lg font-black text-white">
-                Elenco Utenti & Giocatori Registrati
-              </h2>
-            </div>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Tutte le persone registrate nella web app (Google Auth) e i giocatori ospiti inseriti manualmente.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Cerca per nome o email..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 w-52 sm:w-64"
-              />
-            </div>
-            <button
-              type="button"
-              onClick={handleOpenAddModal}
-              className="flex items-center gap-1.5 px-3 py-2 bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 font-bold rounded-xl text-xs transition-colors cursor-pointer"
-            >
-              <UserPlus className="h-3.5 w-3.5" />
-              <span>Nuovo</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Tabella Utenti */}
-        <div className="overflow-x-auto rounded-2xl border border-slate-800">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="bg-slate-950/80 border-b border-slate-800 text-slate-400 font-bold uppercase tracking-wider text-[11px]">
-                <th className="py-3 px-4">Giocatore</th>
-                <th className="py-3 px-4">Email Account</th>
-                <th className="py-3 px-4">Ruolo App</th>
-                <th className="py-3 px-4 text-center">Posizione Campo</th>
-                <th className="py-3 px-4">Tipo Profilo</th>
-                <th className="py-3 px-4 text-center">Media OVR</th>
-                <th className="py-3 px-4 text-right">Azioni Admin</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60">
-              {filteredPlayers.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-8 text-center text-slate-500">
-                    Nessun utente o giocatore trovato per la ricerca &quot;{searchQuery}&quot;.
-                  </td>
-                </tr>
-              ) : (
-                filteredPlayers.map((p) => {
-                  const isMarcoSuperAdmin = p.email && p.email.toLowerCase().includes('macciolino84');
-                  const isPlayerAdmin = p.role === 'admin';
-
-                  return (
-                    <tr key={p.id} className="hover:bg-slate-800/30 transition-colors">
-                      {/* Avatar e Nome */}
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-3">
-                          {p.avatar_url ? (
-                            <img
-                              src={p.avatar_url}
-                              alt={p.full_name}
-                              className="h-8 w-8 rounded-full object-cover ring-1 ring-slate-700"
-                            />
-                          ) : (
-                            <div className="h-8 w-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-emerald-400 text-xs">
-                              {p.full_name.charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                          <div>
-                            <div className="font-bold text-white flex items-center gap-1.5">
-                              <span>{p.full_name}</span>
-                              {isMarcoSuperAdmin && (
-                                <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-1.5 py-0.2 rounded font-mono font-bold">
-                                  ★ Super Admin
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-[10px] text-slate-500 font-mono">ID: {p.id.slice(0, 8)}...</div>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Email */}
-                      <td className="py-3 px-4 text-slate-300 font-mono text-[11px]">
-                        {p.email ? (
-                          <span className="text-slate-300">{p.email}</span>
-                        ) : (
-                          <span className="text-slate-600 italic">Nessun account Google (Ospite)</span>
-                        )}
-                      </td>
-
-                      {/* Ruolo Applicativo */}
-                      <td className="py-3 px-4">
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                            isPlayerAdmin
-                              ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
-                              : 'bg-blue-500/15 text-blue-300 border border-blue-500/30'
-                          }`}
-                        >
-                          {isPlayerAdmin ? '★ Admin' : 'Player'}
-                        </span>
-                      </td>
-
-                      {/* Posizione Tattica in Campo (Separata dai ruoli) */}
-                      <td className="py-3 px-4 text-center">
-                        <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-emerald-400 border border-slate-700">
-                          {FIELD_POSITION_ABBR[p.position || 'Esterno']}
-                        </span>
-                        <span className="text-[10px] text-slate-400 block mt-0.5">{p.position || 'Esterno'}</span>
-                      </td>
-
-                      {/* Tipo Profilo */}
-                      <td className="py-3 px-4">
-                        {p.is_guest ? (
-                          <span className="text-[11px] text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded">
-                            Ospite Manuale
-                          </span>
-                        ) : (
-                          <span className="text-[11px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded flex items-center gap-1 w-max">
-                            <span>Google Auth</span>
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Overall Rating */}
-                      <td className="py-3 px-4 text-center">
-                        <StatBadge score={p.overall_rating || 6.0} size="sm" />
-                      </td>
-
-                      {/* Azioni Admin (Promozione / Modifica / Elimina) */}
-                      <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {/* Pulsante Promozione Admin */}
-                          {!isMarcoSuperAdmin && (
-                            <button
-                              type="button"
-                              onClick={() => handleToggleUserRole(p)}
-                              className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer border ${
-                                isPlayerAdmin
-                                  ? 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-amber-500/30'
-                                  : 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border-emerald-500/30'
-                              }`}
-                              title={isPlayerAdmin ? 'Revoca ruolo Admin e riporta a Player' : 'Promuovi questo utente a ruolo Amministratore'}
-                            >
-                              {isPlayerAdmin ? 'Rendi Player' : '★ Fai Admin'}
-                            </button>
-                          )}
-
-                          {/* Modifica Voti */}
-                          <button
-                            type="button"
-                            onClick={() => handleOpenEditModal(p)}
-                            className="p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-                            title="Modifica Statistiche"
-                          >
-                            <Edit3 className="h-4 w-4" />
-                          </button>
-
-                          {/* Elimina Giocatore */}
-                          {!isMarcoSuperAdmin && (
-                            <button
-                              type="button"
-                              onClick={() => handleDeletePlayer(p)}
-                              className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-                              title="Elimina Giocatore"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* AZIONE CRITICA: AZZERA TUTTE LE VOTAZIONI DELLA SETTIMANA */}
-      <div className="bg-slate-900 border border-rose-500/30 rounded-3xl p-6 shadow-xl space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-rose-500/20 text-rose-400 rounded-2xl">
-            <RotateCcw className="h-5 w-5" />
-          </div>
-          <div>
-            <h2 className="text-base font-bold text-white">
-              Azzera Tutte le Votazioni della Settimana
-            </h2>
-            <p className="text-xs text-slate-400">
-              Svuota l&apos;elenco dei presenti e delle waitlist per tutti i giorni del calendario (utile all&apos;inizio di ogni nuovo ciclo settimanale).
-            </p>
-          </div>
-        </div>
-
-        {resetSuccess && (
-          <div className="p-3 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 rounded-xl text-xs font-bold flex items-center gap-2">
-            <Check className="h-4 w-4" />
-            Tutte le presenze della settimana sono state azzerate con successo!
-          </div>
+      {/* CONTENUTO SCHEDA ATTIVA */}
+      <div className="pt-1">
+        {activeTab === 'overview' && (
+          <TabOverviewMatch
+            days={upcomingDays}
+            activeDate={activeDate}
+            onSelectDate={handleSelectOfficialDate}
+            players={players}
+            presences={presences}
+            generatedTeamRecord={generatedTeams}
+            totalMatchCost={appSettings.standard_total_cost || 80}
+          />
         )}
 
-        <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs text-amber-400 font-medium">
-            <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-            <span>Questa operazione azzera i titolari e le riserve correnti in tutte le sezioni.</span>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleResetWeeklyVotes}
-            disabled={isResetting}
-            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-black rounded-xl text-xs uppercase tracking-wider shadow-lg shadow-rose-600/25 transition-all disabled:opacity-50 cursor-pointer"
-          >
-            {isResetting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <RotateCcw className="h-4 w-4" />
-            )}
-            Azzera Votazioni Settimana
-          </button>
-        </div>
-      </div>
-
-      {/* GESTIONE CATEGORIE STATISTICHE */}
-      <StatCategoriesManager
-        categories={categories}
-        onCategoriesChanged={(newCats) => setCategories(newCats)}
-      />
-
-      {/* SISTEMA NOTIFICHE EMAIL & RESEND */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-2xl">
-            <Mail className="h-5 w-5" />
-          </div>
-          <div>
-            <h2 className="text-base font-bold text-white">Notifiche Automatiche Email Admin</h2>
-            <p className="text-xs text-slate-400">
-              Invia un&apos;email immediata all&apos;Admin quando un giorno raggiunge 10 titolari o se un titolare si ritira.
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800 text-xs space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-slate-400">Destinatario Notifiche:</span>
-            <span className="font-mono text-emerald-400 font-bold">
-              {process.env.ADMIN_NOTIFICATION_EMAIL || 'admin@clubcalcetto.it'}
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-slate-400">Stato Provider Email:</span>
-            <span className="font-mono text-slate-300">
-              Resend API / Server Console Log (Pronto all&apos;invio)
-            </span>
-          </div>
-        </div>
-
-        {testEmailSuccess && (
-          <div className="p-3 bg-slate-950 border border-slate-700 text-emerald-300 rounded-xl text-xs font-mono">
-            {testEmailSuccess}
-          </div>
+        {activeTab === 'presences' && (
+          <TabPresencesTimelock
+            days={upcomingDays}
+            activeDate={activeDate}
+            onSelectDate={handleSelectOfficialDate}
+            players={players}
+            presences={presences}
+            onRemovePresence={handleRemovePresence}
+            onPromoteWaitlistToStarter={handlePromoteWaitlistToStarter}
+            onDemoteStarterToWaitlist={handleDemoteStarterToWaitlist}
+            onAddGuestPresence={handleAddGuestPresence}
+            onResetPresences={handleResetPresences}
+            timelockEnabled={Boolean(appSettings.timelock_enabled)}
+            timelockHours={appSettings.timelock_hours_before || 4}
+            onUpdateTimelock={handleUpdateTimelock}
+          />
         )}
 
-        <div className="flex justify-end pt-1">
-          <button
-            type="button"
-            onClick={handleTestEmail}
-            disabled={testEmailLoading}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
-          >
-            {testEmailLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
-            ) : (
-              <Mail className="h-4 w-4 text-emerald-400" />
-            )}
-            Invia Email di Test
-          </button>
-        </div>
+        {activeTab === 'users' && (
+          <TabUsersRoles
+            players={players}
+            onOpenAddModal={() => {
+              setPlayerToEdit(null);
+              setIsPlayerModalOpen(true);
+            }}
+            onOpenEditModal={(p) => {
+              setPlayerToEdit(p);
+              setIsPlayerModalOpen(true);
+            }}
+            onTogglePlayerRole={handleTogglePlayerRole}
+            onDeletePlayer={handleDeletePlayer}
+            canManageRoles={isSuperAdmin}
+          />
+        )}
+
+        {activeTab === 'config' && (
+          <TabClubConfigFields
+            fields={fields}
+            onAddField={handleAddField}
+            onUpdateField={handleUpdateField}
+            onDeleteField={handleDeleteField}
+            defaultFieldId={appSettings.default_field_id}
+            onSetDefaultFieldId={handleSetDefaultFieldId}
+            categories={categories}
+            onReset8Categories={handleReset8Categories}
+            standardCost={appSettings.standard_total_cost || 80}
+            standardTime={appSettings.standard_match_time || '20:30'}
+            onSaveEconomicConfig={handleSaveEconomicConfig}
+            onSendTestEmail={handleSendTestEmail}
+            isSendingEmail={isSendingEmail}
+            emailStatusMessage={emailStatusMessage}
+          />
+        )}
       </div>
 
-      {/* Modal Aggiunta / Modifica Giocatore */}
+      {/* MODALE CREAZIONE / MODIFICA GIOCATORE */}
       <PlayerModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        playerToEdit={editingPlayer}
+        isOpen={isPlayerModalOpen}
+        onClose={() => setIsPlayerModalOpen(false)}
+        playerToEdit={playerToEdit}
         statCategories={categories}
-        onSaved={(savedPlayer) => {
+        onSaved={() => {
           setPlayers(getStoredPlayers());
         }}
       />

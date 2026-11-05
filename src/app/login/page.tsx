@@ -28,7 +28,6 @@ export default function LoginPage() {
     signUpWithEmailPassword,
     sendVerificationEmail,
     checkEmailVerification,
-    simulateEmailVerification,
     user,
     profile,
     isAdmin,
@@ -135,7 +134,7 @@ export default function LoginPage() {
       if (verified) {
         window.location.href = '/presenze';
       } else {
-        setErrorMessage('L\'email non risulta ancora verificata. Clicca sul link ricevuto o usa il pulsante di test per ambiente locale.');
+        setErrorMessage('L\'email non risulta ancora verificata. Clicca sul link che hai ricevuto via email.');
       }
     } finally {
       setIsCheckingVerification(false);
@@ -222,20 +221,6 @@ export default function LoginPage() {
               >
                 <Send className="h-3.5 w-3.5 text-amber-400" />
                 <span>Reinvia email di verifica</span>
-              </button>
-
-              {/* Pulsante dedicato per test locale (localhost) */}
-              <button
-                type="button"
-                onClick={() => {
-                  simulateEmailVerification();
-                  window.location.href = '/presenze';
-                }}
-                className="w-full flex items-center justify-center gap-1.5 py-2 px-3 bg-emerald-500/15 border border-emerald-500/30 hover:bg-emerald-500/25 text-emerald-300 font-bold rounded-xl text-xs transition-all cursor-pointer"
-                title="Bypassa la verifica per testare immediatamente in locale"
-              >
-                <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
-                <span>Verifica Subito (Modalità Test Locale)</span>
               </button>
 
               <button

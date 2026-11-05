@@ -1,8 +1,9 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useTransition } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { Profile, UserRole, FieldPosition } from '@/types/database';
-import { updateStoredPlayer, getStoredPlayers, addStoredPlayer, findPlayerByAuth } from '@/lib/services/playerService';
+import { updateStoredPlayer, addStoredPlayer, getStoredPlayers } from '@/lib/services/playerService';
+import { getStoredCategories } from '@/lib/services/statCategoryService';
 import { auth as firebaseAuth, googleProvider, isFirebaseConfigured, db } from '@/lib/firebase/config';
 import {
   signInWithPopup,
@@ -16,218 +17,99 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
-export const MARCO_ADMIN_ID = 'p-1';
-export const MARCO_ADMIN_EMAIL = 'macciolino84@gmail.com';
+/**
+ * SECURITY MODEL
+ * - Identity comes ONLY from Firebase Auth (no local / simulated logins).
+ * - The super admin is the verified account SUPER_ADMIN_EMAIL; its profile document is 'p-1'.
+ * - Other admins are profiles with role === 'admin', promoted only by the super admin.
+ * - Everything here is UI logic: the real enforcement is in firestore.rules.
+ */
+export const SUPER_ADMIN_PROFILE_ID = 'p-1';
+export const SUPER_ADMIN_EMAIL = 'macciolino84@gmail.com';
 
-export interface SimpleUser {
-  id: string;
-  uid?: string;
-  email: string | null;
-  displayName?: string | null;
-  photoURL?: string | null;
-  emailVerified?: boolean;
+// Backward-compatible aliases
+export const MARCO_ADMIN_ID = SUPER_ADMIN_PROFILE_ID;
+export const MARCO_ADMIN_EMAIL = SUPER_ADMIN_EMAIL;
+
+export function isSuperAdminEmail(email?: string | null): boolean {
+  return (email || '').toLowerCase().trim() === SUPER_ADMIN_EMAIL;
 }
 
-export const MARCO_ADMIN_USER: SimpleUser = {
-  id: MARCO_ADMIN_ID,
-  uid: MARCO_ADMIN_ID,
-  email: MARCO_ADMIN_EMAIL,
-  displayName: 'Marco B.',
-  photoURL: null,
-  emailVerified: true,
-};
-
-export const MARCO_ADMIN_PROFILE: Profile = {
-  id: MARCO_ADMIN_ID,
-  user_id: MARCO_ADMIN_ID,
-  email: MARCO_ADMIN_EMAIL,
-  full_name: 'Marco B.',
-  avatar_url: null,
-  role: 'admin',
-  position: 'Esterno',
-  is_guest: false,
-  stats: {
-    Resistenza: 8,
-    Velocità: 8,
-    Difesa: 7,
-    Tiro: 8,
-    Passaggio: 8,
-    Tecnica: 9,
-    Fisico: 7,
-    Dribbling: 8,
-  },
-  overall_rating: 7.9,
-  matches_won: 15,
-  matches_drawn: 4,
-  matches_lost: 5,
-  created_at: '2026-10-01T10:00:00Z',
-  updated_at: '2026-10-01T10:00:00Z',
-};
-
-export const GUEST_REGULAR_USER: SimpleUser = {
-  id: 'guest-regular-user',
-  uid: 'guest-regular-user',
-  email: 'ospite@clubcalcetto.it',
-  displayName: 'Giocatore Ospite',
-  photoURL: null,
-  emailVerified: true,
-};
-
-export const GUEST_REGULAR_PROFILE: Profile = {
-  id: 'guest-regular-user',
-  user_id: 'guest-regular-user',
-  email: 'ospite@clubcalcetto.it',
-  full_name: 'Giocatore Ospite',
-  avatar_url: null,
-  role: 'player',
-  position: 'Esterno',
-  is_guest: false,
-  stats: {
-    Resistenza: 6,
-    Velocità: 6,
-    Difesa: 6,
-    Tiro: 6,
-    Passaggio: 6,
-    Tecnica: 6,
-    Fisico: 6,
-    Dribbling: 6,
-  },
-  overall_rating: 6.0,
-  matches_won: 6,
-  matches_drawn: 2,
-  matches_lost: 4,
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-};
-
-export function determineRoleAndName(
-  email?: string | null,
-  fallbackName?: string | null
-): { role: UserRole; name: string } {
-  const cleanEmail = (email || '').toLowerCase().trim();
-  const isMacciolino = cleanEmail.includes('macciolino84');
-  if (isMacciolino) {
-    return { role: 'admin', name: 'Marco B.' };
-  }
-  return {
-    role: 'player',
-    name: fallbackName || (email ? email.split('@')[0] : 'Giocatore'),
-  };
+function profileDocIdFor(fbUser: FirebaseUser): string {
+  return isSuperAdminEmail(fbUser.email) ? SUPER_ADMIN_PROFILE_ID : fbUser.uid;
 }
 
-export function resolveProfileForUser(
-  authId: string,
-  authEmail?: string | null,
-  authName?: string | null,
-  authAvatar?: string | null,
-  tacticalPosition?: FieldPosition
+function normalizeRole(rawRole: unknown, email?: string | null): UserRole {
+  if (isSuperAdminEmail(email)) return 'admin';
+  return rawRole === 'admin' ? 'admin' : 'player';
+}
+
+function defaultStats(): Record<string, number> {
+  const stats: Record<string, number> = {};
+  getStoredCategories().forEach((cat) => {
+    stats[cat.name] = cat.default_value ?? 6;
+  });
+  return stats;
+}
+
+function buildNewProfile(
+  fbUser: FirebaseUser,
+  fullName?: string | null,
+  position?: FieldPosition
 ): Profile {
-  const { role, name } = determineRoleAndName(authEmail, authName);
-  const isMarco = role === 'admin' || (authEmail && authEmail.toLowerCase().includes('macciolino84'));
-  const found = findPlayerByAuth(authId, authEmail);
-
-  if (found) {
-    return {
-      ...found,
-      id: isMarco ? 'p-1' : found.id,
-      user_id: authId,
-      email: authEmail || found.email,
-      full_name: isMarco ? 'Marco B.' : (found.full_name || name),
-      avatar_url: found.avatar_url || authAvatar || null,
-      role: isMarco ? 'admin' : (found.role === 'admin' ? 'admin' : 'player'),
-      position: found.position || tacticalPosition || 'Esterno',
-      matches_won: found.matches_won ?? (isMarco ? 15 : 0),
-      matches_drawn: found.matches_drawn ?? (isMarco ? 4 : 0),
-      matches_lost: found.matches_lost ?? (isMarco ? 5 : 0),
-      stats: found.stats || (isMarco ? MARCO_ADMIN_PROFILE.stats : GUEST_REGULAR_PROFILE.stats),
-      overall_rating: found.overall_rating ?? (isMarco ? 7.9 : 6.0),
-    };
-  }
-
-  // Nuovo utente registrato: default role 'player'
-  const newPlayer: Profile = {
-    id: isMarco ? 'p-1' : authId,
-    user_id: authId,
-    email: authEmail || (isMarco ? MARCO_ADMIN_EMAIL : 'giocatore@clubcalcetto.it'),
-    full_name: isMarco ? 'Marco B.' : name,
-    avatar_url: authAvatar || null,
-    role: isMarco ? 'admin' : 'player',
-    position: tacticalPosition || 'Esterno',
+  const stats = defaultStats();
+  const values = Object.values(stats);
+  const ovr = values.length ? Number((values.reduce((a, b) => a + b, 0) / values.length).toFixed(1)) : 6;
+  const now = new Date().toISOString();
+  return {
+    id: profileDocIdFor(fbUser),
+    user_id: fbUser.uid,
+    email: fbUser.email,
+    full_name:
+      (fullName && fullName.trim()) ||
+      fbUser.displayName ||
+      (fbUser.email ? fbUser.email.split('@')[0] : 'Giocatore'),
+    avatar_url: fbUser.photoURL || null,
+    role: isSuperAdminEmail(fbUser.email) ? 'admin' : 'player',
+    position: position || 'Esterno',
     is_guest: false,
-    stats: isMarco ? MARCO_ADMIN_PROFILE.stats : GUEST_REGULAR_PROFILE.stats,
-    overall_rating: isMarco ? 7.9 : 6.0,
-    matches_won: isMarco ? 15 : 0,
-    matches_drawn: isMarco ? 4 : 0,
-    matches_lost: isMarco ? 5 : 0,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    stats,
+    overall_rating: ovr,
+    matches_won: 0,
+    matches_drawn: 0,
+    matches_lost: 0,
+    created_at: now,
+    updated_at: now,
   };
-
-  addStoredPlayer(newPlayer);
-  return newPlayer;
 }
 
-const STORAGE_KEY_USER = 'clubcalcetto_active_user';
-const STORAGE_KEY_PROFILE = 'clubcalcetto_active_profile';
-const STORAGE_KEY_LOCAL_VERIFIED = 'clubcalcetto_email_verified_bypass';
-
-function saveLocalSession(user: any, profile: Profile) {
-  if (typeof window !== 'undefined') {
-    try {
-      localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(user));
-      localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(profile));
-      const role = profile?.role === 'admin' ? 'admin' : 'player';
-      document.cookie = `user_role=${role}; path=/; max-age=604800; SameSite=Lax`;
-      document.cookie = 'demo_session=true; path=/; max-age=604800; SameSite=Lax';
-    } catch (e) {
-      console.warn('Storage save error:', e);
-    }
-  }
-}
-
-function clearLocalSession() {
-  if (typeof window !== 'undefined') {
-    try {
-      localStorage.removeItem(STORAGE_KEY_USER);
-      localStorage.removeItem(STORAGE_KEY_PROFILE);
-      localStorage.removeItem(STORAGE_KEY_LOCAL_VERIFIED);
-      document.cookie = 'user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
-      document.cookie = 'demo_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
-    } catch (e) {
-      console.warn('Storage clear error:', e);
-    }
-  }
-}
-
-function getLocalSession(): { user: any; profile: Profile } | null {
-  if (typeof window === 'undefined') return null;
+// UI-only cookies read by src/proxy.ts for routing (NOT a security boundary)
+function setRoutingCookies(profile: Profile | null) {
+  if (typeof document === 'undefined') return;
   try {
-    const rawUser = localStorage.getItem(STORAGE_KEY_USER);
-    const rawProfile = localStorage.getItem(STORAGE_KEY_PROFILE);
-    if (rawUser && rawProfile) {
-      const parsedUser = JSON.parse(rawUser);
-      const parsedProfile = JSON.parse(rawProfile);
-      const isMarco = (parsedProfile.email || parsedUser.email || '').toLowerCase().trim() === MARCO_ADMIN_EMAIL.toLowerCase();
-      const strictRole: UserRole = isMarco ? 'admin' : (parsedProfile.role === 'admin' ? 'admin' : 'player');
-      return {
-        user: parsedUser,
-        profile: {
-          ...parsedProfile,
-          role: strictRole,
-          full_name: (strictRole === 'admin' && isMarco) ? 'Marco B.' : (parsedProfile.full_name || 'Giocatore'),
-        },
-      };
+    if (profile) {
+      const role = profile.role === 'admin' ? 'admin' : 'player';
+      document.cookie = `user_role=${role}; path=/; max-age=604800; SameSite=Lax`;
+      document.cookie = 'cc_session=1; path=/; max-age=604800; SameSite=Lax';
+    } else {
+      document.cookie = 'user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
+      document.cookie = 'cc_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
     }
-  } catch (e) {
-    console.warn('Storage read error:', e);
+    // Remove legacy cookie/keys from the old simulated-login system
+    document.cookie = 'demo_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
+    localStorage.removeItem('clubcalcetto_active_user');
+    localStorage.removeItem('clubcalcetto_active_profile');
+    localStorage.removeItem('clubcalcetto_email_verified_bypass');
+  } catch {
+    /* ignore */
   }
-  return null;
 }
 
 interface AuthContextType {
-  user: FirebaseUser | SimpleUser | null;
+  user: FirebaseUser | null;
   profile: Profile | null;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
   isLoading: boolean;
   isEmailVerified: boolean;
   signInWithGoogle: () => Promise<void>;
@@ -235,244 +117,120 @@ interface AuthContextType {
   signInWithEmailPassword: (email: string, password: string) => Promise<void>;
   sendVerificationEmail: () => Promise<void>;
   checkEmailVerification: () => Promise<boolean>;
-  simulateEmailVerification: () => void;
-  loginAsMarcoAdmin: () => void;
-  loginAsGuestUser: () => void;
-  loginAsPlayer: (player: Profile) => void;
-  loginWithEmail: (email: string, name?: string) => void;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
-  updateProfile: (updatedData: Partial<Profile>) => Promise<void>;
+  updateProfile: (updatedData: Partial<Pick<Profile, 'full_name' | 'avatar_url' | 'position'>>) => Promise<void>;
   authProvider: 'firebase' | 'local';
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<FirebaseUser | SimpleUser | null>(null);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [localVerifiedBypass, setLocalVerifiedBypass] = useState<boolean>(false);
+  const [verifiedTick, setVerifiedTick] = useState(0);
 
-  const syncProfileWithFirestore = async (fbUser: FirebaseUser) => {
-    if (!isFirebaseConfigured) return;
+  // Name/position typed in the sign-up form, used when the profile document is first created
+  const pendingSignUp = useRef<{ fullName?: string; position?: FieldPosition } | null>(null);
+
+  /** Loads (or creates on first login) the profile document of the signed-in user. */
+  const syncProfile = async (fbUser: FirebaseUser): Promise<Profile | null> => {
+    const docId = profileDocIdFor(fbUser);
+    const docRef = doc(db, 'profiles', docId);
     try {
-      const isMarco = (fbUser.email || '').toLowerCase().trim() === MARCO_ADMIN_EMAIL.toLowerCase();
-      const docRef = doc(db, 'profiles', isMarco ? 'p-1' : fbUser.uid);
       const snap = await getDoc(docRef);
-
+      let resolved: Profile;
       if (snap.exists()) {
-        const firestoreData = snap.data() as Profile;
-        const resolved = resolveProfileForUser(
-          fbUser.uid,
-          fbUser.email,
-          firestoreData.full_name || fbUser.displayName,
-          firestoreData.avatar_url || fbUser.photoURL,
-          firestoreData.position
-        );
-        // RUOLO DA FIRESTORE: Admin solo se il campo 'role' nel documento è esattamente 'admin', altrimenti 'player'
-        const strictRole: UserRole = isMarco ? 'admin' : (firestoreData.role === 'admin' ? 'admin' : 'player');
-        const merged: Profile = {
-          ...resolved,
-          ...firestoreData,
-          id: isMarco ? 'p-1' : firestoreData.id || fbUser.uid,
-          role: strictRole,
-          position: firestoreData.position || resolved.position || 'Esterno',
-          full_name: isMarco ? 'Marco B.' : (firestoreData.full_name || resolved.full_name),
+        const data = snap.data() as Profile;
+        resolved = {
+          ...data,
+          id: docId,
+          role: normalizeRole(data.role, fbUser.email),
+          position: data.position || 'Esterno',
         };
-        setProfile(merged);
-        saveLocalSession(fbUser, merged);
+        updateStoredPlayer(resolved);
       } else {
-        const newProf = resolveProfileForUser(
-          fbUser.uid,
-          fbUser.email,
-          fbUser.displayName,
-          fbUser.photoURL
-        );
-        await setDoc(docRef, newProf, { merge: true });
-        setProfile(newProf);
-        saveLocalSession(fbUser, newProf);
+        const pending = pendingSignUp.current;
+        resolved = buildNewProfile(fbUser, pending?.fullName, pending?.position);
+        await setDoc(docRef, resolved);
+        addStoredPlayer(resolved);
       }
+      pendingSignUp.current = null;
+      setProfile(resolved);
+      setRoutingCookies(resolved);
+      return resolved;
     } catch (e) {
       console.warn('Firestore sync profile warning:', e);
+      return null;
     }
   };
 
   useEffect(() => {
-    let mounted = true;
-
-    // 1. Ripristina prima dal localStorage
-    const local = getLocalSession();
-    if (local && mounted) {
-      setUser(local.user);
-      setProfile(local.profile);
-    }
-    if (typeof window !== 'undefined') {
-      const bypass = localStorage.getItem(STORAGE_KEY_LOCAL_VERIFIED) === 'true';
-      if (bypass && mounted) {
-        setLocalVerifiedBypass(true);
-      }
-    }
-
     if (!isFirebaseConfigured) {
       setIsLoading(false);
+      return;
     }
-
-    // 2. Ascolta Firebase Auth se configurato
-    let unsubscribeFirebase: (() => void) | undefined;
-    if (isFirebaseConfigured) {
-      try {
-        unsubscribeFirebase = onAuthStateChanged(firebaseAuth, async (fbUser) => {
-          if (!mounted) return;
-          if (fbUser) {
-            const fbProfile = resolveProfileForUser(
-              fbUser.uid,
-              fbUser.email,
-              fbUser.displayName,
-              fbUser.photoURL
-            );
-            setUser(fbUser);
-            setProfile(fbProfile);
-            saveLocalSession(fbUser, fbProfile);
-            await syncProfileWithFirestore(fbUser);
-          } else {
-            if (!local) {
-              setUser(null);
-              setProfile(null);
-              clearLocalSession();
-            }
-          }
-          if (mounted) {
-            setIsLoading(false);
-          }
-        });
-      } catch (e) {
-        console.warn('Firebase listener error:', e);
-        if (mounted) {
-          setIsLoading(false);
-        }
+    let mounted = true;
+    const unsubscribe = onAuthStateChanged(firebaseAuth, async (fbUser) => {
+      if (!mounted) return;
+      if (fbUser) {
+        setUser(fbUser);
+        await syncProfile(fbUser);
+      } else {
+        setUser(null);
+        setProfile(null);
+        setRoutingCookies(null);
       }
-    }
-
+      if (mounted) setIsLoading(false);
+    });
     return () => {
       mounted = false;
-      if (unsubscribeFirebase) unsubscribeFirebase();
+      unsubscribe();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Sincronizzazione locale quando un giocatore o le statistiche cambiano
+  // Keep the profile in sync when the local players cache changes (e.g. an admin edits stats)
   useEffect(() => {
     const handlePlayersChanged = () => {
-      const currentAuthId = (user as any)?.uid || (user as any)?.id;
-      const currentEmail = (user as any)?.email;
-      if (!currentAuthId && !currentEmail) return;
-
-      const found = findPlayerByAuth(currentAuthId, currentEmail);
-      if (found) {
-        setProfile((prev) => {
-          if (!prev) return found;
-          if (
-            prev.full_name !== found.full_name ||
-            prev.avatar_url !== found.avatar_url ||
-            prev.overall_rating !== found.overall_rating ||
-            prev.matches_won !== found.matches_won ||
-            prev.matches_drawn !== found.matches_drawn ||
-            prev.matches_lost !== found.matches_lost ||
-            prev.position !== found.position ||
-            prev.role !== found.role ||
-            JSON.stringify(prev.stats) !== JSON.stringify(found.stats)
-          ) {
-            const isMarco =
-              prev.email?.toLowerCase().includes('macciolino84') ||
-              found.email?.toLowerCase().includes('macciolino84');
-            const updated: Profile = {
-              ...prev,
-              ...found,
-              id: isMarco ? 'p-1' : found.id,
-              role: isMarco ? 'admin' : (found.role || prev.role || 'player'),
-              position: found.position || prev.position || 'Esterno',
-              full_name: isMarco ? 'Marco B.' : found.full_name,
-            };
-            saveLocalSession(user, updated);
-            return updated;
-          }
-          return prev;
-        });
-      }
+      if (!profile) return;
+      const found = getStoredPlayers().find((p) => p.id === profile.id);
+      if (!found) return;
+      if (JSON.stringify(found) === JSON.stringify(profile)) return;
+      const updated: Profile = {
+        ...profile,
+        ...found,
+        id: profile.id,
+        role: normalizeRole(found.role, user?.email),
+      };
+      setProfile(updated);
+      setRoutingCookies(updated);
     };
-
     window.addEventListener('clubcalcetto_players_changed', handlePlayersChanged);
-    return () => {
-      window.removeEventListener('clubcalcetto_players_changed', handlePlayersChanged);
-    };
-  }, [user]);
+    return () => window.removeEventListener('clubcalcetto_players_changed', handlePlayersChanged);
+  }, [profile, user]);
 
-  // Controlla stato di verifica email
   const isEmailVerified: boolean = Boolean(
-    // Se è Marco super admin
-    user?.email?.toLowerCase().includes('macciolino84') ||
-    // Se bypass locale abilitato per test rapido
-    localVerifiedBypass ||
-    // Se utente Google (providerData include google.com)
-    (user as any)?.providerData?.some((p: any) => p.providerId === 'google.com') ||
-    // Se Firebase flag emailVerified è true
-    (user as any)?.emailVerified === true
+    user &&
+      (user.emailVerified || user.providerData?.some((p) => p.providerId === 'google.com'))
   );
+  void verifiedTick; // re-render trigger after checkEmailVerification
 
-  const simulateEmailVerification = () => {
-    setLocalVerifiedBypass(true);
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem(STORAGE_KEY_LOCAL_VERIFIED, 'true');
-      } catch {}
-    }
-  };
-
-  const checkEmailVerification = async (): Promise<boolean> => {
-    if (!firebaseAuth.currentUser) return isEmailVerified;
-    try {
-      await reload(firebaseAuth.currentUser);
-      const isVerified = Boolean(firebaseAuth.currentUser.emailVerified);
-      if (isVerified) {
-        setUser({ ...firebaseAuth.currentUser });
-      }
-      return isVerified;
-    } catch (err) {
-      console.warn('Errore checkEmailVerification:', err);
-      return isEmailVerified;
-    }
-  };
-
-  const sendVerificationEmail = async () => {
-    if (firebaseAuth.currentUser) {
-      await sendEmailVerification(firebaseAuth.currentUser);
+  const ensureConfigured = () => {
+    if (!isFirebaseConfigured) {
+      throw new Error('Firebase non è configurato: impossibile effettuare il login.');
     }
   };
 
   const signInWithGoogle = async () => {
+    ensureConfigured();
     setIsLoading(true);
     try {
-      if (isFirebaseConfigured) {
-        const result = await signInWithPopup(firebaseAuth, googleProvider);
-        const fbUser = result.user;
-        const newProfile = resolveProfileForUser(
-          fbUser.uid,
-          fbUser.email,
-          fbUser.displayName,
-          fbUser.photoURL
-        );
-        setUser(fbUser);
-        setProfile(newProfile);
-        saveLocalSession(fbUser, newProfile);
-        await syncProfileWithFirestore(fbUser);
-        if (typeof window !== 'undefined') {
-          window.location.href = '/presenze';
-        }
-        return;
-      }
-    } catch (err: unknown) {
-      console.warn('Firebase popup fallito:', err);
-      throw err;
+      const result = await signInWithPopup(firebaseAuth, googleProvider);
+      setUser(result.user);
+      await syncProfile(result.user);
+      window.location.href = '/presenze';
     } finally {
       setIsLoading(false);
     }
@@ -484,264 +242,99 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     fullName: string,
     position: FieldPosition = 'Esterno'
   ) => {
+    ensureConfigured();
     setIsLoading(true);
     try {
-      let fbUser: any;
-      if (isFirebaseConfigured) {
-        try {
-          const cred = await createUserWithEmailAndPassword(firebaseAuth, email.trim(), pass);
-          fbUser = cred.user;
-          // Invia email di verifica richiesta dal punto 5
-          try {
-            await sendEmailVerification(fbUser);
-          } catch (emailErr) {
-            console.warn('Impossibile inviare email di verifica:', emailErr);
-          }
-        } catch (firebaseErr: any) {
-          if (firebaseErr?.code === 'auth/operation-not-allowed' || firebaseErr?.message?.includes('operation-not-allowed')) {
-            console.warn('Firebase auth/operation-not-allowed: Email/Password non è ancora abilitato nella console Firebase. Modalità locale attivata per consentire il test.');
-            const cleanEmail = email.trim().toLowerCase();
-            const localUid = `u-${cleanEmail.replace(/[^a-z0-9]/g, '_')}`;
-            fbUser = {
-              id: localUid,
-              uid: localUid,
-              email: cleanEmail,
-              displayName: fullName.trim(),
-              photoURL: null,
-              emailVerified: false,
-            };
-          } else {
-            throw firebaseErr;
-          }
-        }
-      } else {
-        const cleanEmail = email.trim().toLowerCase();
-        const localUid = `u-${cleanEmail.replace(/[^a-z0-9]/g, '_')}`;
-        fbUser = {
-          id: localUid,
-          uid: localUid,
-          email: cleanEmail,
-          displayName: fullName.trim(),
-          photoURL: null,
-          emailVerified: false,
-        };
+      pendingSignUp.current = { fullName: fullName.trim(), position };
+      const cred = await createUserWithEmailAndPassword(firebaseAuth, email.trim(), pass);
+      try {
+        await sendEmailVerification(cred.user);
+      } catch (emailErr) {
+        console.warn('Impossibile inviare email di verifica:', emailErr);
       }
-
-      const newProfile = resolveProfileForUser(
-        fbUser.uid || fbUser.id,
-        fbUser.email,
-        fullName.trim(),
-        null,
-        position
-      );
-
-      setUser(fbUser);
-      setProfile(newProfile);
-      saveLocalSession(fbUser, newProfile);
-      if (isFirebaseConfigured && fbUser.uid && !fbUser.uid.startsWith('u-')) {
-        await syncProfileWithFirestore(fbUser);
-      }
+      setUser(cred.user);
+      await syncProfile(cred.user);
+    } catch (err) {
+      pendingSignUp.current = null;
+      throw err;
     } finally {
       setIsLoading(false);
     }
   };
 
   const signInWithEmailPassword = async (email: string, pass: string) => {
+    ensureConfigured();
     setIsLoading(true);
     try {
-      let fbUser: any;
-      if (isFirebaseConfigured) {
-        try {
-          const cred = await signInWithEmailAndPassword(firebaseAuth, email.trim(), pass);
-          fbUser = cred.user;
-        } catch (firebaseErr: any) {
-          if (firebaseErr?.code === 'auth/operation-not-allowed' || firebaseErr?.message?.includes('operation-not-allowed')) {
-            console.warn('Firebase auth/operation-not-allowed: Login con fallback locale.');
-            const cleanEmail = email.trim().toLowerCase();
-            const isMarco = cleanEmail.includes('macciolino84');
-            const localUid = isMarco ? 'p-1' : `u-${cleanEmail.replace(/[^a-z0-9]/g, '_')}`;
-            const existing = findPlayerByAuth(localUid, cleanEmail);
-            fbUser = {
-              id: localUid,
-              uid: localUid,
-              email: cleanEmail,
-              displayName: existing?.full_name || (isMarco ? 'Marco B.' : cleanEmail.split('@')[0]),
-              photoURL: existing?.avatar_url || null,
-              emailVerified: true,
-            };
-          } else {
-            throw firebaseErr;
-          }
-        }
-      } else {
-        const cleanEmail = email.trim().toLowerCase();
-        const isMarco = cleanEmail.includes('macciolino84');
-        const localUid = isMarco ? 'p-1' : `u-${cleanEmail.replace(/[^a-z0-9]/g, '_')}`;
-        const existing = findPlayerByAuth(localUid, cleanEmail);
-        fbUser = {
-          id: localUid,
-          uid: localUid,
-          email: cleanEmail,
-          displayName: existing?.full_name || (isMarco ? 'Marco B.' : cleanEmail.split('@')[0]),
-          photoURL: existing?.avatar_url || null,
-          emailVerified: true,
-        };
-      }
-
-      const resolved = resolveProfileForUser(
-        fbUser.uid || fbUser.id,
-        fbUser.email,
-        fbUser.displayName,
-        fbUser.photoURL
-      );
-      setUser(fbUser);
-      setProfile(resolved);
-      saveLocalSession(fbUser, resolved);
-      if (isFirebaseConfigured && fbUser.uid && !fbUser.uid.startsWith('u-')) {
-        await syncProfileWithFirestore(fbUser);
-      }
-      if (typeof window !== 'undefined') {
-        window.location.href = '/presenze';
-      }
+      const cred = await signInWithEmailAndPassword(firebaseAuth, email.trim(), pass);
+      setUser(cred.user);
+      await syncProfile(cred.user);
+      window.location.href = '/presenze';
     } finally {
       setIsLoading(false);
     }
   };
 
-  const loginAsMarcoAdmin = () => {
-    const adminProf = resolveProfileForUser('p-1', MARCO_ADMIN_EMAIL, 'Marco B.', null, 'Esterno');
-    setUser(MARCO_ADMIN_USER);
-    setProfile(adminProf);
-    saveLocalSession(MARCO_ADMIN_USER, adminProf);
-    if (typeof window !== 'undefined') {
-      window.location.href = '/presenze';
+  const sendVerificationEmail = async () => {
+    if (firebaseAuth.currentUser) {
+      await sendEmailVerification(firebaseAuth.currentUser);
     }
   };
 
-  const loginAsGuestUser = () => {
-    const guestProf = resolveProfileForUser('guest-regular-user', 'ospite@clubcalcetto.it', 'Giocatore Ospite', null, 'Esterno');
-    setUser(GUEST_REGULAR_USER);
-    setProfile(guestProf);
-    saveLocalSession(GUEST_REGULAR_USER, guestProf);
-    if (typeof window !== 'undefined') {
-      window.location.href = '/presenze';
-    }
-  };
-
-  const loginAsPlayer = (player: Profile) => {
-    const isMarco = (player.email || '').toLowerCase().includes('macciolino84') || player.id === 'p-1';
-    const simpleUser: SimpleUser = {
-      id: player.id,
-      uid: player.id,
-      email: player.email,
-      displayName: player.full_name,
-      photoURL: player.avatar_url,
-      emailVerified: true,
-    };
-    const playerProf: Profile = {
-      ...player,
-      role: isMarco ? 'admin' : (player.role === 'admin' ? 'admin' : 'player'),
-      full_name: isMarco ? 'Marco B.' : player.full_name,
-    };
-    setUser(simpleUser);
-    setProfile(playerProf);
-    saveLocalSession(simpleUser, playerProf);
-    if (typeof window !== 'undefined') {
-      window.location.href = '/presenze';
-    }
-  };
-
-  const loginWithEmail = (email: string, name?: string) => {
-    const cleanEmail = email.trim().toLowerCase();
-    const isMarco = cleanEmail.includes('macciolino84');
-    const authId = isMarco ? 'p-1' : `user-${cleanEmail.replace(/[^a-z0-9]/g, '_')}`;
-    const userObj: SimpleUser = {
-      id: authId,
-      uid: authId,
-      email: cleanEmail,
-      displayName: isMarco ? 'Marco B.' : (name || cleanEmail.split('@')[0]),
-      photoURL: null,
-      emailVerified: true,
-    };
-    const resolved = resolveProfileForUser(authId, cleanEmail, userObj.displayName);
-    setUser(userObj);
-    setProfile(resolved);
-    saveLocalSession(userObj, resolved);
-    if (typeof window !== 'undefined') {
-      window.location.href = '/presenze';
+  const checkEmailVerification = async (): Promise<boolean> => {
+    const current = firebaseAuth.currentUser;
+    if (!current) return false;
+    try {
+      await reload(current);
+      // Refresh the ID token so Firestore rules see email_verified = true
+      await current.getIdToken(true);
+      setUser(firebaseAuth.currentUser);
+      setVerifiedTick((t) => t + 1);
+      return Boolean(current.emailVerified);
+    } catch (err) {
+      console.warn('Errore checkEmailVerification:', err);
+      return false;
     }
   };
 
   const signOut = async () => {
-    clearLocalSession();
     try {
-      if (isFirebaseConfigured) {
-        await firebaseSignOut(firebaseAuth);
-      }
+      if (isFirebaseConfigured) await firebaseSignOut(firebaseAuth);
     } catch (e) {
       console.warn('Firebase signOut error:', e);
     }
     setUser(null);
     setProfile(null);
-    setLocalVerifiedBypass(false);
-    if (typeof window !== 'undefined') {
-      window.location.href = '/login';
-    }
+    setRoutingCookies(null);
+    window.location.href = '/login';
   };
 
   const refreshProfile = async () => {
-    const currentId = (user as any)?.uid || (user as any)?.id;
-    if (currentId && isFirebaseConfigured) {
-      try {
-        const snap = await getDoc(doc(db, 'profiles', currentId));
-        if (snap.exists()) {
-          const data = snap.data() as Profile;
-          setProfile(data);
-          saveLocalSession(user, data);
-        }
-      } catch (e) {
-        console.warn('refreshProfile error:', e);
-      }
+    if (firebaseAuth.currentUser) {
+      await syncProfile(firebaseAuth.currentUser);
     }
   };
 
-  const updateProfile = async (updatedData: Partial<Profile>) => {
+  /** Self-service edit: only name, avatar and field position (enforced by firestore.rules too). */
+  const updateProfile = async (
+    updatedData: Partial<Pick<Profile, 'full_name' | 'avatar_url' | 'position'>>
+  ) => {
     if (!profile) return;
-    const isMarco = profile.email?.toLowerCase().includes('macciolino84') || profile.id === 'p-1';
-    const merged: Profile = {
-      ...profile,
-      ...updatedData,
-      id: isMarco ? 'p-1' : profile.id,
-      role: isMarco ? 'admin' : (profile.role === 'admin' ? 'admin' : 'player'),
-      position: updatedData.position || profile.position || 'Esterno',
-      full_name: isMarco ? (updatedData.full_name || 'Marco B.') : (updatedData.full_name || profile.full_name),
-      updated_at: new Date().toISOString(),
-    };
-    setProfile(merged);
-    saveLocalSession(user, merged);
-    updateStoredPlayer(merged);
+    const patch: Partial<Profile> = { updated_at: new Date().toISOString() };
+    if (updatedData.full_name !== undefined) patch.full_name = updatedData.full_name || profile.full_name;
+    if (updatedData.avatar_url !== undefined) patch.avatar_url = updatedData.avatar_url;
+    if (updatedData.position !== undefined) patch.position = updatedData.position || profile.position || 'Esterno';
 
-    try {
-      if (isFirebaseConfigured && merged.id) {
-        await setDoc(doc(db, 'profiles', merged.id), merged, { merge: true });
-      }
-    } catch (err) {
-      console.warn('Sync Firebase updateProfile warning:', err);
+    if (isFirebaseConfigured) {
+      await setDoc(doc(db, 'profiles', profile.id), patch, { merge: true });
     }
+    const merged: Profile = { ...profile, ...patch };
+    setProfile(merged);
+    updateStoredPlayer(merged);
   };
 
-  const isSuperAdminEmail = Boolean(
-    (user?.email && user.email.toLowerCase().trim() === MARCO_ADMIN_EMAIL.toLowerCase()) ||
-    (profile?.email && profile.email.toLowerCase().trim() === MARCO_ADMIN_EMAIL.toLowerCase())
-  );
-
-  // Isolamento Rigido: L'utente è admin SOLO SE è autenticato (user !== null)
-  // E il suo profilo ha tassativamente role === 'admin' oppure la sua email corrisponde a MARCO_ADMIN_EMAIL.
-  // In qualsiasi altro caso (compresi unhandled/undefined/player) il valore è RIGOROSAMENTE false.
-  const isAdmin = Boolean(
-    user && ((profile && profile.role === 'admin') || isSuperAdminEmail)
-  );
-
+  const isSuperAdmin = Boolean(user && user.emailVerified && isSuperAdminEmail(user.email));
+  const isAdmin = Boolean(user && (isSuperAdmin || profile?.role === 'admin'));
   const authProvider = isFirebaseConfigured ? 'firebase' : 'local';
 
   return (
@@ -750,6 +343,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         profile,
         isAdmin,
+        isSuperAdmin,
         isLoading,
         isEmailVerified,
         signInWithGoogle,
@@ -757,11 +351,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signInWithEmailPassword,
         sendVerificationEmail,
         checkEmailVerification,
-        simulateEmailVerification,
-        loginAsMarcoAdmin,
-        loginAsGuestUser,
-        loginAsPlayer,
-        loginWithEmail,
         signOut,
         refreshProfile,
         updateProfile,

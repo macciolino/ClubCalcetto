@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Presence, Profile } from '@/types/database';
 import { StatBadge } from './StatBadge';
 import { CalendarDay } from '@/lib/utils/dateUtils';
-import { CheckCircle2, Clock, UserX, UserPlus, Sparkles } from 'lucide-react';
+import { isTimelockActive } from '@/lib/services/presenceService';
+import { CheckCircle2, Clock, UserX, UserPlus, Sparkles, Lock } from 'lucide-react';
 
 interface PresenceCardProps {
   day: CalendarDay;
@@ -62,6 +63,8 @@ export function PresenceCard({
     : null;
 
   const isFull = starters.length >= 10;
+  const timelockCheck = mounted && !isAdmin ? isTimelockActive(day.dateString) : { locked: false };
+  const isCancelLocked = isUserPresent && timelockCheck.locked;
 
   return (
     <div
@@ -239,35 +242,44 @@ export function PresenceCard({
 
       {/* Pulsante Azione Partecipazione */}
       <div className="mt-5 pt-3 border-t border-slate-800 flex flex-col gap-2">
-        <button
-          type="button"
-          onClick={() => onTogglePresence(day.dateString)}
-          disabled={isToggling}
-          className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg ${
-            isUserPresent
-              ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30'
-              : isFull
-              ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-500/25'
-              : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/25'
-          }`}
-        >
-          {isUserPresent ? (
-            <>
-              <UserX className="h-4 w-4" />
-              Annulla Presenza ({userPresence?.status === 'confirmed' ? 'Titolare' : 'Waitlist'})
-            </>
-          ) : isFull ? (
-            <>
-              <Clock className="h-4 w-4" />
-              Mettiti in Waitlist (+{waitlist.length + 1})
-            </>
-          ) : (
-            <>
-              <Sparkles className="h-4 w-4" />
-              Vota Presenza (Gioca)
-            </>
-          )}
-        </button>
+        {isCancelLocked ? (
+          <div className="w-full py-2.5 px-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs text-center flex items-center justify-center gap-2">
+            <Lock className="h-4 w-4 text-amber-400 flex-shrink-0" />
+            <span className="font-semibold text-[11px] leading-tight">
+              Disdette bloccate (Time-lock attivo). Contatta l&apos;Admin per disdire.
+            </span>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onTogglePresence(day.dateString)}
+            disabled={isToggling}
+            className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer ${
+              isUserPresent
+                ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                : isFull
+                ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-500/25'
+                : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/25'
+            }`}
+          >
+            {isUserPresent ? (
+              <>
+                <UserX className="h-4 w-4" />
+                Annulla Presenza ({userPresence?.status === 'confirmed' ? 'Titolare' : 'Waitlist'})
+              </>
+            ) : isFull ? (
+              <>
+                <Clock className="h-4 w-4" />
+                Mettiti in Waitlist (+{waitlist.length + 1})
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4" />
+                Vota Presenza (Gioca)
+              </>
+            )}
+          </button>
+        )}
 
         {/* Per l'Admin: Assegna giocatore ospite */}
         {showAdminActions && onAddGuestPresence && (

@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "dev:emulators": "node scripts/dev-emulators.mjs",
+    "seed:emulators": "node scripts/seed-emulators.mjs",
+    "backup:firestore": "node scripts/backup-firestore.mjs",
+    "test:rules": "firebase emulators:exec --config firebase.test.json --only auth,firestore --project demo-clubcalcetto \"node scripts/test-rules.mjs\""
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -24,6 +28,7 @@
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
     "autoprefixer": "^10.4.20",
+    "firebase-tools": "^15.35.0",
     "postcss": "^8.5.1",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.3"

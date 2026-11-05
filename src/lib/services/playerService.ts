@@ -242,11 +242,17 @@ export function getStoredPlayers(): Profile[] {
 
           // Se ruolo era 'user', converti in 'player'
           const role = (p.role === 'admin' ? 'admin' : 'player') as 'admin' | 'player';
+          const rawStats = p.stats || {};
+          const stats = {
+            ...rawStats,
+            Visione: rawStats.Visione ?? rawStats.Tecnica ?? 7,
+          };
 
           return {
             ...p,
             role,
             position,
+            stats,
             matches_won: won,
             matches_drawn: drawn,
             matches_lost: lost,
