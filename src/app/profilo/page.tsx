@@ -7,7 +7,7 @@ import { useAuth } from '@/lib/context/AuthContext';
 import { FieldPosition, FIELD_POSITIONS, FIELD_POSITION_ABBR, sortStatsByCanonicalOrder } from '@/types/database';
 import { RadarChart } from '@/components/RadarChart';
 import { StatBadge } from '@/components/StatBadge';
-import { getStoredCategories } from '@/lib/services/statCategoryService';
+import { useStatCategories } from '@/lib/hooks/useStatCategories';
 import { subscribeMatches } from '@/lib/firebase/firestoreService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { Match } from '@/types/database';
@@ -35,7 +35,7 @@ export default function ProfiloPage() {
   const [mounted, setMounted] = useState(false);
   const [fullName, setFullName] = useState(profile?.full_name || 'Giocatore');
   const [position, setPosition] = useState<FieldPosition>(profile?.position || 'Esterno');
-  const [categories, setCategories] = useState(() => getStoredCategories());
+  const categories = useStatCategories();
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -63,15 +63,6 @@ export default function ProfiloPage() {
     }
   }, [profile]);
 
-  useEffect(() => {
-    const handleCategoriesChanged = () => {
-      setCategories(getStoredCategories());
-    };
-    window.addEventListener('clubcalcetto_categories_changed', handleCategoriesChanged);
-    return () => {
-      window.removeEventListener('clubcalcetto_categories_changed', handleCategoriesChanged);
-    };
-  }, []);
 
   if (!mounted) {
     return (

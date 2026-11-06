@@ -24,7 +24,7 @@ interface PlayerCardFifaProps {
   isAdmin: boolean;
   onEdit?: (player: Profile) => void;
   onDelete?: (player: Profile) => void;
-  /** Parametri ufficiali configurati dall'admin (Campi & Regole). Se assenti usa le chiavi del giocatore. */
+  /** Parametri ufficiali configurati dall'admin (Campi & Parametri). Se assenti usa le chiavi del giocatore. */
   categories?: StatCategory[];
 }
 

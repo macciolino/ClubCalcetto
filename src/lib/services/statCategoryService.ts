@@ -18,7 +18,6 @@ export const DEFAULT_BASE_CATEGORIES: StatCategory[] = [
 const CATEGORIES_STORAGE_KEY = 'clubcalcetto_stat_categories';
 
 export { normalizeCategories, getStatValue } from '@/lib/utils/statUtils';
-import { normalizeCategories } from '@/lib/utils/statUtils';
 
 export function getStoredCategories(): StatCategory[] {
   if (typeof window === 'undefined') return DEFAULT_BASE_CATEGORIES;
@@ -26,8 +25,8 @@ export function getStoredCategories(): StatCategory[] {
     const raw = localStorage.getItem(CATEGORIES_STORAGE_KEY);
     if (raw) {
       const parsed: StatCategory[] = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return normalizeCategories(parsed);
+      if (Array.isArray(parsed)) {
+        return parsed;
       }
     }
   } catch (err) {
@@ -50,84 +49,4 @@ export function saveStoredCategories(categories: StatCategory[]) {
 export function resetToDefault8Categories(): StatCategory[] {
   saveStoredCategories(DEFAULT_BASE_CATEGORIES);
   return DEFAULT_BASE_CATEGORIES;
-}
-
-export async function addStoredCategory(newCat: {
-  name: string;
-  label?: string;
-  default_value: number;
-}): Promise<StatCategory[]> {
-  const currentCats = getStoredCategories();
-  const catObj: StatCategory = {
-    id: `cat-${Date.now()}`,
-    name: newCat.name.trim(),
-    label: newCat.label?.trim() || newCat.name.trim(),
-    default_value: newCat.default_value ?? 7,
-  };
-
-  const updatedCats = [...currentCats, catObj];
-  saveStoredCategories(updatedCats);
-
-  // AGGIORNA IN REAL-TIME TUTTI I GIOCATORI ISCRITTI
-  // Inserisce la nuova statistica con il valore di default e ricalcola l'overall rating per ciascuno
-  const currentPlayers = getStoredPlayers();
-  const updatedPlayers: Profile[] = currentPlayers.map((p) => {
-    const existingStats = p.stats || {};
-    const newStats = {
-      ...existingStats,
-      [catObj.name]: existingStats[catObj.name] ?? catObj.default_value,
-    };
-    const values = Object.values(newStats).filter((v) => typeof v === 'number');
-    const avg =
-      values.length > 0
-        ? Number((values.reduce((a, b) => a + b, 0) / values.length).toFixed(1))
-        : p.overall_rating;
-
-    return {
-      ...p,
-      stats: newStats,
-      overall_rating: avg,
-      updated_at: new Date().toISOString(),
-    };
-  });
-
-  saveStoredPlayers(updatedPlayers);
-  saveStatCategoryDoc(catObj);
-
-  return updatedCats;
-}
-
-export async function removeStoredCategory(
-  categoryId: string,
-  categoryName: string
-): Promise<StatCategory[]> {
-  const currentCats = getStoredCategories();
-  const updatedCats = currentCats.filter(
-    (c) => c.id !== categoryId && c.name.toLowerCase() !== categoryName.toLowerCase()
-  );
-  saveStoredCategories(updatedCats);
-
-  // Rimuove la statistica dai profili
-  const currentPlayers = getStoredPlayers();
-  const updatedPlayers: Profile[] = currentPlayers.map((p) => {
-    const existingStats = { ...(p.stats || {}) };
-    delete existingStats[categoryName];
-    const values = Object.values(existingStats).filter((v) => typeof v === 'number');
-    const avg =
-      values.length > 0
-        ? Number((values.reduce((a, b) => a + b, 0) / values.length).toFixed(1))
-        : p.overall_rating;
-
-    return {
-      ...p,
-      stats: existingStats,
-      overall_rating: avg,
-      updated_at: new Date().toISOString(),
-    };
-  });
-
-  saveStoredPlayers(updatedPlayers);
-  await deleteStatCategoryDoc(categoryId);
-
-  return updatedCats;
 }

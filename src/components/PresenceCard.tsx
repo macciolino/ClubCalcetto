@@ -19,6 +19,8 @@ interface PresenceCardProps {
   isToggling?: boolean;
   /** Day not open yet for players (next week before the admin opens voting) */
   isLocked?: boolean;
+  /** This day reached 10 starters first in its week */
+  isFirstToTen?: boolean;
 }
 
 export function PresenceCard({
@@ -32,6 +34,7 @@ export function PresenceCard({
   onRemovePresence,
   isToggling = false,
   isLocked = false,
+  isFirstToTen = false,
 }: PresenceCardProps) {
   const [mounted, setMounted] = useState(false);
 
@@ -85,6 +88,11 @@ export function PresenceCard({
             {day.isToday && (
               <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-emerald-500/30">
                 Oggi
+              </span>
+            )}
+            {isFirstToTen && (
+              <span className="bg-amber-500/15 text-amber-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-amber-400/40">
+                🥇 Primo a 10
               </span>
             )}
           </div>

@@ -8,6 +8,7 @@ import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { formatItalianDate } from '@/lib/utils/dateUtils';
 import { History, Trophy, Star, ListOrdered, CalendarDays, Coins, Trash2, Loader2, Pencil } from 'lucide-react';
 import { MatchEditModal } from '@/components/MatchEditModal';
+import { HistoryCalendar } from '@/components/HistoryCalendar';
 
 interface PlayerLine {
   id: string;
@@ -73,6 +74,7 @@ export default function HistoryPage() {
   const [view, setView] = useState<'leaderboard' | 'matches'>('leaderboard');
   const [sortBy, setSortBy] = useState<SortKey>('won');
   const [editing, setEditing] = useState<Match | null>(null);
+  const [pickedDate, setPickedDate] = useState<string | null>(null);
   const [season, setSeason] = useState<string>('all');
 
   useEffect(() => {
@@ -162,7 +164,7 @@ export default function HistoryPage() {
             <span>Stagione</span>
             <select
               value={season}
-              onChange={(e) => setSeason(e.target.value)}
+              onChange={(e) => { setSeason(e.target.value); setPickedDate(null); }}
               className="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
             >
               <option value="all">Tutte</option>
@@ -295,8 +297,14 @@ export default function HistoryPage() {
           </div>
         </div>
       ) : (
+        <div className="space-y-4">
+        <HistoryCalendar
+          matchDates={visibleMatches.map((m) => m.match_date || m.id)}
+          selected={pickedDate}
+          onSelect={setPickedDate}
+        />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {visibleMatches.map((m) => {
+          {visibleMatches.filter((m) => !pickedDate || (m.match_date || m.id) === pickedDate).map((m) => {
             const w = m.score_white ?? 0;
             const b = m.score_black ?? 0;
             const mvpName = m.mvp_player_id ? nameOf(m.mvp_player_id) : null;
@@ -381,6 +389,7 @@ export default function HistoryPage() {
               </article>
             );
           })}
+        </div>
         </div>
       )}
 

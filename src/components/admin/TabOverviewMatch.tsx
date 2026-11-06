@@ -2,6 +2,7 @@
 
 import { MatchResultFields, MatchResultValue, validateScorers } from '@/components/MatchResultFields';
 import { reconcileTeams, toTeamPlayer } from '@/lib/utils/teamUtils';
+import { firstToTenByWeek as computeFirstToTen } from '@/lib/utils/presenceRanking';
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Profile, Presence, Match, GeneratedTeamRecord } from '@/types/database';
@@ -122,6 +123,7 @@ export function TabOverviewMatch({
   const [isArchiving, setIsArchiving] = useState(false);
   const [archiveSuccessMessage, setArchiveSuccessMessage] = useState('');
   const [cashOpen, setCashOpen] = useState(false);
+  const [daysOpen, setDaysOpen] = useState(false);
 
   // Partite archiviate totali
   const [archivedMatchesCount, setArchivedMatchesCount] = useState(0);
@@ -170,30 +172,8 @@ export function TabOverviewMatch({
     setResult((r) => (r.mvpPlayerId ? r : { ...r, mvpPlayerId: mvpVotes[0].playerId }));
   }, [activeDate, mvpVotes, savedMatch?.status]);
 
-  // Per ogni settimana: il giorno che ha raggiunto PER PRIMO 10 iscritti (momento in cui si è iscritto il 10° titolare)
-  const firstToTenByWeek = (() => {
-    const reachedAt = (date: string): number | null => {
-      const starters = presences.filter((p) => p.date === date && p.status === 'confirmed');
-      if (starters.length < 10) return null;
-      const times = starters.map((p) =>
-        typeof p.joined_ms === 'number' ? p.joined_ms : Date.parse(p.created_at) || Number.MAX_SAFE_INTEGER
-      );
-      return Math.max(...times);
-    };
-    const weekOf = (d: Date) => {
-      const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7));
-      return `${monday.getFullYear()}-${monday.getMonth()}-${monday.getDate()}`;
-    };
-    const best = new Map<string, { date: string; at: number }>();
-    days.forEach((day) => {
-      const at = reachedAt(day.dateString);
-      if (at === null) return;
-      const wk = weekOf(day.dateObj);
-      const cur = best.get(wk);
-      if (!cur || at < cur.at) best.set(wk, { date: day.dateString, at });
-    });
-    return new Set(Array.from(best.values()).map((b) => b.date));
-  })();
+  // Per ogni settimana: il giorno che ha raggiunto PER PRIMO 10 iscritti
+  const firstToTenByWeek = computeFirstToTen(days, presences);
 
   const isAlreadyClosed = savedMatch?.status === 'completed';
 
@@ -344,22 +324,38 @@ export function TabOverviewMatch({
         </div>
       </div>
 
-      {/* 2. ELEZIONE GIORNO UFFICIALE & CTA GENERATORE SQUADRE */}
+      {/* 2. ELEZIONE GIORNO UFFICIALE (a tendina) & CTA GENERATORE SQUADRE */}
       <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-xl space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
-          <div>
-            <h2 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-emerald-400" />
-              Elezione Giorno Ufficiale Partita
-            </h2>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Clicca su un giorno per impostarlo come partita ufficiale. In evidenza (🥇) il giorno che per primo ha raggiunto 10 iscritti nella settimana.
-            </p>
-          </div>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => setDaysOpen((o) => !o)}
+            aria-expanded={daysOpen}
+            className="flex-1 min-w-0 flex items-center justify-between gap-3 text-left"
+          >
+            <div className="min-w-0">
+              <h2 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+                Elezione Giorno Ufficiale Partita
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Ufficiale: <strong className="text-emerald-300">{formatItalianDate(activeDate)}</strong>
+                {firstToTenByWeek.size > 0 && (
+                  <>
+                    {' '}· 🥇 primo a 10:{' '}
+                    <strong className="text-amber-300">
+                      {Array.from(firstToTenByWeek).map((d) => formatItalianDate(d)).join(', ')}
+                    </strong>
+                  </>
+                )}
+              </p>
+            </div>
+            <ChevronDown className={`h-5 w-5 text-slate-400 flex-shrink-0 transition-transform ${daysOpen ? 'rotate-180' : ''}`} />
+          </button>
 
           <Link
             href={`/squadre?date=${activeDate}`}
-            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/25 transition-all hover:scale-105 cursor-pointer"
+            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/25 transition-all cursor-pointer"
           >
             <Sparkles className="h-4 w-4" />
             <span>Generatore Squadre 5v5</span>
@@ -367,6 +363,11 @@ export function TabOverviewMatch({
           </Link>
         </div>
 
+        {daysOpen && (
+          <div className="space-y-3 border-t border-slate-800 pt-3">
+            <p className="text-xs text-slate-400">
+              Tocca un giorno per impostarlo come partita ufficiale. In evidenza (🥇) il giorno che per primo ha raggiunto 10 iscritti nella settimana.
+            </p>
         {/* Card Selettore Orizzontale a Radio Button per i Giorni */}
         <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2.5">
           {days.map((day) => {
@@ -419,6 +420,8 @@ export function TabOverviewMatch({
             );
           })}
         </div>
+          </div>
+        )}
       </div>
 
       {/* 3. TRACCIAMENTO CASSA & PAGAMENTI QUOTA CAMPO (a tendina) */}

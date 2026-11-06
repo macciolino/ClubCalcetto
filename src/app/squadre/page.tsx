@@ -76,7 +76,7 @@ function SquadreContent() {
   const [matchTime, setMatchTime] = useState('20:30');
   const [matchLocation, setMatchLocation] = useState('');
   const [totalCost, setTotalCost] = useState(80.0);
-  // Valori standard decisi dall'admin (Admin > Campi & Regole) e partita salvata per la data
+  // Valori standard decisi dall'admin (Admin > Campi & Parametri) e partita salvata per la data
   const [standardCost, setStandardCost] = useState(80);
   const [standardTime, setStandardTime] = useState('20:30');
   const [savedMatch, setSavedMatch] = useState<Match | null>(null);
@@ -177,7 +177,7 @@ function SquadreContent() {
     };
   }, [selectedDate]);
 
-  // Valori standard dell'admin (Admin > Campi & Regole) e campi sportivi, in tempo reale
+  // Valori standard dell'admin (Admin > Campi & Parametri) e campi sportivi, in tempo reale
   useEffect(() => {
     if (!isFirebaseConfigured) return;
     const unsubSettings = subscribeAppSettings((st) => {
@@ -623,7 +623,7 @@ function SquadreContent() {
                 </button>
               </>
             ) : (
-              'Costo e orario seguono i valori standard (Admin → Campi & Regole). Se li modifichi qui valgono solo per questa partita.'
+              'Costo e orario seguono i valori standard (Admin → Campi & Parametri). Se li modifichi qui valgono solo per questa partita.'
             )}
           </p>
         )}

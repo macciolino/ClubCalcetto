@@ -3,7 +3,7 @@ import { callNotifyApi } from '@/lib/services/pushService';
 /**
  * Notifications to the players of a match (web push via Firebase Cloud Messaging, free).
  * Sent by the server route /api/notify. Who receives them is decided by the admin
- * (Admin → Campi & Regole → Notifiche): nobody, only admins (test) or all the players concerned.
+ * (Admin → Campi & Parametri → Notifiche): nobody, only admins (test) or all the players concerned.
  */
 export type MatchNotification =
   | { type: 'match_confirmed'; date: string; playerIds: string[] }

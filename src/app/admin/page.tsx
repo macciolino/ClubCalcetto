@@ -40,7 +40,8 @@ import {
   saveAppSettings,
 } from '@/lib/services/presenceService';
 import { 
-  getStoredCategories, 
+  getStoredCategories,
+  saveStoredCategories,
   resetToDefault8Categories 
 } from '@/lib/services/statCategoryService';
 import { 
@@ -139,7 +140,8 @@ export default function AdminPage() {
         }
       });
       unsubCats = subscribeStatCategories((remote) => {
-        if (remote && remote.length > 0) setCategories(remote);
+        setCategories(remote);
+        saveStoredCategories(remote);
       });
       unsubFields = subscribeSportFields((remote) => {
         if (remote && remote.length > 0) setFields(remote);
@@ -363,61 +365,61 @@ export default function AdminPage() {
 
       {/* 4 TAB ORIZZONTALI PRINCIPALI */}
       <div className="bg-slate-900/90 border border-slate-800 p-1.5 rounded-2xl shadow-xl backdrop-blur-md">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-1">
           {/* Tab 1: Panoramica, Match & Cassa */}
           <button
             type="button"
             onClick={() => setActiveTab('overview')}
-            className={`flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+            className={`w-full flex items-center justify-start md:justify-center gap-2.5 py-2.5 md:py-3 px-3.5 md:px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
               activeTab === 'overview'
                 ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/25 scale-[1.01]'
                 : 'text-slate-400 hover:text-white hover:bg-slate-850/60'
             }`}
           >
-            <LayoutDashboard className="h-4 w-4" />
-            <span className="truncate">1. Match & Cassa</span>
+            <LayoutDashboard className="h-4 w-4 flex-shrink-0" />
+            <span className="text-left md:text-center leading-tight">1. Match & Cassa</span>
           </button>
 
           {/* Tab 2: Gestione Presenze & Time-lock */}
           <button
             type="button"
             onClick={() => setActiveTab('presences')}
-            className={`flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+            className={`w-full flex items-center justify-start md:justify-center gap-2.5 py-2.5 md:py-3 px-3.5 md:px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
               activeTab === 'presences'
                 ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/25 scale-[1.01]'
                 : 'text-slate-400 hover:text-white hover:bg-slate-850/60'
             }`}
           >
-            <CalendarDays className="h-4 w-4" />
-            <span className="truncate">2. Presenze & Blocco</span>
+            <CalendarDays className="h-4 w-4 flex-shrink-0" />
+            <span className="text-left md:text-center leading-tight">2. Presenze & Blocco</span>
           </button>
 
           {/* Tab 3: Anagrafica Utenti & Ruoli */}
           <button
             type="button"
             onClick={() => setActiveTab('users')}
-            className={`flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+            className={`w-full flex items-center justify-start md:justify-center gap-2.5 py-2.5 md:py-3 px-3.5 md:px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
               activeTab === 'users'
                 ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/25 scale-[1.01]'
                 : 'text-slate-400 hover:text-white hover:bg-slate-850/60'
             }`}
           >
-            <Users className="h-4 w-4" />
-            <span className="truncate">3. Anagrafica Rosa</span>
+            <Users className="h-4 w-4 flex-shrink-0" />
+            <span className="text-left md:text-center leading-tight">3. Anagrafica Rosa</span>
           </button>
 
           {/* Tab 4: Configurazione & Gestione Campi */}
           <button
             type="button"
             onClick={() => setActiveTab('config')}
-            className={`flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+            className={`w-full flex items-center justify-start md:justify-center gap-2.5 py-2.5 md:py-3 px-3.5 md:px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
               activeTab === 'config'
                 ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/25 scale-[1.01]'
                 : 'text-slate-400 hover:text-white hover:bg-slate-850/60'
             }`}
           >
-            <Settings className="h-4 w-4" />
-            <span className="truncate">4. Campi & Regole</span>
+            <Settings className="h-4 w-4 flex-shrink-0" />
+            <span className="text-left md:text-center leading-tight">4. Campi & Parametri</span>
           </button>
         </div>
       </div>

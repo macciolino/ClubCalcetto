@@ -19,7 +19,7 @@ const MODES: { value: Mode; label: string; help: string }[] = [
   { value: 'all', label: 'Tutti i giocatori', help: 'Le notifiche arrivano ai giocatori interessati.' },
 ];
 
-/** Admin → Campi & Regole: who receives notifications + test notification to yourself. */
+/** Admin → Campi & Parametri: who receives notifications + test notification to yourself. */
 export function NotificationSettingsCard() {
   const { profile } = useAuth();
   const [mode, setMode] = useState<Mode>('admins');

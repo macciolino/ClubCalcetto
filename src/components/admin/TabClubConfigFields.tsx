@@ -1,5 +1,7 @@
 'use client';
 
+import { StatParametersCard } from '@/components/admin/StatParametersCard';
+
 
 import { NumberInput } from '@/components/NumberInput';
 import React, { useState, useEffect } from 'react';
@@ -229,71 +231,8 @@ export function TabClubConfigFields({
         </div>
       </div>
 
-      {/* 2. CONFIGURAZIONE CATEGORIE STATISTICHE (OTTAGONO A 8 PARAMETRI) */}
-      <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-xl space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <Sliders className="h-5 w-5 text-emerald-400" />
-              <h2 className="text-sm font-black text-white uppercase tracking-wider">
-                Parametri Ottagono Calcetto 5v5 (Abilità Ufficiali)
-              </h2>
-            </div>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Il sistema calcola l&apos;OVR e l&apos;algoritmo di bilanciamento su questi 8 parametri chiave.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setIsLegendOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 font-bold rounded-xl text-xs border border-indigo-500/30 transition-all cursor-pointer"
-            >
-              <Info className="h-3.5 w-3.5 text-indigo-400" />
-              <span>Legenda Interattiva Parametri</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (confirm('Ripristinare gli 8 parametri ufficiali per calcetto 5v5?')) {
-                  onReset8Categories();
-                }
-              }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-850 hover:bg-slate-800 text-slate-300 font-bold rounded-xl text-xs border border-slate-700 transition-colors cursor-pointer"
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-              <span>Ripristina Default 8</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Griglia 8 Parametri */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {STAT_CANONICAL_ORDER.filter((k) => k !== 'Tecnica').map((statName) => {
-            const detail = STAT_DETAILS[statName];
-            if (!detail) return null;
-
-            return (
-              <div
-                key={detail.code}
-                className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 space-y-1.5 hover:border-slate-700 transition-all"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-xs font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
-                    {detail.code}
-                  </span>
-                  <span className="text-[10px] text-slate-500 font-mono">Scala 1-10</span>
-                </div>
-                <h4 className="font-black text-xs text-white">{detail.name}</h4>
-                <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">
-                  {detail.label}
-                </p>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      {/* 2. PARAMETRI DEI GIOCATORI (aggiunta / rimozione solo qui) */}
+      <StatParametersCard categories={categories} onOpenLegend={() => setIsLegendOpen(true)} />
 
       {/* 3. PARAMETRI ECONOMICI E LOGISTICI + 4. NOTIFICHE & SYSTEM STATUS (2 COLONNE) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">

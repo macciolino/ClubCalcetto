@@ -5,7 +5,7 @@ export const DEFAULT_MATCH_TIME = '20:30';
 
 /**
  * Total cost of a match: the cost saved at closing (completed matches) or a custom cost set by an admin
- * for that match; otherwise the standard cost from Admin > Campi & Regole.
+ * for that match; otherwise the standard cost from Admin > Campi & Parametri.
  * Old match docs that only stored the default 80 do NOT override the standard anymore.
  */
 export function effectiveMatchCost(match: Match | null | undefined, standardCost?: number): number {

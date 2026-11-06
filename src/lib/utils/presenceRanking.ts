@@ -39,3 +39,35 @@ export function rankPresencesByDate(presences: Presence[]): Presence[] {
   return Array.from(byDate.values()).flatMap(rankDayPresences);
 }
 
+
+/**
+ * For each week, the day that reached 10 starters FIRST (moment the 10th starter signed up).
+ * Shown with 🥇 in Presenze and in Admin → Match. Days are { dateString, dateObj }.
+ */
+export function firstToTenByWeek(
+  days: { dateString: string; dateObj: Date }[],
+  presences: Presence[]
+): Set<string> {
+  const reachedAt = (date: string): number | null => {
+    const starters = presences.filter((p) => p.date === date && p.status === 'confirmed');
+    if (starters.length < MAX_STARTERS) return null;
+    return Math.max(
+      ...starters.map((p) =>
+        typeof p.joined_ms === 'number' ? p.joined_ms : Date.parse(p.created_at) || Number.MAX_SAFE_INTEGER
+      )
+    );
+  };
+  const weekOf = (d: Date) => {
+    const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7));
+    return `${monday.getFullYear()}-${monday.getMonth()}-${monday.getDate()}`;
+  };
+  const best = new Map<string, { date: string; at: number }>();
+  days.forEach((day) => {
+    const at = reachedAt(day.dateString);
+    if (at === null) return;
+    const wk = weekOf(day.dateObj);
+    const cur = best.get(wk);
+    if (!cur || at < cur.at) best.set(wk, { date: day.dateString, at });
+  });
+  return new Set(Array.from(best.values()).map((b) => b.date));
+}

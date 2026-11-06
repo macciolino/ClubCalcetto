@@ -1,5 +1,6 @@
 'use client';
 
+import { firstToTenByWeek } from '@/lib/utils/presenceRanking';
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/context/AuthContext';
@@ -171,6 +172,9 @@ export default function PresenzePage() {
   const isMatchReady = selectedStarters.length >= 10;
 
   // Giorni che hanno raggiunto il quorum dei 10 titolari
+  // Il giorno arrivato per primo a 10 iscritti in ogni settimana (come in Admin → Match)
+  const firstToTen = firstToTenByWeek(days, presences);
+
   const daysWithQuorum = days.filter((d) => {
     const dayP = presences.filter((p) => p.date === d.dateString);
     return dayP.filter((p) => p.status === 'confirmed').length >= 10;
@@ -333,6 +337,7 @@ export default function PresenzePage() {
             const isFull = confirmedCount >= 10;
             const locked = isDayLocked(day.dateString);
             const startsNextWeek = day.dateString === nextWeekStart;
+            const isFirstToTen = firstToTen.has(day.dateString);
 
             return (
               <React.Fragment key={day.dateString}>
@@ -347,6 +352,8 @@ export default function PresenzePage() {
                 className={`flex-shrink-0 flex flex-col items-center justify-between w-24 sm:w-28 p-3 rounded-2xl border transition-all ${
                   isSelected
                     ? 'bg-emerald-500/15 border-emerald-500 text-white shadow-lg ring-2 ring-emerald-500/60'
+                    : isFirstToTen
+                    ? 'bg-amber-500/10 border-amber-400 text-white ring-2 ring-amber-400/50'
                     : locked
                     ? 'bg-slate-950 border-slate-800 text-slate-500 opacity-60'
                     : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
@@ -375,6 +382,9 @@ export default function PresenzePage() {
                   </span>
                   {locked && <Lock className="h-3 w-3 text-slate-500" aria-label="Bloccato" />}
                 </div>
+                {isFirstToTen && (
+                  <div className="mt-1 text-[9px] font-black uppercase text-amber-300 leading-tight">🥇 Primo a 10</div>
+                )}
               </button>
               </React.Fragment>
             );
@@ -433,6 +443,7 @@ export default function PresenzePage() {
                   onAddGuestPresence={handleAddGuestPresence}
                   onRemovePresence={handleRemovePresence}
                   isLocked={isDayLocked(currentDay.dateString)}
+                  isFirstToTen={firstToTen.has(currentDay.dateString)}
                   isToggling={busyDate === currentDay.dateString}
                 />
               </div>
@@ -454,6 +465,7 @@ export default function PresenzePage() {
                   onAddGuestPresence={handleAddGuestPresence}
                   onRemovePresence={handleRemovePresence}
                   isLocked={isDayLocked(day.dateString)}
+                  isFirstToTen={firstToTen.has(day.dateString)}
                   isToggling={busyDate === day.dateString}
                 />
               );

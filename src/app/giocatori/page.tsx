@@ -6,10 +6,9 @@ import { Profile, StatCategory, FIELD_POSITION_ABBR, STAT_CANONICAL_ORDER } from
 import { subscribeProfiles, subscribeStatCategories, deleteProfileDoc } from '@/lib/firebase/firestoreService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { getStoredPlayers, removeStoredPlayer, saveStoredPlayers, getPlayerMatchRecord } from '@/lib/services/playerService';
-import { getStoredCategories, DEFAULT_BASE_CATEGORIES } from '@/lib/services/statCategoryService';
+import { getStoredCategories, saveStoredCategories, DEFAULT_BASE_CATEGORIES } from '@/lib/services/statCategoryService';
 import { StatBadge } from '@/components/StatBadge';
 import { PlayerModal } from '@/components/PlayerModal';
-import { StatCategoriesManager } from '@/components/StatCategoriesManager';
 import { PlayerCardFifa } from '@/components/PlayerCardFifa';
 import { 
   Users, 
@@ -38,7 +37,6 @@ export default function GiocatoriPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPlayerToEdit, setSelectedPlayerToEdit] = useState<Profile | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [showCatManager, setShowCatManager] = useState(false);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [sortBy, setSortBy] = useState<'ovr' | 'wins' | 'name'>('ovr');
 
@@ -74,9 +72,8 @@ export default function GiocatoriPage() {
       });
 
       unsubCats = subscribeStatCategories((remoteCats) => {
-        if (remoteCats && remoteCats.length > 0) {
-          setCategories(remoteCats);
-        }
+        setCategories(remoteCats);
+        saveStoredCategories(remoteCats);
       });
     }
 
@@ -164,14 +161,6 @@ export default function GiocatoriPage() {
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() => setShowCatManager(!showCatManager)}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-850 hover:bg-slate-800 border border-slate-700 rounded-xl text-xs font-bold text-slate-300 transition-colors cursor-pointer"
-            >
-              <Settings2 className="h-4 w-4 text-emerald-400" />
-              {showCatManager ? 'Chiudi Categorie' : 'Gestisci Categorie'}
-            </button>
-            <button
-              type="button"
               onClick={handleOpenNewGuestModal}
               className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-black uppercase tracking-wider shadow-lg shadow-emerald-500/20 transition-all hover:scale-105 cursor-pointer"
             >
@@ -181,16 +170,6 @@ export default function GiocatoriPage() {
           </div>
         )}
       </div>
-
-      {/* Gestore Categorie Statistiche (Se attivato da Admin) */}
-      {isClientAdmin && showCatManager && (
-        <div className="animate-in fade-in duration-200">
-          <StatCategoriesManager
-            categories={categories}
-            onCategoriesChanged={(newCats) => setCategories(newCats)}
-          />
-        </div>
-      )}
 
       {/* Barra Ricerca, Ordinamento e Switcher Vista */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-900/60 p-3 rounded-2xl border border-slate-800">

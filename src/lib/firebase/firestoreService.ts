@@ -16,11 +16,11 @@ import {
   DocumentData,
   runTransaction,
   increment,
+  FieldPath,
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './config';
 import { Profile, Presence, StatCategory, Match, GeneratedTeamRecord, AppSettings, CalendarSettings, MatchOutcome, MatchScorer, MatchTeamPlayer, TeamSubstitution, MvpVote } from '@/types/database';
 import { rankDayPresences, rankPresencesByDate } from '@/lib/services/presenceService';
-import { normalizeCategories } from '@/lib/utils/statUtils';
 import { requestTeamsCheck } from '@/lib/services/notificationService';
 
 // ==========================================
@@ -222,14 +222,13 @@ export function subscribeStatCategories(
     return onSnapshot(
       colRef,
       (snapshot) => {
-        if (!snapshot.empty) {
-          const list: StatCategory[] = [];
-          snapshot.forEach((docSnap) => {
-            list.push(docSnap.data() as StatCategory);
-          });
-          callback(normalizeCategories(list));
-        }
-        // NOTE: no automatic seeding; the admin can use "Ripristina Default 8" 
+        // Names exactly as saved by the admin (no automatic renaming); also called with [] if all were removed
+        const list: StatCategory[] = [];
+        snapshot.forEach((docSnap) => {
+          list.push({ ...(docSnap.data() as StatCategory), id: docSnap.id });
+        });
+        list.sort((a, b) => (a.created_at || a.id).localeCompare(b.created_at || b.id));
+        callback(list);
       },
       (err) => {
         console.warn('[Firestore] subscribeStatCategories warning:', err.message);
@@ -239,6 +238,41 @@ export function subscribeStatCategories(
     console.warn('[Firestore] subscribeStatCategories exception:', err);
     return () => {};
   }
+}
+
+/**
+ * Adds a player parameter (admin, Admin → Campi & Parametri).
+ * Every player WITHOUT a value for it gets the default value (e.g. 6); players who already had one
+ * (parameter removed and added again) keep their old value. The OVR is NOT recalculated:
+ * it changes only when an admin edits that player. Returns how many players were updated.
+ */
+export async function addStatParameter(name: string, defaultValue: number): Promise<number> {
+  if (!isFirebaseConfigured) return 0;
+  const clean = name.trim();
+  const id = `cat-${Date.now()}`;
+  await setDoc(doc(db, 'stat_categories', id), {
+    id,
+    name: clean,
+    label: clean,
+    default_value: defaultValue,
+    created_at: new Date().toISOString(),
+  });
+  const profiles = await getDocs(collection(db, 'profiles'));
+  const missing = profiles.docs.filter((d) => typeof (d.data().stats || {})[clean] !== 'number');
+  for (let i = 0; i < missing.length; i += 400) {
+    const batch = writeBatch(db);
+    missing.slice(i, i + 400).forEach((d) =>
+      batch.update(d.ref, new FieldPath('stats', clean), defaultValue, 'updated_at', new Date().toISOString())
+    );
+    await batch.commit();
+  }
+  return missing.length;
+}
+
+/** Removes a parameter from the app. Players' values stay saved (hidden): adding it again brings them back. */
+export async function removeStatParameter(id: string): Promise<void> {
+  if (!isFirebaseConfigured) return;
+  await deleteDoc(doc(db, 'stat_categories', id));
 }
 
 export async function saveStatCategoryDoc(cat: StatCategory): Promise<void> {
