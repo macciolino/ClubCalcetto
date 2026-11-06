@@ -89,7 +89,7 @@ export function MatchEditModal({ match, profiles, closedBy, onClose }: MatchEdit
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/70 flex items-end sm:items-center justify-center sm:p-4"
+      className="fixed inset-0 z-50 bg-black/70 flex items-end sm:items-center justify-center sm:p-4 pt-safe px-safe"
       role="dialog"
       aria-modal="true"
       aria-labelledby="match-edit-title"
@@ -128,7 +128,7 @@ export function MatchEditModal({ match, profiles, closedBy, onClose }: MatchEdit
           {error && <p className="text-sm text-rose-300">{error}</p>}
         </div>
 
-        <div className="sticky bottom-0 bg-slate-900 border-t border-slate-800 px-5 py-4 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+        <div className="sticky bottom-0 bg-slate-900 border-t border-slate-800 px-5 pt-4 sheet-safe-bottom flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
           <button
             type="button"
             onClick={onClose}

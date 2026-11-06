@@ -39,7 +39,54 @@ body {
   background: #475569;
 }
 
-/* Safe area padding for mobile bottom bar */
+/*
+ * Safe areas: phones with notch / Dynamic Island, rounded corners and the home bar (iPhone, many Android).
+ * With viewport-fit=cover (layout.tsx) the app uses the whole screen, so the fixed bars keep
+ * a margin equal to the area the system reserves. On phones with square corners the values are 0
+ * and the minimums below apply.
+ */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --bottom-nav-h: 4.25rem;
+}
+
+/* Bottom navigation bar (phones) */
 .pb-safe {
-  padding-bottom: env(safe-area-inset-bottom, 1rem);
+  padding-bottom: max(var(--safe-bottom), 0.5rem);
+  padding-left: max(var(--safe-left), 0.75rem);
+  padding-right: max(var(--safe-right), 0.75rem);
+}
+
+/* Top bar: below the status bar / notch / Dynamic Island */
+.pt-safe {
+  padding-top: var(--safe-top);
+}
+
+/* Content in landscape: away from the notch on the sides */
+.px-safe {
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+}
+
+/* Room for the bottom bar + home bar so the last content is never hidden */
+.body-safe-bottom {
+  padding-bottom: calc(var(--bottom-nav-h) + var(--safe-bottom) + 0.75rem);
+}
+@media (min-width: 768px) {
+  .body-safe-bottom {
+    padding-bottom: var(--safe-bottom);
+  }
+}
+
+/* Centered dialogs: never under the notch or the home bar */
+.modal-safe {
+  padding: max(1rem, var(--safe-top)) max(1rem, var(--safe-right)) max(1rem, var(--safe-bottom)) max(1rem, var(--safe-left));
+}
+
+/* Bottom sheets (dialogs that slide up on phones) */
+.sheet-safe-bottom {
+  padding-bottom: max(1rem, var(--safe-bottom));
 }

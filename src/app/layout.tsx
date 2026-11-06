@@ -18,6 +18,8 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
+  // Use the whole screen (notch, rounded corners, home bar): bars add the safe margins themselves
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({
@@ -27,7 +29,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="it" className="dark" suppressHydrationWarning style={{ backgroundColor: '#020617', colorScheme: 'dark' }}>
-      <body className="min-h-screen bg-slate-950 text-slate-100 flex flex-col antialiased selection:bg-emerald-500 selection:text-slate-950 pb-16 md:pb-0" suppressHydrationWarning style={{ backgroundColor: '#020617' }}>
+      <body className="min-h-screen bg-slate-950 text-slate-100 flex flex-col antialiased selection:bg-emerald-500 selection:text-slate-950 body-safe-bottom px-safe" suppressHydrationWarning style={{ backgroundColor: '#020617' }}>
         <AuthProvider>
           <Navbar />
           <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-6">

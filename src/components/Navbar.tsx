@@ -51,7 +51,7 @@ export function Navbar() {
   return (
     <>
       {/* Top Header */}
-      <header className="sticky top-0 z-40 w-full border-b border-slate-800 bg-slate-950/90 backdrop-blur-md">
+      <header className="sticky top-0 z-40 w-full border-b border-slate-800 bg-slate-950/90 backdrop-blur-md pt-safe">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           {/* Logo */}
           <Link href="/presenze" className="flex items-center gap-2.5 group">
@@ -77,14 +77,15 @@ export function Navbar() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                  title={item.label}
+                  className={`flex items-center gap-2 px-3 lg:px-3.5 py-2 lg:py-1.5 rounded-lg text-sm font-semibold transition-all ${
                     isActive
                       ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
                       : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
                   }`}
                 >
                   <Icon className="h-4 w-4" />
-                  {item.label}
+                  <span className="hidden lg:inline">{item.label}</span>
                 </Link>
               );
             })}
@@ -145,7 +146,7 @@ export function Navbar() {
       </header>
 
       {/* Mobile Bottom Navigation Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-slate-950/95 backdrop-blur-lg border-t border-slate-800/80 px-2 py-1.5 pb-safe">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-slate-950/95 backdrop-blur-lg border-t border-slate-800/80 pt-1.5 pb-safe">
         <div className="flex items-center justify-around">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -163,7 +164,7 @@ export function Navbar() {
                 <div className={`p-1 rounded-lg ${isActive ? 'bg-emerald-500/20' : ''}`}>
                   <Icon className="h-5 w-5" />
                 </div>
-                <span className="text-[10px] tracking-tight mt-0.5">{item.label}</span>
+                <span className="text-[10px] tracking-tight mt-0.5 max-w-full truncate">{item.label}</span>
               </Link>
             );
           })}
