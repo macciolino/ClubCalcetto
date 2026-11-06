@@ -156,7 +156,8 @@ service cloud.firestore {
 
     // ---------- MVP votes (one per person per match day, doc id = date_uid) ----------
     // Everyone signed in can vote; the app opens the vote 45 minutes after the end of the match, for 24 hours.
-    // Rules allow it from the match day up to 3 days later (admins also earlier, to test the vote);
+    // Rules allow it from the match day up to 3 days later; earlier only for admins or during an
+    // admin "test with everyone" on that day;
     // the vote can be changed, never cast on behalf of someone else.
     function isValidMvpVote(voteId) {
       let data = request.resource.data;
@@ -169,8 +170,14 @@ service cloud.firestore {
         && data.player_id.size() > 0
         && data.updated_at == request.time
         && (isAdmin()
+            || isMvpTestForAll(data.date)
             || (request.time >= dateToTimestamp(data.date)
                 && request.time < dateToTimestamp(data.date) + duration.value(3, 'd')));
+    }
+    // An admin opened a test vote for everyone on that match day ("Prova con tutti")
+    function isMvpTestForAll(d) {
+      let teams = /databases/$(database)/documents/generated_teams/$(d);
+      return exists(teams) && get(teams).data.get('mvp_vote_test', false) == 'all';
     }
     // ---------- push notification devices (doc id = FCM token) ----------
     // Each person registers only their own devices (linked to their own profile); notifications are sent

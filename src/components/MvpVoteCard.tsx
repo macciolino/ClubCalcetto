@@ -15,8 +15,8 @@ interface MvpVoteCardProps {
   /** Firebase uid of who is looking (null = not signed in) */
   voterUid: string | null;
   isAdmin?: boolean;
-  /** Test mode saved on the teams of that day: admins see the vote open at any time */
-  testMode?: boolean;
+  /** Test mode saved on the teams of that day: 'admins' = only admins, 'all' = everyone can vote now */
+  testMode?: 'admins' | 'all' | false;
 }
 
 const timeLabel = (d: Date) => d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
@@ -43,7 +43,7 @@ export function MvpVoteCard({ date, matchTime, white, black, voterUid, isAdmin =
   }, []);
 
   const { opensAt, closesAt } = mvpVotingWindow(date, matchTime);
-  const isTesting = isAdmin && testMode;
+  const isTesting = testMode === 'all' || (isAdmin && testMode === 'admins');
   const isOpen = isTesting || (now >= opensAt && now < closesAt);
   const isClosed = !isTesting && now >= closesAt;
   const myVote = voterUid ? votes.find((v) => v.voter_id === voterUid)?.player_id : undefined;
@@ -52,9 +52,10 @@ export function MvpVoteCard({ date, matchTime, white, black, voterUid, isAdmin =
   const players = [...white, ...black];
   const leader = tally[0] ? players.find((p) => p.id === tally[0].playerId) : undefined;
 
-  const toggleTest = async () => {
+  const changeTest = async (mode: 'admins' | 'all' | false) => {
+    if (mode === 'all' && !confirm('Il voto di prova si apre ADESSO per tutti i giocatori. Ricordati di azzerare i voti alla fine. Continuare?')) return;
     try {
-      await setMvpVoteTest(date, !testMode);
+      await setMvpVoteTest(date, mode);
     } catch (err) {
       console.warn('[MVP] modalità test non aggiornata:', err);
       setError('Non è stato possibile cambiare la modalità test (servono le squadre salvate).');
@@ -100,18 +101,40 @@ export function MvpVoteCard({ date, matchTime, white, black, voterUid, isAdmin =
         <div className={`rounded-2xl border p-3 space-y-2 ${testMode ? 'border-violet-400/50 bg-violet-500/10' : 'border-slate-800 bg-slate-950/60'}`}>
           <p className="text-xs text-slate-300 flex items-start gap-1.5">
             <FlaskConical className="h-4 w-4 text-violet-300 flex-shrink-0" />
-            {testMode
-              ? 'MODALITÀ PROVA attiva: solo gli amministratori vedono il voto aperto e possono votare adesso. I giocatori vedono il voto normale.'
-              : 'Solo admin: puoi provare il voto prima della partita. Gli altri giocatori non vedono nulla di diverso.'}
+            {testMode === 'all'
+              ? 'PROVA CON TUTTI attiva: ogni giocatore vede il voto aperto e può votare adesso. A fine prova premi "Termina prova" e poi "Azzera voti".'
+              : testMode
+              ? 'PROVA SOLO ADMIN attiva: solo gli amministratori vedono il voto aperto. I giocatori vedono il voto normale.'
+              : 'Solo admin: puoi provare il voto prima della partita, solo tra admin oppure con tutti i giocatori.'}
           </p>
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={toggleTest}
-              className="px-3 py-2 rounded-xl text-xs font-bold border border-violet-400/50 text-violet-200 hover:bg-violet-500/20"
-            >
-              {testMode ? 'Termina prova' : 'Prova il voto ora'}
-            </button>
+            {testMode !== 'admins' && (
+              <button
+                type="button"
+                onClick={() => changeTest('admins')}
+                className="px-3 py-2 rounded-xl text-xs font-bold border border-violet-400/50 text-violet-200 hover:bg-violet-500/20"
+              >
+                Prova solo admin
+              </button>
+            )}
+            {testMode !== 'all' && (
+              <button
+                type="button"
+                onClick={() => changeTest('all')}
+                className="px-3 py-2 rounded-xl text-xs font-bold border border-violet-400/50 text-violet-200 hover:bg-violet-500/20"
+              >
+                Prova con tutti
+              </button>
+            )}
+            {testMode && (
+              <button
+                type="button"
+                onClick={() => changeTest(false)}
+                className="px-3 py-2 rounded-xl text-xs font-bold border border-slate-600 text-slate-200 hover:bg-slate-800"
+              >
+                Termina prova
+              </button>
+            )}
             {votes.length > 0 && (
               <button
                 type="button"
@@ -123,6 +146,13 @@ export function MvpVoteCard({ date, matchTime, white, black, voterUid, isAdmin =
             )}
           </div>
         </div>
+      )}
+
+      {!isAdmin && testMode === 'all' && (
+        <p className="text-xs text-violet-200 bg-violet-500/10 border border-violet-400/40 rounded-xl p-3 flex items-start gap-1.5">
+          <FlaskConical className="h-4 w-4 flex-shrink-0" />
+          Voto di PROVA: serve a controllare che tutto funzioni, i voti verranno cancellati.
+        </p>
       )}
 
       {!isOpen && !isClosed && (

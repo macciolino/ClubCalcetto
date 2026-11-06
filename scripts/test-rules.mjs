@@ -222,6 +222,13 @@ await expectDenied('player A votes with a fake time', () =>
 await expectDenied('player B deletes player A vote', () => deleteDoc(doc(playerB.db, 'mvp_votes', `${TODAY}_${playerA.uid}`)));
 await expectAllowed('player B reads the votes', () => getDocs(collection(playerB.db, 'mvp_votes')));
 await expectAllowed('admin C test-votes for a future match', () => vote(adminC, NEXT_MONDAY, adminC.uid, playerA.uid));
+await expectDenied('player A votes early for next week (no test)', () => vote(playerA, NEXT_MONDAY, playerA.uid, playerB.uid));
+await expectAllowed('admin C opens a test vote for everyone', () =>
+  setDoc(doc(adminC.db, 'generated_teams', NEXT_MONDAY), { id: NEXT_MONDAY, date: NEXT_MONDAY, team_white: [], team_black: [], created_at: 'x', mvp_vote_test: 'all' }));
+await expectAllowed('player A votes early during the test for everyone', () => vote(playerA, NEXT_MONDAY, playerA.uid, playerB.uid));
+await expectAllowed('admin C ends the test', () =>
+  updateDoc(doc(adminC.db, 'generated_teams', NEXT_MONDAY), { mvp_vote_test: false }));
+await expectDenied('player A votes early after the test ended', () => vote(playerA, NEXT_MONDAY, playerA.uid, adminC.uid));
 await expectAllowed('admin C clears player A test vote', () => deleteDoc(doc(adminC.db, 'mvp_votes', `${TODAY}_${playerA.uid}`)));
 
 console.log('\nPush devices');

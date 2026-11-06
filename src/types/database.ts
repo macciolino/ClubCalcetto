@@ -264,8 +264,11 @@ export interface GeneratedTeamRecord {
   confirmed?: boolean;
   confirmed_at?: string;
   confirmed_by?: string;
-  /** Admin test of the MVP vote: admins see the vote open at any time (players do not) */
-  mvp_vote_test?: boolean;
+  /**
+   * Test of the MVP vote: 'admins' (or legacy true) = only admins see it open now;
+   * 'all' = everyone can vote now (test votes are then cleared by an admin).
+   */
+  mvp_vote_test?: boolean | 'admins' | 'all';
   /** History of automatic substitutions (withdrawal → first player of the waitlist) */
   substitutions?: TeamSubstitution[];
 }

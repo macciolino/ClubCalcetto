@@ -1028,7 +1028,7 @@ function SquadreContent() {
           black={teams.black}
           voterUid={user?.uid || null}
           isAdmin={isClientAdmin}
-          testMode={Boolean(teamRecord?.mvp_vote_test)}
+          testMode={teamRecord?.mvp_vote_test === 'all' ? 'all' : teamRecord?.mvp_vote_test ? 'admins' : false}
         />
       )}
 

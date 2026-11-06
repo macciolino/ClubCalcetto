@@ -671,9 +671,9 @@ export async function castMvpVote(date: string, voterUid: string, playerId: stri
 }
 
 /** Admin test mode of the MVP vote for a match day (only admins see it open early). */
-export async function setMvpVoteTest(date: string, on: boolean): Promise<void> {
+export async function setMvpVoteTest(date: string, mode: 'admins' | 'all' | false): Promise<void> {
   if (!isFirebaseConfigured) return;
-  await updateDoc(doc(db, 'generated_teams', date), { mvp_vote_test: on, updated_at: new Date().toISOString() });
+  await updateDoc(doc(db, 'generated_teams', date), { mvp_vote_test: mode, updated_at: new Date().toISOString() });
 }
 
 /** Deletes all MVP votes of a match day (admins, e.g. after a test). */
