@@ -1,9 +1,9 @@
+import { callNotifyApi } from '@/lib/services/pushService';
+
 /**
- * Notifications to the players of a match.
- *
- * NOT ACTIVE YET: web push (Firebase Cloud Messaging, free) arrives with the next phase.
- * The app already calls these functions at the right moments, so switching notifications on
- * will only need this file (plus the Vercel API route that sends them).
+ * Notifications to the players of a match (web push via Firebase Cloud Messaging, free).
+ * Sent by the server route /api/notify. Who receives them is decided by the admin
+ * (Admin → Campi & Regole → Notifiche): nobody, only admins (test) or all the players concerned.
  */
 export type MatchNotification =
   | { type: 'match_confirmed'; date: string; playerIds: string[] }
@@ -11,7 +11,14 @@ export type MatchNotification =
   | { type: 'substitution'; date: string; playerIds: string[]; outName: string; inName: string };
 
 export async function notifyMatchPlayers(event: MatchNotification): Promise<void> {
-  if (process.env.NODE_ENV !== 'production') {
-    console.info('[Notifiche] (non ancora attive) evento:', event.type, event.date);
+  try {
+    await callNotifyApi(event);
+  } catch (err) {
+    console.warn('[Notifiche] invio non riuscito:', err);
   }
+}
+
+/** After a sign-up or withdrawal: the server checks if someone takes a place in the saved teams. */
+export function requestTeamsCheck(date: string): void {
+  callNotifyApi({ type: 'reconcile', date }).catch(() => undefined);
 }

@@ -1,5 +1,7 @@
 'use client';
 
+import { NotificationSettingsCard } from '@/components/admin/NotificationSettingsCard';
+
 import { NumberInput } from '@/components/NumberInput';
 import React, { useState, useEffect } from 'react';
 import { SportField, StatCategory, STAT_DETAILS, STAT_CANONICAL_ORDER } from '@/types/database';
@@ -39,9 +41,6 @@ interface TabClubConfigFieldsProps {
   standardCost: number;
   standardTime: string;
   onSaveEconomicConfig: (cost: number, time: string) => void;
-  onSendTestEmail: () => Promise<void>;
-  isSendingEmail: boolean;
-  emailStatusMessage: string;
 }
 
 export function TabClubConfigFields({
@@ -56,9 +55,6 @@ export function TabClubConfigFields({
   standardCost,
   standardTime,
   onSaveEconomicConfig,
-  onSendTestEmail,
-  isSendingEmail,
-  emailStatusMessage,
 }: TabClubConfigFieldsProps) {
   // Modal Campo
   const [isFieldModalOpen, setIsFieldModalOpen] = useState(false);
@@ -375,65 +371,7 @@ export function TabClubConfigFields({
           </form>
         </div>
 
-        {/* Notifiche Email & System Status */}
-        <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-xl space-y-4">
-          <div className="border-b border-slate-800 pb-3">
-            <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
-              <Server className="h-4 w-4 text-emerald-400" />
-              Notifiche Email & System Status
-            </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Monitora i provider di sistema e invia un messaggio di prova.
-            </p>
-          </div>
-
-          <div className="space-y-3 text-xs">
-            <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 flex items-center justify-between">
-              <div>
-                <span className="font-bold text-white block">Email Notification Service</span>
-                <span className="text-[11px] text-slate-400">Resend API Provider</span>
-              </div>
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Operativo
-              </span>
-            </div>
-
-            <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 flex items-center justify-between">
-              <div>
-                <span className="font-bold text-white block">Database & Storage Locale</span>
-                <span className="text-[11px] text-slate-400">Firebase Firestore + Browser Cache</span>
-              </div>
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                Sincronizzato
-              </span>
-            </div>
-
-            {emailStatusMessage && (
-              <div className="p-3 bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 rounded-xl text-xs font-bold flex items-center gap-2 animate-in fade-in">
-                <Check className="h-4 w-4 text-emerald-400" />
-                <span>{emailStatusMessage}</span>
-              </div>
-            )}
-
-            <div className="pt-1">
-              <button
-                type="button"
-                onClick={onSendTestEmail}
-                disabled={isSendingEmail}
-                className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-750 text-slate-200 font-bold rounded-xl text-xs border border-slate-700 transition-all cursor-pointer"
-              >
-                {isSendingEmail ? (
-                  <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
-                ) : (
-                  <Mail className="h-4 w-4 text-emerald-400" />
-                )}
-                <span>Invia Email di Test Admin</span>
-              </button>
-            </div>
-          </div>
-        </div>
+        <NotificationSettingsCard />
       </div>
 
       {/* MODALI: CAMPO SPORTIVO & LEGENDA STATISTICHE */}

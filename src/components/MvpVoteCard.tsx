@@ -2,10 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 import { MatchTeamPlayer, MvpVote } from '@/types/database';
-import { castMvpVote, countMvpVotes, subscribeMvpVotes } from '@/lib/firebase/firestoreService';
+import { castMvpVote, countMvpVotes, subscribeMvpVotes, setMvpVoteTest, clearMvpVotes } from '@/lib/firebase/firestoreService';
 import { mvpVotingWindow } from '@/lib/utils/matchUtils';
 import { formatItalianDate } from '@/lib/utils/dateUtils';
-import { Star, Clock, Check, Loader2 } from 'lucide-react';
+import { Star, Clock, Check, Loader2, FlaskConical, Trash2 } from 'lucide-react';
 
 interface MvpVoteCardProps {
   date: string;
@@ -14,6 +14,9 @@ interface MvpVoteCardProps {
   black: MatchTeamPlayer[];
   /** Firebase uid of who is looking (null = not signed in) */
   voterUid: string | null;
+  isAdmin?: boolean;
+  /** Test mode saved on the teams of that day: admins see the vote open at any time */
+  testMode?: boolean;
 }
 
 const timeLabel = (d: Date) => d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
@@ -21,7 +24,7 @@ const toYmd = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 /** MVP of the day voted by everyone. Opens 45 minutes after the end of the match (start time + 1h45). */
-export function MvpVoteCard({ date, matchTime, white, black, voterUid }: MvpVoteCardProps) {
+export function MvpVoteCard({ date, matchTime, white, black, voterUid, isAdmin = false, testMode = false }: MvpVoteCardProps) {
   const [votes, setVotes] = useState<MvpVote[]>([]);
   const [now, setNow] = useState(() => new Date());
   const [saving, setSaving] = useState<string | null>(null);
@@ -40,13 +43,33 @@ export function MvpVoteCard({ date, matchTime, white, black, voterUid }: MvpVote
   }, []);
 
   const { opensAt, closesAt } = mvpVotingWindow(date, matchTime);
-  const isOpen = now >= opensAt && now < closesAt;
-  const isClosed = now >= closesAt;
+  const isTesting = isAdmin && testMode;
+  const isOpen = isTesting || (now >= opensAt && now < closesAt);
+  const isClosed = !isTesting && now >= closesAt;
   const myVote = voterUid ? votes.find((v) => v.voter_id === voterUid)?.player_id : undefined;
   const tally = countMvpVotes(votes);
   const countOf = (id: string) => tally.find((t) => t.playerId === id)?.count || 0;
   const players = [...white, ...black];
   const leader = tally[0] ? players.find((p) => p.id === tally[0].playerId) : undefined;
+
+  const toggleTest = async () => {
+    try {
+      await setMvpVoteTest(date, !testMode);
+    } catch (err) {
+      console.warn('[MVP] modalità test non aggiornata:', err);
+      setError('Non è stato possibile cambiare la modalità test (servono le squadre salvate).');
+    }
+  };
+
+  const handleClearVotes = async () => {
+    if (!confirm(`Cancellare tutti i ${votes.length} voti MVP di questa partita?`)) return;
+    try {
+      await clearMvpVotes(date);
+    } catch (err) {
+      console.warn('[MVP] cancellazione voti non riuscita:', err);
+      setError('Cancellazione dei voti non riuscita.');
+    }
+  };
 
   const handleVote = async (playerId: string) => {
     if (!voterUid || !isOpen) return;
@@ -72,6 +95,35 @@ export function MvpVoteCard({ date, matchTime, white, black, voterUid }: MvpVote
         </h3>
         <span className="text-xs font-mono text-slate-400">{votes.length} voti</span>
       </div>
+
+      {isAdmin && (
+        <div className={`rounded-2xl border p-3 space-y-2 ${testMode ? 'border-violet-400/50 bg-violet-500/10' : 'border-slate-800 bg-slate-950/60'}`}>
+          <p className="text-xs text-slate-300 flex items-start gap-1.5">
+            <FlaskConical className="h-4 w-4 text-violet-300 flex-shrink-0" />
+            {testMode
+              ? 'MODALITÀ PROVA attiva: solo gli amministratori vedono il voto aperto e possono votare adesso. I giocatori vedono il voto normale.'
+              : 'Solo admin: puoi provare il voto prima della partita. Gli altri giocatori non vedono nulla di diverso.'}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={toggleTest}
+              className="px-3 py-2 rounded-xl text-xs font-bold border border-violet-400/50 text-violet-200 hover:bg-violet-500/20"
+            >
+              {testMode ? 'Termina prova' : 'Prova il voto ora'}
+            </button>
+            {votes.length > 0 && (
+              <button
+                type="button"
+                onClick={handleClearVotes}
+                className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold border border-rose-500/40 text-rose-300 hover:bg-rose-500/15"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Azzera voti
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {!isOpen && !isClosed && (
         <p className="text-sm text-slate-300 flex items-center gap-2">

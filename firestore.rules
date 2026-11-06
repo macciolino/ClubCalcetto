@@ -46,6 +46,14 @@ service cloud.firestore {
         || (resource.data.role == 'user' && request.resource.data.role == 'player');
     }
 
+    // Profile photo: only a real photo chosen by the player (small JPEG made by the app) or the Google photo.
+    // Preset images (SVG emoji avatars) and huge images are refused.
+    function isValidAvatar(v) {
+      return v == null
+        || (v is string && v.size() <= 150000
+            && (v.matches('^https://[^ ]+$') || v.matches('^data:image/jpeg;base64,[A-Za-z0-9+/=]+$')));
+    }
+
     // ---------- profiles ----------
     match /profiles/{profileId} {
       allow read: if signedIn();
@@ -66,7 +74,8 @@ service cloud.firestore {
         || (isAdmin() && roleUntouchedOrLegacyFix())
         || (signedIn()
             && profileId == request.auth.uid
-            && onlyChanges(['full_name', 'avatar_url', 'position', 'updated_at']));
+            && onlyChanges(['full_name', 'avatar_url', 'position', 'updated_at'])
+            && (!('avatar_url' in changedKeys()) || isValidAvatar(request.resource.data.avatar_url)));
 
       // The super admin profile can never be deleted; only the super admin can delete an admin.
       allow delete: if profileId != 'p-1'
@@ -146,8 +155,9 @@ service cloud.firestore {
     }
 
     // ---------- MVP votes (one per person per match day, doc id = date_uid) ----------
-    // Everyone signed in can vote; the app opens the vote 45 minutes after the end of the match.
-    // Rules allow it only from the match day up to 4 days later; the vote can be changed, never on behalf of others.
+    // Everyone signed in can vote; the app opens the vote 45 minutes after the end of the match, for 24 hours.
+    // Rules allow it from the match day up to 3 days later (admins also earlier, to test the vote);
+    // the vote can be changed, never cast on behalf of someone else.
     function isValidMvpVote(voteId) {
       let data = request.resource.data;
       return data.keys().hasOnly(['date', 'voter_id', 'player_id', 'updated_at'])
@@ -158,9 +168,25 @@ service cloud.firestore {
         && data.player_id is string
         && data.player_id.size() > 0
         && data.updated_at == request.time
-        && request.time >= dateToTimestamp(data.date)
-        && request.time < dateToTimestamp(data.date) + duration.value(4, 'd');
+        && (isAdmin()
+            || (request.time >= dateToTimestamp(data.date)
+                && request.time < dateToTimestamp(data.date) + duration.value(3, 'd')));
     }
+    // ---------- push notification devices (doc id = FCM token) ----------
+    // Each person registers only their own devices (linked to their own profile); notifications are sent
+    // by the server with the Admin SDK, which ignores these rules. Nobody reads other people's tokens.
+    match /push_tokens/{token} {
+      allow read: if signedIn() && resource.data.uid == request.auth.uid;
+      allow create, update: if signedIn()
+        && request.resource.data.keys().hasOnly(['uid', 'profile_id', 'platform', 'updated_at'])
+        && request.resource.data.uid == request.auth.uid
+        && (request.resource.data.profile_id == request.auth.uid
+            || (isSuperAdmin() && request.resource.data.profile_id == 'p-1'))
+        && request.resource.data.platform in ['ios', 'android', 'desktop']
+        && request.resource.data.updated_at == request.time;
+      allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+    }
+
     match /mvp_votes/{voteId} {
       allow read: if signedIn();
       allow create, update: if signedIn() && isValidMvpVote(voteId);

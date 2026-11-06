@@ -88,8 +88,6 @@ export default function AdminPage() {
   const [playerToEdit, setPlayerToEdit] = useState<Profile | null>(null);
 
   // Email Test State
-  const [isSendingEmail, setIsSendingEmail] = useState(false);
-  const [emailStatusMessage, setEmailStatusMessage] = useState('');
 
   // 1. ISOLAMENTO RIGIDO: Controllo autorizzazione amministratore
   const isStrictAdmin = Boolean(mounted && !isLoading && user && (profile?.role === 'admin' || isAdmin));
@@ -319,32 +317,7 @@ export default function AdminPage() {
     });
   };
 
-  const handleSendTestEmail = async () => {
-    setIsSendingEmail(true);
-    setEmailStatusMessage('');
-    try {
-      const res = await fetch('/api/notify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'ten_players_reached',
-          date: activeDate,
-          playerCount: 10,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setEmailStatusMessage('Email inviata con successo via Resend API!');
-      } else {
-        setEmailStatusMessage(`Simulazione completata (${data.error || 'Server OK'})`);
-      }
-    } catch {
-      setEmailStatusMessage('Email di test inviata (Modalità di sviluppo)');
-    } finally {
-      setIsSendingEmail(false);
-      setTimeout(() => setEmailStatusMessage(''), 5000);
-    }
-  };
+
 
   return (
     <div className="space-y-6 pb-20 animate-in fade-in duration-300">
@@ -507,9 +480,6 @@ export default function AdminPage() {
             standardCost={appSettings.standard_total_cost || 80}
             standardTime={appSettings.standard_match_time || '20:30'}
             onSaveEconomicConfig={handleSaveEconomicConfig}
-            onSendTestEmail={handleSendTestEmail}
-            isSendingEmail={isSendingEmail}
-            emailStatusMessage={emailStatusMessage}
           />
         )}
       </div>

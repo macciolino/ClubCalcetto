@@ -40,8 +40,8 @@ export function effectiveMatchLocation(
 /** A match lasts 1 hour; the MVP vote opens 45 minutes after the end (e.g. start 20:00 → vote at 21:45). */
 export const MATCH_DURATION_MIN = 60;
 export const MVP_VOTE_DELAY_MIN = 45;
-/** The vote stays open 3 days (Firestore rules accept votes up to 4 days after the match date). */
-export const MVP_VOTE_OPEN_HOURS = 72;
+/** The vote stays open 24 hours (Firestore rules accept votes up to 3 days after the match date). */
+export const MVP_VOTE_OPEN_HOURS = 24;
 
 export function mvpVotingWindow(date: string, matchTime: string): { opensAt: Date; closesAt: Date } {
   const [y, m, d] = date.split('-').map(Number);

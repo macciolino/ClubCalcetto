@@ -132,7 +132,7 @@ await expectAllowed('creates own profile as player', () =>
 await expectDenied('creates a profile with someone else\'s id', () =>
   setDoc(doc(playerA.db, 'profiles', 'someone-else'), baseProfile('someone-else')));
 await expectAllowed('changes own name / avatar / position', () =>
-  setDoc(doc(playerA.db, 'profiles', playerA.uid), { full_name: 'New Name', avatar_url: 'data:x', position: 'Punta', updated_at: 'y' }, { merge: true }));
+  setDoc(doc(playerA.db, 'profiles', playerA.uid), { full_name: 'New Name', avatar_url: 'https://lh3.googleusercontent.com/a/photo', position: 'Punta', updated_at: 'y' }, { merge: true }));
 await expectDenied('changes own stats', () =>
   setDoc(doc(playerA.db, 'profiles', playerA.uid), { stats: { Tiro: 10, Difesa: 10 } }, { merge: true }));
 await expectDenied('changes own overall rating', () =>
@@ -221,6 +221,28 @@ await expectDenied('player A votes with a fake time', () =>
   setDoc(doc(playerA.db, 'mvp_votes', `${TODAY}_${playerA.uid}`), { date: TODAY, voter_id: playerA.uid, player_id: 'x', updated_at: 'yesterday' }));
 await expectDenied('player B deletes player A vote', () => deleteDoc(doc(playerB.db, 'mvp_votes', `${TODAY}_${playerA.uid}`)));
 await expectAllowed('player B reads the votes', () => getDocs(collection(playerB.db, 'mvp_votes')));
+await expectAllowed('admin C test-votes for a future match', () => vote(adminC, NEXT_MONDAY, adminC.uid, playerA.uid));
+await expectAllowed('admin C clears player A test vote', () => deleteDoc(doc(adminC.db, 'mvp_votes', `${TODAY}_${playerA.uid}`)));
+
+console.log('\nPush devices');
+const regToken = (c, token, uid, profileId) =>
+  setDoc(doc(c.db, 'push_tokens', token), { uid, profile_id: profileId, platform: 'android', updated_at: serverTimestamp() });
+await expectAllowed('player A registers own device', () => regToken(playerA, 'tokA', playerA.uid, playerA.uid));
+await expectDenied('player A registers a device for player B profile', () => regToken(playerA, 'tokX', playerA.uid, playerB.uid));
+await expectDenied('player A registers a device as player B', () => regToken(playerA, 'tokY', playerB.uid, playerB.uid));
+await expectDenied('player B reads player A device', () => getDoc(doc(playerB.db, 'push_tokens', 'tokA')));
+await expectAllowed('player A removes own device', () => deleteDoc(doc(playerA.db, 'push_tokens', 'tokA')));
+
+console.log('\nProfile photo');
+const jpeg = 'data:image/jpeg;base64,' + 'A'.repeat(2000);
+await expectAllowed('player A uploads own photo (small JPEG)', () =>
+  updateDoc(doc(playerA.db, 'profiles', playerA.uid), { avatar_url: jpeg, updated_at: 'x' }));
+await expectAllowed('player A removes own photo', () =>
+  updateDoc(doc(playerA.db, 'profiles', playerA.uid), { avatar_url: null, updated_at: 'x' }));
+await expectDenied('player A sets a preset SVG avatar', () =>
+  updateDoc(doc(playerA.db, 'profiles', playerA.uid), { avatar_url: 'data:image/svg+xml;utf8,%3Csvg%3E', updated_at: 'x' }));
+await expectDenied('player A uploads a huge image', () =>
+  updateDoc(doc(playerA.db, 'profiles', playerA.uid), { avatar_url: 'data:image/jpeg;base64,' + 'A'.repeat(200000), updated_at: 'x' }));
 
 console.log('\nImpostor (email/password account using the super admin address, NOT verified)');
 await expectDenied('writes settings', () => setDoc(doc(impostor.db, 'settings', 'official_match'), { date: 'x' }));

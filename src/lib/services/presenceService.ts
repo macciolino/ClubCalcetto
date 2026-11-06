@@ -9,7 +9,8 @@ const LEGACY_PRESENCES_STORAGE_KEY = 'clubcalcetto_presences_list';
 
 const TODAY_DATE = toDateString(new Date());
 
-export const MAX_STARTERS = 10;
+import { MAX_STARTERS, rankDayPresences, rankPresencesByDate } from '@/lib/utils/presenceRanking';
+export { MAX_STARTERS, rankDayPresences, rankPresencesByDate };
 
 // Presences now live ONLY in Firestore (realtime). Drop the old local copy, which could contain demo data.
 if (typeof window !== 'undefined') {
@@ -27,42 +28,6 @@ if (typeof window !== 'undefined') {
 //  - newer ones are ordered by joined_at (Firestore server time, so nobody can jump the queue);
 //  - an admin override can force a player into the starters or onto the waitlist.
 // Withdrawing simply deletes one's own presence: the first in waitlist moves up automatically.
-
-function createdMillis(p: Presence): number {
-  const t = new Date(p.created_at || 0).getTime();
-  return Number.isFinite(t) ? t : 0;
-}
-
-export function rankDayPresences(dayPresences: Presence[]): Presence[] {
-  const legacy = dayPresences
-    .filter((p) => typeof p.joined_ms !== 'number')
-    .sort((a, b) => (a.order_index ?? 999) - (b.order_index ?? 999) || createdMillis(a) - createdMillis(b));
-  const modern = dayPresences
-    .filter((p) => typeof p.joined_ms === 'number')
-    .sort((a, b) => (a.joined_ms as number) - (b.joined_ms as number) || a.id.localeCompare(b.id));
-  const queue = [...legacy, ...modern];
-  const ordered = [
-    ...queue.filter((p) => p.admin_override === 'starter'),
-    ...queue.filter((p) => !p.admin_override),
-    ...queue.filter((p) => p.admin_override === 'waitlist'),
-  ];
-  return ordered.map((p, idx) => ({
-    ...p,
-    status: idx < MAX_STARTERS ? 'confirmed' : 'waitlist',
-    order_index: idx + 1,
-  }));
-}
-
-/** Ranks a list that may contain several dates (each date ranked on its own). */
-export function rankPresencesByDate(presences: Presence[]): Presence[] {
-  const byDate = new Map<string, Presence[]>();
-  for (const p of presences) {
-    const list = byDate.get(p.date) || [];
-    list.push(p);
-    byDate.set(p.date, list);
-  }
-  return Array.from(byDate.values()).flatMap(rankDayPresences);
-}
 
 /**
  * Who would be promoted from the waitlist if `presenceId` were removed (used for notifications).

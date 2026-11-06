@@ -6,7 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { Profile, StatCategory, FieldPosition, FIELD_POSITIONS, STAT_CANONICAL_ORDER } from '@/types/database';
 import { addStoredPlayer, updateStoredPlayer } from '@/lib/services/playerService';
 import { saveProfileDoc } from '@/lib/firebase/firestoreService';
-import { uploadPlayerAvatar } from '@/lib/firebase/storageService';
+import { photoToAvatarDataUrl } from '@/lib/utils/imageUtils';
 import { X, Upload, Save, UserPlus, Loader2 } from 'lucide-react';
 
 interface PlayerModalProps {
@@ -96,27 +96,11 @@ export function PlayerModal({
       setUploadingAvatar(true);
       setErrorMsg('');
 
-      try {
-        const publicUrl = await uploadPlayerAvatar(playerToEdit?.id || 'new', file);
-        if (publicUrl) {
-          setAvatarUrl(publicUrl);
-          setUploadingAvatar(false);
-          return;
-        }
-      } catch (err) {
-        console.warn('Storage upload fallback reader:', err);
-      }
-
-      // Fallback per preview locale usando FileReader
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setAvatarUrl(event.target?.result as string);
-        setUploadingAvatar(false);
-      };
-      reader.readAsDataURL(file);
+      setAvatarUrl(await photoToAvatarDataUrl(file));
+      setUploadingAvatar(false);
     } catch (err) {
       console.error('Errore durante caricamento avatar:', err);
-      setErrorMsg('Impossibile caricare l\'immagine.');
+      setErrorMsg(err instanceof Error ? err.message : 'Impossibile caricare la foto.');
       setUploadingAvatar(false);
     }
   };

@@ -21,6 +21,7 @@ import { db, isFirebaseConfigured } from './config';
 import { Profile, Presence, StatCategory, Match, GeneratedTeamRecord, AppSettings, CalendarSettings, MatchOutcome, MatchScorer, MatchTeamPlayer, TeamSubstitution, MvpVote } from '@/types/database';
 import { rankDayPresences, rankPresencesByDate } from '@/lib/services/presenceService';
 import { normalizeCategories } from '@/lib/utils/statUtils';
+import { requestTeamsCheck } from '@/lib/services/notificationService';
 
 // ==========================================
 // 1. PROFILI & GIOCATORI (Collection: 'profiles')
@@ -166,12 +167,20 @@ export async function joinPresence(date: string, playerId: string): Promise<void
     created_at: new Date().toISOString(),
     joined_at: serverTimestamp(),
   });
+  requestTeamsCheck(date);
+}
+
+/** Presence ids are `${date}_${playerId}`: after a change the server checks substitutions for that day. */
+function checkTeamsForPresence(presenceId: string) {
+  const date = presenceId.slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(date)) requestTeamsCheck(date);
 }
 
 /** Withdraws a presence (own, or anyone's for admins). The waitlist moves up automatically. */
 export async function leavePresence(presenceId: string): Promise<void> {
   if (!isFirebaseConfigured) return;
   await deleteDoc(doc(db, 'presences', presenceId));
+  checkTeamsForPresence(presenceId);
 }
 
 /** Admin only: force a player into the starters / onto the waitlist, or clear the override (null). */
@@ -181,6 +190,7 @@ export async function setPresenceOverride(
 ): Promise<void> {
   if (!isFirebaseConfigured) return;
   await updateDoc(doc(db, 'presences', presenceId), { admin_override: override });
+  checkTeamsForPresence(presenceId);
 }
 
 export async function clearPresencesForDate(date: string): Promise<void> {
@@ -658,6 +668,21 @@ export async function castMvpVote(date: string, voterUid: string, playerId: stri
     player_id: playerId,
     updated_at: serverTimestamp(),
   });
+}
+
+/** Admin test mode of the MVP vote for a match day (only admins see it open early). */
+export async function setMvpVoteTest(date: string, on: boolean): Promise<void> {
+  if (!isFirebaseConfigured) return;
+  await updateDoc(doc(db, 'generated_teams', date), { mvp_vote_test: on, updated_at: new Date().toISOString() });
+}
+
+/** Deletes all MVP votes of a match day (admins, e.g. after a test). */
+export async function clearMvpVotes(date: string): Promise<void> {
+  if (!isFirebaseConfigured) return;
+  const snap = await getDocs(query(collection(db, 'mvp_votes'), where('date', '==', date)));
+  const batch = writeBatch(db);
+  snap.docs.forEach((d) => batch.delete(d.ref));
+  await batch.commit();
 }
 
 /** Votes per player, most voted first. */

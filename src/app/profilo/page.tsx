@@ -12,6 +12,7 @@ import { subscribeMatches } from '@/lib/firebase/firestoreService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { Match } from '@/types/database';
 import { NotificationGuide } from '@/components/NotificationGuide';
+import { photoToAvatarDataUrl } from '@/lib/utils/imageUtils';
 import { 
   User, 
   Upload, 
@@ -38,6 +39,8 @@ export default function ProfiloPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -123,6 +126,28 @@ export default function ProfiloPage() {
     profileStats[cat.name] = getStatValue(profile?.stats, cat.name, cat.default_value ?? 6);
   });
 
+  // Foto profilo: solo una foto scelta dal giocatore (niente immagini preimpostate), rimpicciolita e salvata nel profilo
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setIsUploading(true);
+    setErrorMsg('');
+    try {
+      const dataUrl = await photoToAvatarDataUrl(file);
+      await updateProfile({ avatar_url: dataUrl });
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : 'Impossibile caricare la foto.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleRemovePhoto = async () => {
+    if (!confirm('Vuoi togliere la tua foto?')) return;
+    await updateProfile({ avatar_url: null });
+  };
+
   // Salvataggio modifiche
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -181,6 +206,37 @@ export default function ProfiloPage() {
       {/* SCHEDA DATI PERSONALI & UPLOAD FOTO */}
       <form onSubmit={handleSaveProfile} className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-6">
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
+          {/* Foto profilo */}
+          <div className="flex flex-col items-center space-y-2">
+            {profile.avatar_url && !profile.avatar_url.startsWith('data:image/svg') ? (
+              <img
+                src={profile.avatar_url}
+                alt={`Foto di ${fullName}`}
+                referrerPolicy="no-referrer"
+                className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl object-cover ring-4 ring-emerald-500/40 shadow-xl"
+              />
+            ) : (
+              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-slate-800 border-2 border-slate-700 flex items-center justify-center font-black text-3xl text-emerald-400 shadow-xl">
+                {fullName.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/heic" onChange={handleImageUpload} className="hidden" />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs border border-slate-700 disabled:opacity-60"
+            >
+              {isUploading ? <Loader2 className="h-4 w-4 animate-spin text-emerald-400" /> : <Camera className="h-4 w-4 text-emerald-400" />}
+              {profile.avatar_url ? 'Cambia foto' : 'Carica la tua foto'}
+            </button>
+            {profile.avatar_url && (
+              <button type="button" onClick={handleRemovePhoto} className="text-[11px] text-slate-500 hover:text-rose-400 underline">
+                Togli foto
+              </button>
+            )}
+          </div>
+
           {/* Sezione Dati Nome, Email e Ruolo */}
           <div className="flex-1 w-full space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

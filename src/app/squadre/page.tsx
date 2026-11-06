@@ -1027,6 +1027,8 @@ function SquadreContent() {
           white={teams.white}
           black={teams.black}
           voterUid={user?.uid || null}
+          isAdmin={isClientAdmin}
+          testMode={Boolean(teamRecord?.mvp_vote_test)}
         />
       )}
 
