@@ -5,7 +5,18 @@ import { doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { getApp } from 'firebase/app';
 import { auth, db, isFirebaseConfigured } from '@/lib/firebase/config';
 
-const VAPID_KEY = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY || '';
+let vapidKeyCache: string | null = null;
+/** Public VAPID key: read from the server (/api/push-config), so it needs no NEXT_PUBLIC_ variable. */
+async function getVapidKey(): Promise<string> {
+  if (vapidKeyCache !== null) return vapidKeyCache;
+  try {
+    const res = await fetch('/api/push-config', { cache: 'no-store' });
+    vapidKeyCache = ((await res.json()) as { vapidKey?: string }).vapidKey || '';
+  } catch {
+    return '';
+  }
+  return vapidKeyCache;
+}
 const TOKEN_KEY = 'clubcalcetto_push_token';
 
 export type PushStatus = 'unsupported' | 'not_configured' | 'needs_install' | 'denied' | 'off' | 'on';
@@ -29,7 +40,7 @@ export async function getPushStatus(): Promise<PushStatus> {
   if (typeof window === 'undefined' || !('Notification' in window) || !('serviceWorker' in navigator)) {
     return isIos() && !isStandalone() ? 'needs_install' : 'unsupported';
   }
-  if (!VAPID_KEY || !isFirebaseConfigured) return 'not_configured';
+  if (!isFirebaseConfigured || !(await getVapidKey())) return 'not_configured';
   if (!(await isSupported().catch(() => false))) return isIos() && !isStandalone() ? 'needs_install' : 'unsupported';
   if (Notification.permission === 'denied') return 'denied';
   return Notification.permission === 'granted' && savedToken() ? 'on' : 'off';
@@ -46,7 +57,7 @@ export async function enablePush(profileId: string): Promise<PushStatus> {
 
   const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
   await navigator.serviceWorker.ready;
-  const token = await getToken(getMessaging(getApp()), { vapidKey: VAPID_KEY, serviceWorkerRegistration: registration });
+  const token = await getToken(getMessaging(getApp()), { vapidKey: await getVapidKey(), serviceWorkerRegistration: registration });
   const uid = auth.currentUser?.uid;
   if (!token || !uid) return 'off';
 
