@@ -268,6 +268,14 @@ export interface GeneratedTeamRecord {
   substitutions?: TeamSubstitution[];
 }
 
+/** MVP vote of one person for one match day (collection mvp_votes, doc id = `${date}_${uid}`). */
+export interface MvpVote {
+  date: string;
+  voter_id: string;
+  player_id: string;
+  updated_at?: unknown;
+}
+
 export interface AppSettings {
   official_match_date?: string;
   timelock_enabled?: boolean;

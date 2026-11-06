@@ -36,3 +36,18 @@ export function effectiveMatchLocation(
   const def = fields.find((f) => f.id === defaultFieldId) || fields[0];
   return def ? fieldLabel(def) : 'Centro Sportivo Calcetto';
 }
+
+/** A match lasts 1 hour; the MVP vote opens 45 minutes after the end (e.g. start 20:00 → vote at 21:45). */
+export const MATCH_DURATION_MIN = 60;
+export const MVP_VOTE_DELAY_MIN = 45;
+/** The vote stays open 3 days (Firestore rules accept votes up to 4 days after the match date). */
+export const MVP_VOTE_OPEN_HOURS = 72;
+
+export function mvpVotingWindow(date: string, matchTime: string): { opensAt: Date; closesAt: Date } {
+  const [y, m, d] = date.split('-').map(Number);
+  const [hh, mm] = (matchTime || DEFAULT_MATCH_TIME).split(':').map(Number);
+  const start = new Date(y, (m || 1) - 1, d || 1, hh || 0, mm || 0);
+  const opensAt = new Date(start.getTime() + (MATCH_DURATION_MIN + MVP_VOTE_DELAY_MIN) * 60000);
+  const closesAt = new Date(opensAt.getTime() + MVP_VOTE_OPEN_HOURS * 3600000);
+  return { opensAt, closesAt };
+}

@@ -7,9 +7,11 @@ import { useAuth } from '@/lib/context/AuthContext';
 import { FieldPosition, FIELD_POSITIONS, FIELD_POSITION_ABBR, sortStatsByCanonicalOrder } from '@/types/database';
 import { RadarChart } from '@/components/RadarChart';
 import { StatBadge } from '@/components/StatBadge';
-import { getPlayerMatchRecord } from '@/lib/services/playerService';
 import { getStoredCategories } from '@/lib/services/statCategoryService';
-import { uploadPlayerAvatar } from '@/lib/firebase/storageService';
+import { subscribeMatches } from '@/lib/firebase/firestoreService';
+import { isFirebaseConfigured } from '@/lib/firebase/config';
+import { Match } from '@/types/database';
+import { NotificationGuide } from '@/components/NotificationGuide';
 import { 
   User, 
   Upload, 
@@ -27,24 +29,26 @@ import {
   Loader2
 } from 'lucide-react';
 
-const PRESET_AVATARS = ['⚽', '🧤', '🏃', '🥇', '🦁', '⚡', '👑', '🎯'];
-
 export default function ProfiloPage() {
   const { user, profile, isAdmin, updateProfile } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [fullName, setFullName] = useState(profile?.full_name || 'Giocatore');
   const [position, setPosition] = useState<FieldPosition>(profile?.position || 'Esterno');
-  const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || '');
   const [categories, setCategories] = useState(() => getStoredCategories());
-  const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  // Statistiche globali calcolate dalle partite archiviate (le stesse dello Storico)
+  const [matches, setMatches] = useState<Match[]>([]);
+  useEffect(() => {
+    if (!isFirebaseConfigured) return;
+    const unsub = subscribeMatches((list) => setMatches(list.filter((m) => m.status === 'completed')));
+    return () => unsub();
   }, []);
 
   const isStrictAdmin = Boolean(mounted && user && (profile?.role === 'admin' || isAdmin));
@@ -53,7 +57,6 @@ export default function ProfiloPage() {
     if (profile) {
       setFullName(profile.full_name || 'Giocatore');
       setPosition(profile.position || 'Esterno');
-      setAvatarUrl(profile.avatar_url || '');
     }
   }, [profile]);
 
@@ -96,60 +99,29 @@ export default function ProfiloPage() {
     );
   }
 
-  const record = getPlayerMatchRecord(profile);
+  const record = (() => {
+    let won = 0, drawn = 0, lost = 0, goals = 0, mvp = 0;
+    for (const m of matches) {
+      const w = m.score_white ?? 0;
+      const b = m.score_black ?? 0;
+      const inWhite = (m.team_white || []).some((p) => p.id === profile.id);
+      const inBlack = (m.team_black || []).some((p) => p.id === profile.id);
+      if (inWhite || inBlack) {
+        if (w === b) drawn += 1;
+        else if (inWhite === w > b) won += 1;
+        else lost += 1;
+      }
+      goals += (m.scorers || []).filter((s) => s.player_id === profile.id).reduce((acc, s) => acc + (s.goals || 0), 0);
+      if (m.mvp_player_id === profile.id) mvp += 1;
+    }
+    return { won, drawn, lost, goals, mvp, total: won + drawn + lost };
+  })();
 
   // Mappatura dinamica delle statistiche per includere in tempo reale ogni categoria attiva
   const profileStats: Record<string, number> = {};
   categories.forEach((cat) => {
     profileStats[cat.name] = getStatValue(profile?.stats, cat.name, cat.default_value ?? 6);
   });
-
-  // Caricamento immagine dal dispositivo
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsUploading(true);
-    setErrorMsg('');
-
-    try {
-      // 1. Prova upload su Firebase Storage se configurato
-      try {
-        const publicUrl = await uploadPlayerAvatar(profile.id, file);
-        if (publicUrl) {
-          setAvatarUrl(publicUrl);
-          await updateProfile({ avatar_url: publicUrl });
-          setIsUploading(false);
-          return;
-        }
-      } catch (storageErr) {
-        console.warn('Firebase Storage upload warning, uso fallback base64:', storageErr);
-      }
-
-      // 2. Fallback istantaneo FileReader (Base64) per visualizzazione locale persistente
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const base64Url = event.target?.result as string;
-        setAvatarUrl(base64Url);
-        await updateProfile({ avatar_url: base64Url });
-        setIsUploading(false);
-      };
-      reader.readAsDataURL(file);
-    } catch (err: unknown) {
-      console.warn('Fallback caricamento immagine:', err);
-      setErrorMsg('Impossibile caricare l\'immagine.');
-      setIsUploading(false);
-    }
-  };
-
-  // Selezione avatar preset rapido
-  const handleSelectPresetAvatar = async (emoji: string) => {
-    // Genera un avatar SVG data url con emoji
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="#0f172a"/><text x="50%" y="55%" font-size="50" text-anchor="middle" dominant-baseline="middle">${emoji}</text></svg>`;
-    const dataUrl = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-    setAvatarUrl(dataUrl);
-    await updateProfile({ avatar_url: dataUrl });
-  };
 
   // Salvataggio modifiche
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -164,7 +136,6 @@ export default function ProfiloPage() {
     try {
       await updateProfile({
         full_name: fullName.trim(),
-        avatar_url: avatarUrl || null,
         position,
       });
       setSaveSuccess(true);
@@ -194,7 +165,7 @@ export default function ProfiloPage() {
               Il Mio Profilo Giocatore
             </h1>
             <p className="text-xs text-slate-400 mt-0.5">
-              Personalizza la tua immagine profilo e analizza le tue statistiche e il record partite.
+              I tuoi dati, le tue abilità e le tue statistiche di tutte le partite archiviate.
             </p>
           </div>
         </div>
@@ -210,73 +181,6 @@ export default function ProfiloPage() {
       {/* SCHEDA DATI PERSONALI & UPLOAD FOTO */}
       <form onSubmit={handleSaveProfile} className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-6">
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-          {/* Sezione Avatar & Upload */}
-          <div className="flex flex-col items-center space-y-3">
-            <div className="relative group">
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt={fullName}
-                  className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl object-cover ring-4 ring-emerald-500/40 shadow-xl"
-                />
-              ) : (
-                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-slate-800 border-2 border-slate-700 flex items-center justify-center font-black text-3xl text-emerald-400 shadow-xl">
-                  {fullName.charAt(0).toUpperCase()}
-                </div>
-              )}
-
-              {/* Tasto Camera Upload Sovrimpresso */}
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading}
-                className="absolute inset-0 bg-slate-950/60 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-xs font-bold cursor-pointer"
-              >
-                {isUploading ? (
-                  <Loader2 className="h-6 w-6 animate-spin text-emerald-400" />
-                ) : (
-                  <>
-                    <Camera className="h-6 w-6 text-emerald-400 mb-1" />
-                    <span>Cambia Foto</span>
-                  </>
-                )}
-              </button>
-            </div>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
-              className="hidden"
-            />
-
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-300 font-bold rounded-xl text-xs transition-colors cursor-pointer border border-slate-700"
-            >
-              <Upload className="h-3.5 w-3.5 text-emerald-400" />
-              <span>Carica Foto</span>
-            </button>
-
-            {/* Scelta rapida emoji avatar */}
-            <div className="flex items-center gap-1">
-              {PRESET_AVATARS.slice(0, 4).map((emoji) => (
-                <button
-                  key={emoji}
-                  type="button"
-                  onClick={() => handleSelectPresetAvatar(emoji)}
-                  className="h-7 w-7 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 flex items-center justify-center text-sm cursor-pointer transition-colors"
-                  title={`Imposta avatar ${emoji}`}
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Sezione Dati Nome, Email e Ruolo */}
           <div className="flex-1 w-full space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -402,98 +306,51 @@ export default function ProfiloPage() {
           </div>
         </div>
 
-        {/* COLONNA 2: TABELLA RECORD PARTITE (VITTORIE, PAREGGI, SCONFITTE) */}
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-5 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <Trophy className="h-5 w-5 text-amber-400" />
-                <h2 className="text-base font-black text-white uppercase tracking-wider">
-                  Record Partite & Palmarès
-                </h2>
-              </div>
-              <span className="text-xs font-mono font-black text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 rounded-md">
-                {record.winRate}% Win Rate
-              </span>
+        {/* COLONNA 2: LE MIE STATISTICHE GLOBALI */}
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-5">
+          <div className="border-b border-slate-800 pb-3">
+            <div className="flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-amber-400" />
+              <h2 className="text-base font-black text-white uppercase tracking-wider">Le Mie Statistiche</h2>
             </div>
             <p className="text-xs text-slate-400 mt-2">
-              Statistiche storiche sul rendimento nelle partite settimanali di calcetto.
+              Totali di tutte le partite archiviate ({record.total} giocate).
             </p>
           </div>
 
-          {/* Box Vittorie / Pareggi / Sconfitte */}
           <div className="grid grid-cols-3 gap-3 text-center">
             <div className="bg-emerald-500/10 border border-emerald-500/30 p-3.5 rounded-2xl space-y-1">
-              <div className="text-xs font-black text-emerald-400 uppercase tracking-wider">Vittorie</div>
-              <div className="text-2xl sm:text-3xl font-black text-emerald-300 font-mono">
-                {record.won}
-              </div>
-              <div className="text-[10px] text-emerald-400/80 font-semibold">+3 pt cad.</div>
+              <div className="text-xs font-black text-emerald-400 uppercase tracking-wider">Vinte</div>
+              <div className="text-3xl font-black text-emerald-300 font-mono">{record.won}</div>
             </div>
-
             <div className="bg-amber-500/10 border border-amber-500/30 p-3.5 rounded-2xl space-y-1">
-              <div className="text-xs font-black text-amber-400 uppercase tracking-wider">Pareggi</div>
-              <div className="text-2xl sm:text-3xl font-black text-amber-300 font-mono">
-                {record.drawn}
-              </div>
-              <div className="text-[10px] text-amber-400/80 font-semibold">+1 pt cad.</div>
+              <div className="text-xs font-black text-amber-400 uppercase tracking-wider">Pareggiate</div>
+              <div className="text-3xl font-black text-amber-300 font-mono">{record.drawn}</div>
             </div>
-
             <div className="bg-rose-500/10 border border-rose-500/30 p-3.5 rounded-2xl space-y-1">
-              <div className="text-xs font-black text-rose-400 uppercase tracking-wider">Sconfitte</div>
-              <div className="text-2xl sm:text-3xl font-black text-rose-300 font-mono">
-                {record.lost}
-              </div>
-              <div className="text-[10px] text-rose-400/80 font-semibold">0 pt</div>
+              <div className="text-xs font-black text-rose-400 uppercase tracking-wider">Perse</div>
+              <div className="text-3xl font-black text-rose-300 font-mono">{record.lost}</div>
             </div>
           </div>
 
-          {/* Tabella Riassuntiva Bilancio */}
-          <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 space-y-2.5 text-xs">
-            <div className="flex items-center justify-between text-slate-300">
-              <span className="text-slate-400">Partite Disputate Totali:</span>
-              <span className="font-mono font-bold text-white text-sm">{record.total} partite</span>
+          <div className="grid grid-cols-2 gap-3 text-center">
+            <div className="bg-slate-950/80 border border-slate-800 p-3.5 rounded-2xl space-y-1">
+              <div className="text-xs font-black text-slate-300 uppercase tracking-wider">⚽ Gol segnati</div>
+              <div className="text-3xl font-black text-white font-mono">{record.goals}</div>
             </div>
-            <div className="flex items-center justify-between text-slate-300">
-              <span className="text-slate-400">Punti Classifica Conquistati:</span>
-              <span className="font-mono font-bold text-amber-400 text-sm">{record.points} punti</span>
+            <div className="bg-slate-950/80 border border-slate-800 p-3.5 rounded-2xl space-y-1">
+              <div className="text-xs font-black text-slate-300 uppercase tracking-wider">★ MVP</div>
+              <div className="text-3xl font-black text-amber-300 font-mono">{record.mvp}</div>
             </div>
-            <div className="flex items-center justify-between text-slate-300">
-              <span className="text-slate-400">Media Punti a Partita:</span>
-              <span className="font-mono font-bold text-emerald-400">
-                {record.total > 0 ? (record.points / record.total).toFixed(2) : '0.00'} pt/match
-              </span>
-            </div>
-
-            {/* Barra Visuale Rapporto V / P / S */}
-            {record.total > 0 && (
-              <div className="pt-2">
-                <div className="flex justify-between text-[10px] text-slate-400 mb-1">
-                  <span>Distribuzione Esiti</span>
-                  <span>{record.winRate}% V / {Math.round((record.drawn / record.total) * 100)}% P / {Math.round((record.lost / record.total) * 100)}% S</span>
-                </div>
-                <div className="h-2.5 w-full bg-slate-900 rounded-full overflow-hidden flex">
-                  <div
-                    style={{ width: `${(record.won / record.total) * 100}%` }}
-                    className="bg-emerald-500 h-full"
-                    title={`Vittorie: ${record.won}`}
-                  />
-                  <div
-                    style={{ width: `${(record.drawn / record.total) * 100}%` }}
-                    className="bg-amber-400 h-full"
-                    title={`Pareggi: ${record.drawn}`}
-                  />
-                  <div
-                    style={{ width: `${(record.lost / record.total) * 100}%` }}
-                    className="bg-rose-500 h-full"
-                    title={`Sconfitte: ${record.lost}`}
-                  />
-                </div>
-              </div>
-            )}
           </div>
+
+          <Link href="/history" className="block text-center text-xs text-emerald-400 underline">
+            Vedi la classifica completa nello Storico
+          </Link>
         </div>
       </div>
+
+      <NotificationGuide />
     </div>
   );
 }

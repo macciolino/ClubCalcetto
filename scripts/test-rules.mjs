@@ -210,6 +210,18 @@ console.log('\nPlayer A after voting is open');
 await expectAllowed(`signs up for next week (${NEXT_MONDAY})`, () => join(playerA, NEXT_MONDAY, playerA.uid));
 await expectDenied('signs up beyond the opened range', () => join(playerA, IN_TWO_WEEKS, playerA.uid));
 
+console.log('\nMVP votes');
+const vote = (c, date, voter, player) =>
+  setDoc(doc(c.db, 'mvp_votes', `${date}_${voter}`), { date, voter_id: voter, player_id: player, updated_at: serverTimestamp() });
+await expectAllowed('player A votes MVP for today', () => vote(playerA, TODAY, playerA.uid, playerB.uid));
+await expectAllowed('player A changes own vote', () => vote(playerA, TODAY, playerA.uid, adminC.uid));
+await expectDenied('player A votes on behalf of player B', () => vote(playerA, TODAY, playerB.uid, playerA.uid));
+await expectDenied('player A votes for a future match', () => vote(playerA, NEXT_MONDAY, playerA.uid, playerB.uid));
+await expectDenied('player A votes with a fake time', () =>
+  setDoc(doc(playerA.db, 'mvp_votes', `${TODAY}_${playerA.uid}`), { date: TODAY, voter_id: playerA.uid, player_id: 'x', updated_at: 'yesterday' }));
+await expectDenied('player B deletes player A vote', () => deleteDoc(doc(playerB.db, 'mvp_votes', `${TODAY}_${playerA.uid}`)));
+await expectAllowed('player B reads the votes', () => getDocs(collection(playerB.db, 'mvp_votes')));
+
 console.log('\nImpostor (email/password account using the super admin address, NOT verified)');
 await expectDenied('writes settings', () => setDoc(doc(impostor.db, 'settings', 'official_match'), { date: 'x' }));
 await expectDenied('edits p-1', () => setDoc(doc(impostor.db, 'profiles', 'p-1'), { full_name: 'x' }, { merge: true }));

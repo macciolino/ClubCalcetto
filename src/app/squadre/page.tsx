@@ -8,6 +8,7 @@ import { Profile, Presence, Match, GeneratedTeamRecord, SportField, MatchTeamPla
 import { reconcileTeams, profileForTeamPlayer, splitKey, toTeamPlayer, SLOT_LABELS } from '@/lib/utils/teamUtils';
 import { notifyMatchPlayers } from '@/lib/services/notificationService';
 import { TeamSwapEditor } from '@/components/TeamSwapEditor';
+import { MvpVoteCard } from '@/components/MvpVoteCard';
 import { getStoredFields, subscribeSportFields } from '@/lib/services/fieldService';
 import { effectiveMatchCost, effectiveMatchTime, effectiveMatchLocation, fieldLabel } from '@/lib/utils/matchUtils';
 import { 
@@ -1016,7 +1017,20 @@ function SquadreContent() {
             />
           </div>
         </div>
-      ) : (
+      ) : null}
+
+      {/* Voto MVP aperto a tutti, 45 minuti dopo la fine della partita */}
+      {teams && teamsComplete && tab === 'pitch' && (
+        <MvpVoteCard
+          date={selectedDate}
+          matchTime={matchTime}
+          white={teams.white}
+          black={teams.black}
+          voterUid={user?.uid || null}
+        />
+      )}
+
+      {!balancedResult && !(tab === 'manual' && manualDraft) && (
         /* Placeholder quando non ancora generato */
         <div className="bg-slate-900/60 border border-dashed border-slate-800 rounded-3xl p-10 text-center space-y-3">
           <div className="inline-flex p-3 bg-slate-800 text-emerald-400 rounded-2xl">

@@ -9,7 +9,7 @@ import { Profile, Presence, Match, GeneratedTeamRecord } from '@/types/database'
 const EMPTY_RESULT: MatchResultValue = { scoreWhite: 0, scoreBlack: 0, mvpPlayerId: '', scorers: [] };
 import { useAuth } from '@/lib/context/AuthContext';
 import { effectiveMatchCost } from '@/lib/utils/matchUtils';
-import { subscribeMatch, subscribeMatches, saveMatchResult } from '@/lib/firebase/firestoreService';
+import { subscribeMatch, subscribeMatches, saveMatchResult, subscribeMvpVotes, countMvpVotes } from '@/lib/firebase/firestoreService';
 import { CalendarDay, formatItalianDate } from '@/lib/utils/dateUtils';
 import { 
   getMatchPayments, 
@@ -153,6 +153,45 @@ export function TabOverviewMatch({
       });
     }
   }, [activeDate, savedMatch]);
+
+  // Voti MVP dei giocatori per questa partita: il più votato viene proposto (l'admin può scegliere chiunque)
+  const [mvpVotes, setMvpVotes] = useState<{ playerId: string; count: number }[]>([]);
+  useEffect(() => {
+    setMvpVotes([]);
+    const unsub = subscribeMvpVotes(activeDate, (votes) => setMvpVotes(countMvpVotes(votes)));
+    return () => unsub();
+  }, [activeDate]);
+  const proposedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (proposedFor.current === activeDate || savedMatch?.status === 'completed' || !mvpVotes[0]) return;
+    proposedFor.current = activeDate;
+    setResult((r) => (r.mvpPlayerId ? r : { ...r, mvpPlayerId: mvpVotes[0].playerId }));
+  }, [activeDate, mvpVotes, savedMatch?.status]);
+
+  // Per ogni settimana: il giorno che ha raggiunto PER PRIMO 10 iscritti (momento in cui si è iscritto il 10° titolare)
+  const firstToTenByWeek = (() => {
+    const reachedAt = (date: string): number | null => {
+      const starters = presences.filter((p) => p.date === date && p.status === 'confirmed');
+      if (starters.length < 10) return null;
+      const times = starters.map((p) =>
+        typeof p.joined_ms === 'number' ? p.joined_ms : Date.parse(p.created_at) || Number.MAX_SAFE_INTEGER
+      );
+      return Math.max(...times);
+    };
+    const weekOf = (d: Date) => {
+      const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7));
+      return `${monday.getFullYear()}-${monday.getMonth()}-${monday.getDate()}`;
+    };
+    const best = new Map<string, { date: string; at: number }>();
+    days.forEach((day) => {
+      const at = reachedAt(day.dateString);
+      if (at === null) return;
+      const wk = weekOf(day.dateObj);
+      const cur = best.get(wk);
+      if (!cur || at < cur.at) best.set(wk, { date: day.dateString, at });
+    });
+    return new Set(Array.from(best.values()).map((b) => b.date));
+  })();
 
   const isAlreadyClosed = savedMatch?.status === 'completed';
 
@@ -312,7 +351,7 @@ export function TabOverviewMatch({
               Elezione Giorno Ufficiale Partita
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              Clicca su uno dei giorni con quorum per impostarlo come match ufficiale della settimana.
+              Clicca su un giorno per impostarlo come partita ufficiale. In evidenza (🥇) il giorno che per primo ha raggiunto 10 iscritti nella settimana.
             </p>
           </div>
 
@@ -334,6 +373,7 @@ export function TabOverviewMatch({
               (p) => p.date === day.dateString && p.status === 'confirmed'
             ).length;
             const hasQuorum = count >= 10;
+            const isFirstToTen = firstToTenByWeek.has(day.dateString);
 
             return (
               <button
@@ -343,6 +383,8 @@ export function TabOverviewMatch({
                 className={`flex flex-col items-center justify-between p-3 rounded-2xl border text-center transition-all cursor-pointer ${
                   isOfficial
                     ? 'bg-emerald-500/15 border-emerald-500 text-white ring-2 ring-emerald-500/60 shadow-lg'
+                    : isFirstToTen
+                    ? 'bg-amber-500/10 border-amber-400 text-white ring-2 ring-amber-400/50'
                     : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-white'
                 }`}
               >
@@ -368,6 +410,9 @@ export function TabOverviewMatch({
                     </span>
                   )}
                 </div>
+                {isFirstToTen && (
+                  <div className="mt-1 text-[9px] font-black uppercase text-amber-300 leading-tight">🥇 Primo a 10</div>
+                )}
               </button>
             );
           })}
@@ -527,7 +572,7 @@ export function TabOverviewMatch({
                 <>Squadre prese dalla sezione <Link href={`/squadre?date=${activeDate}`} className="text-emerald-400 underline">Squadre</Link>: se sono sbagliate correggile lì prima di salvare.</>
               )}
             </p>
-            <MatchResultFields value={result} onChange={setResult} white={teams.white} black={teams.black} />
+            <MatchResultFields value={result} onChange={setResult} white={teams.white} black={teams.black} mvpVotes={mvpVotes} />
           </>
         ) : (
           <div className="p-4 bg-amber-500/10 border border-amber-500/30 text-amber-200 rounded-2xl text-sm flex items-start gap-2">

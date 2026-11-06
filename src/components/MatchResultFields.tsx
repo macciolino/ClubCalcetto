@@ -47,10 +47,15 @@ interface MatchResultFieldsProps {
   onChange: (value: MatchResultValue) => void;
   white: MatchTeamPlayer[];
   black: MatchTeamPlayer[];
+  /** MVP votes of the players (Squadre page), shown next to the names: the admin can still pick anyone */
+  mvpVotes?: { playerId: string; count: number }[];
 }
 
 /** Final score, MVP and scorers of a match (used in Admin → Match & Cassa and in the history editor). */
-export function MatchResultFields({ value, onChange, white, black }: MatchResultFieldsProps) {
+export function MatchResultFields({ value, onChange, white, black, mvpVotes = [] }: MatchResultFieldsProps) {
+  const votesOf = (id: string) => mvpVotes.find((v) => v.playerId === id)?.count || 0;
+  const mvpLabel = (p: MatchTeamPlayer) => (votesOf(p.id) > 0 ? `${p.name} (${votesOf(p.id)} voti)` : p.name);
+  const topVoted = mvpVotes[0];
   const [newScorerId, setNewScorerId] = useState('');
   const set = (patch: Partial<MatchResultValue>) => onChange({ ...value, ...patch });
 
@@ -130,15 +135,31 @@ export function MatchResultFields({ value, onChange, white, black }: MatchResult
           <option value="">-- Nessun MVP --</option>
           <optgroup label="⚪ Bianchi">
             {white.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
+              <option key={p.id} value={p.id}>{mvpLabel(p)}</option>
             ))}
           </optgroup>
           <optgroup label="⚫ Neri">
             {black.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
+              <option key={p.id} value={p.id}>{mvpLabel(p)}</option>
             ))}
           </optgroup>
         </select>
+        {topVoted && players.some((p) => p.id === topVoted.playerId) ? (
+          <p className="text-xs text-slate-400">
+            Voto dei giocatori: più votato <strong className="text-amber-300">{nameOf(topVoted.playerId)}</strong> ({topVoted.count}{' '}
+            {topVoted.count === 1 ? 'voto' : 'voti'}).
+            {value.mvpPlayerId !== topVoted.playerId && (
+              <>
+                {' '}
+                <button type="button" onClick={() => set({ mvpPlayerId: topVoted.playerId })} className="text-emerald-400 underline font-semibold">
+                  Usa il più votato
+                </button>
+              </>
+            )}
+          </p>
+        ) : (
+          <p className="text-xs text-slate-500">Nessun voto dei giocatori per ora.</p>
+        )}
       </div>
 
       {/* Marcatori */}

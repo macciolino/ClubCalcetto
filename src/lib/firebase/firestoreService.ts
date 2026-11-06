@@ -18,7 +18,7 @@ import {
   increment,
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './config';
-import { Profile, Presence, StatCategory, Match, GeneratedTeamRecord, AppSettings, CalendarSettings, MatchOutcome, MatchScorer, MatchTeamPlayer, TeamSubstitution } from '@/types/database';
+import { Profile, Presence, StatCategory, Match, GeneratedTeamRecord, AppSettings, CalendarSettings, MatchOutcome, MatchScorer, MatchTeamPlayer, TeamSubstitution, MvpVote } from '@/types/database';
 import { rankDayPresences, rankPresencesByDate } from '@/lib/services/presenceService';
 import { normalizeCategories } from '@/lib/utils/statUtils';
 
@@ -629,6 +629,44 @@ export async function applyTeamSubstitutions(
     });
     return true;
   });
+}
+
+// ==========================================
+// 7. VOTO MVP (Collection: 'mvp_votes', doc id = date_uid)
+// ==========================================
+
+export function subscribeMvpVotes(date: string, callback: (votes: MvpVote[]) => void): Unsubscribe | (() => void) {
+  if (!isFirebaseConfigured || typeof window === 'undefined' || !date) return () => {};
+  try {
+    return onSnapshot(
+      query(collection(db, 'mvp_votes'), where('date', '==', date)),
+      (snap) => callback(snap.docs.map((d) => d.data() as MvpVote)),
+      (err) => console.warn('[Firestore] subscribeMvpVotes warning:', err.message)
+    );
+  } catch (err) {
+    console.warn('[Firestore] subscribeMvpVotes exception:', err);
+    return () => {};
+  }
+}
+
+/** One vote per person per match: voting again replaces the previous choice. */
+export async function castMvpVote(date: string, voterUid: string, playerId: string): Promise<void> {
+  if (!isFirebaseConfigured) return;
+  await setDoc(doc(db, 'mvp_votes', `${date}_${voterUid}`), {
+    date,
+    voter_id: voterUid,
+    player_id: playerId,
+    updated_at: serverTimestamp(),
+  });
+}
+
+/** Votes per player, most voted first. */
+export function countMvpVotes(votes: MvpVote[]): { playerId: string; count: number }[] {
+  const counts = new Map<string, number>();
+  votes.forEach((v) => counts.set(v.player_id, (counts.get(v.player_id) || 0) + 1));
+  return Array.from(counts.entries())
+    .map(([playerId, count]) => ({ playerId, count }))
+    .sort((a, b) => b.count - a.count);
 }
 
 // ==========================================

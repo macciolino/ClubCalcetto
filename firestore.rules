@@ -144,6 +144,28 @@ service cloud.firestore {
       allow read: if signedIn();
       allow write: if isAdmin();
     }
+
+    // ---------- MVP votes (one per person per match day, doc id = date_uid) ----------
+    // Everyone signed in can vote; the app opens the vote 45 minutes after the end of the match.
+    // Rules allow it only from the match day up to 4 days later; the vote can be changed, never on behalf of others.
+    function isValidMvpVote(voteId) {
+      let data = request.resource.data;
+      return data.keys().hasOnly(['date', 'voter_id', 'player_id', 'updated_at'])
+        && data.date is string
+        && data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && data.voter_id == request.auth.uid
+        && voteId == data.date + '_' + request.auth.uid
+        && data.player_id is string
+        && data.player_id.size() > 0
+        && data.updated_at == request.time
+        && request.time >= dateToTimestamp(data.date)
+        && request.time < dateToTimestamp(data.date) + duration.value(4, 'd');
+    }
+    match /mvp_votes/{voteId} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && isValidMvpVote(voteId);
+      allow delete: if isAdmin() || (signedIn() && resource.data.voter_id == request.auth.uid);
+    }
     match /match_payments/{id} {
       allow read: if signedIn();
       allow write: if isAdmin();

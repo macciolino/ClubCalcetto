@@ -6,6 +6,7 @@ import { Navbar } from '@/components/Navbar';
 export const metadata: Metadata = {
   title: 'ClubCalcetto - Gestione Partite & Squadre Bilanciate',
   description: 'App privata per la gestione presenze, statistiche giocatori e generazione squadre 5v5 con algoritmo di bilanciamento.',
+  appleWebApp: { capable: true, title: 'ClubCalcetto', statusBarStyle: 'black-translucent' },
 };
 
 export const viewport: Viewport = {
