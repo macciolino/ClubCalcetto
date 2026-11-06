@@ -348,13 +348,14 @@ export function TabPresencesTimelock({
       {/* 4. ASSEGNAZIONE GIOCATORE / OSPITE & AZIONI DISTRUTTIVE */}
       <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         {/* Assegna Rapido Giocatore */}
-        <div className="flex items-center gap-2 flex-1 max-w-md">
+        <div className="flex items-center gap-2 w-full sm:flex-1 sm:max-w-md min-w-0">
           <select
             value={selectedGuestToAdd}
             onChange={(e) => setSelectedGuestToAdd(e.target.value)}
-            className="flex-1 text-xs bg-slate-950 border border-slate-800 text-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-emerald-500"
+            aria-label="Giocatore da iscrivere a questa data"
+            className="flex-1 min-w-0 w-full text-sm bg-slate-950 border border-slate-800 text-slate-200 rounded-xl px-3 py-2.5 truncate focus:outline-none focus:border-emerald-500"
           >
-            <option value="">+ Seleziona giocatore da iscrivere a questa data...</option>
+            <option value="">Scegli chi iscrivere…</option>
             {availablePlayers.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.full_name} ({p.overall_rating}) {p.is_guest ? '[Ospite]' : ''}
@@ -370,7 +371,11 @@ export function TabPresencesTimelock({
                 setSelectedGuestToAdd('');
               }
             }}
-            className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 text-slate-950 font-bold rounded-xl text-xs transition-all cursor-pointer"
+            className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2.5 font-bold rounded-xl text-xs transition-all ${
+              selectedGuestToAdd
+                ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 cursor-pointer'
+                : 'bg-slate-800 text-slate-400 border border-slate-700 cursor-not-allowed'
+            }`}
           >
             <UserPlus className="h-4 w-4" />
             <span>Iscrivi</span>
@@ -381,7 +386,7 @@ export function TabPresencesTimelock({
         <button
           type="button"
           onClick={() => setIsResetModalOpen(true)}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-bold rounded-xl text-xs border border-rose-500/30 transition-all cursor-pointer"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-bold rounded-xl text-xs border border-rose-500/30 transition-all cursor-pointer"
         >
           <RotateCcw className="h-4 w-4" />
           <span>Azzera Presenze della Settimana</span>

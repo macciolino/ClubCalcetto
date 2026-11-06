@@ -295,7 +295,7 @@ export function PresenceCard({
         {showAdminActions && onAddGuestPresence && (
           <div className="flex items-center gap-1.5 mt-1">
             <select
-              className="flex-1 text-xs bg-slate-950 border border-slate-800 text-slate-300 rounded-lg px-2 py-1.5 focus:outline-none focus:border-emerald-500"
+              className="flex-1 min-w-0 text-xs bg-slate-950 border border-slate-800 text-slate-300 rounded-lg px-2 py-1.5 focus:outline-none focus:border-emerald-500"
               defaultValue=""
               onChange={(e) => {
                 if (e.target.value) {
