@@ -10,6 +10,7 @@ import { TabOverviewMatch } from '@/components/admin/TabOverviewMatch';
 import { TabPresencesTimelock } from '@/components/admin/TabPresencesTimelock';
 import { TabUsersRoles } from '@/components/admin/TabUsersRoles';
 import { TabClubConfigFields } from '@/components/admin/TabClubConfigFields';
+import { NotificationSettingsCard } from '@/components/admin/NotificationSettingsCard';
 import { 
   subscribeProfiles, 
   subscribeStatCategories, 
@@ -356,6 +357,9 @@ export default function AdminPage() {
           </Link>
         </div>
       </div>
+
+      {/* Notifiche (a tendina, in alto) */}
+      <NotificationSettingsCard />
 
       {/* 4 TAB ORIZZONTALI PRINCIPALI */}
       <div className="bg-slate-900/90 border border-slate-800 p-1.5 rounded-2xl shadow-xl backdrop-blur-md">

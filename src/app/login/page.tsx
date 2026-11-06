@@ -1,5 +1,6 @@
 'use client';
 
+import { BrandLogo } from '@/components/BrandLogo';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/context/AuthContext';
@@ -160,8 +161,8 @@ export default function LoginPage() {
 
         {/* Intestazione e Logo */}
         <div className="text-center space-y-2 relative">
-          <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-emerald-600 to-green-400 text-slate-950 shadow-xl shadow-emerald-500/30">
-            <span className="text-2xl">⚽</span>
+          <div className="inline-flex">
+            <BrandLogo size="lg" />
           </div>
           <div>
             <h1 className="text-2xl font-black tracking-tight text-white">

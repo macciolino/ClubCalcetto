@@ -1,6 +1,5 @@
 'use client';
 
-import { NotificationSettingsCard } from '@/components/admin/NotificationSettingsCard';
 
 import { NumberInput } from '@/components/NumberInput';
 import React, { useState, useEffect } from 'react';
@@ -371,7 +370,6 @@ export function TabClubConfigFields({
           </form>
         </div>
 
-        <NotificationSettingsCard />
       </div>
 
       {/* MODALI: CAMPO SPORTIVO & LEGENDA STATISTICHE */}

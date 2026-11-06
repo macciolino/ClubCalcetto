@@ -5,7 +5,7 @@ import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '@/lib/firebase/config';
 import { useAuth } from '@/lib/context/AuthContext';
 import { callNotifyApi } from '@/lib/services/pushService';
-import { Bell, Loader2, Send } from 'lucide-react';
+import { Bell, Loader2, Send, ChevronDown } from 'lucide-react';
 
 type Mode = 'off' | 'admins' | 'all';
 
@@ -26,6 +26,7 @@ export function NotificationSettingsCard() {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [message, setMessage] = useState('');
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     if (!isFirebaseConfigured) return;
@@ -80,15 +81,29 @@ export function NotificationSettingsCard() {
 
   return (
     <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-xl space-y-4">
-      <div className="border-b border-slate-800 pb-3">
-        <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
-          <Bell className="h-4 w-4 text-emerald-400" />
-          Notifiche ai giocatori
-        </h3>
-        <p className="text-xs text-slate-400 mt-0.5">
-          Partita confermata, squadre cambiate e chi subentra a chi. Gratuite (Firebase Cloud Messaging).
-        </p>
-      </div>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="w-full flex items-center justify-between gap-3 text-left"
+      >
+        <div className="min-w-0">
+          <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+            <Bell className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+            Notifiche ai giocatori
+          </h3>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Destinatari: <strong className={mode === 'all' ? 'text-emerald-300' : mode === 'admins' ? 'text-violet-300' : 'text-slate-300'}>{MODES.find((m) => m.value === mode)?.label}</strong>
+          </p>
+        </div>
+        <ChevronDown className={`h-5 w-5 text-slate-400 flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+      <div className="space-y-4 border-t border-slate-800 pt-4">
+      <p className="text-xs text-slate-400">
+        Partita confermata, squadre cambiate e chi subentra a chi. Gratuite (Firebase Cloud Messaging).
+      </p>
 
       <div className="space-y-2" role="radiogroup" aria-label="Chi riceve le notifiche">
         {MODES.map((m) => (
@@ -119,6 +134,8 @@ export function NotificationSettingsCard() {
         Manda una notifica di prova a me
       </button>
       {message && <p className="text-xs text-slate-300">{message}</p>}
+      </div>
+      )}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import { BrandLogo } from '@/components/BrandLogo';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -55,8 +56,8 @@ export function Navbar() {
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           {/* Logo */}
           <Link href="/presenze" className="flex items-center gap-2.5 group">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-600 to-green-400 text-slate-950 shadow-lg shadow-emerald-500/25 transition-transform group-hover:scale-105">
-              <span className="text-xl">⚽</span>
+            <div className="transition-transform group-hover:scale-105">
+              <BrandLogo />
             </div>
             <div>
               <span className="text-lg font-black tracking-tight text-white flex items-center gap-1.5">

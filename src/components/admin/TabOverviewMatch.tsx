@@ -35,7 +35,8 @@ import {
   RotateCcw, 
   Loader2,
   Calendar,
-  DollarSign
+  DollarSign,
+  ChevronDown
 } from 'lucide-react';
 
 interface TabOverviewMatchProps {
@@ -120,6 +121,7 @@ export function TabOverviewMatch({
   const [result, setResult] = useState<MatchResultValue>(EMPTY_RESULT);
   const [isArchiving, setIsArchiving] = useState(false);
   const [archiveSuccessMessage, setArchiveSuccessMessage] = useState('');
+  const [cashOpen, setCashOpen] = useState(false);
 
   // Partite archiviate totali
   const [archivedMatchesCount, setArchivedMatchesCount] = useState(0);
@@ -419,38 +421,46 @@ export function TabOverviewMatch({
         </div>
       </div>
 
-      {/* 3. TRACCIAMENTO CASSA & PAGAMENTI QUOTA CAMPO */}
+      {/* 3. TRACCIAMENTO CASSA & PAGAMENTI QUOTA CAMPO (a tendina) */}
       <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-xl space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
-          <div>
+        <button
+          type="button"
+          onClick={() => setCashOpen((o) => !o)}
+          aria-expanded={cashOpen}
+          className="w-full flex items-center justify-between gap-3 text-left"
+        >
+          <div className="min-w-0">
             <h2 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
-              <Coins className="h-4 w-4 text-emerald-400" />
-              Cassa & Pagamenti Quota Campo ({formatItalianDate(activeDate)})
+              <Coins className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+              Cassa & Pagamenti ({formatItalianDate(activeDate)})
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              Tieni traccia delle quote pagate dai 10 titolari in tempo reale (€{costPerPlayer.toFixed(2)} a testa).
+              €{totalCollected.toFixed(2)} di €{totalMatchCost} · {paidCount}/10 pagati · €{costPerPlayer.toFixed(2)} a testa
             </p>
           </div>
+          <ChevronDown className={`h-5 w-5 text-slate-400 flex-shrink-0 transition-transform ${cashOpen ? 'rotate-180' : ''}`} />
+        </button>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleSetAllPaid}
-              className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 font-bold rounded-xl text-xs border border-emerald-500/30 transition-all cursor-pointer"
-            >
-              <Check className="h-3.5 w-3.5 text-emerald-400" />
-              <span>Segna Tutti Pagati</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleResetPayments}
-              className="flex items-center gap-1 px-3 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-rose-400 font-bold rounded-xl text-xs transition-colors cursor-pointer"
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-              <span>Reset Cassa</span>
-            </button>
-          </div>
-        </div>
+        {cashOpen && (
+          <>
+            <div className="flex flex-wrap items-center gap-2 border-t border-slate-800 pt-3">
+              <button
+                type="button"
+                onClick={handleSetAllPaid}
+                className="flex items-center gap-1 px-3 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 font-bold rounded-xl text-xs border border-emerald-500/30 transition-all cursor-pointer"
+              >
+                <Check className="h-3.5 w-3.5 text-emerald-400" />
+                <span>Segna Tutti Pagati</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleResetPayments}
+                className="flex items-center gap-1 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-rose-400 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                <span>Reset Cassa</span>
+              </button>
+            </div>
 
         {/* Progress Bar Finanziaria */}
         <div className="space-y-1.5">
@@ -519,6 +529,8 @@ export function TabOverviewMatch({
               );
             })}
           </div>
+        )}
+          </>
         )}
       </div>
 
