@@ -46,7 +46,6 @@ export function getStoredPlayers(): Profile[] {
               ...p,
               role: 'admin',
               position: p.position || 'Esterno',
-              full_name: 'Marco B.',
               matches_won: won,
               matches_drawn: drawn,
               matches_lost: lost,

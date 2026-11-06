@@ -18,7 +18,7 @@ import {
   increment,
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './config';
-import { Profile, Presence, StatCategory, Match, GeneratedTeamRecord, AppSettings, CalendarSettings, MatchOutcome, MatchScorer, MatchAssist, MatchTeamPlayer } from '@/types/database';
+import { Profile, Presence, StatCategory, Match, GeneratedTeamRecord, AppSettings, CalendarSettings, MatchOutcome, MatchScorer, MatchTeamPlayer } from '@/types/database';
 import { rankDayPresences, rankPresencesByDate } from '@/lib/services/presenceService';
 import { normalizeCategories } from '@/lib/utils/statUtils';
 
@@ -403,7 +403,6 @@ export interface MatchResultInput {
   teamBlack: MatchTeamPlayer[];
   mvpPlayerId: string | null;
   scorers: MatchScorer[];
-  assists: MatchAssist[];
   totalCost: number;
   closedBy: string;
 }
@@ -482,7 +481,6 @@ export async function saveMatchResult(input: MatchResultInput): Promise<void> {
         team_black: teamBlack,
         mvp_player_id: input.mvpPlayerId || null,
         scorers: input.scorers,
-        assists: input.assists,
         total_cost: input.totalCost,
         cost_per_player: Number((input.totalCost / 10).toFixed(2)),
         profile_effects: appliedEffects,

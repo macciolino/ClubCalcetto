@@ -16,17 +16,15 @@ interface PlayerLine {
   drawn: number;
   lost: number;
   goals: number;
-  assists: number;
   mvp: number;
   points: number;
 }
 
-type SortKey = 'points' | 'goals' | 'assists' | 'mvp' | 'played';
+type SortKey = 'points' | 'goals' | 'mvp' | 'played';
 
 const SORT_LABELS: Record<SortKey, string> = {
   points: 'Punti',
   goals: 'Gol',
-  assists: 'Assist',
   mvp: 'MVP',
   played: 'Presenze',
 };
@@ -37,7 +35,7 @@ function buildLeaderboard(matches: Match[], nameOf: (id: string, fallback?: stri
   const line = (id: string, fallbackName?: string) => {
     let l = lines.get(id);
     if (!l) {
-      l = { id, name: nameOf(id, fallbackName), played: 0, won: 0, drawn: 0, lost: 0, goals: 0, assists: 0, mvp: 0, points: 0 };
+      l = { id, name: nameOf(id, fallbackName), played: 0, won: 0, drawn: 0, lost: 0, goals: 0, mvp: 0, points: 0 };
       lines.set(id, l);
     }
     return l;
@@ -59,7 +57,6 @@ function buildLeaderboard(matches: Match[], nameOf: (id: string, fallback?: stri
     apply('white');
     apply('black');
     (m.scorers || []).forEach((s) => (line(s.player_id, s.player_name).goals += s.goals || 0));
-    (m.assists || []).forEach((a) => (line(a.player_id, a.player_name).assists += a.count || 0));
     if (m.mvp_player_id) line(m.mvp_player_id).mvp += 1;
   }
 
@@ -157,7 +154,7 @@ export default function HistoryPage() {
             <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">Storico Partite</h1>
           </div>
           <p className="text-sm text-slate-400">
-            Risultati, marcatori, assist e MVP di tutte le partite archiviate dall&apos;admin.
+            Risultati, marcatori e MVP di tutte le partite archiviate dall&apos;admin.
           </p>
         </div>
         {seasons.length > 0 && (
@@ -275,7 +272,6 @@ export default function HistoryPage() {
                     <th className="px-2 py-3" title="Vittorie / Pareggi / Sconfitte">V-P-S</th>
                     <th className="px-2 py-3" title="Punti (3 vittoria, 1 pareggio)">Pt</th>
                     <th className="px-2 py-3">Gol</th>
-                    <th className="px-2 py-3" title="Assist">Ass</th>
                     <th className="px-3 py-3">MVP</th>
                   </tr>
                 </thead>
@@ -291,7 +287,6 @@ export default function HistoryPage() {
                       </td>
                       <td className="px-2 py-2.5 text-center font-mono font-black text-white">{l.points}</td>
                       <td className="px-2 py-2.5 text-center font-mono">{l.goals}</td>
-                      <td className="px-2 py-2.5 text-center font-mono">{l.assists}</td>
                       <td className="px-3 py-2.5 text-center font-mono">{l.mvp}</td>
                     </tr>
                   ))}
@@ -368,12 +363,7 @@ export default function HistoryPage() {
                       ⚽ {(m.scorers || []).map((s) => `${nameOf(s.player_id, s.player_name)} (${s.goals})`).join(', ')}
                     </p>
                   )}
-                  {(m.assists || []).length > 0 && (
-                    <p className="text-slate-400">
-                      👟 {(m.assists || []).map((a) => `${nameOf(a.player_id, a.player_name)} (${a.count})`).join(', ')}
-                    </p>
-                  )}
-                  {!mvpName && !(m.scorers || []).length && !(m.assists || []).length && (
+                  {!mvpName && !(m.scorers || []).length && (
                     <p className="text-slate-500">Nessun marcatore o MVP inserito.</p>
                   )}
                 </div>

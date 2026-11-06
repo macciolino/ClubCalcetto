@@ -181,6 +181,7 @@ export interface Match {
   score_black?: number;
   mvp_player_id?: string;
   scorers?: MatchScorer[];
+  /** @deprecated assists are no longer tracked (kept only so old match docs still type-check) */
   assists?: MatchAssist[];
   /** Teams as they played (names kept so the history stays readable even if a player is deleted) */
   team_white?: MatchTeamPlayer[];

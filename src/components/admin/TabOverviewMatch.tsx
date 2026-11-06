@@ -3,7 +3,7 @@
 import { NumberInput } from '@/components/NumberInput';
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { Profile, Presence, Match, GeneratedTeamRecord, MatchScorer, MatchAssist, MatchTeamPlayer } from '@/types/database';
+import { Profile, Presence, Match, GeneratedTeamRecord, MatchScorer, MatchTeamPlayer } from '@/types/database';
 import { useAuth } from '@/lib/context/AuthContext';
 import { effectiveMatchCost } from '@/lib/utils/matchUtils';
 import { subscribeMatch, subscribeMatches, saveMatchResult } from '@/lib/firebase/firestoreService';
@@ -118,11 +118,8 @@ export function TabOverviewMatch({
   const [scoreBlack, setScoreBlack] = useState<number>(0);
   const [mvpPlayerId, setMvpPlayerId] = useState<string>('');
   const [scorers, setScorers] = useState<MatchScorer[]>([]);
-  const [assists, setAssists] = useState<MatchAssist[]>([]);
   const [newScorerId, setNewScorerId] = useState<string>('');
   const [newScorerGoals, setNewScorerGoals] = useState<number>(1);
-  const [newAssistId, setNewAssistId] = useState<string>('');
-  const [newAssistCount, setNewAssistCount] = useState<number>(1);
   const [isArchiving, setIsArchiving] = useState(false);
   const [archiveSuccessMessage, setArchiveSuccessMessage] = useState('');
 
@@ -145,7 +142,6 @@ export function TabOverviewMatch({
     setScoreBlack(0);
     setMvpPlayerId('');
     setScorers([]);
-    setAssists([]);
   }, [activeDate]);
   useEffect(() => {
     if (
@@ -158,7 +154,6 @@ export function TabOverviewMatch({
       setScoreBlack(savedMatch.score_black ?? 0);
       setMvpPlayerId(savedMatch.mvp_player_id || '');
       setScorers(savedMatch.scorers || []);
-      setAssists(savedMatch.assists || []);
     }
   }, [activeDate, savedMatch]);
 
@@ -180,7 +175,7 @@ export function TabOverviewMatch({
     setPaymentsRecord(updated);
   };
 
-  // Handlers Marcatori & Assist
+  // Handlers Marcatori
   const handleAddScorer = () => {
     if (!newScorerId) return;
     const player = players.find((p) => p.id === newScorerId);
@@ -206,33 +201,6 @@ export function TabOverviewMatch({
 
   const handleRemoveScorer = (playerId: string) => {
     setScorers((prev) => prev.filter((s) => s.player_id !== playerId));
-  };
-
-  const handleAddAssist = () => {
-    if (!newAssistId) return;
-    const player = players.find((p) => p.id === newAssistId);
-    setAssists((prev) => {
-      const existing = prev.find((a) => a.player_id === newAssistId);
-      if (existing) {
-        return prev.map((a) =>
-          a.player_id === newAssistId ? { ...a, count: a.count + newAssistCount } : a
-        );
-      }
-      return [
-        ...prev,
-        {
-          player_id: newAssistId,
-          player_name: player?.full_name || 'Giocatore',
-          count: newAssistCount,
-        },
-      ];
-    });
-    setNewAssistId('');
-    setNewAssistCount(1);
-  };
-
-  const handleRemoveAssist = (playerId: string) => {
-    setAssists((prev) => prev.filter((a) => a.player_id !== playerId));
   };
 
   // Chiusura & Archiviazione Partita (si può risalvare per correggere: nulla viene contato due volte)
@@ -272,7 +240,6 @@ export function TabOverviewMatch({
         teamBlack: teams.black,
         mvpPlayerId: mvpPlayerId || null,
         scorers,
-        assists,
         totalCost: totalMatchCost,
         closedBy: profile?.id || '',
       });
@@ -549,7 +516,7 @@ export function TabOverviewMatch({
             </h2>
           </div>
           <p className="text-xs text-slate-400 mt-0.5">
-            Inserisci il tabellino finale (risultato, marcatori, assist e MVP). Al salvataggio, i record di vittoria, pareggio e sconfitta (V/P/S) verranno aggiornati nei profili.
+            Inserisci il tabellino finale (risultato, marcatori e MVP). Al salvataggio, i record di vittoria, pareggio e sconfitta (V/P/S) verranno aggiornati nei profili.
           </p>
         </div>
 
@@ -648,10 +615,10 @@ export function TabOverviewMatch({
             )}
           </div>
 
-          {/* Tabellino Marcatori & Assist */}
+          {/* Tabellino Marcatori */}
           <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
             <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-              Marcatori & Assist
+              Marcatori
             </h3>
 
             {/* Aggiunta Marcatore */}
@@ -697,58 +664,6 @@ export function TabOverviewMatch({
                       <button
                         type="button"
                         onClick={() => handleRemoveScorer(s.player_id)}
-                        className="text-slate-500 hover:text-rose-400"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Aggiunta Assistman */}
-            <div className="space-y-1.5 pt-2 border-t border-slate-800">
-              <div className="flex gap-2">
-                <select
-                  value={newAssistId}
-                  onChange={(e) => setNewAssistId(e.target.value)}
-                  className="flex-1 px-2.5 py-1.5 bg-slate-900 border border-slate-800 text-slate-300 rounded-lg text-xs"
-                >
-                  <option value="">Aggiungi assist...</option>
-                  {starterProfiles.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.full_name}
-                    </option>
-                  ))}
-                </select>
-                <NumberInput
-                  min={1}
-                  max={15}
-                  value={newAssistCount}
-                  onValueChange={setNewAssistCount}
-                  className="w-12 px-1.5 py-1.5 bg-slate-900 border border-slate-800 text-white rounded-lg text-xs text-center"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddAssist}
-                  className="px-2.5 py-1.5 bg-blue-500 text-white rounded-lg text-xs font-bold"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                </button>
-              </div>
-
-              {assists.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {assists.map((a) => (
-                    <span
-                      key={a.player_id}
-                      className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-slate-900 border border-slate-800 text-blue-300 text-[10px] rounded-lg font-bold"
-                    >
-                      👟 {a.player_name} ({a.count})
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveAssist(a.player_id)}
                         className="text-slate-500 hover:text-rose-400"
                       >
                         ×

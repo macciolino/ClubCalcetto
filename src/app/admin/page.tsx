@@ -357,10 +357,10 @@ export default function AdminPage() {
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                Pannello Amministratore SaaS
+                Pannello Amministratore
               </h1>
               <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400">
-                ClubCalcetto 5v5 Matchmaker • Marco B. (Admin)
+                ClubCalcetto - {profile?.full_name || 'Amministratore'}
               </span>
             </div>
           </div>
@@ -384,7 +384,7 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* 4 TAB ORIZZONTALI PRINCIPALI (SAAS & FIFA STYLE) */}
+      {/* 4 TAB ORIZZONTALI PRINCIPALI */}
       <div className="bg-slate-900/90 border border-slate-800 p-1.5 rounded-2xl shadow-xl backdrop-blur-md">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
           {/* Tab 1: Panoramica, Match & Cassa */}
