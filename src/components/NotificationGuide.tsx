@@ -77,10 +77,16 @@ export function NotificationGuide() {
           Come attivare le notifiche
         </h2>
       </div>
-      <p className="text-xs text-slate-400">
-        Ti avvisiamo quando la partita è confermata, quando entri tra i titolari dalla lista d&apos;attesa e quando si
-        aprono le iscrizioni della settimana dopo. Le notifiche sono gratuite.
-      </p>
+      <div className="text-xs text-slate-400 space-y-1">
+        <p>Ti avvisiamo quando:</p>
+        <ul className="list-disc pl-5 space-y-0.5">
+          <li>si aprono le iscrizioni della settimana prossima;</li>
+          <li>la tua partita è confermata o le squadre cambiano;</li>
+          <li>qualcuno prende il posto di chi si è ritirato;</li>
+          <li>si apre il voto per l&apos;MVP, a fine partita.</li>
+        </ul>
+        <p>Le notifiche sono gratuite.</p>
+      </div>
 
       {status && (
         <div

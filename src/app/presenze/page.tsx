@@ -1,5 +1,6 @@
 'use client';
 
+import { callNotifyApi } from '@/lib/services/pushService';
 import { firstToTenByWeek } from '@/lib/utils/presenceRanking';
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -158,6 +159,8 @@ export default function PresenzePage() {
     setIsSavingCalendar(true);
     try {
       await saveCalendarOpenUntil(next, profile?.id || '');
+      // Avvisa tutti i registrati che si possono iscrivere (il server lo manda una volta sola per apertura)
+      if (next) callNotifyApi({ type: 'voting_open', until: next }).catch(() => undefined);
     } catch (err) {
       console.warn('[Presenze] calendar error:', err);
       alert('Impossibile aggiornare il calendario.');

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
-import { adminAuth, adminDb, adminMessaging, isAdminConfigured } from '@/lib/firebase/admin';
+import { adminAuth, adminDb, isAdminConfigured } from '@/lib/firebase/admin';
+import { Message, deliver, italianDate, registeredProfileIds, sendToTokens } from '@/lib/server/push';
 import { rankDayPresences } from '@/lib/utils/presenceRanking';
 import { reconcileTeams } from '@/lib/utils/teamUtils';
 import { GeneratedTeamRecord, Presence } from '@/types/database';
@@ -8,91 +9,21 @@ import { GeneratedTeamRecord, Presence } from '@/types/database';
 export const runtime = 'nodejs';
 
 const SUPER_ADMIN_EMAIL = 'macciolino84@gmail.com';
-const SUPER_ADMIN_PROFILE_ID = 'p-1';
 
-/** Who receives notifications: 'off' nobody, 'admins' only admins (test), 'all' the players concerned. */
-type NotifyMode = 'off' | 'admins' | 'all';
 
 type NotifyRequest =
   | { type: 'test' }
   | { type: 'match_confirmed' | 'teams_changed'; date: string; playerIds: string[] }
   | { type: 'substitution'; date: string; playerIds: string[]; outName: string; inName: string }
   /** Anyone signed in: after a sign-up / withdrawal the server checks if someone takes a place in the teams */
-  | { type: 'reconcile'; date: string };
+  | { type: 'reconcile'; date: string }
+  /** Admin opened next week's sign-ups (Presenze): everyone registered is told, once per opening */
+  | { type: 'voting_open'; until: string };
 
-interface Message {
-  title: string;
-  body: string;
-  url: string;
-}
 
 const isDate = (d: unknown): d is string => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d);
 
-function italianDate(date: string): string {
-  const [y, m, d] = date.split('-').map(Number);
-  return new Date(Date.UTC(y, m - 1, d, 12)).toLocaleDateString('it-IT', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    timeZone: 'Europe/Rome',
-  });
-}
-
-async function getMode(): Promise<NotifyMode> {
-  const snap = await adminDb().doc('settings/notifications').get();
-  const mode = snap.exists ? (snap.data()?.mode as NotifyMode) : undefined;
-  return mode === 'off' || mode === 'all' ? mode : 'admins';
-}
-
-async function adminProfileIds(): Promise<string[]> {
-  const snap = await adminDb().collection('profiles').where('role', '==', 'admin').get();
-  return Array.from(new Set([SUPER_ADMIN_PROFILE_ID, ...snap.docs.map((d) => d.id)]));
-}
-
-/** Sends to every device registered by these profiles; removes tokens that no longer work. */
-async function sendToProfiles(profileIds: string[], msg: Message): Promise<number> {
-  const ids = Array.from(new Set(profileIds.filter(Boolean)));
-  const tokens: string[] = [];
-  for (let i = 0; i < ids.length; i += 30) {
-    const snap = await adminDb().collection('push_tokens').where('profile_id', 'in', ids.slice(i, i + 30)).get();
-    snap.docs.forEach((d) => tokens.push(d.id));
-  }
-  return sendToTokens(tokens, msg);
-}
-
-async function sendToTokens(tokens: string[], msg: Message): Promise<number> {
-  if (tokens.length === 0) return 0;
-  let sent = 0;
-  for (let i = 0; i < tokens.length; i += 500) {
-    const chunk = tokens.slice(i, i + 500);
-    const res = await adminMessaging().sendEachForMulticast({
-      tokens: chunk,
-      data: { title: msg.title, body: msg.body, url: msg.url },
-      webpush: { headers: { Urgency: 'high', TTL: String(24 * 3600) } },
-    });
-    sent += res.successCount;
-    const dead = res.responses
-      .map((r, idx) => (!r.success && /registration-token-not-registered|invalid-argument|invalid-registration-token/.test(r.error?.code || '') ? chunk[idx] : null))
-      .filter((t): t is string => Boolean(t));
-    await Promise.all(dead.map((t) => adminDb().doc(`push_tokens/${t}`).delete().catch(() => undefined)));
-  }
-  return sent;
-}
-
-/** Applies the mode: 'all' → the players concerned; 'admins' → all admins, marked as a test. */
-async function deliver(playerIds: string[], msg: Message): Promise<{ sent: number; mode: NotifyMode }> {
-  const mode = await getMode();
-  if (mode === 'off') return { sent: 0, mode };
-  if (mode === 'all') return { sent: await sendToProfiles(playerIds, msg), mode };
-  const sent = await sendToProfiles(await adminProfileIds(), {
-    ...msg,
-    title: `[PROVA] ${msg.title}`,
-    body: `${msg.body} (in modalità prova arriva solo agli admin; destinatari reali: ${playerIds.length} giocatori)`,
-  });
-  return { sent, mode };
-}
-
-function buildMessage(req: Exclude<NotifyRequest, { type: 'test' } | { type: 'reconcile' }>): Message {
+function buildMessage(req: Exclude<NotifyRequest, { type: 'test' } | { type: 'reconcile' } | { type: 'voting_open' }>): Message {
   const when = italianDate(req.date);
   const url = `/squadre?date=${req.date}`;
   if (req.type === 'match_confirmed') {
@@ -188,6 +119,22 @@ export async function POST(request: Request) {
         { title: '🔔 Notifica di prova', body: 'Se leggi questo messaggio le notifiche di ClubCalcetto funzionano!', url: '/profilo' }
       );
       return NextResponse.json({ ok: true, sent, devices: tokens.size });
+    }
+
+    if (body.type === 'voting_open') {
+      if (!isDate(body.until)) return NextResponse.json({ ok: false, error: 'bad_request' }, { status: 400 });
+      const calRef = adminDb().doc('settings/calendar');
+      const cal = await calRef.get();
+      // Solo se le iscrizioni sono davvero aperte fino a quella data, e una volta sola per apertura
+      if (cal.data()?.open_until !== body.until) return NextResponse.json({ ok: true, skipped: 'not_open' });
+      if (cal.data()?.voting_notified_for === body.until) return NextResponse.json({ ok: true, skipped: 'already_sent' });
+      await calRef.set({ voting_notified_for: body.until }, { merge: true });
+      const result = await deliver(await registeredProfileIds(), {
+        title: '📅 Iscrizioni aperte',
+        body: `Sono aperte le iscrizioni della settimana prossima (fino a ${italianDate(body.until)}): segna le tue presenze!`,
+        url: '/presenze',
+      });
+      return NextResponse.json({ ok: true, ...result });
     }
 
     if (!isDate(body.date) || !Array.isArray(body.playerIds)) {

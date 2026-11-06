@@ -269,6 +269,8 @@ export interface GeneratedTeamRecord {
    * 'all' = everyone can vote now (test votes are then cleared by an admin).
    */
   mvp_vote_test?: boolean | 'admins' | 'all';
+  /** Server: when the 'MVP vote is open' notification was sent (sent once) */
+  mvp_vote_notified_at?: string;
   /** History of automatic substitutions (withdrawal → first player of the waitlist) */
   substitutions?: TeamSubstitution[];
 }

@@ -102,7 +102,8 @@ export function NotificationSettingsCard() {
       {open && (
       <div className="space-y-4 border-t border-slate-800 pt-4">
       <p className="text-xs text-slate-400">
-        Partita confermata, squadre cambiate e chi subentra a chi. Gratuite (Firebase Cloud Messaging).
+        Iscrizioni aperte (a tutti i registrati), partita confermata, squadre cambiate, chi subentra a chi (ai 10
+        della partita) e voto MVP aperto (a tutti i registrati). Gratuite (Firebase Cloud Messaging).
       </p>
 
       <div className="space-y-2" role="radiogroup" aria-label="Chi riceve le notifiche">
