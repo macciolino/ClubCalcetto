@@ -26,8 +26,6 @@ export function proxy(request: NextRequest) {
     pathname.startsWith('/auth') ||
     pathname.startsWith('/api') ||
     pathname.startsWith('/_next') ||
-    pathname === '/icon' ||
-    pathname === '/apple-icon' ||
     pathname.includes('.');
 
   // In localhost o sessione attiva consentiamo la navigazione pubblica
