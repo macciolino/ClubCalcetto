@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminDb, isAdminConfigured } from '@/lib/firebase/admin';
+import { checkPromotions } from '@/lib/server/presenceWatch';
 import { deliver, italianDate, registeredProfileIds, romeDateTime, romeTimeLabel } from '@/lib/server/push';
 import { MATCH_DURATION_MIN, MVP_VOTE_DELAY_MIN, MVP_VOTE_OPEN_HOURS } from '@/lib/utils/matchUtils';
 import { GeneratedTeamRecord, Match } from '@/types/database';
@@ -77,7 +78,19 @@ async function run(request: Request) {
     });
     report[date] = `inviata (${result.mode}, ${result.sent} dispositivi)`;
   }
-  return NextResponse.json({ ok: true, report });
+  // Rete di sicurezza, una volta all'ora (per non consumare letture del piano gratuito): chi è passato dalla
+  // lista d'attesa ai titolari nei prossimi giorni, se l'avviso immediato dopo il ritiro è sfuggito
+  let promotionsChecked = 0;
+  const hourly = now.getUTCMinutes() < 10 || new URL(request.url).searchParams.get('full') === '1';
+  for (let i = 0; hourly && i < 14; i++) {
+    const date = romeDay(new Date(now.getTime() + i * 24 * 3600 * 1000));
+    const any = await db.collection('presences').where('date', '==', date).limit(1).get();
+    if (any.empty) continue;
+    await checkPromotions(date);
+    promotionsChecked += 1;
+  }
+
+  return NextResponse.json({ ok: true, report, promotionsChecked });
 }
 
 export const GET = run;

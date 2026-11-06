@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminAuth, adminDb, isAdminConfigured } from '@/lib/firebase/admin';
 import { Message, deliver, italianDate, registeredProfileIds, sendToTokens } from '@/lib/server/push';
-import { rankDayPresences } from '@/lib/utils/presenceRanking';
+import { checkPromotions } from '@/lib/server/presenceWatch';
 import { reconcileTeams } from '@/lib/utils/teamUtils';
-import { GeneratedTeamRecord, Presence } from '@/types/database';
+import { GeneratedTeamRecord } from '@/types/database';
 
 export const runtime = 'nodejs';
 
@@ -47,16 +47,8 @@ function buildMessage(req: Exclude<NotifyRequest, { type: 'test' } | { type: 're
 async function reconcile(date: string) {
   const db = adminDb();
   const teamsRef = db.doc(`generated_teams/${date}`);
-  const presSnap = await db.collection('presences').where('date', '==', date).get();
-  const presences: Presence[] = presSnap.docs.map((d) => {
-    const data = d.data() as Presence & { joined_at?: { toMillis?: () => number } };
-    const { joined_at, ...rest } = data;
-    const joined_ms = joined_at && typeof joined_at.toMillis === 'function' ? joined_at.toMillis() : undefined;
-    return { ...rest, id: rest.id || d.id, joined_ms };
-  });
-  const starterIds = rankDayPresences(presences)
-    .filter((p) => p.status === 'confirmed')
-    .map((p) => p.player_id);
+  const { starterIds } = await checkPromotions(date);
+
   const profileSnaps = starterIds.length ? await db.getAll(...starterIds.map((id) => db.doc(`profiles/${id}`))) : [];
   // Come nell'app: solo presenze con un profilo esistente, massimo 10
   const starters = starterIds

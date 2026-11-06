@@ -81,6 +81,7 @@ export function NotificationGuide() {
         <p>Ti avvisiamo quando:</p>
         <ul className="list-disc pl-5 space-y-0.5">
           <li>si aprono le iscrizioni della settimana prossima;</li>
+          <li>dalla lista d&apos;attesa entri tra i 10 titolari;</li>
           <li>la tua partita è confermata o le squadre cambiano;</li>
           <li>qualcuno prende il posto di chi si è ritirato;</li>
           <li>si apre il voto per l&apos;MVP, a fine partita.</li>
