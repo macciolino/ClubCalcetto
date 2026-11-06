@@ -6,7 +6,8 @@ import { subscribeMatches, subscribeProfiles, deleteMatchResult } from '@/lib/fi
 import { useAuth } from '@/lib/context/AuthContext';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { formatItalianDate } from '@/lib/utils/dateUtils';
-import { History, Trophy, Star, ListOrdered, CalendarDays, Coins, Trash2, Loader2 } from 'lucide-react';
+import { History, Trophy, Star, ListOrdered, CalendarDays, Coins, Trash2, Loader2, Pencil } from 'lucide-react';
+import { MatchEditModal } from '@/components/MatchEditModal';
 
 interface PlayerLine {
   id: string;
@@ -17,13 +18,12 @@ interface PlayerLine {
   lost: number;
   goals: number;
   mvp: number;
-  points: number;
 }
 
-type SortKey = 'points' | 'goals' | 'mvp' | 'played';
+type SortKey = 'won' | 'goals' | 'mvp' | 'played';
 
 const SORT_LABELS: Record<SortKey, string> = {
-  points: 'Punti',
+  won: 'Vittorie',
   goals: 'Gol',
   mvp: 'MVP',
   played: 'Presenze',
@@ -35,7 +35,7 @@ function buildLeaderboard(matches: Match[], nameOf: (id: string, fallback?: stri
   const line = (id: string, fallbackName?: string) => {
     let l = lines.get(id);
     if (!l) {
-      l = { id, name: nameOf(id, fallbackName), played: 0, won: 0, drawn: 0, lost: 0, goals: 0, mvp: 0, points: 0 };
+      l = { id, name: nameOf(id, fallbackName), played: 0, won: 0, drawn: 0, lost: 0, goals: 0, mvp: 0 };
       lines.set(id, l);
     }
     return l;
@@ -60,7 +60,7 @@ function buildLeaderboard(matches: Match[], nameOf: (id: string, fallback?: stri
     if (m.mvp_player_id) line(m.mvp_player_id).mvp += 1;
   }
 
-  return Array.from(lines.values()).map((l) => ({ ...l, points: l.won * 3 + l.drawn }));
+  return Array.from(lines.values());
 }
 
 export default function HistoryPage() {
@@ -71,7 +71,8 @@ export default function HistoryPage() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [view, setView] = useState<'leaderboard' | 'matches'>('leaderboard');
-  const [sortBy, setSortBy] = useState<SortKey>('points');
+  const [sortBy, setSortBy] = useState<SortKey>('won');
+  const [editing, setEditing] = useState<Match | null>(null);
   const [season, setSeason] = useState<string>('all');
 
   useEffect(() => {
@@ -106,7 +107,7 @@ export default function HistoryPage() {
     const list = buildLeaderboard(visibleMatches, nameOf);
     return list.sort(
       (a, b) =>
-        b[sortBy] - a[sortBy] || b.points - a.points || b.goals - a.goals || a.name.localeCompare(b.name)
+        b[sortBy] - a[sortBy] || b.won - a.won || b.goals - a.goals || a.played - b.played || a.name.localeCompare(b.name)
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleMatches, profiles, sortBy]);
@@ -127,8 +128,7 @@ export default function HistoryPage() {
 
   const handleDeleteAll = async () => {
     const label = season === 'all' ? 'TUTTO lo storico' : `lo storico ${season}`;
-    const typed = prompt(`Stai per cancellare ${label} (${visibleMatches.length} partite). Le V/P/S verranno tolte dai profili. Scrivi CANCELLA per confermare.`);
-    if (typed?.trim().toUpperCase() !== 'CANCELLA') return;
+    if (!confirm(`Vuoi davvero cancellare ${label} (${visibleMatches.length} partite)? Vittorie, pareggi e sconfitte di queste partite verranno tolti dai profili. L'operazione non si può annullare.`)) return;
     setDeleting('all');
     try {
       for (const m of visibleMatches) {
@@ -269,8 +269,9 @@ export default function HistoryPage() {
                     <th className="text-left px-3 py-3">#</th>
                     <th className="text-left px-2 py-3">Giocatore</th>
                     <th className="px-2 py-3" title="Presenze">PG</th>
-                    <th className="px-2 py-3" title="Vittorie / Pareggi / Sconfitte">V-P-S</th>
-                    <th className="px-2 py-3" title="Punti (3 vittoria, 1 pareggio)">Pt</th>
+                    <th className="px-2 py-3" title="Partite vinte">V</th>
+                    <th className="px-2 py-3" title="Pareggi">P</th>
+                    <th className="px-2 py-3" title="Sconfitte">S</th>
                     <th className="px-2 py-3">Gol</th>
                     <th className="px-3 py-3">MVP</th>
                   </tr>
@@ -281,11 +282,9 @@ export default function HistoryPage() {
                       <td className="px-3 py-2.5 font-mono text-slate-500">{idx + 1}</td>
                       <td className="px-2 py-2.5 font-semibold whitespace-nowrap">{l.name}</td>
                       <td className="px-2 py-2.5 text-center font-mono">{l.played}</td>
-                      <td className="px-2 py-2.5 text-center font-mono whitespace-nowrap">
-                        <span className="text-emerald-400">{l.won}</span>-<span className="text-amber-400">{l.drawn}</span>-
-                        <span className="text-rose-400">{l.lost}</span>
-                      </td>
-                      <td className="px-2 py-2.5 text-center font-mono font-black text-white">{l.points}</td>
+                      <td className="px-2 py-2.5 text-center font-mono font-black text-emerald-400">{l.won}</td>
+                      <td className="px-2 py-2.5 text-center font-mono text-amber-400">{l.drawn}</td>
+                      <td className="px-2 py-2.5 text-center font-mono text-rose-400">{l.lost}</td>
                       <td className="px-2 py-2.5 text-center font-mono">{l.goals}</td>
                       <td className="px-3 py-2.5 text-center font-mono">{l.mvp}</td>
                     </tr>
@@ -303,15 +302,27 @@ export default function HistoryPage() {
             const mvpName = m.mvp_player_id ? nameOf(m.mvp_player_id) : null;
             return (
               <article key={m.id} className="bg-slate-900 border border-slate-800 rounded-3xl p-5 space-y-4">
-                <header className="flex items-center justify-between gap-2">
+                <header className="flex flex-wrap items-center justify-between gap-2">
                   <h2 className="text-sm font-bold text-white">{formatItalianDate(m.match_date || m.id)}</h2>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => setEditing(m)}
+                      disabled={deleting !== null}
+                      aria-label="Modifica partita"
+                      className="ml-auto flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-emerald-300 hover:bg-emerald-500/15 disabled:opacity-50"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      Modifica
+                    </button>
+                  )}
                   {isAdmin && (
                     <button
                       type="button"
                       onClick={() => handleDeleteMatch(m)}
                       disabled={deleting !== null}
                       aria-label="Cancella partita dallo storico"
-                      className="ml-auto flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-rose-300 hover:bg-rose-500/15 disabled:opacity-50"
+                      className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-rose-300 hover:bg-rose-500/15 disabled:opacity-50"
                     >
                       {deleting === m.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                       Cancella
@@ -371,6 +382,15 @@ export default function HistoryPage() {
             );
           })}
         </div>
+      )}
+
+      {editing && (
+        <MatchEditModal
+          match={editing}
+          profiles={profiles}
+          closedBy={profile?.id || ''}
+          onClose={() => setEditing(null)}
+        />
       )}
     </div>
   );

@@ -18,7 +18,7 @@ import {
   increment,
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './config';
-import { Profile, Presence, StatCategory, Match, GeneratedTeamRecord, AppSettings, CalendarSettings, MatchOutcome, MatchScorer, MatchTeamPlayer } from '@/types/database';
+import { Profile, Presence, StatCategory, Match, GeneratedTeamRecord, AppSettings, CalendarSettings, MatchOutcome, MatchScorer, MatchTeamPlayer, TeamSubstitution } from '@/types/database';
 import { rankDayPresences, rankPresencesByDate } from '@/lib/services/presenceService';
 import { normalizeCategories } from '@/lib/utils/statUtils';
 
@@ -552,15 +552,84 @@ export function subscribeGeneratedTeams(
   }
 }
 
-export async function saveGeneratedTeamsDoc(record: GeneratedTeamRecord): Promise<void> {
+const teamIdsKey = (white: { id: string }[] = [], black: { id: string }[] = []) =>
+  `${white.map((p) => p.id).join(',')}|${black.map((p) => p.id).join(',')}`;
+
+/**
+ * Saves the teams of a match day (generate, "Ribilancia" or manual edit by an admin).
+ * A confirmed match stays confirmed: the new teams become the official ones.
+ */
+export async function saveTeams(
+  date: string,
+  white: MatchTeamPlayer[],
+  black: MatchTeamPlayer[],
+  extra: { manual: boolean; whiteAvg?: number; blackAvg?: number }
+): Promise<void> {
   if (!isFirebaseConfigured) return;
-  try {
-    await setDoc(doc(db, 'generated_teams', record.date), record, { merge: true });
-  } catch (err) {
-    console.warn('[Firestore] saveGeneratedTeamsDoc error:', err);
-  }
+  const now = new Date().toISOString();
+  const ref = doc(db, 'generated_teams', date);
+  const snap = await getDoc(ref);
+  const existing = snap.exists() ? (snap.data() as GeneratedTeamRecord) : null;
+  const record: GeneratedTeamRecord = {
+    id: date,
+    date,
+    team_white: white,
+    team_black: black,
+    created_at: existing?.created_at || now,
+    updated_at: now,
+    manual: extra.manual,
+    confirmed: existing?.confirmed || false,
+    substitutions: existing?.substitutions || [],
+  };
+  if (existing?.confirmed_at) record.confirmed_at = existing.confirmed_at;
+  if (existing?.confirmed_by) record.confirmed_by = existing.confirmed_by;
+  if (typeof extra.whiteAvg === 'number') record.white_score_avg = extra.whiteAvg;
+  if (typeof extra.blackAvg === 'number') record.black_score_avg = extra.blackAvg;
+  // Riscrive l'intero documento: le vecchie squadre salvate come profili completi spariscono
+  await setDoc(ref, record);
 }
 
+/** Admin confirms the match: from now on these are the teams (players get notified). */
+export async function confirmTeams(date: string, confirmedBy: string, confirmed = true): Promise<void> {
+  if (!isFirebaseConfigured) return;
+  await updateDoc(doc(db, 'generated_teams', date), {
+    confirmed,
+    confirmed_at: confirmed ? new Date().toISOString() : null,
+    confirmed_by: confirmed ? confirmedBy : null,
+    updated_at: new Date().toISOString(),
+  });
+}
+
+/**
+ * Saves the substitutions computed by reconcileTeams (a starter withdrew, the first of the
+ * waitlist takes exactly that place). Written only if the teams did not change in the meantime,
+ * so two admins with the page open cannot apply it twice. Returns true if this call wrote it.
+ */
+export async function applyTeamSubstitutions(
+  date: string,
+  expected: { white: { id: string }[]; black: { id: string }[] },
+  next: { white: MatchTeamPlayer[]; black: MatchTeamPlayer[] },
+  substitutions: Omit<TeamSubstitution, 'at'>[]
+): Promise<boolean> {
+  if (!isFirebaseConfigured || substitutions.length === 0) return false;
+  const ref = doc(db, 'generated_teams', date);
+  return runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) return false;
+    const current = snap.data() as GeneratedTeamRecord;
+    if (teamIdsKey(current.team_white, current.team_black) !== teamIdsKey(expected.white, expected.black)) {
+      return false;
+    }
+    const now = new Date().toISOString();
+    tx.update(ref, {
+      team_white: next.white,
+      team_black: next.black,
+      substitutions: [...(current.substitutions || []), ...substitutions.map((s) => ({ ...s, at: now }))],
+      updated_at: now,
+    });
+    return true;
+  });
+}
 
 // ==========================================
 // 8. APP SETTINGS (Collection: 'settings', Doc: 'app_config')

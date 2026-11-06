@@ -228,14 +228,44 @@ export interface CalendarSettings {
   updated_by?: string;
 }
 
+/** Player saved in a generated team. Old docs stored whole profiles (full_name), new ones store {id, name}. */
+export interface StoredTeamPlayer {
+  id: string;
+  name?: string;
+  full_name?: string;
+}
+
+export interface TeamSubstitution {
+  out_id: string;
+  out_name: string;
+  in_id: string;
+  in_name: string;
+  at: string;
+}
+
+/**
+ * Teams of a match day (collection generated_teams, doc id = date).
+ * Once saved they do NOT change by themselves: only a substitution (a starter withdraws and someone
+ * from the waitlist takes the place), a manual edit or "Ribilancia" by an admin can change them.
+ * Slot order = 1-1-2-1 diamond: [POR, DIF, EST SX, EST DX, PUN].
+ */
 export interface GeneratedTeamRecord {
   id: string;
   date: string;
-  team_white: Profile[];
-  team_black: Profile[];
-  white_score_avg: number;
-  black_score_avg: number;
+  team_white: StoredTeamPlayer[];
+  team_black: StoredTeamPlayer[];
+  white_score_avg?: number;
+  black_score_avg?: number;
   created_at: string;
+  updated_at?: string;
+  /** Teams edited by hand by an admin */
+  manual?: boolean;
+  /** Admin confirmed the match with these teams (players are notified) */
+  confirmed?: boolean;
+  confirmed_at?: string;
+  confirmed_by?: string;
+  /** History of automatic substitutions (withdrawal → first player of the waitlist) */
+  substitutions?: TeamSubstitution[];
 }
 
 export interface AppSettings {

@@ -4,7 +4,10 @@ import { NumberInput } from '@/components/NumberInput';
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/context/AuthContext';
-import { Profile, Presence, Match, GeneratedTeamRecord, SportField } from '@/types/database';
+import { Profile, Presence, Match, GeneratedTeamRecord, SportField, MatchTeamPlayer } from '@/types/database';
+import { reconcileTeams, profileForTeamPlayer, splitKey, toTeamPlayer, SLOT_LABELS } from '@/lib/utils/teamUtils';
+import { notifyMatchPlayers } from '@/lib/services/notificationService';
+import { TeamSwapEditor } from '@/components/TeamSwapEditor';
 import { getStoredFields, subscribeSportFields } from '@/lib/services/fieldService';
 import { effectiveMatchCost, effectiveMatchTime, effectiveMatchLocation, fieldLabel } from '@/lib/utils/matchUtils';
 import { 
@@ -12,14 +15,16 @@ import {
   saveMatchFields,
   subscribeAppSettings,
   subscribeGeneratedTeams, 
-  saveGeneratedTeamsDoc, 
+  saveTeams,
+  confirmTeams,
+  applyTeamSubstitutions,
   subscribePresences, 
   subscribeProfiles 
 } from '@/lib/firebase/firestoreService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { getStoredPlayers } from '@/lib/services/playerService';
 import { getOfficialMatchDate } from '@/lib/services/presenceService';
-import { balanceTeams, BalancedTeamsResult, getPlayerOverallRating } from '@/lib/algorithm/teamBalancer';
+import { balanceTeams, BalancedTeamsResult, summarizeTeams } from '@/lib/algorithm/teamBalancer';
 import { VirtualPitch } from '@/components/VirtualPitch';
 import { StatBadge } from '@/components/StatBadge';
 import { formatItalianDate } from '@/lib/utils/dateUtils';
@@ -41,7 +46,11 @@ import {
   Shield,
   Zap,
   Loader2,
-  Bot
+  Bot,
+  Lock,
+  BadgeCheck,
+  Pencil,
+  ArrowLeftRight
 } from 'lucide-react';
 
 
@@ -76,7 +85,12 @@ function SquadreContent() {
 
   const [presences, setPresences] = useState<Presence[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [balancedResult, setBalancedResult] = useState<BalancedTeamsResult | null>(null);
+  const [teamRecord, setTeamRecord] = useState<GeneratedTeamRecord | null>(null);
+  const [tab, setTab] = useState<'pitch' | 'manual'>('pitch');
+  const [manualDraft, setManualDraft] = useState<{ white: MatchTeamPlayer[]; black: MatchTeamPlayer[] } | null>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [isSavingManual, setIsSavingManual] = useState(false);
+  const [infoMsg, setInfoMsg] = useState('');
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
@@ -149,12 +163,16 @@ function SquadreContent() {
     if (!isFirebaseConfigured || !selectedDate) return;
     setPresences([]);
     setSavedMatch(null);
+    setTeamRecord(null);
+    setTab('pitch');
     dirtyFields.current.clear();
     const unsubMatch = subscribeMatch(selectedDate, (m) => setSavedMatch(m));
     const unsubPres = subscribePresences(selectedDate, (pres) => setPresences(pres));
+    const unsubTeams = subscribeGeneratedTeams(selectedDate, (rec) => setTeamRecord(rec));
     return () => {
       unsubMatch();
       unsubPres();
+      unsubTeams();
     };
   }, [selectedDate]);
 
@@ -218,75 +236,162 @@ function SquadreContent() {
   };
   const hasCustomValues = Boolean(savedMatch?.cost_override || savedMatch?.time_override);
 
-  // Calcola i 10 titolari specifici per la data selezionata
+  // Calcola i 10 titolari specifici per la data selezionata (già in ordine di iscrizione)
   const confirmedPresences = presences.filter((p) => p.date === selectedDate && p.status === 'confirmed');
   const starterProfiles: Profile[] = confirmedPresences
-    .map((p) => {
-      const found = profiles.find((prof) => prof.id === p.player_id || prof.user_id === p.player_id);
-      if (!found) {
-        console.warn(`[TeamBalancer Debug] Giocatore ID "${p.player_id}" ha presenza confermata ma non è presente nella lista profili.`);
-      }
-      return found;
-    })
-    .filter((prof): prof is Profile => prof !== undefined);
+    .map((p) => profiles.find((prof) => prof.id === p.player_id || prof.user_id === p.player_id))
+    .filter((prof): prof is Profile => prof !== undefined)
+    .slice(0, 10);
+  const starters = starterProfiles.map(toTeamPlayer);
 
-  // Genera in automatico le squadre bilanciate quando ci sono 10 titolari (si ricalcola se cambiano i titolari)
-  const startersKey = starterProfiles.slice(0, 10).map((p) => p.id).join('|');
+  // Squadre: si generano UNA volta e restano quelle. Cambiano solo se qualcuno subentra
+  // (prende esattamente il posto di chi si è ritirato), con una modifica manuale o con "Ribilancia".
+  const isCompleted = savedMatch?.status === 'completed';
+  const reconciled = teamRecord ? reconcileTeams(teamRecord, starters) : null;
+  const teams: { white: MatchTeamPlayer[]; black: MatchTeamPlayer[] } | null =
+    isCompleted && savedMatch?.team_white?.length && savedMatch?.team_black?.length
+      ? { white: savedMatch.team_white, black: savedMatch.team_black }
+      : reconciled
+      ? { white: reconciled.white, black: reconciled.black }
+      : null;
+  const balancedResult: BalancedTeamsResult | null = teams
+    ? summarizeTeams(
+        teams.white.map((p) => profileForTeamPlayer(p, profiles)),
+        teams.black.map((p) => profileForTeamPlayer(p, profiles))
+      )
+    : null;
+  const isConfirmed = Boolean(teamRecord?.confirmed);
+  const teamsComplete = Boolean(teams && teams.white.length === 5 && teams.black.length === 5);
+  const allTeamIds = teams ? [...teams.white, ...teams.black].map((p) => p.id) : [];
+
+  // Sostituzioni: quando un admin apre la pagina vengono salvate (una sola volta) e si avvisano i giocatori
+  const savingSubs = useRef<string>('');
+  const subsKey = reconciled ? reconciled.substitutions.map((x) => `${x.out_id}>${x.in_id}`).join(',') : '';
   useEffect(() => {
-    const ten = starterProfiles.slice(0, 10);
-    setBalancedResult(ten.length >= 10 ? balanceTeams(ten) : null);
+    if (!isClientAdmin || isCompleted || !teamRecord || !reconciled || reconciled.substitutions.length === 0) return;
+    const key = `${selectedDate}:${subsKey}`;
+    if (savingSubs.current === key) return;
+    savingSubs.current = key;
+    applyTeamSubstitutions(
+      selectedDate,
+      { white: teamRecord.team_white, black: teamRecord.team_black },
+      { white: reconciled.white, black: reconciled.black },
+      reconciled.substitutions
+    )
+      .then((wrote) => {
+        if (!wrote) return;
+        reconciled.substitutions.forEach((sub) =>
+          notifyMatchPlayers({
+            type: 'substitution',
+            date: selectedDate,
+            playerIds: [...reconciled.white, ...reconciled.black].map((p) => p.id),
+            outName: sub.out_name,
+            inName: sub.in_name,
+          })
+        );
+      })
+      .catch((err) => console.warn('[Squadre] salvataggio sostituzione non riuscito:', err));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startersKey]);
+  }, [isClientAdmin, isCompleted, teamRecord, subsKey, selectedDate]);
 
-  useEffect(() => {
-    console.log(`[TeamBalancer Debug] Data: ${selectedDate}`, {
-      totaliPresenze: presences.length,
-      confermatiPerData: confirmedPresences.length,
-      profiliTrovati: starterProfiles.length,
-      bottoneAbilitato: starterProfiles.length >= 10,
-    });
-  }, [selectedDate, presences.length, confirmedPresences.length, starterProfiles.length]);
+  const flash = (msg: string) => {
+    setInfoMsg(msg);
+    setTimeout(() => setInfoMsg(''), 6000);
+  };
 
-  // Esecuzione Algoritmo di Bilanciamento Squadre
-  const handleGenerateTeams = () => {
+  // Genera (prima volta) o Ribilancia (squadre diverse, comunque equilibrate)
+  const handleGenerateTeams = async () => {
     setErrorMsg('');
     if (!isStrictAdmin) {
       setErrorMsg('La generazione delle squadre è riservata esclusivamente agli amministratori.');
       return;
     }
-    console.log('[TeamBalancer Debug] Tentativo generazione squadre. Titolari pronti:', starterProfiles.length);
     if (starterProfiles.length < 10) {
-      const msg = `Sono necessari esattamente 10 giocatori confermati per generare le squadre. Attualmente: ${starterProfiles.length}/10 per la data ${selectedDate}.`;
-      console.warn('[TeamBalancer Debug] Impossibile generare:', msg);
-      setErrorMsg(msg);
+      setErrorMsg(`Servono 10 titolari per generare le squadre. Attualmente: ${starterProfiles.length}/10.`);
+      return;
+    }
+    const isRebalance = Boolean(teamRecord);
+    if (isRebalance && isConfirmed && !confirm('La partita è già confermata con queste squadre. Vuoi davvero rimescolarle? I giocatori verranno avvisati.')) {
       return;
     }
 
     setIsGenerating(true);
     try {
-      // Esegui algoritmo deterministico sui primi 10 titolari
-      const tenStarters = starterProfiles.slice(0, 10);
-      console.log('[TeamBalancer Debug] Esecuzione balanceTeams con:', tenStarters.map((p) => p.full_name));
-      const result = balanceTeams(tenStarters);
-      setBalancedResult(result);
-      console.log('[TeamBalancer Debug] Generazione completata con successo!');
-
-      // Salva match e squadre generate su Firebase Firestore se connesso
-      saveGeneratedTeamsDoc({
-        id: selectedDate,
-        date: selectedDate,
-        team_white: result.teamWhite,
-        team_black: result.teamBlack,
-        white_score_avg: result.whiteStats.overallAvg,
-        black_score_avg: result.blackStats.overallAvg,
-        created_at: new Date().toISOString(),
+      const current = teams ? splitKey(teams.white.map((p) => p.id), teams.black.map((p) => p.id)) : undefined;
+      const result = balanceTeams(starterProfiles, isRebalance ? { excludeSplitKey: current } : {});
+      await saveTeams(selectedDate, result.teamWhite.map(toTeamPlayer), result.teamBlack.map(toTeamPlayer), {
+        manual: false,
+        whiteAvg: result.whiteStats.overallAvg,
+        blackAvg: result.blackStats.overallAvg,
       });
+      if (isRebalance && isConfirmed) {
+        notifyMatchPlayers({ type: 'teams_changed', date: selectedDate, playerIds: starters.map((p) => p.id) });
+      }
+      setTab('pitch');
+      flash(isRebalance ? 'Squadre ribilanciate e salvate.' : 'Squadre generate e salvate: restano queste finché non le cambi tu.');
     } catch (err: unknown) {
       console.error('Generazione fallita:', err);
-      const msg = err instanceof Error ? err.message : 'Errore algoritmo';
-      setErrorMsg(msg);
+      setErrorMsg(err instanceof Error ? err.message : 'Generazione non riuscita. Riprova.');
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  // Conferma partita: da qui in poi queste sono le squadre (i giocatori vengono avvisati)
+  const handleConfirmMatch = async () => {
+    if (!teamRecord || !teamsComplete) return;
+    if (!confirm(`Confermi la partita del ${formatItalianDate(selectedDate)} con queste squadre?`)) return;
+    setIsConfirming(true);
+    try {
+      await confirmTeams(selectedDate, profile?.id || '');
+      notifyMatchPlayers({ type: 'match_confirmed', date: selectedDate, playerIds: allTeamIds });
+      flash('Partita confermata. Le squadre restano queste salvo sostituzioni, modifiche manuali o Ribilancia.');
+    } catch (err) {
+      console.warn('[Squadre] conferma non riuscita:', err);
+      setErrorMsg('Conferma non riuscita. Riprova.');
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  const handleUnconfirmMatch = async () => {
+    if (!confirm('Annullare la conferma della partita?')) return;
+    try {
+      await confirmTeams(selectedDate, profile?.id || '', false);
+    } catch (err) {
+      console.warn('[Squadre] annullamento conferma non riuscito:', err);
+    }
+  };
+
+  // Modifica manuale (tab a parte, solo admin)
+  const openManualTab = () => {
+    if (teams) setManualDraft({ white: [...teams.white], black: [...teams.black] });
+    setTab('manual');
+  };
+
+  const handleSaveManual = async () => {
+    if (!manualDraft) return;
+    setIsSavingManual(true);
+    try {
+      const sum = summarizeTeams(
+        manualDraft.white.map((p) => profileForTeamPlayer(p, profiles)),
+        manualDraft.black.map((p) => profileForTeamPlayer(p, profiles))
+      );
+      await saveTeams(selectedDate, manualDraft.white, manualDraft.black, {
+        manual: true,
+        whiteAvg: sum.whiteStats.overallAvg,
+        blackAvg: sum.blackStats.overallAvg,
+      });
+      if (isConfirmed) {
+        notifyMatchPlayers({ type: 'teams_changed', date: selectedDate, playerIds: allTeamIds });
+      }
+      setTab('pitch');
+      flash('Squadre modificate e salvate.');
+    } catch (err) {
+      console.warn('[Squadre] salvataggio manuale non riuscito:', err);
+      setErrorMsg('Salvataggio non riuscito. Riprova.');
+    } finally {
+      setIsSavingManual(false);
     }
   };
 
@@ -362,6 +467,7 @@ function SquadreContent() {
   };
 
   const costPerPerson = (Number(totalCost || 80) / 10).toFixed(2);
+  const selectedField = fields.find((f) => fieldLabel(f) === matchLocation || f.name === matchLocation);
 
   return (
     <div className="space-y-6 pb-16">
@@ -470,6 +576,20 @@ function SquadreContent() {
                 className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-medium focus:outline-none focus:border-emerald-500 disabled:opacity-70 text-xs"
               />
             )}
+            {selectedField?.address && (
+              <a
+                href={
+                  selectedField.maps_url ||
+                  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${selectedField.name} ${selectedField.address}`)}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 flex items-start gap-1 text-[11px] text-emerald-300 hover:underline"
+              >
+                <MapPin className="h-3.5 w-3.5 flex-shrink-0 mt-px" />
+                <span>{selectedField.address}</span>
+              </a>
+            )}
           </div>
 
           {/* Costo Totale */}
@@ -507,40 +627,64 @@ function SquadreContent() {
           </p>
         )}
 
-        {/* Pulsante di Calcolo / Generazione Squadre */}
-        <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
+        {/* Stato squadre + pulsanti admin */}
+        <div className="pt-2 space-y-3">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
             {starterProfiles.length >= 10 ? (
               <span className="text-emerald-400 font-semibold flex items-center gap-1.5">
-                <Check className="h-4 w-4" /> 10 titolari confermati per il {formatItalianDate(selectedDate)}
+                <Check className="h-4 w-4" /> 10 titolari per il {formatItalianDate(selectedDate)}
               </span>
             ) : (
               <span className="text-amber-400 font-semibold flex items-center gap-1.5">
-                <AlertCircle className="h-4 w-4" /> Mancano ancora {10 - starterProfiles.length} giocatori per raggiungere 10
+                <AlertCircle className="h-4 w-4" /> Mancano {10 - starterProfiles.length} giocatori per arrivare a 10
               </span>
             )}
-
+            {isCompleted ? (
+              <span className="text-slate-300 font-semibold flex items-center gap-1.5">
+                <Lock className="h-4 w-4 text-slate-400" /> Partita archiviata: squadre bloccate
+              </span>
+            ) : isConfirmed ? (
+              <span className="text-emerald-300 font-semibold flex items-center gap-1.5">
+                <BadgeCheck className="h-4 w-4" /> Partita confermata
+                {isClientAdmin && (
+                  <button type="button" onClick={handleUnconfirmMatch} className="ml-1 text-slate-400 underline font-normal">
+                    annulla
+                  </button>
+                )}
+              </span>
+            ) : teamRecord ? (
+              <span className="text-slate-400 flex items-center gap-1.5">
+                <Shield className="h-4 w-4" /> Squadre salvate, partita non ancora confermata
+              </span>
+            ) : null}
           </div>
 
-          {isClientAdmin ? (
-            <button
-              type="button"
-              onClick={handleGenerateTeams}
-              disabled={isGenerating || starterProfiles.length < 10}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/25 transition-all disabled:opacity-40 hover:scale-105 cursor-pointer"
-            >
-              {isGenerating ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Shuffle className="h-4 w-4" />
+          {isClientAdmin && !isCompleted ? (
+            <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
+              <button
+                type="button"
+                onClick={handleGenerateTeams}
+                disabled={isGenerating || starterProfiles.length < 10}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 bg-slate-800 hover:bg-slate-700 text-white font-black rounded-xl text-xs uppercase tracking-wider border border-slate-700 transition-all disabled:opacity-40 cursor-pointer"
+              >
+                {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shuffle className="h-4 w-4" />}
+                {teamRecord ? 'Ribilancia Squadre' : 'Genera Squadre Bilanciate'}
+              </button>
+              {teamRecord && !isConfirmed && (
+                <button
+                  type="button"
+                  onClick={handleConfirmMatch}
+                  disabled={isConfirming || !teamsComplete}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/25 transition-all disabled:opacity-40 cursor-pointer"
+                >
+                  {isConfirming ? <Loader2 className="h-4 w-4 animate-spin" /> : <BadgeCheck className="h-4 w-4" />}
+                  Conferma Partita
+                </button>
               )}
-              {balancedResult ? 'Ribilancia Squadre' : 'Genera Squadre Bilanciate'}
-            </button>
-          ) : (
-            <div className="text-xs text-slate-500 italic">
-              La generazione è riservata agli amministratori.
             </div>
-          )}
+          ) : !isClientAdmin && !teamRecord ? (
+            <p className="text-xs text-slate-500 italic">Le squadre vengono generate e confermate dagli amministratori.</p>
+          ) : null}
         </div>
       </div>
 
@@ -548,6 +692,61 @@ function SquadreContent() {
         <div className="p-3 text-xs bg-rose-500/15 border border-rose-500/30 text-rose-300 rounded-2xl flex items-center gap-2">
           <AlertCircle className="h-4 w-4 flex-shrink-0" />
           <span>{errorMsg}</span>
+        </div>
+      )}
+
+      {infoMsg && (
+        <div className="p-3 text-xs bg-emerald-500/15 border border-emerald-500/30 text-emerald-200 rounded-2xl flex items-center gap-2">
+          <Check className="h-4 w-4 flex-shrink-0" />
+          <span>{infoMsg}</span>
+        </div>
+      )}
+
+      {/* Sostituzioni avvenute (chi si è ritirato e chi ha preso il posto) */}
+      {!isCompleted && (teamRecord?.substitutions?.length || reconciled?.substitutions.length) ? (
+        <div className="p-3 text-xs bg-amber-500/10 border border-amber-500/30 text-amber-200 rounded-2xl space-y-1">
+          {[...(teamRecord?.substitutions || []), ...(reconciled?.substitutions || [])].slice(-4).map((sub, i) => (
+            <div key={`${sub.out_id}-${sub.in_id}-${i}`} className="flex items-center gap-1.5">
+              <ArrowLeftRight className="h-3.5 w-3.5 flex-shrink-0" />
+              <span>
+                <strong>{sub.in_name}</strong> subentra al posto di {sub.out_name}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {reconciled && reconciled.emptySlots > 0 && !isCompleted && (
+        <div className="p-3 text-xs bg-rose-500/10 border border-rose-500/30 text-rose-200 rounded-2xl flex items-center gap-2">
+          <AlertCircle className="h-4 w-4 flex-shrink-0" />
+          <span>
+            {reconciled.emptySlots === 1 ? 'Manca 1 giocatore' : `Mancano ${reconciled.emptySlots} giocatori`}: il posto verrà preso dal primo che si iscrive.
+          </span>
+        </div>
+      )}
+
+      {/* Tab: campo / modifica manuale (solo admin) */}
+      {isClientAdmin && teams && !isCompleted && (
+        <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl text-sm">
+          <button
+            type="button"
+            onClick={() => setTab('pitch')}
+            aria-pressed={tab === 'pitch'}
+            className={`flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg font-bold transition-all ${
+              tab === 'pitch' ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Trophy className="h-4 w-4" /> Campo
+          </button>
+          <button
+            type="button"
+            onClick={openManualTab}
+            aria-pressed={tab === 'manual'}
+            className={`flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg font-bold transition-all ${
+              tab === 'manual' ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Pencil className="h-4 w-4" /> Modifica manuale
+          </button>
         </div>
       )}
 
@@ -565,7 +764,36 @@ function SquadreContent() {
       )}
 
       {/* RISULTATO: CAMPO VIRTUALE & CONDIVISIONE */}
-      {balancedResult ? (
+      {tab === 'manual' && manualDraft && isClientAdmin && !isCompleted ? (
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-4">
+          <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+            <Pencil className="h-4 w-4 text-emerald-400" /> Modifica manuale squadre
+          </h3>
+          <TeamSwapEditor
+            white={manualDraft.white}
+            black={manualDraft.black}
+            onChange={(white, black) => setManualDraft({ white, black })}
+          />
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2 border-t border-slate-800">
+            <button
+              type="button"
+              onClick={() => setTab('pitch')}
+              className="w-full sm:w-auto px-5 py-3 rounded-xl text-xs font-bold text-slate-300 border border-slate-700 hover:bg-slate-800"
+            >
+              Annulla
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveManual}
+              disabled={isSavingManual}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs uppercase tracking-wider disabled:opacity-40"
+            >
+              {isSavingManual ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+              Salva squadre
+            </button>
+          </div>
+        </div>
+      ) : balancedResult ? (
         <div className="space-y-6 animate-in fade-in duration-300">
           {/* Card Bilanciamento e Statistiche a Confronto */}
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-4">
@@ -614,6 +842,14 @@ function SquadreContent() {
                     {balancedResult.whiteStats.techniqueAvg}
                   </div>
                 </div>
+                <ul className="pt-2 border-t border-slate-800 space-y-1 text-xs">
+                  {balancedResult.teamWhite.map((p, i) => (
+                    <li key={p.id} className="flex items-center gap-2 text-slate-200">
+                      <span className="w-11 flex-shrink-0 font-mono text-[10px] font-bold text-emerald-400">{SLOT_LABELS[i]}</span>
+                      <span className="truncate">{p.full_name}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
 
               {/* Nera */}
@@ -642,6 +878,14 @@ function SquadreContent() {
                     {balancedResult.blackStats.techniqueAvg}
                   </div>
                 </div>
+                <ul className="pt-2 border-t border-slate-800 space-y-1 text-xs">
+                  {balancedResult.teamBlack.map((p, i) => (
+                    <li key={p.id} className="flex items-center gap-2 text-slate-200">
+                      <span className="w-11 flex-shrink-0 font-mono text-[10px] font-bold text-emerald-400">{SLOT_LABELS[i]}</span>
+                      <span className="truncate">{p.full_name}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             </div>
 
@@ -780,7 +1024,7 @@ function SquadreContent() {
           </div>
           <h3 className="text-base font-bold text-white">Nessuna squadra generata per questa data</h3>
           <p className="text-xs text-slate-400 max-w-md mx-auto">
-            Quando 10 giocatori confermano la presenza per la giornata selezionata, l'Admin può cliccare su &quot;Genera Squadre Bilanciate&quot; per visualizzare il campo virtuale e condividere le convocazioni.
+            Quando ci sono 10 titolari un amministratore genera le squadre: da quel momento restano quelle (cambiano solo se qualcuno subentra, con la modifica manuale o con &quot;Ribilancia&quot;).
           </p>
         </div>
       )}

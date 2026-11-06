@@ -3,6 +3,7 @@
 import React, { forwardRef } from 'react';
 import { Profile } from '@/types/database';
 import { 
+  PlayerPitchPosition,
   WHITE_TEAM_COORDINATES, 
   BLACK_TEAM_COORDINATES, 
   getOrganicCoordinates,
@@ -144,93 +145,23 @@ export const VirtualPitch = forwardRef<HTMLDivElement, VirtualPitchProps>(
             <span className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-slate-900 border border-amber-400 ring-1 ring-slate-700" />
           </div>
 
-          {/* GIOCATORI: SQUADRA BIANCA */}
-          {teamWhite.map((player, idx) => {
-            const pos = whitePositions[idx] || { x: 50, y: 20, roleLabel: 'CALC' };
-            const ovr = getPlayerOverallRating(player);
-            const shortName = getShortPlayerName(player.full_name);
-
-            return (
-              <div
-                key={`white-${player.id || idx}`}
-                className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group transition-transform z-10"
-                style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
-              >
-                {/* Badge Maglia Giocatore */}
-                <div className="relative flex items-center justify-center">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-b from-white to-slate-200 text-slate-900 font-black shadow-lg ring-1.5 sm:ring-2 ring-white/95 flex items-center justify-center overflow-hidden">
-                    {player.avatar_url ? (
-                      <img
-                        src={player.avatar_url}
-                        alt={player.full_name}
-                        className="w-full h-full object-cover"
-                        referrerPolicy="no-referrer"
-                      />
-                    ) : (
-                      <span className="text-[11px] sm:text-sm font-black">
-                        {player.full_name ? player.full_name.charAt(0).toUpperCase() : 'P'}
-                      </span>
-                    )}
-                  </div>
-                  {/* Rating pill */}
-                  <span className="absolute -top-1 -right-1 sm:-right-1.5 bg-emerald-600 text-white font-mono text-[8px] sm:text-[9px] font-bold px-1 sm:px-1.5 py-0 rounded-full border border-white/80 shadow-sm leading-tight select-none">
-                    {ovr}
-                  </span>
-                </div>
-                {/* Nome Cartellino */}
-                <div
-                  title={player.full_name}
-                  className="mt-0.5 bg-slate-950/95 backdrop-blur-sm text-white text-[8px] sm:text-[9.5px] font-bold px-1.5 py-0.5 rounded shadow max-w-[64px] xs:max-w-[72px] sm:max-w-[88px] truncate border border-white/25 text-center leading-tight whitespace-nowrap select-none"
-                >
-                  {shortName}
-                </div>
-              </div>
-            );
-          })}
-
-          {/* GIOCATORI: SQUADRA NERA */}
-          {teamBlack.map((player, idx) => {
-            const pos = blackPositions[idx] || { x: 50, y: 75, roleLabel: 'CALC' };
-            const ovr = getPlayerOverallRating(player);
-            const shortName = getShortPlayerName(player.full_name);
-
-            return (
-              <div
-                key={`black-${player.id || idx}`}
-                className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group transition-transform z-10"
-                style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
-              >
-                {/* Badge Maglia Giocatore */}
-                <div className="relative flex items-center justify-center">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-b from-slate-900 to-black text-white font-black shadow-lg ring-1.5 sm:ring-2 ring-amber-400/90 flex items-center justify-center overflow-hidden">
-                    {player.avatar_url ? (
-                      <img
-                        src={player.avatar_url}
-                        alt={player.full_name}
-                        className="w-full h-full object-cover"
-                        referrerPolicy="no-referrer"
-                      />
-                    ) : (
-                      <span className="text-[11px] sm:text-sm font-black">
-                        {player.full_name ? player.full_name.charAt(0).toUpperCase() : 'P'}
-                      </span>
-                    )}
-                  </div>
-                  {/* Rating pill */}
-                  <span className="absolute -top-1 -right-1 sm:-right-1.5 bg-amber-500 text-slate-950 font-mono text-[8px] sm:text-[9px] font-bold px-1 sm:px-1.5 py-0 rounded-full border border-black/80 shadow-sm leading-tight select-none">
-                    {ovr}
-                  </span>
-                </div>
-                {/* Nome Cartellino */}
-                <div
-                  title={player.full_name}
-                  className="mt-0.5 bg-slate-950/95 backdrop-blur-sm text-white text-[8px] sm:text-[9.5px] font-bold px-1.5 py-0.5 rounded shadow max-w-[64px] xs:max-w-[72px] sm:max-w-[88px] truncate border border-amber-400/40 text-center leading-tight whitespace-nowrap select-none"
-                >
-                  {shortName}
-                </div>
-              </div>
-            );
-          })}
+          {/* GIOCATORI: figurine stile album */}
+          {teamWhite.map((player, idx) => (
+            <PlayerSticker
+              key={`white-${player.id || idx}`}
+              player={player}
+              team="white"
+              pos={whitePositions[idx] || { x: 50, y: 20, roleLabel: 'CALC' }}
+            />
+          ))}
+          {teamBlack.map((player, idx) => (
+            <PlayerSticker
+              key={`black-${player.id || idx}`}
+              player={player}
+              team="black"
+              pos={blackPositions[idx] || { x: 50, y: 75, roleLabel: 'CALC' }}
+            />
+          ))}
 
           {/* Watermark ClubCalcetto a bordo centrocampo */}
           <div className="absolute top-[51%] left-2.5 sm:left-3 text-[7px] sm:text-[8px] text-white/35 tracking-wider font-mono uppercase pointer-events-none select-none">
@@ -243,3 +174,66 @@ export const VirtualPitch = forwardRef<HTMLDivElement, VirtualPitchProps>(
 );
 
 VirtualPitch.displayName = 'VirtualPitch';
+
+/** Player sticker in "album figurine" style: white sticker border, photo, team band, role and name. */
+function PlayerSticker({
+  player,
+  team,
+  pos,
+}: {
+  player: Profile;
+  team: 'white' | 'black';
+  pos: PlayerPitchPosition;
+}) {
+  const ovr = getPlayerOverallRating(player);
+  const shortName = getShortPlayerName(player.full_name);
+  const isWhite = team === 'white';
+  return (
+    <div
+      className="absolute -translate-x-1/2 -translate-y-1/2 z-10 select-none"
+      style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+      title={player.full_name}
+    >
+      <div className="w-[48px] sm:w-[62px] rounded-[5px] bg-[#fdfaf0] p-[2px] shadow-[0_3px_6px_rgba(0,0,0,0.55)] rotate-[-1deg]">
+        {/* Fascia squadra con ruolo e voto */}
+        <div
+          className={`flex items-center justify-between px-1 rounded-t-[3px] text-[7px] sm:text-[8px] font-black leading-[11px] sm:leading-[13px] ${
+            isWhite ? 'bg-slate-100 text-slate-900 border-b border-slate-300' : 'bg-slate-900 text-amber-300'
+          }`}
+        >
+          <span>{pos.roleLabel}</span>
+          <span className="font-mono">{ovr}</span>
+        </div>
+        {/* Foto */}
+        <div
+          className={`relative h-[36px] sm:h-[46px] overflow-hidden flex items-center justify-center ${
+            isWhite
+              ? 'bg-gradient-to-b from-sky-200 to-sky-400'
+              : 'bg-gradient-to-b from-amber-200 to-amber-500'
+          }`}
+        >
+          {player.avatar_url ? (
+            <img
+              src={player.avatar_url}
+              alt=""
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <span className="text-lg sm:text-2xl font-black text-white drop-shadow">
+              {player.full_name ? player.full_name.charAt(0).toUpperCase() : '?'}
+            </span>
+          )}
+        </div>
+        {/* Nome */}
+        <div
+          className={`rounded-b-[3px] px-0.5 text-center text-[7.5px] sm:text-[9px] font-black uppercase tracking-tight truncate leading-[12px] sm:leading-[14px] ${
+            isWhite ? 'bg-white text-slate-900' : 'bg-black text-white'
+          }`}
+        >
+          {shortName}
+        </div>
+      </div>
+    </div>
+  );
+}

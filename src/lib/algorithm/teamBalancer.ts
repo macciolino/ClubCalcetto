@@ -156,52 +156,61 @@ export function orderTeamForDiamondRombo(team: Profile[]): Profile[] {
   return [por, dif, est1, est2, pun];
 }
 
+export interface BalanceOptions {
+  /**
+   * "Ribilancia": skip this split (see splitKey in teamUtils) and pick at random among the
+   * most balanced alternatives, so pressing the button really gives different teams.
+   */
+  excludeSplitKey?: string;
+  /** How many of the best alternatives to choose from when rebalancing (default 5) */
+  pickAmongTop?: number;
+}
+
 /**
- * Algoritmo di Bilanciamento Squadre 5v5 per ClubCalcetto
- * Trova la partizione ottimale tra 252 combinazioni minimizzando il delta medio e secondario
+ * Algoritmo di Bilanciamento Squadre 5v5 per ClubCalcetto.
+ * Valuta tutte le 126 divisioni distinte (252 combinazioni / 2) e sceglie la più equilibrata
+ * per media generale, poi per difesa + attacco. Senza opzioni il risultato è deterministico.
  */
-export function balanceTeams(players: Profile[]): BalancedTeamsResult {
-  console.log('[TeamBalancer Debug] Inizio bilanciamento con giocatori confermati:', players.length);
+export function balanceTeams(players: Profile[], options: BalanceOptions = {}): BalancedTeamsResult {
   if (players.length !== 10) {
-    console.error('[TeamBalancer Debug] Errore: sono richiesti esattamente 10 giocatori, ricevuti:', players.length);
-    throw new Error('L\'algoritmo richiede esattamente 10 giocatori.');
+    throw new Error("L'algoritmo richiede esattamente 10 giocatori.");
   }
 
-  // Tutte le possibili combinazioni di 5 giocatori
-  const allCombos = getCombinations(players, 5);
+  // Ogni divisione contiene il primo giocatore in "Bianca": così non contiamo due volte la stessa divisione a colori invertiti
+  const first = players[0];
+  const allCombos = getCombinations(players.slice(1), 4).map((c) => [first, ...c]);
 
-  let bestWhite: Profile[] = [];
-  let bestBlack: Profile[] = [];
-  let minDiff = Infinity;
-  let minSecondaryDiff = Infinity;
-
-  for (const comboWhite of allCombos) {
+  const candidates = allCombos.map((comboWhite) => {
     const whiteIds = new Set(comboWhite.map((p) => p.id));
     const comboBlack = players.filter((p) => !whiteIds.has(p.id));
+    const sum = (team: Profile[], f: (p: Profile) => number) => team.reduce((acc, p) => acc + f(p), 0);
+    const diff = Math.abs(sum(comboWhite, getPlayerOverallRating) - sum(comboBlack, getPlayerOverallRating));
+    const def = (p: Profile) => Number(p.stats?.['Difesa']) || 6;
+    const atk = (p: Profile) => Number(p.stats?.['Tiro']) || 6;
+    const secondaryDiff =
+      Math.abs(sum(comboWhite, def) - sum(comboBlack, def)) + Math.abs(sum(comboWhite, atk) - sum(comboBlack, atk));
+    const key = [comboWhite.map((p) => p.id).sort().join(','), comboBlack.map((p) => p.id).sort().join(',')]
+      .sort()
+      .join('|');
+    return { white: comboWhite, black: comboBlack, diff, secondaryDiff, key };
+  });
 
-    const whiteSum = comboWhite.reduce((acc, p) => acc + getPlayerOverallRating(p), 0);
-    const blackSum = comboBlack.reduce((acc, p) => acc + getPlayerOverallRating(p), 0);
+  // Più equilibrate prima (differenze sotto 0.05 considerate pari, poi conta difesa + attacco)
+  candidates.sort((a, b) =>
+    Math.abs(a.diff - b.diff) >= 0.05 ? a.diff - b.diff : a.secondaryDiff - b.secondaryDiff
+  );
 
-    const diff = Math.abs(whiteSum - blackSum);
-
-    // Calcolo bilanciamento secondario (difesa + attacco)
-    const whiteDef = comboWhite.reduce((acc, p) => acc + (p.stats?.['Difesa'] || 6), 0);
-    const blackDef = comboBlack.reduce((acc, p) => acc + (p.stats?.['Difesa'] || 6), 0);
-    const whiteAtk = comboWhite.reduce((acc, p) => acc + (p.stats?.['Tiro'] || 6), 0);
-    const blackAtk = comboBlack.reduce((acc, p) => acc + (p.stats?.['Tiro'] || 6), 0);
-
-    const secondaryDiff = Math.abs(whiteDef - blackDef) + Math.abs(whiteAtk - blackAtk);
-
-    if (
-      diff < minDiff ||
-      (Math.abs(diff - minDiff) < 0.05 && secondaryDiff < minSecondaryDiff)
-    ) {
-      minDiff = diff;
-      minSecondaryDiff = secondaryDiff;
-      bestWhite = comboWhite;
-      bestBlack = comboBlack;
-    }
+  let chosen = candidates[0];
+  if (options.excludeSplitKey) {
+    const others = candidates.filter((c) => c.key !== options.excludeSplitKey);
+    const pool = others.slice(0, Math.max(1, options.pickAmongTop ?? 5));
+    if (pool.length > 0) chosen = pool[Math.floor(Math.random() * pool.length)];
   }
+
+  // A caso chi fa i Bianchi solo quando si ribilancia; altrimenti risultato stabile
+  const swapColours = Boolean(options.excludeSplitKey) && Math.random() < 0.5;
+  const bestWhite = swapColours ? chosen.black : chosen.white;
+  const bestBlack = swapColours ? chosen.white : chosen.black;
 
   const whiteStats = calculateTeamSummary(bestWhite);
   const blackStats = calculateTeamSummary(bestBlack);
@@ -210,18 +219,27 @@ export function balanceTeams(players: Profile[]): BalancedTeamsResult {
   // Indice di equità da 0 a 100% (se diffAvg è 0, fairness è 100%)
   const fairnessScore = Math.max(0, Math.min(100, Math.round(100 - diffAvg * 15)));
 
-  // Ordina i giocatori rigidamente nella formazione a rombo 1-1-2-1
-  const orderedWhite = orderTeamForDiamondRombo(bestWhite);
-  const orderedBlack = orderTeamForDiamondRombo(bestBlack);
-
-  console.log('[TeamBalancer Debug] Bilanciamento completato con successo. Delta media:', diffAvg);
-
   return {
-    teamWhite: orderedWhite,
-    teamBlack: orderedBlack,
+    teamWhite: orderTeamForDiamondRombo(bestWhite),
+    teamBlack: orderTeamForDiamondRombo(bestBlack),
     whiteStats,
     blackStats,
     difference: Number(diffAvg.toFixed(2)),
     fairnessScore,
+  };
+}
+
+/** Balance summary for teams that already exist (saved, substituted or edited by hand). */
+export function summarizeTeams(teamWhite: Profile[], teamBlack: Profile[]): BalancedTeamsResult {
+  const whiteStats = calculateTeamSummary(teamWhite);
+  const blackStats = calculateTeamSummary(teamBlack);
+  const diffAvg = Math.abs(whiteStats.overallAvg - blackStats.overallAvg);
+  return {
+    teamWhite,
+    teamBlack,
+    whiteStats,
+    blackStats,
+    difference: Number(diffAvg.toFixed(2)),
+    fairnessScore: Math.max(0, Math.min(100, Math.round(100 - diffAvg * 15))),
   };
 }

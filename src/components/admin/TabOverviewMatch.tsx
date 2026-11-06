@@ -1,9 +1,12 @@
 'use client';
 
-import { NumberInput } from '@/components/NumberInput';
+import { MatchResultFields, MatchResultValue, validateScorers } from '@/components/MatchResultFields';
+import { reconcileTeams, toTeamPlayer } from '@/lib/utils/teamUtils';
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { Profile, Presence, Match, GeneratedTeamRecord, MatchScorer, MatchTeamPlayer } from '@/types/database';
+import { Profile, Presence, Match, GeneratedTeamRecord } from '@/types/database';
+
+const EMPTY_RESULT: MatchResultValue = { scoreWhite: 0, scoreBlack: 0, mvpPlayerId: '', scorers: [] };
 import { useAuth } from '@/lib/context/AuthContext';
 import { effectiveMatchCost } from '@/lib/utils/matchUtils';
 import { subscribeMatch, subscribeMatches, saveMatchResult } from '@/lib/firebase/firestoreService';
@@ -114,12 +117,7 @@ export function TabOverviewMatch({
   const progressPercent = Math.min(100, Math.round((paidCount / 10) * 100));
 
   // Modulo Chiusura Match Post-Partita
-  const [scoreWhite, setScoreWhite] = useState<number>(0);
-  const [scoreBlack, setScoreBlack] = useState<number>(0);
-  const [mvpPlayerId, setMvpPlayerId] = useState<string>('');
-  const [scorers, setScorers] = useState<MatchScorer[]>([]);
-  const [newScorerId, setNewScorerId] = useState<string>('');
-  const [newScorerGoals, setNewScorerGoals] = useState<number>(1);
+  const [result, setResult] = useState<MatchResultValue>(EMPTY_RESULT);
   const [isArchiving, setIsArchiving] = useState(false);
   const [archiveSuccessMessage, setArchiveSuccessMessage] = useState('');
 
@@ -138,10 +136,7 @@ export function TabOverviewMatch({
   useEffect(() => {
     // Cambio data: modulo vuoto, poi eventualmente ricaricato dalla partita salvata
     prefilledFor.current = null;
-    setScoreWhite(0);
-    setScoreBlack(0);
-    setMvpPlayerId('');
-    setScorers([]);
+    setResult(EMPTY_RESULT);
   }, [activeDate]);
   useEffect(() => {
     if (
@@ -150,10 +145,12 @@ export function TabOverviewMatch({
       prefilledFor.current !== activeDate
     ) {
       prefilledFor.current = activeDate;
-      setScoreWhite(savedMatch.score_white ?? 0);
-      setScoreBlack(savedMatch.score_black ?? 0);
-      setMvpPlayerId(savedMatch.mvp_player_id || '');
-      setScorers(savedMatch.scorers || []);
+      setResult({
+        scoreWhite: savedMatch.score_white ?? 0,
+        scoreBlack: savedMatch.score_black ?? 0,
+        mvpPlayerId: savedMatch.mvp_player_id || '',
+        scorers: savedMatch.scorers || [],
+      });
     }
   }, [activeDate, savedMatch]);
 
@@ -175,57 +172,31 @@ export function TabOverviewMatch({
     setPaymentsRecord(updated);
   };
 
-  // Handlers Marcatori
-  const handleAddScorer = () => {
-    if (!newScorerId) return;
-    const player = players.find((p) => p.id === newScorerId);
-    setScorers((prev) => {
-      const existing = prev.find((s) => s.player_id === newScorerId);
-      if (existing) {
-        return prev.map((s) =>
-          s.player_id === newScorerId ? { ...s, goals: s.goals + newScorerGoals } : s
-        );
-      }
-      return [
-        ...prev,
-        {
-          player_id: newScorerId,
-          player_name: player?.full_name || 'Giocatore',
-          goals: newScorerGoals,
-        },
-      ];
-    });
-    setNewScorerId('');
-    setNewScorerGoals(1);
-  };
-
-  const handleRemoveScorer = (playerId: string) => {
-    setScorers((prev) => prev.filter((s) => s.player_id !== playerId));
-  };
-
-  // Chiusura & Archiviazione Partita (si può risalvare per correggere: nulla viene contato due volte)
-  const toTeam = (list: Profile[]): MatchTeamPlayer[] => list.map((p) => ({ id: p.id, name: p.full_name }));
-  const resolveTeams = (): { white: MatchTeamPlayer[]; black: MatchTeamPlayer[] } | null => {
-    if (savedMatch?.team_white?.length && savedMatch?.team_black?.length) {
-      return { white: savedMatch.team_white, black: savedMatch.team_black };
+  // Squadre della partita: quelle archiviate (mai più cambiate da sole), altrimenti quelle generate in Squadre
+  // con le eventuali sostituzioni (chi si è ritirato viene sostituito al suo posto). Mai "i primi 5 iscritti".
+  const teams = (() => {
+    if (savedMatch?.status === 'completed' && savedMatch.team_white?.length && savedMatch.team_black?.length) {
+      return { white: savedMatch.team_white, black: savedMatch.team_black, fromArchive: true };
     }
     if (generatedTeamRecord?.team_white?.length && generatedTeamRecord?.team_black?.length) {
-      return { white: toTeam(generatedTeamRecord.team_white), black: toTeam(generatedTeamRecord.team_black) };
-    }
-    if (starterProfiles.length >= 10) {
-      return { white: toTeam(starterProfiles.slice(0, 5)), black: toTeam(starterProfiles.slice(5, 10)) };
+      const r = reconcileTeams(generatedTeamRecord, starterProfiles.map(toTeamPlayer));
+      if (r.white.length === 5 && r.black.length === 5) return { white: r.white, black: r.black, fromArchive: false };
     }
     return null;
-  };
-  const canArchive = Boolean(resolveTeams());
+  })();
+  const validation = teams ? validateScorers(result, teams.white, teams.black) : { error: null, warnings: [] };
+  const canArchive = Boolean(teams) && !validation.error;
 
   const handleArchiveMatch = async () => {
-    const teams = resolveTeams();
     if (!teams) {
-      alert('Servono 10 convocati confermati (o le squadre generate) per archiviare la partita.');
+      alert('Prima genera le squadre nella sezione Squadre: il risultato viene salvato sulle squadre generate.');
       return;
     }
-    if (isAlreadyClosed && !confirm('Questa partita è già archiviata. Vuoi aggiornare il risultato? Vittorie/pareggi/sconfitte verranno corretti, non sommati di nuovo.')) {
+    if (validation.error) {
+      alert(validation.error);
+      return;
+    }
+    if (isAlreadyClosed && !confirm('Questa partita è già archiviata. Vuoi aggiornare il risultato? Le squadre restano quelle archiviate; vittorie/pareggi/sconfitte vengono corretti, non sommati di nuovo.')) {
       return;
     }
 
@@ -234,12 +205,12 @@ export function TabOverviewMatch({
     try {
       await saveMatchResult({
         date: activeDate,
-        scoreWhite,
-        scoreBlack,
+        scoreWhite: result.scoreWhite,
+        scoreBlack: result.scoreBlack,
         teamWhite: teams.white,
         teamBlack: teams.black,
-        mvpPlayerId: mvpPlayerId || null,
-        scorers,
+        mvpPlayerId: result.mvpPlayerId || null,
+        scorers: result.scorers,
         totalCost: totalMatchCost,
         closedBy: profile?.id || '',
       });
@@ -516,7 +487,7 @@ export function TabOverviewMatch({
             </h2>
           </div>
           <p className="text-xs text-slate-400 mt-0.5">
-            Inserisci il tabellino finale (risultato, marcatori e MVP). Al salvataggio, i record di vittoria, pareggio e sconfitta (V/P/S) verranno aggiornati nei profili.
+            Inserisci risultato, marcatori e MVP. Al salvataggio vittorie, pareggi e sconfitte vengono aggiornati nei profili.
           </p>
         </div>
 
@@ -537,144 +508,36 @@ export function TabOverviewMatch({
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          {/* Risultato Finale: Bianca vs Nera */}
-          <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
-            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-              <span>⚽ Risultato Finale 5v5</span>
-            </h3>
-
-            <div className="flex items-center justify-around gap-3 pt-2">
-              <div className="text-center space-y-1">
-                <span className="text-xs font-bold text-white block">⚪ Bianca</span>
-                <NumberInput
-                  min={0}
-                  max={50}
-                  value={scoreWhite}
-                  onValueChange={setScoreWhite}
-                  className="w-16 h-14 bg-slate-900 border-2 border-slate-700 text-center text-2xl font-black text-white rounded-xl focus:border-emerald-500 focus:outline-none"
-                />
-              </div>
-
-              <span className="text-xl font-black text-slate-600">-</span>
-
-              <div className="text-center space-y-1">
-                <span className="text-xs font-bold text-white block">⚫ Nera</span>
-                <NumberInput
-                  min={0}
-                  max={50}
-                  value={scoreBlack}
-                  onValueChange={setScoreBlack}
-                  className="w-16 h-14 bg-slate-900 border-2 border-slate-700 text-center text-2xl font-black text-white rounded-xl focus:border-emerald-500 focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="text-center pt-2">
-              <span className="text-[11px] font-mono text-emerald-400 font-bold uppercase">
-                {scoreWhite > scoreBlack
-                  ? 'Vittoria Squadra Bianca'
-                  : scoreBlack > scoreWhite
-                  ? 'Vittoria Squadra Nera'
-                  : 'Pareggio'}
-              </span>
-            </div>
-          </div>
-
-          {/* MVP Partita */}
-          <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
-            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-              <Star className="h-4 w-4 text-amber-400" />
-              <span>MVP (Miglior Giocatore)</span>
-            </h3>
-
-            <p className="text-[11px] text-slate-400">
-              Seleziona il calciatore che ha fatto la differenza durante il match:
-            </p>
-
-            <select
-              value={mvpPlayerId}
-              onChange={(e) => setMvpPlayerId(e.target.value)}
-              className="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs font-semibold focus:outline-none focus:border-amber-400"
-            >
-              <option value="">-- Seleziona MVP --</option>
-              {starterProfiles.map((p) => (
-                <option key={p.id} value={p.id}>
-                  ★ {p.full_name} ({p.overall_rating})
-                </option>
-              ))}
-            </select>
-
-            {mvpPlayerId && (
-              <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-bold rounded-xl flex items-center gap-2">
-                <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
-                <span>
-                  {starterProfiles.find((p) => p.id === mvpPlayerId)?.full_name} premiato come Man of the Match!
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Tabellino Marcatori */}
-          <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
-            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-              Marcatori
-            </h3>
-
-            {/* Aggiunta Marcatore */}
-            <div className="space-y-1.5">
-              <div className="flex gap-2">
-                <select
-                  value={newScorerId}
-                  onChange={(e) => setNewScorerId(e.target.value)}
-                  className="flex-1 px-2.5 py-1.5 bg-slate-900 border border-slate-800 text-slate-300 rounded-lg text-xs"
-                >
-                  <option value="">Aggiungi marcatore...</option>
-                  {starterProfiles.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.full_name}
-                    </option>
-                  ))}
-                </select>
-                <NumberInput
-                  min={1}
-                  max={15}
-                  value={newScorerGoals}
-                  onValueChange={setNewScorerGoals}
-                  className="w-12 px-1.5 py-1.5 bg-slate-900 border border-slate-800 text-white rounded-lg text-xs text-center"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddScorer}
-                  className="px-2.5 py-1.5 bg-emerald-500 text-slate-950 rounded-lg text-xs font-bold"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                </button>
-              </div>
-
-              {/* Lista Marcatori Aggiunti */}
-              {scorers.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {scorers.map((s) => (
-                    <span
-                      key={s.player_id}
-                      className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-slate-900 border border-slate-800 text-emerald-300 text-[10px] rounded-lg font-bold"
-                    >
-                      ⚽ {s.player_name} ({s.goals})
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveScorer(s.player_id)}
-                        className="text-slate-500 hover:text-rose-400"
-                      >
-                        ×
-                      </button>
-                    </span>
+        {teams ? (
+          <>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              {([['⚪ Bianchi', teams.white], ['⚫ Neri', teams.black]] as const).map(([title, list]) => (
+                <div key={title} className="bg-slate-950 border border-slate-800 rounded-2xl p-3 space-y-1">
+                  <div className="text-xs font-black uppercase tracking-wider text-slate-300">{title}</div>
+                  {list.map((p) => (
+                    <div key={p.id} className="truncate text-slate-200">{p.name}</div>
                   ))}
                 </div>
-              )}
+              ))}
             </div>
+            <p className="text-xs text-slate-400">
+              {teams.fromArchive ? (
+                <>Squadre archiviate: per correggerle usa la matita nello <Link href="/history" className="text-emerald-400 underline">Storico</Link>.</>
+              ) : (
+                <>Squadre prese dalla sezione <Link href={`/squadre?date=${activeDate}`} className="text-emerald-400 underline">Squadre</Link>: se sono sbagliate correggile lì prima di salvare.</>
+              )}
+            </p>
+            <MatchResultFields value={result} onChange={setResult} white={teams.white} black={teams.black} />
+          </>
+        ) : (
+          <div className="p-4 bg-amber-500/10 border border-amber-500/30 text-amber-200 rounded-2xl text-sm flex items-start gap-2">
+            <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+            <span>
+              Per salvare il risultato servono le squadre complete (5 contro 5) generate nella sezione{' '}
+              <Link href={`/squadre?date=${activeDate}`} className="underline font-bold">Squadre</Link>.
+            </span>
           </div>
-        </div>
+        )}
 
         {/* CTA Salva & Archivia Partita */}
         <div className="pt-2 flex justify-end">

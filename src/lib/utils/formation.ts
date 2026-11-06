@@ -34,18 +34,18 @@ export function getShortPlayerName(fullName: string): string {
  */
 export const WHITE_TEAM_COORDINATES: PlayerPitchPosition[] = [
   { x: 50, y: 7.5, roleLabel: 'POR' },    // Portiere (in alto vicino alla porta)
-  { x: 50, y: 19.5, roleLabel: 'DIF' },   // Difensore centrale
-  { x: 19, y: 31.5, roleLabel: 'EST SX' }, // Esterno Sinistro largo
-  { x: 81, y: 31.5, roleLabel: 'EST DX' }, // Esterno Destro largo
-  { x: 43, y: 43, roleLabel: 'PUN' },     // Punta verso sinistra del centrocampo
+  { x: 50, y: 21.5, roleLabel: 'DIF' },   // Difensore centrale
+  { x: 19, y: 34, roleLabel: 'EST SX' }, // Esterno Sinistro largo
+  { x: 81, y: 34, roleLabel: 'EST DX' }, // Esterno Destro largo
+  { x: 40, y: 45, roleLabel: 'PUN' },     // Punta verso sinistra del centrocampo
 ];
 
 export const BLACK_TEAM_COORDINATES: PlayerPitchPosition[] = [
   { x: 50, y: 92.5, roleLabel: 'POR' },   // Portiere (in basso vicino alla porta)
-  { x: 50, y: 80.5, roleLabel: 'DIF' },   // Difensore centrale
-  { x: 19, y: 68.5, roleLabel: 'EST SX' }, // Esterno Sinistro largo
-  { x: 81, y: 68.5, roleLabel: 'EST DX' }, // Esterno Destro largo
-  { x: 57, y: 57, roleLabel: 'PUN' },     // Punta verso destra del centrocampo
+  { x: 50, y: 78.5, roleLabel: 'DIF' },   // Difensore centrale
+  { x: 19, y: 66, roleLabel: 'EST SX' }, // Esterno Sinistro largo
+  { x: 81, y: 66, roleLabel: 'EST DX' }, // Esterno Destro largo
+  { x: 60, y: 55, roleLabel: 'PUN' },     // Punta verso destra del centrocampo
 ];
 
 /**
