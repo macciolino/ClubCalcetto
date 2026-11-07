@@ -7,9 +7,10 @@ import { Match, MvpVote, Profile } from '@/types/database';
  *     official MVP of the match            +1    (switch "MVP")
  *     otherwise MVP votes received, from 2  +0.1 per vote (2 → +0.2, 3 → +0.3, 5 → +0.5)  (switch "MVP")
  *     3 or more goals in the match          +0.5  (switch "Gol")
- *   Wins / defeats do NOT count.
- * - Form = AVERAGE of the points of the last 3 matches (a match not played counts 0), max +1.
- * - The form is added to EVERY parameter and to the OVR (max 10), and is used to balance the teams.
+ *     win +0.2 · draw 0 · defeat -0.2, for all 5 of the team, whatever the score margin
+ *                                           (switch "Vittorie e sconfitte"; MVP / votes / goals compensate)
+ * - Form = AVERAGE of the points of the last 3 matches (a match not played counts 0), from -1 to +1.
+ * - The form is added to EVERY parameter and to the OVR (between 1 and 10), and is used to balance the teams.
  *   The values written by the admins in the player's card are never changed.
  */
 export const FORM_MATCHES = 3;
@@ -19,10 +20,13 @@ export const FORM_VOTE_POINTS = 0.1;
 export const FORM_MIN_VOTES = 2;
 export const FORM_GOALS_MIN = 3;
 export const FORM_GOALS_POINTS = 0.5;
+export const FORM_WIN_POINTS = 0.2;
+export const FORM_LOSS_POINTS = -0.2;
 
 export interface FormSettings {
   goals: boolean;
   mvp: boolean;
+  results: boolean;
 }
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
@@ -34,7 +38,7 @@ export function computeForms(
   settings: FormSettings
 ): Map<string, number> {
   const forms = new Map<string, number>();
-  if (!settings.goals && !settings.mvp) return forms;
+  if (!settings.goals && !settings.mvp && !settings.results) return forms;
   const last = [...completedMatches]
     .filter((m) => m.status === 'completed')
     .sort((a, b) => (b.match_date || b.id).localeCompare(a.match_date || a.id))
@@ -55,6 +59,16 @@ export function computeForms(
         else if ((votes.get(id) || 0) >= FORM_MIN_VOTES) add(id, (votes.get(id) || 0) * FORM_VOTE_POINTS);
       });
     }
+    if (settings.results) {
+      const w = m.score_white ?? 0;
+      const b = m.score_black ?? 0;
+      if (w !== b) {
+        const winners = w > b ? m.team_white : m.team_black;
+        const losers = w > b ? m.team_black : m.team_white;
+        (winners || []).forEach((p) => add(p.id, FORM_WIN_POINTS));
+        (losers || []).forEach((p) => add(p.id, FORM_LOSS_POINTS));
+      }
+    }
     if (settings.goals) {
       (m.scorers || []).forEach((s) => {
         if (played.has(s.player_id) && (s.goals || 0) >= FORM_GOALS_MIN) add(s.player_id, FORM_GOALS_POINTS);
@@ -64,19 +78,26 @@ export function computeForms(
 
   // Media sulle ultime 3 partite del club (se ce ne sono meno di 3, sulle partite che ci sono)
   totals.forEach((sum, id) => {
-    const form = Math.min(FORM_MAX, round1(sum / last.length));
-    if (form > 0) forms.set(id, form);
+    const form = Math.max(-FORM_MAX, Math.min(FORM_MAX, round1(sum / last.length)));
+    if (form !== 0) forms.set(id, form);
   });
   return forms;
 }
 
-/** The player with the form added to every parameter and to the OVR (max 10). The original is not changed. */
+const clamp = (n: number) => Math.max(1, Math.min(10, round1(n)));
+
+/** "+0,5" / "−0,2" for the screens */
+export function formatForm(form: number): string {
+  return `${form > 0 ? '+' : '−'}${String(Math.abs(form)).replace('.', ',')}`;
+}
+
+/** The player with the form added to every parameter and to the OVR (between 1 and 10). The original is not changed. */
 export function withForm(player: Profile, form: number | undefined): Profile {
   if (!form) return player;
   const stats: Record<string, number> = {};
   Object.entries(player.stats || {}).forEach(([k, v]) => {
-    stats[k] = typeof v === 'number' ? Math.min(10, round1(v + form)) : v;
+    stats[k] = typeof v === 'number' ? clamp(v + form) : v;
   });
   const base = typeof player.overall_rating === 'number' && player.overall_rating > 0 ? player.overall_rating : 6;
-  return { ...player, stats, overall_rating: Math.min(10, round1(base + form)) };
+  return { ...player, stats, overall_rating: clamp(base + form) };
 }

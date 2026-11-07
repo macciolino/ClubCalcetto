@@ -1,5 +1,6 @@
 'use client';
 
+import { formatForm } from '@/lib/utils/formUtils';
 import { getStatValue } from '@/lib/utils/statUtils';
 import React, { useState } from 'react';
 import { Profile, StatCategory, FIELD_POSITION_ABBR, STAT_DETAILS, sortStatsByCanonicalOrder } from '@/types/database';
@@ -52,13 +53,14 @@ export function PlayerCardFifa({
     Object.assign(displayStats, player.stats || {});
   }
 
-  // Stato forma: si aggiunge a ogni parametro (max 10) e all'OVR
-  if (form > 0) {
+  // Stato forma: si aggiunge (o toglie) a ogni parametro e all'OVR, sempre tra 1 e 10
+  const clamp = (n: number) => Math.max(1, Math.min(10, Math.round(n * 10) / 10));
+  if (form !== 0) {
     Object.keys(displayStats).forEach((k) => {
-      displayStats[k] = Math.min(10, Math.round((Number(displayStats[k]) + form) * 10) / 10);
+      displayStats[k] = clamp(Number(displayStats[k]) + form);
     });
   }
-  const ovrValue = Math.min(10, (Number(player.overall_rating) || 6) + form);
+  const ovrValue = clamp((Number(player.overall_rating) || 6) + form);
   const ovrDisplay = Math.round(ovrValue * 10); // stile FIFA (es. 7.9 -> 79)
 
   return (
@@ -117,9 +119,15 @@ export function PlayerCardFifa({
           <h3 className="font-black text-sm sm:text-base text-white truncate uppercase tracking-wide">
             {player.full_name}
           </h3>
-          {form > 0 && (
-            <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-500/15 border border-orange-400/40 text-orange-300 text-[10px] font-black uppercase">
-              🔥 In forma +{String(form).replace('.', ',')}
+          {form !== 0 && (
+            <div
+              className={`mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase border ${
+                form > 0
+                  ? 'bg-orange-500/15 border-orange-400/40 text-orange-300'
+                  : 'bg-sky-500/15 border-sky-400/40 text-sky-300'
+              }`}
+            >
+              {form > 0 ? '🔥 In forma' : '❄️ Fuori forma'} {formatForm(form)}
             </div>
           )}
           <div className="flex items-center justify-center gap-2 mt-1">

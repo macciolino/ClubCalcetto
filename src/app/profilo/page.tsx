@@ -9,6 +9,7 @@ import { RadarChart } from '@/components/RadarChart';
 import { StatBadge } from '@/components/StatBadge';
 import { useStatCategories } from '@/lib/hooks/useStatCategories';
 import { useForms } from '@/lib/hooks/useForms';
+import { formatForm } from '@/lib/utils/formUtils';
 import { subscribeMatches } from '@/lib/firebase/firestoreService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { Match } from '@/types/database';
@@ -120,7 +121,7 @@ export default function ProfiloPage() {
   const profileStats: Record<string, number> = {};
   categories.forEach((cat) => {
     const base = getStatValue(profile?.stats, cat.name, cat.default_value ?? 6);
-    profileStats[cat.name] = myForm > 0 ? Math.min(10, Math.round((base + myForm) * 10) / 10) : base;
+    profileStats[cat.name] = myForm !== 0 ? Math.max(1, Math.min(10, Math.round((base + myForm) * 10) / 10)) : base;
   });
 
   // Foto profilo: solo una foto scelta dal giocatore (niente immagini preimpostate), rimpicciolita e salvata nel profilo
@@ -327,7 +328,7 @@ export default function ProfiloPage() {
                 </h2>
               </div>
               <span className="text-xs font-mono font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md">
-                OVR {Math.round(Math.min(10, (profile.overall_rating || 6.0) + myForm) * 10)}
+                OVR {Math.round(Math.max(1, Math.min(10, (profile.overall_rating || 6.0) + myForm)) * 10)}
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-2">
@@ -335,9 +336,14 @@ export default function ProfiloPage() {
             </p>
             {myForm > 0 && (
               <p className="mt-2 text-xs text-orange-300 bg-orange-500/10 border border-orange-400/30 rounded-xl p-2.5">
-                🔥 <strong>In forma +{String(myForm).replace('.', ',')}</strong>: per le ultime partite (MVP, voti o gol) tutti i
-                tuoi valori e l&apos;OVR sono saliti di {String(myForm).replace('.', ',')}. È temporaneo: torna a 0 se nelle
-                prossime partite non fai punti.
+                🔥 <strong>In forma {formatForm(myForm)}</strong>: per le ultime 3 partite (MVP, voti, gol o vittorie) tutti i tuoi
+                valori e l&apos;OVR sono saliti di {formatForm(myForm).slice(1)}. È temporaneo.
+              </p>
+            )}
+            {myForm < 0 && (
+              <p className="mt-2 text-xs text-sky-300 bg-sky-500/10 border border-sky-400/30 rounded-xl p-2.5">
+                ❄️ <strong>Fuori forma {formatForm(myForm)}</strong>: per le ultime 3 partite (sconfitte) tutti i tuoi valori e
+                l&apos;OVR sono scesi di {formatForm(myForm).slice(1)}. È temporaneo: risale con vittorie, voti MVP o gol.
               </p>
             )}
           </div>

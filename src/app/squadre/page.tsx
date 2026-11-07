@@ -1,7 +1,7 @@
 'use client';
 
 import { useForms } from '@/lib/hooks/useForms';
-import { withForm } from '@/lib/utils/formUtils';
+import { withForm, formatForm } from '@/lib/utils/formUtils';
 import { NumberInput } from '@/components/NumberInput';
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -857,7 +857,10 @@ function SquadreContent() {
                       <span className="w-11 flex-shrink-0 font-mono text-[10px] font-bold text-emerald-400">{SLOT_LABELS[i]}</span>
                       <span className="truncate">{p.full_name}</span>
                       {forms.get(p.id) ? (
-                        <span className="ml-auto flex-shrink-0 text-[10px] font-black text-orange-300">🔥+{String(forms.get(p.id)).replace('.', ',')}</span>
+                        <span className={`ml-auto flex-shrink-0 text-[10px] font-black ${(forms.get(p.id) || 0) > 0 ? 'text-orange-300' : 'text-sky-300'}`}>
+                          {(forms.get(p.id) || 0) > 0 ? '🔥' : '❄️'}
+                          {formatForm(forms.get(p.id) || 0)}
+                        </span>
                       ) : null}
                     </li>
                   ))}
@@ -896,7 +899,10 @@ function SquadreContent() {
                       <span className="w-11 flex-shrink-0 font-mono text-[10px] font-bold text-emerald-400">{SLOT_LABELS[i]}</span>
                       <span className="truncate">{p.full_name}</span>
                       {forms.get(p.id) ? (
-                        <span className="ml-auto flex-shrink-0 text-[10px] font-black text-orange-300">🔥+{String(forms.get(p.id)).replace('.', ',')}</span>
+                        <span className={`ml-auto flex-shrink-0 text-[10px] font-black ${(forms.get(p.id) || 0) > 0 ? 'text-orange-300' : 'text-sky-300'}`}>
+                          {(forms.get(p.id) || 0) > 0 ? '🔥' : '❄️'}
+                          {formatForm(forms.get(p.id) || 0)}
+                        </span>
                       ) : null}
                     </li>
                   ))}

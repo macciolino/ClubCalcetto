@@ -294,6 +294,8 @@ export interface AppSettings {
   form_goals?: boolean;
   /** "Stato forma": official MVP (+1) and players' MVP votes (from 2 votes) raise the form. Default off. */
   form_mvp?: boolean;
+  /** "Stato forma": win +0.2, draw 0, defeat -0.2 for every player of the team. Default off. */
+  form_results?: boolean;
 }
 
 /**

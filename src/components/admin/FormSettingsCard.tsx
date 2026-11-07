@@ -11,10 +11,12 @@ import {
   FORM_MIN_VOTES,
   FORM_MVP_POINTS,
   FORM_VOTE_POINTS,
+  FORM_WIN_POINTS,
+  FORM_LOSS_POINTS,
 } from '@/lib/utils/formUtils';
 import { ChevronDown, Flame, Star, Info } from 'lucide-react';
 
-const num = (n: number) => String(n).replace('.', ',');
+const num = (n: number) => String(Math.abs(n)).replace('.', ',');
 
 /**
  * Admin → Campi & Parametri: what raises the players' "Stato forma". Always open; the legend is collapsible.
@@ -25,7 +27,7 @@ export function FormSettingsCard() {
   const [saving, setSaving] = useState(false);
   const [legendOpen, setLegendOpen] = useState(false);
 
-  const toggle = async (key: 'form_goals' | 'form_mvp', next: boolean) => {
+  const toggle = async (key: 'form_goals' | 'form_mvp' | 'form_results', next: boolean) => {
     setSaving(true);
     try {
       await saveAppSettingsDoc({ [key]: next });
@@ -49,8 +51,15 @@ export function FormSettingsCard() {
       help: `MVP della partita +${num(FORM_MVP_POINTS)}; gli altri da ${FORM_MIN_VOTES} voti in su +${num(FORM_VOTE_POINTS)} per voto.`,
       icon: <Star className="h-4 w-4 text-amber-400" />,
     },
+    {
+      key: 'form_results' as const,
+      on: settings.results,
+      label: 'Vittorie e sconfitte',
+      help: `Vittoria +${num(FORM_WIN_POINTS)}, pareggio 0, sconfitta −${num(FORM_LOSS_POINTS)} a tutti e 5 della squadra.`,
+      icon: <span className="text-base leading-none">🏆</span>,
+    },
   ];
-  const anyOn = settings.goals || settings.mvp;
+  const anyOn = settings.goals || settings.mvp || settings.results;
 
   return (
     <div className="bg-slate-900 border border-emerald-500/30 p-4 sm:p-5 rounded-3xl shadow-xl space-y-4">
@@ -61,7 +70,7 @@ export function FormSettingsCard() {
         </h2>
         <p className="text-xs text-slate-400 mt-0.5">
           {anyOn
-            ? `Attivo: chi gioca bene nelle ultime ${FORM_MATCHES} partite sale un po' in tutti i parametri e nel bilanciamento delle squadre.`
+            ? `Attivo: in base alle ultime ${FORM_MATCHES} partite i giocatori salgono o scendono un po' in tutti i parametri e nel bilanciamento delle squadre.`
             : 'Spento: contano solo i valori scritti nella scheda di ogni giocatore.'}
         </p>
       </div>
@@ -125,7 +134,14 @@ export function FormSettingsCard() {
                 <li>
                   <strong>{FORM_GOALS_MIN} o più gol</strong> nella stessa partita: <strong>+{num(FORM_GOALS_POINTS)}</strong>.
                 </li>
-                <li>Vittorie, pareggi e sconfitte non contano.</li>
+                <li>
+                  <strong>Risultato</strong>: vittoria <strong>+{num(FORM_WIN_POINTS)}</strong>, pareggio <strong>0</strong>, sconfitta{' '}
+                  <strong>−{num(FORM_LOSS_POINTS)}</strong>, a tutti e 5 della squadra. Lo scarto non conta (5-4 o 10-2 è uguale).
+                </li>
+                <li>
+                  I punti della stessa partita <strong>si sommano</strong>: chi perde ma è MVP prende −0,2 + 1 = <strong>+0,8</strong>.
+                </li>
+                <li>Ogni voce conta solo se il suo interruttore qui sopra è acceso.</li>
               </ul>
             </div>
             <div>
@@ -133,11 +149,15 @@ export function FormSettingsCard() {
               <ul className="list-disc pl-5 space-y-0.5">
                 <li>
                   È la <strong>media dei punti delle ultime {FORM_MATCHES} partite</strong> archiviate (una partita non giocata conta 0),
-                  al massimo <strong>+{num(FORM_MAX)}</strong>.
+                  da <strong>−{num(FORM_MAX)}</strong> a <strong>+{num(FORM_MAX)}</strong>.
                 </li>
                 <li>
-                  Si aggiunge a <strong>tutti i parametri</strong> (massimo 10) e all&apos;<strong>OVR</strong>, e conta quando si
-                  bilanciano le squadre.
+                  Sopra zero il giocatore è <strong>🔥 in forma</strong> (i valori salgono), sotto zero è <strong>❄️ fuori forma</strong>{' '}
+                  (i valori scendono un po').
+                </li>
+                <li>
+                  Si aggiunge (o si toglie) a <strong>tutti i parametri</strong> e all&apos;<strong>OVR</strong>, sempre tra 1 e 10,
+                  e conta quando si bilanciano le squadre.
                 </li>
                 <li>
                   È <strong>temporaneo</strong>: se nelle partite dopo non fa punti, torna a 0 da solo. I valori scritti nella scheda
@@ -146,13 +166,19 @@ export function FormSettingsCard() {
               </ul>
             </div>
             <div>
-              <p className="font-bold text-white mb-1">Esempio</p>
-              <p>
-                Marco B. nell&apos;ultima partita è MVP (+1) e segna 4 gol (+0,5) = 1,5 punti; nelle 2 partite prima 0. Media su 3
-                partite: 1,5 ÷ 3 = <strong>+0,5</strong>. Tiro 7 diventa 7,5, Visione 6 diventa 6,5, OVR 7,2 diventa 7,7.
-              </p>
+              <p className="font-bold text-white mb-1">Esempi (tutti gli interruttori accesi)</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>
+                  <strong>Marco B.</strong>: ultima partita vinta (+0,2), MVP (+1) e 4 gol (+0,5) = 1,7; nelle 2 partite prima ha perso
+                  (−0,2) e pareggiato (0). Media: (1,7 − 0,2 + 0) ÷ 3 = <strong>+0,5 🔥</strong>. Tiro 7 diventa 7,5, OVR 7,2 diventa 7,7.
+                </li>
+                <li>
+                  <strong>Luca</strong>: 3 sconfitte di fila, nessun voto né gol. Media: (−0,2 × 3) ÷ 3 = <strong>−0,2 ❄️</strong>.
+                  Difesa 8 diventa 7,8, OVR 6,5 diventa 6,3.
+                </li>
+              </ul>
             </div>
-            <p className="text-slate-400">Con entrambi gli interruttori spenti lo stato forma è 0 per tutti.</p>
+            <p className="text-slate-400">Con tutti gli interruttori spenti lo stato forma è 0 per tutti.</p>
           </div>
         )}
       </div>

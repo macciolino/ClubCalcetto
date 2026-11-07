@@ -8,10 +8,12 @@ import { FORM_MATCHES, FormSettings, computeForms } from '@/lib/utils/formUtils'
 
 /** Admin switches of the "Stato forma" (Admin → Campi & Parametri). Off by default. */
 export function useFormSettings(): FormSettings {
-  const [settings, setSettings] = useState<FormSettings>({ goals: false, mvp: false });
+  const [settings, setSettings] = useState<FormSettings>({ goals: false, mvp: false, results: false });
   useEffect(() => {
     if (!isFirebaseConfigured) return;
-    const unsub = subscribeAppSettings((s) => setSettings({ goals: s.form_goals === true, mvp: s.form_mvp === true }));
+    const unsub = subscribeAppSettings((s) =>
+      setSettings({ goals: s.form_goals === true, mvp: s.form_mvp === true, results: s.form_results === true })
+    );
     return () => unsub();
   }, []);
   return settings;
