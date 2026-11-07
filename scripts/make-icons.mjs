@@ -7,9 +7,32 @@
  */
 import sharp from 'sharp';
 
-const SRC = 'assets/logo-header-source.png'; // app: ball only
+const SRC = await centeredOnCircle('assets/logo-header-source.png'); // app: ball only, centered
 const SRC_NOTIFICATION = 'assets/logo-source.png'; // notifications: logo with the bell
 const OUT = 'public/icons';
+
+/**
+ * Centers the logo on its circle (not on the image borders): the source has uneven transparent margins
+ * and the green swoosh sticks out on the left, so the ball looked off-center on the home screen.
+ * Finds the "solid" part of the drawing (rows/columns with many opaque pixels) and crops a square around it.
+ */
+async function centeredOnCircle(file) {
+  const { data, info } = await sharp(file).ensureAlpha().extractChannel('alpha').raw().toBuffer({ resolveWithObject: true });
+  const W = info.width, H = info.height;
+  const col = new Array(W).fill(0), row = new Array(H).fill(0);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (data[y * W + x] > 128) { col[x]++; row[y]++; }
+  const span = (a, t) => { const s = a.findIndex((v) => v > t); const e = a.length - 1 - [...a].reverse().findIndex((v) => v > t); return [s, e]; };
+  const [sx0, sx1] = span(col, W * 0.16), [sy0, sy1] = span(row, H * 0.16); // solid circle
+  const [ax0, ax1] = span(col, 0), [ay0, ay1] = span(row, 0); // everything (swoosh included)
+  const cx = (sx0 + sx1) / 2, cy = (sy0 + sy1) / 2;
+  const half = Math.ceil(Math.max(cx - ax0, ax1 - cx, cy - ay0, ay1 - cy)) + 4;
+  const pad = Math.max(0, half - Math.min(cx, cy, W - cx, H - cy));
+  const padded = await sharp(file).extend({ top: pad, bottom: pad, left: pad, right: pad, background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toBuffer();
+  return sharp(padded)
+    .extract({ left: Math.round(cx - half + pad), top: Math.round(cy - half + pad), width: half * 2, height: half * 2 })
+    .png()
+    .toBuffer();
+}
 const BG = { r: 2, g: 6, b: 23, alpha: 1 }; // #020617, app background
 
 // Transparent icons (notification large icon, Android home screen, browser tab)
@@ -53,5 +76,10 @@ const badgeSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96"
   <circle cx="48" cy="48" r="44" fill="white" mask="url(#m)"/>
 </svg>`;
 await sharp(Buffer.from(badgeSvg)).png({ compressionLevel: 9 }).toFile(`${OUT}/badge-96.png`);
+
+// Logo in the top bar and on the login page (same centered ball)
+for (const size of [128, 192]) {
+  await sharp(SRC).resize(size, size).png({ compressionLevel: 9, palette: true, quality: 90 }).toFile(`public/brand/logo-header-${size}.png`);
+}
 
 console.log('Icone create in', OUT);
