@@ -58,6 +58,31 @@ export function NotificationSettingsCard() {
     }
   };
 
+  // Diagnostica: quali admin hanno un telefono registrato (per capire perché a qualcuno non arriva)
+  type AdminDevice = { name: string; count: number; platforms: string[]; last: string | null };
+  const [devices, setDevices] = useState<AdminDevice[] | null>(null);
+  const [loadingDevices, setLoadingDevices] = useState(false);
+
+  const loadDevices = async (type: 'admin_devices' | 'test_admins') => {
+    setLoadingDevices(true);
+    setMessage('');
+    try {
+      const res = await callNotifyApi({ type });
+      if (res.ok) {
+        setDevices((res.devices as AdminDevice[]) || []);
+        if (type === 'test_admins') setMessage(`Prova inviata a ${res.sent} dispositivi degli admin.`);
+      } else {
+        setMessage('Controllo non riuscito. Riprova.');
+      }
+    } catch {
+      setMessage('Controllo non riuscito. Controlla la connessione.');
+    } finally {
+      setLoadingDevices(false);
+    }
+  };
+
+  const platformLabel = (p: string) => (p === 'ios' ? 'iPhone' : p === 'android' ? 'Android' : p === 'desktop' ? 'PC' : p);
+
   const handleTest = async () => {
     setTesting(true);
     setMessage('');
@@ -103,7 +128,7 @@ export function NotificationSettingsCard() {
       <div className="space-y-4 border-t border-slate-800 pt-4">
       <p className="text-xs text-slate-400">
         Iscrizioni aperte (a tutti i registrati), sei entrato tra i titolari (a chi sale dalla lista d&apos;attesa), partita confermata, squadre cambiate, chi subentra a chi (ai 10
-        della partita) e voto MVP aperto (a tutti i registrati). Gratuite (Firebase Cloud Messaging).
+        della partita) e voto MVP aperto (a tutti i registrati). Agli admin arriva anche l&apos;avviso quando una partita raggiunge 10 iscritti. Gratuite (Firebase Cloud Messaging).
       </p>
 
       <div className="space-y-2" role="radiogroup" aria-label="Chi riceve le notifiche">
@@ -135,6 +160,49 @@ export function NotificationSettingsCard() {
         Manda una notifica di prova a me
       </button>
       {message && <p className="text-xs text-slate-300">{message}</p>}
+
+      {/* Telefoni degli admin */}
+      <div className="border-t border-slate-800 pt-4 space-y-2">
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => loadDevices('admin_devices')}
+            disabled={loadingDevices}
+            className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs border border-slate-700 disabled:opacity-60"
+          >
+            {loadingDevices ? 'Controllo…' : 'Controlla i telefoni degli admin'}
+          </button>
+          <button
+            type="button"
+            onClick={() => loadDevices('test_admins')}
+            disabled={loadingDevices}
+            className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs border border-slate-700 disabled:opacity-60"
+          >
+            Manda una prova a tutti gli admin
+          </button>
+        </div>
+        {devices && (
+          <ul className="space-y-1.5">
+            {devices.map((d) => (
+              <li key={d.name} className="flex items-start justify-between gap-3 p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs">
+                <span className="font-bold text-white truncate">{d.name}</span>
+                {d.count > 0 ? (
+                  <span className="text-right text-emerald-300">
+                    {d.count} {d.count === 1 ? 'telefono' : 'dispositivi'} ({d.platforms.map(platformLabel).join(', ')})
+                    {d.last && (
+                      <span className="block text-slate-500">
+                        aggiornato {new Date(d.last).toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    )}
+                  </span>
+                ) : (
+                  <span className="text-right text-amber-300">nessun telefono: deve attivare le notifiche dal Profilo</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
       </div>
       )}
     </div>

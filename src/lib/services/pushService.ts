@@ -48,19 +48,29 @@ export async function getPushStatus(): Promise<PushStatus> {
 
 /** Asks permission and registers this device to receive ClubCalcetto notifications. */
 export async function enablePush(profileId: string): Promise<PushStatus> {
-  const status = await getPushStatus();
-  if (status === 'unsupported' || status === 'not_configured' || status === 'needs_install' || status === 'denied') {
-    return status;
+  if (typeof window === 'undefined' || !('Notification' in window) || !('serviceWorker' in navigator)) {
+    return isIos() && !isStandalone() ? 'needs_install' : 'unsupported';
   }
-  const permission = await Notification.requestPermission();
+  // iPhone shows the "Allow notifications" prompt ONLY if it is asked right after the tap:
+  // any wait before (network, checks) makes iOS ignore the request. So ask first, check after.
+  const permission = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
   if (permission !== 'granted') return permission === 'denied' ? 'denied' : 'off';
+  const status = await getPushStatus();
+  if (status === 'unsupported' || status === 'not_configured' || status === 'needs_install') return status;
 
+  return (await registerDevice(profileId)) ? 'on' : 'off';
+}
+
+/** Gets this device's token and saves it (replacing an old one that the phone may have changed). */
+async function registerDevice(profileId: string): Promise<boolean> {
   const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
   await navigator.serviceWorker.ready;
   const token = await getToken(getMessaging(getApp()), { vapidKey: await getVapidKey(), serviceWorkerRegistration: registration });
   const uid = auth.currentUser?.uid;
-  if (!token || !uid) return 'off';
+  if (!token || !uid) return false;
 
+  const old = savedToken();
+  if (old && old !== token) await deleteDoc(doc(db, 'push_tokens', old)).catch(() => undefined);
   await setDoc(doc(db, 'push_tokens', token), {
     uid,
     profile_id: profileId,
@@ -70,7 +80,22 @@ export async function enablePush(profileId: string): Promise<PushStatus> {
   try {
     localStorage.setItem(TOKEN_KEY, token);
   } catch {}
-  return 'on';
+  return true;
+}
+
+/**
+ * At every app start, if notifications are allowed on this device, renews the registration.
+ * Phones (iPhone above all) change their token from time to time: without this, notifications stop arriving.
+ */
+export async function refreshPushRegistration(profileId: string): Promise<void> {
+  try {
+    if (typeof window === 'undefined' || !('Notification' in window) || Notification.permission !== 'granted') return;
+    const status = await getPushStatus();
+    if (status === 'unsupported' || status === 'not_configured' || status === 'needs_install' || status === 'denied') return;
+    await registerDevice(profileId);
+  } catch (err) {
+    console.warn('[Push] rinnovo registrazione:', err);
+  }
 }
 
 /** Stops notifications on this device. */

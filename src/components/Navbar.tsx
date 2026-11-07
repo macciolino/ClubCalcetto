@@ -1,5 +1,6 @@
 'use client';
 
+import { refreshPushRegistration } from '@/lib/services/pushService';
 import { BrandLogo } from '@/components/BrandLogo';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -19,6 +20,12 @@ import {
 export function Navbar() {
   const pathname = usePathname();
   const { user, profile, isAdmin, signOut } = useAuth();
+
+  // Rinnova la registrazione per le notifiche a ogni avvio (i telefoni cambiano il codice ogni tanto)
+  const profileId = profile?.id;
+  useEffect(() => {
+    if (profileId) refreshPushRegistration(profileId);
+  }, [profileId]);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {

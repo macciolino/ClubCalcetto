@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminAuth, adminDb, isAdminConfigured } from '@/lib/firebase/admin';
-import { Message, deliver, italianDate, registeredProfileIds, sendToTokens } from '@/lib/server/push';
+import { Message, adminProfileIds, deliver, italianDate, registeredProfileIds, sendToTokens } from '@/lib/server/push';
 import { checkPromotions } from '@/lib/server/presenceWatch';
 import { reconcileTeams } from '@/lib/utils/teamUtils';
 import { GeneratedTeamRecord } from '@/types/database';
@@ -18,12 +18,18 @@ type NotifyRequest =
   /** Anyone signed in: after a sign-up / withdrawal the server checks if someone takes a place in the teams */
   | { type: 'reconcile'; date: string }
   /** Admin opened next week's sign-ups (Presenze): everyone registered is told, once per opening */
-  | { type: 'voting_open'; until: string };
+  | { type: 'voting_open'; until: string }
+  /** Admin diagnostics: which admins have a device registered for notifications */
+  | { type: 'admin_devices' }
+  /** Test notification to every admin's devices */
+  | { type: 'test_admins' };
 
 
 const isDate = (d: unknown): d is string => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d);
 
-function buildMessage(req: Exclude<NotifyRequest, { type: 'test' } | { type: 'reconcile' } | { type: 'voting_open' }>): Message {
+function buildMessage(
+  req: Exclude<NotifyRequest, { type: 'test' } | { type: 'reconcile' } | { type: 'voting_open' } | { type: 'admin_devices' } | { type: 'test_admins' }>
+): Message {
   const when = italianDate(req.date);
   const url = `/squadre?date=${req.date}`;
   if (req.type === 'match_confirmed') {
@@ -113,14 +119,48 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, sent, devices: tokens.size });
     }
 
+    if (body.type === 'admin_devices' || body.type === 'test_admins') {
+      const ids = await adminProfileIds();
+      const profiles = await adminDb().getAll(...ids.map((id) => adminDb().doc(`profiles/${id}`)));
+      const devices: { name: string; count: number; platforms: string[]; last: string | null }[] = [];
+      let sent = 0;
+      for (let i = 0; i < ids.length; i++) {
+        if (!profiles[i].exists) continue;
+        const tokens = await adminDb().collection('push_tokens').where('profile_id', '==', ids[i]).get();
+        const list = tokens.docs.map((d) => d.data());
+        const last = list
+          .map((t) => (t.updated_at?.toDate ? (t.updated_at.toDate() as Date).toISOString() : null))
+          .filter((x): x is string => Boolean(x))
+          .sort()
+          .pop() || null;
+        devices.push({
+          name: (profiles[i].data()?.full_name as string) || 'Admin',
+          count: tokens.size,
+          platforms: Array.from(new Set(list.map((t) => String(t.platform || '?')))),
+          last,
+        });
+        if (body.type === 'test_admins' && tokens.size > 0) {
+          sent += await sendToTokens(
+            tokens.docs.map((d) => d.id),
+            { title: '🔔 Prova per gli admin', body: 'Notifica di prova inviata a tutti gli amministratori.', url: '/admin' }
+          );
+        }
+      }
+      return NextResponse.json({ ok: true, devices, sent });
+    }
+
     if (body.type === 'voting_open') {
       if (!isDate(body.until)) return NextResponse.json({ ok: false, error: 'bad_request' }, { status: 400 });
       const calRef = adminDb().doc('settings/calendar');
       const cal = await calRef.get();
-      // Solo se le iscrizioni sono davvero aperte fino a quella data, e una volta sola per apertura
+      // Solo se le iscrizioni sono davvero aperte fino a quella data. Ogni (ri)apertura avvisa di nuovo:
+      // si salta solo un secondo invio entro 2 minuti (doppio clic).
       if (cal.data()?.open_until !== body.until) return NextResponse.json({ ok: true, skipped: 'not_open' });
-      if (cal.data()?.voting_notified_for === body.until) return NextResponse.json({ ok: true, skipped: 'already_sent' });
-      await calRef.set({ voting_notified_for: body.until }, { merge: true });
+      const lastAt = Date.parse(cal.data()?.voting_notified_at || '') || 0;
+      if (cal.data()?.voting_notified_for === body.until && Date.now() - lastAt < 2 * 60 * 1000) {
+        return NextResponse.json({ ok: true, skipped: 'just_sent' });
+      }
+      await calRef.set({ voting_notified_for: body.until, voting_notified_at: new Date().toISOString() }, { merge: true });
       const result = await deliver(await registeredProfileIds(), {
         title: '📅 Iscrizioni aperte',
         body: `Sono aperte le iscrizioni della settimana prossima (fino a ${italianDate(body.until)}): segna le tue presenze!`,

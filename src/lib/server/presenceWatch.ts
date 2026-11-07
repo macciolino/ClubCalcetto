@@ -1,5 +1,5 @@
 import { adminDb } from '@/lib/firebase/admin';
-import { deliver, italianDate } from '@/lib/server/push';
+import { deliver, deliverToAdmins, italianDate } from '@/lib/server/push';
 import { rankDayPresences } from '@/lib/utils/presenceRanking';
 import { Presence } from '@/types/database';
 
@@ -28,13 +28,32 @@ async function notifyPromoted(date: string, starterIds: string[], waitlistIds: s
   const db = adminDb();
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' });
   const stateRef = db.doc(`notify_state/${date}`);
-  const promoted = await db.runTransaction(async (tx) => {
+  const { promoted, tenReached } = await db.runTransaction(async (tx) => {
     const snap = await tx.get(stateRef);
     const prevWaitlist = new Set<string>(snap.exists ? (snap.data()?.waitlist as string[]) || [] : []);
-    tx.set(stateRef, { starters: starterIds, waitlist: waitlistIds, updated_at: new Date().toISOString() });
-    if (!snap.exists || date < today) return [];
-    return starterIds.filter((id) => prevWaitlist.has(id));
+    const full = starterIds.length >= 10;
+    const alreadyAlerted = Boolean(snap.data()?.ten_alert_sent);
+    const isFuture = date >= today;
+    // Avviso "10 iscritti" una volta; se si scende sotto 10 e si torna a 10, gli admin vengono avvisati di nuovo
+    const sendTen = full && !alreadyAlerted && isFuture;
+    tx.set(stateRef, {
+      starters: starterIds,
+      waitlist: waitlistIds,
+      ten_alert_sent: full ? alreadyAlerted || sendTen : false,
+      updated_at: new Date().toISOString(),
+    });
+    return {
+      promoted: !snap.exists || !isFuture ? [] : starterIds.filter((id) => prevWaitlist.has(id)),
+      tenReached: sendTen,
+    };
   });
+  if (tenReached) {
+    await deliverToAdmins({
+      title: '🔟 Raggiunti 10 iscritti',
+      body: `La partita di ${italianDate(date)} ha 10 titolari: potete generare e confermare le squadre.`,
+      url: `/squadre?date=${date}`,
+    });
+  }
   if (promoted.length === 0) return;
   await deliver(promoted, {
     title: '✅ Sei titolare!',
