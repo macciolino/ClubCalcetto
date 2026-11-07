@@ -290,6 +290,10 @@ export interface AppSettings {
   standard_match_time?: string;
   standard_total_cost?: number;
   default_field_id?: string;
+  /** Scorers' goals count in the statistics (Storico leaderboard, profile). Default true. */
+  count_goals?: boolean;
+  /** MVP awards count in the statistics (Storico leaderboard, profile). Default true. */
+  count_mvp?: boolean;
 }
 
 /**

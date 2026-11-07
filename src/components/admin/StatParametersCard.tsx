@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { StatCategory } from '@/types/database';
 import { addStatParameter, removeStatParameter } from '@/lib/firebase/firestoreService';
 import { NumberInput } from '@/components/NumberInput';
+import { CollapsibleCard } from '@/components/CollapsibleCard';
 import { Sliders, Plus, Trash2, Loader2, Info, Check } from 'lucide-react';
 
 const DEFAULT_PARAMETER_VALUE = 6;
@@ -74,17 +75,15 @@ export function StatParametersCard({ categories, onOpenLegend }: StatParametersC
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-3xl shadow-xl space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 border-b border-slate-800 pb-3">
-        <div className="min-w-0">
-          <h2 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
-            <Sliders className="h-5 w-5 text-emerald-400 flex-shrink-0" />
-            Parametri dei giocatori
-          </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Le abilità di ogni giocatore (card, radar e bilanciamento squadre). Si aggiungono e tolgono solo qui.
-          </p>
-        </div>
+    <CollapsibleCard
+      title="Parametri dei giocatori"
+      icon={<Sliders className="h-5 w-5 text-emerald-400" />}
+      summary={categories.length ? categories.map((c) => c.name).join(' · ') : 'Nessun parametro'}
+    >
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+        <p className="text-xs text-slate-400">
+          Le abilità di ogni giocatore (card, radar e bilanciamento squadre). Si aggiungono e tolgono solo qui.
+        </p>
         {onOpenLegend && (
           <button
             type="button"
@@ -186,6 +185,6 @@ export function StatParametersCard({ categories, onOpenLegend }: StatParametersC
         </p>
       )}
       {error && <p className="text-xs text-rose-300">{error}</p>}
-    </div>
+    </CollapsibleCard>
   );
 }

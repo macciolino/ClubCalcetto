@@ -9,6 +9,7 @@ import { formatItalianDate } from '@/lib/utils/dateUtils';
 import { History, Trophy, Star, ListOrdered, CalendarDays, Coins, Trash2, Loader2, Pencil } from 'lucide-react';
 import { MatchEditModal } from '@/components/MatchEditModal';
 import { HistoryCalendar } from '@/components/HistoryCalendar';
+import { useStatsCounting } from '@/lib/hooks/useStatsCounting';
 
 interface PlayerLine {
   id: string;
@@ -75,6 +76,12 @@ export default function HistoryPage() {
   const [sortBy, setSortBy] = useState<SortKey>('won');
   const [editing, setEditing] = useState<Match | null>(null);
   const [pickedDate, setPickedDate] = useState<string | null>(null);
+  // Scelta admin: gol e MVP contano nelle statistiche? (i dati delle partite restano comunque salvati)
+  const { countGoals, countMvp } = useStatsCounting();
+  const sortKeys = (Object.keys(SORT_LABELS) as SortKey[]).filter(
+    (k) => (k !== 'goals' || countGoals) && (k !== 'mvp' || countMvp)
+  );
+  const activeSort: SortKey = sortKeys.includes(sortBy) ? sortBy : 'won';
   const [season, setSeason] = useState<string>('all');
 
   useEffect(() => {
@@ -109,10 +116,14 @@ export default function HistoryPage() {
     const list = buildLeaderboard(visibleMatches, nameOf);
     return list.sort(
       (a, b) =>
-        b[sortBy] - a[sortBy] || b.won - a.won || b.goals - a.goals || a.played - b.played || a.name.localeCompare(b.name)
+        b[activeSort] - a[activeSort] ||
+        b.won - a.won ||
+        (countGoals ? b.goals - a.goals : 0) ||
+        a.played - b.played ||
+        a.name.localeCompare(b.name)
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibleMatches, profiles, sortBy]);
+  }, [visibleMatches, profiles, activeSort, countGoals]);
 
   // Cancellazione (solo admin): toglie anche le V/P/S che la partita aveva aggiunto ai profili
   const handleDeleteMatch = async (m: Match) => {
@@ -246,14 +257,14 @@ export default function HistoryPage() {
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <span className="text-slate-400">Ordina per:</span>
-            {(Object.keys(SORT_LABELS) as SortKey[]).map((k) => (
+            {sortKeys.map((k) => (
               <button
                 key={k}
                 type="button"
                 onClick={() => setSortBy(k)}
-                aria-pressed={sortBy === k}
+                aria-pressed={activeSort === k}
                 className={`px-3 py-1 rounded-full border font-semibold transition-colors ${
-                  sortBy === k
+                  activeSort === k
                     ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300'
                     : 'border-slate-700 text-slate-400 hover:text-white'
                 }`}
@@ -274,8 +285,8 @@ export default function HistoryPage() {
                     <th className="px-2 py-3" title="Partite vinte">V</th>
                     <th className="px-2 py-3" title="Pareggi">P</th>
                     <th className="px-2 py-3" title="Sconfitte">S</th>
-                    <th className="px-2 py-3">Gol</th>
-                    <th className="px-3 py-3">MVP</th>
+                    {countGoals && <th className="px-2 py-3">Gol</th>}
+                    {countMvp && <th className="px-3 py-3">MVP</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -287,8 +298,8 @@ export default function HistoryPage() {
                       <td className="px-2 py-2.5 text-center font-mono font-black text-emerald-400">{l.won}</td>
                       <td className="px-2 py-2.5 text-center font-mono text-amber-400">{l.drawn}</td>
                       <td className="px-2 py-2.5 text-center font-mono text-rose-400">{l.lost}</td>
-                      <td className="px-2 py-2.5 text-center font-mono">{l.goals}</td>
-                      <td className="px-3 py-2.5 text-center font-mono">{l.mvp}</td>
+                      {countGoals && <td className="px-2 py-2.5 text-center font-mono">{l.goals}</td>}
+                      {countMvp && <td className="px-3 py-2.5 text-center font-mono">{l.mvp}</td>}
                     </tr>
                   ))}
                 </tbody>

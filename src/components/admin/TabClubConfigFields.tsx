@@ -1,6 +1,8 @@
 'use client';
 
 import { StatParametersCard } from '@/components/admin/StatParametersCard';
+import { StatsCountingCard } from '@/components/admin/StatsCountingCard';
+import { CollapsibleCard } from '@/components/CollapsibleCard';
 
 
 import { NumberInput } from '@/components/NumberInput';
@@ -106,20 +108,21 @@ export function TabClubConfigFields({
 
   return (
     <div className="space-y-6">
-      {/* 1. ANAGRAFICA CENTRI SPORTIVI & CAMPI DA CALCIO */}
-      <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-xl space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-emerald-400" />
-              <h2 className="text-sm font-black text-white uppercase tracking-wider">
-                Anagrafica Centri Sportivi & Campi da Gioco
-              </h2>
-            </div>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Censisci i centri dove giochi abitualmente, con recapiti, tipo di erba e link navigatore.
-            </p>
-          </div>
+      {/* 0. COSA CONTA NELLE STATISTICHE (sempre aperto) */}
+      <StatsCountingCard />
+
+      {/* 1. ANAGRAFICA CENTRI SPORTIVI & CAMPI DA CALCIO (a tendina) */}
+      <CollapsibleCard
+        title="Centri sportivi & campi"
+        icon={<Building2 className="h-5 w-5 text-emerald-400" />}
+        summary={`${fields.length} ${fields.length === 1 ? 'campo' : 'campi'}${
+          fields.find((f) => f.id === defaultFieldId) ? ` · predefinito: ${fields.find((f) => f.id === defaultFieldId)?.name}` : ''
+        }`}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <p className="text-xs text-slate-400">
+            Censisci i centri dove giochi abitualmente, con recapiti, tipo di erba e link navigatore.
+          </p>
 
           <button
             type="button"
@@ -229,24 +232,22 @@ export function TabClubConfigFields({
             );
           })}
         </div>
-      </div>
+      </CollapsibleCard>
 
       {/* 2. PARAMETRI DEI GIOCATORI (aggiunta / rimozione solo qui) */}
       <StatParametersCard categories={categories} onOpenLegend={() => setIsLegendOpen(true)} />
 
       {/* 3. PARAMETRI ECONOMICI E LOGISTICI + 4. NOTIFICHE & SYSTEM STATUS (2 COLONNE) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* Parametri Economici e Logistici */}
-        <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-xl space-y-4">
-          <div className="border-b border-slate-800 pb-3">
-            <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
-              <Coins className="h-4 w-4 text-emerald-400" />
-              Parametri Economici & Quota Campo
-            </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Definisci il costo orario del campo e l&apos;orario predefinito della partita.
-            </p>
-          </div>
+      <div className="grid grid-cols-1 gap-5">
+        {/* Parametri Economici e Logistici (a tendina) */}
+        <CollapsibleCard
+          title="Costo campo & orario"
+          icon={<Coins className="h-5 w-5 text-emerald-400" />}
+          summary={`€${standardCost} a partita (€${(Number(standardCost) / 10).toFixed(2)} a testa) · ore ${standardTime}`}
+        >
+          <p className="text-xs text-slate-400">
+            Definisci il costo del campo e l&apos;orario predefinito della partita.
+          </p>
 
           {saveSuccessMsg && (
             <div className="p-3 bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 rounded-xl text-xs font-bold flex items-center gap-2">
@@ -307,7 +308,7 @@ export function TabClubConfigFields({
               <span>Salva Impostazioni Economiche</span>
             </button>
           </form>
-        </div>
+        </CollapsibleCard>
 
       </div>
 

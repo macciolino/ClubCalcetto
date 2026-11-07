@@ -8,6 +8,7 @@ import { FieldPosition, FIELD_POSITIONS, FIELD_POSITION_ABBR, sortStatsByCanonic
 import { RadarChart } from '@/components/RadarChart';
 import { StatBadge } from '@/components/StatBadge';
 import { useStatCategories } from '@/lib/hooks/useStatCategories';
+import { useStatsCounting } from '@/lib/hooks/useStatsCounting';
 import { subscribeMatches } from '@/lib/firebase/firestoreService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { Match } from '@/types/database';
@@ -36,6 +37,7 @@ export default function ProfiloPage() {
   const [fullName, setFullName] = useState(profile?.full_name || 'Giocatore');
   const [position, setPosition] = useState<FieldPosition>(profile?.position || 'Esterno');
   const categories = useStatCategories();
+  const { countGoals, countMvp } = useStatsCounting();
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -380,16 +382,22 @@ export default function ProfiloPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 text-center">
-            <div className="bg-slate-950/80 border border-slate-800 p-3.5 rounded-2xl space-y-1">
-              <div className="text-xs font-black text-slate-300 uppercase tracking-wider">⚽ Gol segnati</div>
-              <div className="text-3xl font-black text-white font-mono">{record.goals}</div>
+          {(countGoals || countMvp) && (
+            <div className={`grid ${countGoals && countMvp ? 'grid-cols-2' : 'grid-cols-1'} gap-3 text-center`}>
+              {countGoals && (
+                <div className="bg-slate-950/80 border border-slate-800 p-3.5 rounded-2xl space-y-1">
+                  <div className="text-xs font-black text-slate-300 uppercase tracking-wider">⚽ Gol segnati</div>
+                  <div className="text-3xl font-black text-white font-mono">{record.goals}</div>
+                </div>
+              )}
+              {countMvp && (
+                <div className="bg-slate-950/80 border border-slate-800 p-3.5 rounded-2xl space-y-1">
+                  <div className="text-xs font-black text-slate-300 uppercase tracking-wider">★ MVP</div>
+                  <div className="text-3xl font-black text-amber-300 font-mono">{record.mvp}</div>
+                </div>
+              )}
             </div>
-            <div className="bg-slate-950/80 border border-slate-800 p-3.5 rounded-2xl space-y-1">
-              <div className="text-xs font-black text-slate-300 uppercase tracking-wider">★ MVP</div>
-              <div className="text-3xl font-black text-amber-300 font-mono">{record.mvp}</div>
-            </div>
-          </div>
+          )}
 
           <Link href="/history" className="block text-center text-xs text-emerald-400 underline">
             Vedi la classifica completa nello Storico
