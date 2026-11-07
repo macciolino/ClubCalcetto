@@ -5,6 +5,7 @@ import { saveAppSettingsDoc } from '@/lib/firebase/firestoreService';
 import { useFormSettings } from '@/lib/hooks/useForms';
 import {
   FORM_GOALS_MIN,
+  FORM_GOALS_MIN_DEFENDER,
   FORM_GOALS_POINTS,
   FORM_MATCHES,
   FORM_MAX,
@@ -41,7 +42,7 @@ export function FormSettingsCard() {
       key: 'form_goals' as const,
       on: settings.goals,
       label: 'Gol',
-      help: `Chi segna ${FORM_GOALS_MIN} o più gol in una partita prende +${num(FORM_GOALS_POINTS)}.`,
+      help: `Chi segna ${FORM_GOALS_MIN} o più gol in una partita prende +${num(FORM_GOALS_POINTS)}; i difensori già dal ${FORM_GOALS_MIN_DEFENDER === 1 ? 'primo gol' : `${FORM_GOALS_MIN_DEFENDER}° gol`}.`,
       icon: <span className="text-base leading-none">⚽</span>,
     },
     {
@@ -133,6 +134,8 @@ export function FormSettingsCard() {
                 </li>
                 <li>
                   <strong>{FORM_GOALS_MIN} o più gol</strong> nella stessa partita: <strong>+{num(FORM_GOALS_POINTS)}</strong>.
+                  Chi ha come ruolo <strong>Difensore</strong> (nella scheda giocatore) lo prende già{' '}
+                  <strong>dal primo gol</strong>, perché segna raramente.
                 </li>
                 <li>
                   <strong>Risultato</strong>: vittoria <strong>+{num(FORM_WIN_POINTS)}</strong>, pareggio <strong>0</strong>, sconfitta{' '}

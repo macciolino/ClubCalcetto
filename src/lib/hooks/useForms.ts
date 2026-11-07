@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Match, MvpVote } from '@/types/database';
-import { subscribeAppSettings, subscribeMatches, subscribeMvpVotes } from '@/lib/firebase/firestoreService';
+import { subscribeAppSettings, subscribeMatches, subscribeMvpVotes, subscribeProfiles } from '@/lib/firebase/firestoreService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { FORM_MATCHES, FormSettings, computeForms } from '@/lib/utils/formUtils';
 
@@ -24,6 +24,18 @@ export function useForms(): { forms: Map<string, number>; settings: FormSettings
   const settings = useFormSettings();
   const [matches, setMatches] = useState<Match[]>([]);
   const [votesByDate, setVotesByDate] = useState<Record<string, MvpVote[]>>({});
+  const [positions, setPositions] = useState<Record<string, string | undefined>>({});
+
+  // Ruolo di ogni giocatore (i difensori prendono il bonus gol già dal primo gol)
+  useEffect(() => {
+    if (!isFirebaseConfigured || !settings.goals) return;
+    const unsub = subscribeProfiles((list) => {
+      const map: Record<string, string | undefined> = {};
+      (list || []).forEach((p) => (map[p.id] = p.position));
+      setPositions(map);
+    });
+    return () => unsub();
+  }, [settings.goals]);
 
   useEffect(() => {
     if (!isFirebaseConfigured) return;
@@ -51,6 +63,9 @@ export function useForms(): { forms: Map<string, number>; settings: FormSettings
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [datesKey, settings.mvp]);
 
-  const forms = useMemo(() => computeForms(matches, votesByDate, settings), [matches, votesByDate, settings]);
+  const forms = useMemo(
+    () => computeForms(matches, votesByDate, settings, positions),
+    [matches, votesByDate, settings, positions]
+  );
   return { forms, settings };
 }

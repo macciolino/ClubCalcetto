@@ -7,6 +7,7 @@ import { Match, MvpVote, Profile } from '@/types/database';
  *     official MVP of the match            +1    (switch "MVP")
  *     otherwise MVP votes received, from 2  +0.1 per vote (2 → +0.2, 3 → +0.3, 5 → +0.5)  (switch "MVP")
  *     3 or more goals in the match          +0.5  (switch "Gol")
+ *       a player whose role is Difensore gets it from the FIRST goal (defenders rarely score)
  *     win +0.2 · draw 0 · defeat -0.2, for all 5 of the team, whatever the score margin
  *                                           (switch "Vittorie e sconfitte"; MVP / votes / goals compensate)
  * - Form = AVERAGE of the points of the last 3 matches (a match not played counts 0), from -1 to +1.
@@ -20,6 +21,8 @@ export const FORM_VOTE_POINTS = 0.1;
 export const FORM_MIN_VOTES = 2;
 export const FORM_GOALS_MIN = 3;
 export const FORM_GOALS_POINTS = 0.5;
+/** Defenders get the goal bonus from this many goals */
+export const FORM_GOALS_MIN_DEFENDER = 1;
 export const FORM_WIN_POINTS = 0.2;
 export const FORM_LOSS_POINTS = -0.2;
 
@@ -35,7 +38,9 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
 export function computeForms(
   completedMatches: Match[],
   votesByDate: Record<string, MvpVote[]>,
-  settings: FormSettings
+  settings: FormSettings,
+  /** Role of each player (profile.position): a 'Difensore' needs only 1 goal for the goal bonus */
+  positions: Record<string, string | undefined> = {}
 ): Map<string, number> {
   const forms = new Map<string, number>();
   if (!settings.goals && !settings.mvp && !settings.results) return forms;
@@ -71,7 +76,8 @@ export function computeForms(
     }
     if (settings.goals) {
       (m.scorers || []).forEach((s) => {
-        if (played.has(s.player_id) && (s.goals || 0) >= FORM_GOALS_MIN) add(s.player_id, FORM_GOALS_POINTS);
+        const min = positions[s.player_id] === 'Difensore' ? FORM_GOALS_MIN_DEFENDER : FORM_GOALS_MIN;
+        if (played.has(s.player_id) && (s.goals || 0) >= min) add(s.player_id, FORM_GOALS_POINTS);
       });
     }
   }
