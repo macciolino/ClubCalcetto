@@ -1,10 +1,14 @@
 /**
- * Generates the app / notification icons from the club logo (assets/logo-source.png).
+ * Generates the icons:
+ *  - app icons (home screen, browser tab, manifest) from the ball logo  assets/logo-header-source.png
+ *  - notification image from the logo with the bell                     assets/logo-source.png
+ *  - Android status-bar badge: simple ball silhouette
  * Usage: node scripts/make-icons.mjs
  */
 import sharp from 'sharp';
 
-const SRC = 'assets/logo-source.png';
+const SRC = 'assets/logo-header-source.png'; // app: ball only
+const SRC_NOTIFICATION = 'assets/logo-source.png'; // notifications: logo with the bell
 const OUT = 'public/icons';
 const BG = { r: 2, g: 6, b: 23, alpha: 1 }; // #020617, app background
 
@@ -12,6 +16,9 @@ const BG = { r: 2, g: 6, b: 23, alpha: 1 }; // #020617, app background
 for (const size of [512, 192, 96]) {
   await sharp(SRC).resize(size, size, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).png({ compressionLevel: 9, palette: true, quality: 90 }).toFile(`${OUT}/icon-${size}.png`);
 }
+
+// Image shown inside the notifications: logo with the bell
+await sharp(SRC_NOTIFICATION).resize(192, 192, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).png({ compressionLevel: 9, palette: true, quality: 90 }).toFile(`${OUT}/notification-192.png`);
 
 // iPhone home screen: no transparency allowed, so dark background with a small margin
 const inner = Math.round(180 * 0.86);

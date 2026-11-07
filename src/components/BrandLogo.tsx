@@ -3,7 +3,7 @@ import React from 'react';
 /**
  * Club logo shown in the top bar and on the login page.
  * To go back to the previous logo (green square with the ⚽ emoji) set LOGO_STYLE = 'classic'.
- * Source images: assets/logo-header-source.png (current), assets/logo-source.png (logo with bell, used for app/notification icons).
+ * Source images: assets/logo-header-source.png (current), assets/logo-source.png (logo with bell, used inside notifications).
  */
 const LOGO_STYLE: 'image' | 'classic' = 'image';
 
