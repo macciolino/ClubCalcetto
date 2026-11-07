@@ -1,5 +1,6 @@
 'use client';
 
+import { useFormSettings } from '@/lib/hooks/useForms';
 import React, { useEffect, useState } from 'react';
 import { Match, MatchTeamPlayer, Profile } from '@/types/database';
 import { saveMatchResult } from '@/lib/firebase/firestoreService';
@@ -29,8 +30,10 @@ export function MatchEditModal({ match, profiles, closedBy, onClose }: MatchEdit
     scoreBlack: match.score_black ?? 0,
     mvpPlayerId: match.mvp_player_id || '',
     scorers: match.scorers || [],
+    penaltySaves: match.penalty_saves || [],
   });
   const [saving, setSaving] = useState(false);
+  const fixedKeeper = Boolean(useFormSettings().fixedKeeper);
   const [error, setError] = useState('');
 
   // Chiudi con Esc e blocca lo scroll della pagina sotto
@@ -56,6 +59,7 @@ export function MatchEditModal({ match, profiles, closedBy, onClose }: MatchEdit
       ...r,
       mvpPlayerId: ids.has(r.mvpPlayerId) ? r.mvpPlayerId : '',
       scorers: r.scorers.filter((s) => ids.has(s.player_id)),
+      penaltySaves: (r.penaltySaves || []).filter((s) => ids.has(s.player_id)),
     }));
   };
 
@@ -75,6 +79,7 @@ export function MatchEditModal({ match, profiles, closedBy, onClose }: MatchEdit
         teamBlack: black,
         mvpPlayerId: result.mvpPlayerId || null,
         scorers: result.scorers,
+        penaltySaves: result.penaltySaves || [],
         totalCost: Number(match.total_cost) || 80,
         closedBy,
       });
@@ -122,7 +127,7 @@ export function MatchEditModal({ match, profiles, closedBy, onClose }: MatchEdit
 
           <section className="space-y-2">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Risultato, MVP e marcatori</h3>
-            <MatchResultFields value={result} onChange={setResult} white={white} black={black} />
+            <MatchResultFields fixedKeeper={fixedKeeper} value={result} onChange={setResult} white={white} black={black} />
           </section>
 
           {error && <p className="text-sm text-rose-300">{error}</p>}

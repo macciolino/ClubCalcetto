@@ -104,11 +104,12 @@ function getCombinations<T>(arr: T[], k: number): T[][] {
  * [3]: Esterno Destro (largo a DX)
  * [4]: Punta (in alto in attacco)
  */
-export function orderTeamForDiamondRombo(team: Profile[]): Profile[] {
+export function orderTeamForDiamondRombo(team: Profile[], fixedKeeper = true): Profile[] {
   const pool = [...team];
 
   // 1. Portiere: cerca giocatore con posizione === 'Portiere', altrimenti miglior difensore/fisico
-  let porIndex = pool.findIndex((p) => p.position === 'Portiere');
+  // Portiere a rotazione: nessuno fa il portiere tutta la partita, lo slot in porta segue solo le abilità
+  let porIndex = fixedKeeper ? pool.findIndex((p) => p.position === 'Portiere') : -1;
   if (porIndex === -1) {
     let bestScore = -1;
     pool.forEach((p, i) => {
@@ -164,6 +165,11 @@ export interface BalanceOptions {
   excludeSplitKey?: string;
   /** How many of the best alternatives to choose from when rebalancing (default 5) */
   pickAmongTop?: number;
+  /**
+   * Club plays with a fixed goalkeeper: with 2 or more 'Portiere' among the 10, each team gets at least one.
+   * false (rotation, default) = the role Portiere is ignored.
+   */
+  fixedKeeper?: boolean;
 }
 
 /**
@@ -195,6 +201,15 @@ export function balanceTeams(players: Profile[], options: BalanceOptions = {}): 
     return { white: comboWhite, black: comboBlack, diff, secondaryDiff, key };
   });
 
+  // Portiere fisso: con almeno 2 portieri, un portiere per squadra
+  const keepers = new Set(players.filter((p) => p.position === 'Portiere').map((p) => p.id));
+  const allowed =
+    options.fixedKeeper && keepers.size >= 2
+      ? candidates.filter((c) => c.white.some((p) => keepers.has(p.id)) && c.black.some((p) => keepers.has(p.id)))
+      : candidates;
+  candidates.length = 0;
+  candidates.push(...allowed);
+
   // Più equilibrate prima (differenze sotto 0.05 considerate pari, poi conta difesa + attacco)
   candidates.sort((a, b) =>
     Math.abs(a.diff - b.diff) >= 0.05 ? a.diff - b.diff : a.secondaryDiff - b.secondaryDiff
@@ -220,8 +235,8 @@ export function balanceTeams(players: Profile[], options: BalanceOptions = {}): 
   const fairnessScore = Math.max(0, Math.min(100, Math.round(100 - diffAvg * 15)));
 
   return {
-    teamWhite: orderTeamForDiamondRombo(bestWhite),
-    teamBlack: orderTeamForDiamondRombo(bestBlack),
+    teamWhite: orderTeamForDiamondRombo(bestWhite, Boolean(options.fixedKeeper)),
+    teamBlack: orderTeamForDiamondRombo(bestBlack, Boolean(options.fixedKeeper)),
     whiteStats,
     blackStats,
     difference: Number(diffAvg.toFixed(2)),

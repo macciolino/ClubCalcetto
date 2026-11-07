@@ -19,7 +19,7 @@ import {
   FieldPath,
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './config';
-import { Profile, Presence, StatCategory, Match, GeneratedTeamRecord, AppSettings, CalendarSettings, MatchOutcome, MatchScorer, MatchTeamPlayer, TeamSubstitution, MvpVote } from '@/types/database';
+import { Profile, Presence, StatCategory, Match, GeneratedTeamRecord, AppSettings, CalendarSettings, MatchOutcome, MatchScorer, MatchTeamPlayer, TeamSubstitution, MvpVote, MatchPenaltySave } from '@/types/database';
 import { rankDayPresences, rankPresencesByDate } from '@/lib/services/presenceService';
 import { requestTeamsCheck } from '@/lib/services/notificationService';
 
@@ -447,6 +447,8 @@ export interface MatchResultInput {
   teamBlack: MatchTeamPlayer[];
   mvpPlayerId: string | null;
   scorers: MatchScorer[];
+  /** Penalties saved by the goalkeeper (fixed goalkeeper only) */
+  penaltySaves?: MatchPenaltySave[];
   totalCost: number;
   closedBy: string;
 }
@@ -525,6 +527,7 @@ export async function saveMatchResult(input: MatchResultInput): Promise<void> {
         team_black: teamBlack,
         mvp_player_id: input.mvpPlayerId || null,
         scorers: input.scorers,
+        penalty_saves: (input.penaltySaves || []).filter((p) => p.count > 0),
         total_cost: input.totalCost,
         cost_per_player: Number((input.totalCost / 10).toFixed(2)),
         profile_effects: appliedEffects,

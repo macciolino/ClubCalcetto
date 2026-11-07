@@ -1,5 +1,6 @@
 'use client';
 
+import { ROTATION_KEEPER_LABEL } from '@/lib/utils/teamUtils';
 import React, { forwardRef } from 'react';
 import { Profile } from '@/types/database';
 import { 
@@ -24,10 +25,14 @@ interface VirtualPitchProps {
   };
   whiteAvg?: number;
   blackAvg?: number;
+  /** false = goalkeeper in rotation: the goal slot is labelled "PORTA ↻" instead of POR */
+  fixedKeeper?: boolean;
 }
 
 export const VirtualPitch = forwardRef<HTMLDivElement, VirtualPitchProps>(
-  ({ teamWhite, teamBlack, matchInfo, whiteAvg, blackAvg }, ref) => {
+  ({ teamWhite, teamBlack, matchInfo, whiteAvg, blackAvg, fixedKeeper = true }, ref) => {
+    const keeperLabel = (pos: PlayerPitchPosition, idx: number) =>
+      idx === 0 && !fixedKeeper ? { ...pos, roleLabel: ROTATION_KEEPER_LABEL } : pos;
     const whitePositions = getOrganicCoordinates(WHITE_TEAM_COORDINATES, 3);
     const blackPositions = getOrganicCoordinates(BLACK_TEAM_COORDINATES, 7);
 
@@ -151,7 +156,7 @@ export const VirtualPitch = forwardRef<HTMLDivElement, VirtualPitchProps>(
               key={`white-${player.id || idx}`}
               player={player}
               team="white"
-              pos={whitePositions[idx] || { x: 50, y: 20, roleLabel: 'CALC' }}
+              pos={keeperLabel(whitePositions[idx] || { x: 50, y: 20, roleLabel: 'CALC' }, idx)}
             />
           ))}
           {teamBlack.map((player, idx) => (
@@ -159,7 +164,7 @@ export const VirtualPitch = forwardRef<HTMLDivElement, VirtualPitchProps>(
               key={`black-${player.id || idx}`}
               player={player}
               team="black"
-              pos={blackPositions[idx] || { x: 50, y: 75, roleLabel: 'CALC' }}
+              pos={keeperLabel(blackPositions[idx] || { x: 50, y: 75, roleLabel: 'CALC' }, idx)}
             />
           ))}
 

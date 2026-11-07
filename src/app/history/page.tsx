@@ -382,6 +382,11 @@ export default function HistoryPage() {
                       ⚽ {(m.scorers || []).map((s) => `${nameOf(s.player_id, s.player_name)} (${s.goals})`).join(', ')}
                     </p>
                   )}
+                  {(m.penalty_saves || []).length > 0 && (
+                    <p className="text-slate-300">
+                      🧤 Rigori parati: {(m.penalty_saves || []).map((p) => `${nameOf(p.player_id, p.player_name)} (${p.count})`).join(', ')}
+                    </p>
+                  )}
                   {!mvpName && !(m.scorers || []).length && (
                     <p className="text-slate-500">Nessun marcatore o MVP inserito.</p>
                   )}

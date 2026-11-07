@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { MatchTeamPlayer } from '@/types/database';
-import { SLOT_LABELS } from '@/lib/utils/teamUtils';
+import { slotLabel } from '@/lib/utils/teamUtils';
 import { ArrowLeftRight } from 'lucide-react';
 
 type Side = 'white' | 'black' | 'bench';
@@ -18,13 +18,15 @@ interface TeamSwapEditorProps {
   /** Players not in the teams who can replace someone (e.g. all players, in the history). */
   bench?: MatchTeamPlayer[];
   disabled?: boolean;
+  /** false = goalkeeper in rotation (first slot shown as "PORTA ↻") */
+  fixedKeeper?: boolean;
 }
 
 /**
  * Manual team editing made for phones: tap a player, then tap another one to swap them
  * (between the two teams or between roles). With a bench, tap a bench player and then a slot to replace.
  */
-export function TeamSwapEditor({ white, black, onChange, bench = [], disabled }: TeamSwapEditorProps) {
+export function TeamSwapEditor({ white, black, onChange, bench = [], disabled, fixedKeeper = true }: TeamSwapEditorProps) {
   const [selected, setSelected] = useState<Selection | null>(null);
 
   const listOf = (side: Side) => (side === 'white' ? white : side === 'black' ? black : bench);
@@ -88,7 +90,7 @@ export function TeamSwapEditor({ white, black, onChange, bench = [], disabled }:
           aria-pressed={selected?.side === side && selected.index === i}
         >
           <span className="w-12 flex-shrink-0 text-[10px] font-mono font-bold text-emerald-400">
-            {SLOT_LABELS[i] || '—'}
+            {slotLabel(i, fixedKeeper)}
           </span>
           <span className="truncate">{p.name}</span>
         </button>

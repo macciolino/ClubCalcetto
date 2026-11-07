@@ -6,6 +6,8 @@ import { useFormSettings } from '@/lib/hooks/useForms';
 import {
   FORM_GOALS_MIN,
   FORM_GOALS_MIN_DEFENDER,
+  FORM_PENALTY_SAVE_POINTS,
+  FORM_PENALTY_SAVE_MAX,
   FORM_GOALS_POINTS,
   FORM_MATCHES,
   FORM_MAX,
@@ -28,6 +30,16 @@ export function FormSettingsCard() {
   const [saving, setSaving] = useState(false);
   const [legendOpen, setLegendOpen] = useState(false);
 
+  const setKeeperMode = async (mode: 'rotation' | 'fixed') => {
+    if ((mode === 'fixed') === Boolean(settings.fixedKeeper)) return;
+    setSaving(true);
+    try {
+      await saveAppSettingsDoc({ goalkeeper_mode: mode });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const toggle = async (key: 'form_goals' | 'form_mvp' | 'form_results', next: boolean) => {
     setSaving(true);
     try {
@@ -42,7 +54,9 @@ export function FormSettingsCard() {
       key: 'form_goals' as const,
       on: settings.goals,
       label: 'Gol',
-      help: `Chi segna ${FORM_GOALS_MIN} o più gol in una partita prende +${num(FORM_GOALS_POINTS)}; i difensori già dal ${FORM_GOALS_MIN_DEFENDER === 1 ? 'primo gol' : `${FORM_GOALS_MIN_DEFENDER}° gol`}.`,
+      help: settings.fixedKeeper
+        ? `${FORM_GOALS_MIN}+ gol in una partita +${num(FORM_GOALS_POINTS)} (difensori e portiere dal primo gol); rigore parato +${num(FORM_PENALTY_SAVE_POINTS)}.`
+        : `${FORM_GOALS_MIN}+ gol in una partita +${num(FORM_GOALS_POINTS)}; i difensori già dal primo gol.`,
       icon: <span className="text-base leading-none">⚽</span>,
     },
     {
@@ -106,6 +120,37 @@ export function FormSettingsCard() {
         ))}
       </div>
 
+      {/* Come gioca il club in porta */}
+      <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+        <div className="text-sm font-bold text-white">🧤 Portiere</div>
+        <div className="grid grid-cols-2 gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl text-xs" role="radiogroup" aria-label="Portiere">
+          {([
+            ['rotation', 'A rotazione'],
+            ['fixed', 'Fisso'],
+          ] as const).map(([value, label]) => {
+            const active = (value === 'fixed') === Boolean(settings.fixedKeeper);
+            return (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                disabled={saving}
+                onClick={() => setKeeperMode(value)}
+                className={`py-2.5 rounded-lg font-bold transition-all ${active ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-xs text-slate-400">
+          {settings.fixedKeeper
+            ? 'Fisso: due portieri tra i 10 vanno uno per squadra; il portiere prende il bonus dal primo gol e i rigori parati contano.'
+            : 'A rotazione (es. ogni 5 minuti): nessun portiere fisso, sul campo il posto in porta è "PORTA ↻" e le squadre si bilanciano senza cercare un portiere.'}
+        </p>
+      </div>
+
       {/* Legenda di quanto deciso (a tendina) */}
       <div className="rounded-2xl border border-slate-700 bg-slate-950/70">
         <button
@@ -135,7 +180,13 @@ export function FormSettingsCard() {
                 <li>
                   <strong>{FORM_GOALS_MIN} o più gol</strong> nella stessa partita: <strong>+{num(FORM_GOALS_POINTS)}</strong>.
                   Chi ha come ruolo <strong>Difensore</strong> (nella scheda giocatore) lo prende già{' '}
-                  <strong>dal primo gol</strong>, perché segna raramente.
+                  <strong>dal primo gol</strong>, perché segna raramente. Con il <strong>portiere fisso</strong> vale lo stesso
+                  per chi ha ruolo <strong>Portiere</strong>.
+                </li>
+                <li>
+                  <strong>Rigore parato</strong> (solo con portiere fisso, si segna a fine partita):{' '}
+                  <strong>+{num(FORM_PENALTY_SAVE_POINTS)}</strong> ciascuno, al massimo <strong>+{num(FORM_PENALTY_SAVE_MAX)}</strong> a
+                  partita. Conta con l&apos;interruttore Gol.
                 </li>
                 <li>
                   <strong>Risultato</strong>: vittoria <strong>+{num(FORM_WIN_POINTS)}</strong>, pareggio <strong>0</strong>, sconfitta{' '}
@@ -178,6 +229,19 @@ export function FormSettingsCard() {
                 <li>
                   <strong>Luca</strong>: 3 sconfitte di fila, nessun voto né gol. Media: (−0,2 × 3) ÷ 3 = <strong>−0,2 ❄️</strong>.
                   Difesa 8 diventa 7,8, OVR 6,5 diventa 6,3.
+                </li>
+              </ul>
+            </div>
+            <div>
+              <p className="font-bold text-white mb-1">Portiere a rotazione o fisso</p>
+              <ul className="list-disc pl-5 space-y-0.5">
+                <li>
+                  <strong>A rotazione</strong> (in porta a turno): il ruolo Portiere non conta, nessun bonus da portiere, le squadre si
+                  bilanciano solo sulle abilità.
+                </li>
+                <li>
+                  <strong>Fisso</strong>: due portieri tra i 10 vanno in squadre diverse; gol del portiere dal primo gol; rigori parati
+                  +{num(FORM_PENALTY_SAVE_POINTS)}.
                 </li>
               </ul>
             </div>

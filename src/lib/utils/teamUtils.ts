@@ -2,6 +2,10 @@ import { GeneratedTeamRecord, MatchTeamPlayer, Profile, StoredTeamPlayer, TeamSu
 
 /** Slot labels of the 1-1-2-1 diamond, in the order players are stored. */
 export const SLOT_LABELS = ['POR', 'DIF', 'EST SX', 'EST DX', 'PUN'] as const;
+/** With the goalkeeper in rotation nobody is the keeper for the whole match */
+export const ROTATION_KEEPER_LABEL = 'PORTA ↻';
+export const slotLabel = (i: number, fixedKeeper = true): string =>
+  i === 0 && !fixedKeeper ? ROTATION_KEEPER_LABEL : SLOT_LABELS[i] || '—';
 
 export const storedName = (p: StoredTeamPlayer): string => p.name || p.full_name || 'Giocatore';
 

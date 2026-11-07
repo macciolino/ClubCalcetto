@@ -181,6 +181,8 @@ export interface Match {
   score_black?: number;
   mvp_player_id?: string;
   scorers?: MatchScorer[];
+  /** Penalties saved by the goalkeeper (only with a fixed goalkeeper) */
+  penalty_saves?: MatchPenaltySave[];
   /** @deprecated assists are no longer tracked (kept only so old match docs still type-check) */
   assists?: MatchAssist[];
   /** Teams as they played (names kept so the history stays readable even if a player is deleted) */
@@ -198,6 +200,12 @@ export interface Match {
 }
 
 export type MatchOutcome = 'won' | 'drawn' | 'lost';
+
+export interface MatchPenaltySave {
+  player_id: string;
+  player_name: string;
+  count: number;
+}
 
 export interface MatchTeamPlayer {
   id: string;
@@ -296,6 +304,8 @@ export interface AppSettings {
   form_mvp?: boolean;
   /** "Stato forma": win +0.2, draw 0, defeat -0.2 for every player of the team. Default off. */
   form_results?: boolean;
+  /** How the club plays in goal: 'rotation' = everyone in turn (e.g. every 5 minutes), 'fixed' = a real goalkeeper. Default rotation. */
+  goalkeeper_mode?: 'rotation' | 'fixed';
 }
 
 /**

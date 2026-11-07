@@ -1,5 +1,6 @@
 'use client';
 
+import { useFormSettings } from '@/lib/hooks/useForms';
 import { MatchResultFields, MatchResultValue, validateScorers } from '@/components/MatchResultFields';
 import { reconcileTeams, toTeamPlayer } from '@/lib/utils/teamUtils';
 import { firstToTenByWeek as computeFirstToTen } from '@/lib/utils/presenceRanking';
@@ -60,6 +61,7 @@ export function TabOverviewMatch({
   totalMatchCost: standardMatchCost = 80,
 }: TabOverviewMatchProps) {
   const { profile } = useAuth();
+  const fixedKeeper = Boolean(useFormSettings().fixedKeeper);
 
   // Partita salvata in Firestore per la data attiva (fonte unica per risultato e quota)
   const [savedMatch, setSavedMatch] = useState<Match | null>(null);
@@ -154,6 +156,7 @@ export function TabOverviewMatch({
         scoreBlack: savedMatch.score_black ?? 0,
         mvpPlayerId: savedMatch.mvp_player_id || '',
         scorers: savedMatch.scorers || [],
+        penaltySaves: savedMatch.penalty_saves || [],
       });
     }
   }, [activeDate, savedMatch]);
@@ -232,6 +235,7 @@ export function TabOverviewMatch({
         teamBlack: teams.black,
         mvpPlayerId: result.mvpPlayerId || null,
         scorers: result.scorers,
+        penaltySaves: result.penaltySaves || [],
         totalCost: totalMatchCost,
         closedBy: profile?.id || '',
       });
@@ -587,7 +591,7 @@ export function TabOverviewMatch({
                 <>Squadre prese dalla sezione <Link href={`/squadre?date=${activeDate}`} className="text-emerald-400 underline">Squadre</Link>: se sono sbagliate correggile lì prima di salvare.</>
               )}
             </p>
-            <MatchResultFields value={result} onChange={setResult} white={teams.white} black={teams.black} mvpVotes={mvpVotes} />
+            <MatchResultFields fixedKeeper={fixedKeeper} value={result} onChange={setResult} white={teams.white} black={teams.black} mvpVotes={mvpVotes} />
           </>
         ) : (
           <div className="p-4 bg-amber-500/10 border border-amber-500/30 text-amber-200 rounded-2xl text-sm flex items-start gap-2">

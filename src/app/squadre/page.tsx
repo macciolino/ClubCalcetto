@@ -7,7 +7,7 @@ import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/context/AuthContext';
 import { Profile, Presence, Match, GeneratedTeamRecord, SportField, MatchTeamPlayer } from '@/types/database';
-import { reconcileTeams, profileForTeamPlayer, splitKey, toTeamPlayer, SLOT_LABELS } from '@/lib/utils/teamUtils';
+import { reconcileTeams, profileForTeamPlayer, splitKey, toTeamPlayer, slotLabel } from '@/lib/utils/teamUtils';
 import { notifyMatchPlayers } from '@/lib/services/notificationService';
 import { TeamSwapEditor } from '@/components/TeamSwapEditor';
 import { MvpVoteCard } from '@/components/MvpVoteCard';
@@ -89,7 +89,8 @@ function SquadreContent() {
   const [presences, setPresences] = useState<Presence[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   // Stato forma (ultime 3 partite, se attivato in Admin): conta nel bilanciamento e sul campo
-  const { forms } = useForms();
+  const { forms, settings: formSettings } = useForms();
+  const fixedKeeper = Boolean(formSettings.fixedKeeper);
   const formProfiles = React.useMemo(
     () => profiles.map((p) => withForm(p, forms.get(p.id))),
     [profiles, forms]
@@ -327,7 +328,7 @@ function SquadreContent() {
     setIsGenerating(true);
     try {
       const current = teams ? splitKey(teams.white.map((p) => p.id), teams.black.map((p) => p.id)) : undefined;
-      const result = balanceTeams(starterProfiles, isRebalance ? { excludeSplitKey: current } : {});
+      const result = balanceTeams(starterProfiles, isRebalance ? { excludeSplitKey: current, fixedKeeper } : { fixedKeeper });
       await saveTeams(selectedDate, result.teamWhite.map(toTeamPlayer), result.teamBlack.map(toTeamPlayer), {
         manual: false,
         whiteAvg: result.whiteStats.overallAvg,
@@ -779,6 +780,7 @@ function SquadreContent() {
             <Pencil className="h-4 w-4 text-emerald-400" /> Modifica manuale squadre
           </h3>
           <TeamSwapEditor
+            fixedKeeper={fixedKeeper}
             white={manualDraft.white}
             black={manualDraft.black}
             onChange={(white, black) => setManualDraft({ white, black })}
@@ -854,7 +856,7 @@ function SquadreContent() {
                 <ul className="pt-2 border-t border-slate-800 space-y-1 text-xs">
                   {balancedResult.teamWhite.map((p, i) => (
                     <li key={p.id} className="flex items-center gap-2 text-slate-200">
-                      <span className="w-11 flex-shrink-0 font-mono text-[10px] font-bold text-emerald-400">{SLOT_LABELS[i]}</span>
+                      <span className="w-11 flex-shrink-0 font-mono text-[10px] font-bold text-emerald-400">{slotLabel(i, fixedKeeper)}</span>
                       <span className="truncate">{p.full_name}</span>
                       {forms.get(p.id) ? (
                         <span className={`ml-auto flex-shrink-0 text-[10px] font-black ${(forms.get(p.id) || 0) > 0 ? 'text-orange-300' : 'text-sky-300'}`}>
@@ -896,7 +898,7 @@ function SquadreContent() {
                 <ul className="pt-2 border-t border-slate-800 space-y-1 text-xs">
                   {balancedResult.teamBlack.map((p, i) => (
                     <li key={p.id} className="flex items-center gap-2 text-slate-200">
-                      <span className="w-11 flex-shrink-0 font-mono text-[10px] font-bold text-emerald-400">{SLOT_LABELS[i]}</span>
+                      <span className="w-11 flex-shrink-0 font-mono text-[10px] font-bold text-emerald-400">{slotLabel(i, fixedKeeper)}</span>
                       <span className="truncate">{p.full_name}</span>
                       {forms.get(p.id) ? (
                         <span className={`ml-auto flex-shrink-0 text-[10px] font-black ${(forms.get(p.id) || 0) > 0 ? 'text-orange-300' : 'text-sky-300'}`}>
@@ -1023,6 +1025,7 @@ function SquadreContent() {
             </div>
 
             <VirtualPitch
+              fixedKeeper={fixedKeeper}
               ref={pitchRef}
               teamWhite={balancedResult.teamWhite}
               teamBlack={balancedResult.teamBlack}

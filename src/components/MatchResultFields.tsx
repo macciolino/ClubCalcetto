@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { MatchScorer, MatchTeamPlayer } from '@/types/database';
+import { MatchPenaltySave, MatchScorer, MatchTeamPlayer } from '@/types/database';
 import { NumberInput } from '@/components/NumberInput';
 import { Star, Plus, Minus, X, AlertCircle } from 'lucide-react';
 
@@ -10,6 +10,8 @@ export interface MatchResultValue {
   scoreBlack: number;
   mvpPlayerId: string;
   scorers: MatchScorer[];
+  /** Fixed goalkeeper only */
+  penaltySaves?: MatchPenaltySave[];
 }
 
 /**
@@ -49,10 +51,12 @@ interface MatchResultFieldsProps {
   black: MatchTeamPlayer[];
   /** MVP votes of the players (Squadre page), shown next to the names: the admin can still pick anyone */
   mvpVotes?: { playerId: string; count: number }[];
+  /** Club plays with a fixed goalkeeper: shows "Rigori parati" for the two goalkeepers (first slot of each team) */
+  fixedKeeper?: boolean;
 }
 
 /** Final score, MVP and scorers of a match (used in Admin → Match & Cassa and in the history editor). */
-export function MatchResultFields({ value, onChange, white, black, mvpVotes = [] }: MatchResultFieldsProps) {
+export function MatchResultFields({ value, onChange, white, black, mvpVotes = [], fixedKeeper = false }: MatchResultFieldsProps) {
   const votesOf = (id: string) => mvpVotes.find((v) => v.playerId === id)?.count || 0;
   const mvpLabel = (p: MatchTeamPlayer) => (votesOf(p.id) > 0 ? `${p.name} (${votesOf(p.id)} voti)` : p.name);
   const topVoted = mvpVotes[0];
@@ -85,7 +89,15 @@ export function MatchResultFields({ value, onChange, white, black, mvpVotes = []
 
   const teamOf = (id: string) => (white.some((p) => p.id === id) ? '⚪' : '⚫');
 
+  const keepers = [white[0], black[0]].filter((p): p is MatchTeamPlayer => Boolean(p));
+  const savesOf = (id: string) => (value.penaltySaves || []).find((x) => x.player_id === id)?.count || 0;
+  const setSaves = (p: MatchTeamPlayer, count: number) => {
+    const others = (value.penaltySaves || []).filter((x) => x.player_id !== p.id);
+    set({ penaltySaves: count > 0 ? [...others, { player_id: p.id, player_name: p.name, count }] : others });
+  };
+
   return (
+    <div className="space-y-4">
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       {/* Risultato */}
       <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
@@ -256,6 +268,40 @@ export function MatchResultFields({ value, onChange, white, black, mvpVotes = []
           </p>
         ))}
       </div>
+    </div>
+
+    {fixedKeeper && keepers.length > 0 && (
+      <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
+        <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">🧤 Rigori parati (portiere)</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {keepers.map((p, i) => (
+            <div key={p.id} className="flex items-center gap-2 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-sm">
+              <span className="flex-1 truncate text-slate-200">
+                {i === 0 ? '⚪' : '⚫'} {p.name}
+              </span>
+              <button
+                type="button"
+                onClick={() => setSaves(p, Math.max(0, savesOf(p.id) - 1))}
+                aria-label={`Togli un rigore parato a ${p.name}`}
+                className="h-9 w-9 flex items-center justify-center rounded-lg bg-slate-800 text-slate-300"
+              >
+                <Minus className="h-4 w-4" />
+              </button>
+              <span className="w-6 text-center font-mono font-black text-emerald-300">{savesOf(p.id)}</span>
+              <button
+                type="button"
+                onClick={() => setSaves(p, Math.min(5, savesOf(p.id) + 1))}
+                aria-label={`Aggiungi un rigore parato a ${p.name}`}
+                className="h-9 w-9 flex items-center justify-center rounded-lg bg-slate-800 text-slate-300"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+        <p className="text-[11px] text-slate-500">Il portiere è il primo giocatore di ogni squadra (posto POR).</p>
+      </div>
+    )}
     </div>
   );
 }
