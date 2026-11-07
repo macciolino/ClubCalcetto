@@ -26,6 +26,8 @@ interface PlayerCardFifaProps {
   onDelete?: (player: Profile) => void;
   /** Parametri ufficiali configurati dall'admin (Campi & Parametri). Se assenti usa le chiavi del giocatore. */
   categories?: StatCategory[];
+  /** "Stato forma" (ultime 3 partite): aggiunto a ogni parametro e all'OVR mostrati. La scheda salvata non cambia. */
+  form?: number;
 }
 
 export function PlayerCardFifa({
@@ -34,6 +36,7 @@ export function PlayerCardFifa({
   onEdit,
   onDelete,
   categories,
+  form = 0,
 }: PlayerCardFifaProps) {
   const [activeTab, setActiveTab] = useState<'radar' | 'stats'>('radar');
   const record = getPlayerMatchRecord(player);
@@ -49,7 +52,14 @@ export function PlayerCardFifa({
     Object.assign(displayStats, player.stats || {});
   }
 
-  const ovrDisplay = Math.round(player.overall_rating * 10); // stile FIFA (es. 7.9 -> 79)
+  // Stato forma: si aggiunge a ogni parametro (max 10) e all'OVR
+  if (form > 0) {
+    Object.keys(displayStats).forEach((k) => {
+      displayStats[k] = Math.min(10, Math.round((Number(displayStats[k]) + form) * 10) / 10);
+    });
+  }
+  const ovrValue = Math.min(10, (Number(player.overall_rating) || 6) + form);
+  const ovrDisplay = Math.round(ovrValue * 10); // stile FIFA (es. 7.9 -> 79)
 
   return (
     <div className="relative group bg-gradient-to-b from-slate-900 via-slate-900/95 to-slate-950 border border-slate-800 hover:border-emerald-500/50 rounded-3xl p-4 sm:p-5 shadow-xl hover:shadow-2xl transition-all duration-300 flex flex-col justify-between overflow-hidden">
@@ -107,6 +117,11 @@ export function PlayerCardFifa({
           <h3 className="font-black text-sm sm:text-base text-white truncate uppercase tracking-wide">
             {player.full_name}
           </h3>
+          {form > 0 && (
+            <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-500/15 border border-orange-400/40 text-orange-300 text-[10px] font-black uppercase">
+              🔥 In forma +{String(form).replace('.', ',')}
+            </div>
+          )}
           <div className="flex items-center justify-center gap-2 mt-1">
             {player.is_guest ? (
               <span className="text-[10px] font-semibold text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded-full">

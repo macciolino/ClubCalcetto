@@ -290,10 +290,10 @@ export interface AppSettings {
   standard_match_time?: string;
   standard_total_cost?: number;
   default_field_id?: string;
-  /** Scorers' goals count in the statistics (Storico leaderboard, profile). Default true. */
-  count_goals?: boolean;
-  /** MVP awards count in the statistics (Storico leaderboard, profile). Default true. */
-  count_mvp?: boolean;
+  /** "Stato forma": goals (3+ in a match) raise the player's form. Default off. */
+  form_goals?: boolean;
+  /** "Stato forma": official MVP (+1) and players' MVP votes (from 2 votes) raise the form. Default off. */
+  form_mvp?: boolean;
 }
 
 /**

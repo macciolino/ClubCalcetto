@@ -1,7 +1,7 @@
 'use client';
 
 import { StatParametersCard } from '@/components/admin/StatParametersCard';
-import { StatsCountingCard } from '@/components/admin/StatsCountingCard';
+import { FormSettingsCard } from '@/components/admin/FormSettingsCard';
 import { CollapsibleCard } from '@/components/CollapsibleCard';
 
 
@@ -108,8 +108,8 @@ export function TabClubConfigFields({
 
   return (
     <div className="space-y-6">
-      {/* 0. COSA CONTA NELLE STATISTICHE (sempre aperto) */}
-      <StatsCountingCard />
+      {/* 0. STATO FORMA: cosa fa salire i parametri (sempre aperto, legenda a tendina) */}
+      <FormSettingsCard />
 
       {/* 1. ANAGRAFICA CENTRI SPORTIVI & CAMPI DA CALCIO (a tendina) */}
       <CollapsibleCard

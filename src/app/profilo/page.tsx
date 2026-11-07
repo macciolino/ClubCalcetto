@@ -8,7 +8,7 @@ import { FieldPosition, FIELD_POSITIONS, FIELD_POSITION_ABBR, sortStatsByCanonic
 import { RadarChart } from '@/components/RadarChart';
 import { StatBadge } from '@/components/StatBadge';
 import { useStatCategories } from '@/lib/hooks/useStatCategories';
-import { useStatsCounting } from '@/lib/hooks/useStatsCounting';
+import { useForms } from '@/lib/hooks/useForms';
 import { subscribeMatches } from '@/lib/firebase/firestoreService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { Match } from '@/types/database';
@@ -37,7 +37,7 @@ export default function ProfiloPage() {
   const [fullName, setFullName] = useState(profile?.full_name || 'Giocatore');
   const [position, setPosition] = useState<FieldPosition>(profile?.position || 'Esterno');
   const categories = useStatCategories();
-  const { countGoals, countMvp } = useStatsCounting();
+  const { forms } = useForms();
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -113,10 +113,14 @@ export default function ProfiloPage() {
     return { won, drawn, lost, goals, mvp, total: won + drawn + lost };
   })();
 
+  // Stato forma (ultime 3 partite, se attivato dall'admin): si aggiunge a ogni parametro e all'OVR
+  const myForm = forms.get(profile.id) || 0;
+
   // Mappatura dinamica delle statistiche per includere in tempo reale ogni categoria attiva
   const profileStats: Record<string, number> = {};
   categories.forEach((cat) => {
-    profileStats[cat.name] = getStatValue(profile?.stats, cat.name, cat.default_value ?? 6);
+    const base = getStatValue(profile?.stats, cat.name, cat.default_value ?? 6);
+    profileStats[cat.name] = myForm > 0 ? Math.min(10, Math.round((base + myForm) * 10) / 10) : base;
   });
 
   // Foto profilo: solo una foto scelta dal giocatore (niente immagini preimpostate), rimpicciolita e salvata nel profilo
@@ -323,12 +327,19 @@ export default function ProfiloPage() {
                 </h2>
               </div>
               <span className="text-xs font-mono font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md">
-                OVR {Math.round((profile.overall_rating || 6.0) * 10)}
+                OVR {Math.round(Math.min(10, (profile.overall_rating || 6.0) + myForm) * 10)}
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-2">
-              Poligono radar ottagonale generato sui tuoi 8 attributi calcistici.
+              Poligono radar ottagonale generato sui tuoi attributi calcistici.
             </p>
+            {myForm > 0 && (
+              <p className="mt-2 text-xs text-orange-300 bg-orange-500/10 border border-orange-400/30 rounded-xl p-2.5">
+                🔥 <strong>In forma +{String(myForm).replace('.', ',')}</strong>: per le ultime partite (MVP, voti o gol) tutti i
+                tuoi valori e l&apos;OVR sono saliti di {String(myForm).replace('.', ',')}. È temporaneo: torna a 0 se nelle
+                prossime partite non fai punti.
+              </p>
+            )}
           </div>
 
           <div className="py-2 flex justify-center">
@@ -382,22 +393,16 @@ export default function ProfiloPage() {
             </div>
           </div>
 
-          {(countGoals || countMvp) && (
-            <div className={`grid ${countGoals && countMvp ? 'grid-cols-2' : 'grid-cols-1'} gap-3 text-center`}>
-              {countGoals && (
-                <div className="bg-slate-950/80 border border-slate-800 p-3.5 rounded-2xl space-y-1">
-                  <div className="text-xs font-black text-slate-300 uppercase tracking-wider">⚽ Gol segnati</div>
-                  <div className="text-3xl font-black text-white font-mono">{record.goals}</div>
-                </div>
-              )}
-              {countMvp && (
-                <div className="bg-slate-950/80 border border-slate-800 p-3.5 rounded-2xl space-y-1">
-                  <div className="text-xs font-black text-slate-300 uppercase tracking-wider">★ MVP</div>
-                  <div className="text-3xl font-black text-amber-300 font-mono">{record.mvp}</div>
-                </div>
-              )}
+          <div className="grid grid-cols-2 gap-3 text-center">
+            <div className="bg-slate-950/80 border border-slate-800 p-3.5 rounded-2xl space-y-1">
+              <div className="text-xs font-black text-slate-300 uppercase tracking-wider">⚽ Gol segnati</div>
+              <div className="text-3xl font-black text-white font-mono">{record.goals}</div>
             </div>
-          )}
+            <div className="bg-slate-950/80 border border-slate-800 p-3.5 rounded-2xl space-y-1">
+              <div className="text-xs font-black text-slate-300 uppercase tracking-wider">★ MVP</div>
+              <div className="text-3xl font-black text-amber-300 font-mono">{record.mvp}</div>
+            </div>
+          </div>
 
           <Link href="/history" className="block text-center text-xs text-emerald-400 underline">
             Vedi la classifica completa nello Storico

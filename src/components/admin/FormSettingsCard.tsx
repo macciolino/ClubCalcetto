@@ -1,0 +1,161 @@
+'use client';
+
+import React, { useState } from 'react';
+import { saveAppSettingsDoc } from '@/lib/firebase/firestoreService';
+import { useFormSettings } from '@/lib/hooks/useForms';
+import {
+  FORM_GOALS_MIN,
+  FORM_GOALS_POINTS,
+  FORM_MATCHES,
+  FORM_MAX,
+  FORM_MIN_VOTES,
+  FORM_MVP_POINTS,
+  FORM_VOTE_POINTS,
+} from '@/lib/utils/formUtils';
+import { ChevronDown, Flame, Star, Info } from 'lucide-react';
+
+const num = (n: number) => String(n).replace('.', ',');
+
+/**
+ * Admin → Campi & Parametri: what raises the players' "Stato forma". Always open; the legend is collapsible.
+ * Everything off = only the values in the player's card count.
+ */
+export function FormSettingsCard() {
+  const settings = useFormSettings();
+  const [saving, setSaving] = useState(false);
+  const [legendOpen, setLegendOpen] = useState(false);
+
+  const toggle = async (key: 'form_goals' | 'form_mvp', next: boolean) => {
+    setSaving(true);
+    try {
+      await saveAppSettingsDoc({ [key]: next });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const rows = [
+    {
+      key: 'form_goals' as const,
+      on: settings.goals,
+      label: 'Gol',
+      help: `Chi segna ${FORM_GOALS_MIN} o più gol in una partita prende +${num(FORM_GOALS_POINTS)}.`,
+      icon: <span className="text-base leading-none">⚽</span>,
+    },
+    {
+      key: 'form_mvp' as const,
+      on: settings.mvp,
+      label: 'MVP e voti',
+      help: `MVP della partita +${num(FORM_MVP_POINTS)}; gli altri da ${FORM_MIN_VOTES} voti in su +${num(FORM_VOTE_POINTS)} per voto.`,
+      icon: <Star className="h-4 w-4 text-amber-400" />,
+    },
+  ];
+  const anyOn = settings.goals || settings.mvp;
+
+  return (
+    <div className="bg-slate-900 border border-emerald-500/30 p-4 sm:p-5 rounded-3xl shadow-xl space-y-4">
+      <div>
+        <h2 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+          <Flame className="h-5 w-5 text-orange-400 flex-shrink-0" />
+          Stato forma dei giocatori
+        </h2>
+        <p className="text-xs text-slate-400 mt-0.5">
+          {anyOn
+            ? `Attivo: chi gioca bene nelle ultime ${FORM_MATCHES} partite sale un po' in tutti i parametri e nel bilanciamento delle squadre.`
+            : 'Spento: contano solo i valori scritti nella scheda di ogni giocatore.'}
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        {rows.map((r) => (
+          <div key={r.key} className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-slate-950 border border-slate-800">
+            <div className="min-w-0">
+              <div className="text-sm font-bold text-white flex items-center gap-2">
+                {r.icon} {r.label}
+              </div>
+              <div className="text-xs text-slate-400 mt-0.5">{r.help}</div>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={r.on}
+              aria-label={`${r.label}: fa salire lo stato forma`}
+              disabled={saving}
+              onClick={() => toggle(r.key, !r.on)}
+              className={`relative flex-shrink-0 h-8 w-14 rounded-full transition-colors disabled:opacity-60 ${
+                r.on ? 'bg-emerald-500' : 'bg-slate-700'
+              }`}
+            >
+              <span
+                className={`absolute top-1 left-1 h-6 w-6 rounded-full bg-white shadow transition-transform ${
+                  r.on ? 'translate-x-6' : ''
+                }`}
+              />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* Legenda di quanto deciso (a tendina) */}
+      <div className="rounded-2xl border border-slate-700 bg-slate-950/70">
+        <button
+          type="button"
+          onClick={() => setLegendOpen((o) => !o)}
+          aria-expanded={legendOpen}
+          className="w-full flex items-center justify-between gap-2 p-3 text-left"
+        >
+          <span className="text-xs font-bold text-white flex items-center gap-1.5">
+            <Info className="h-4 w-4 text-emerald-400" /> Legenda: come si calcola lo stato forma
+          </span>
+          <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${legendOpen ? 'rotate-180' : ''}`} />
+        </button>
+        {legendOpen && (
+          <div className="px-3 pb-3 space-y-3 text-xs text-slate-300">
+            <div>
+              <p className="font-bold text-white mb-1">Punti di ogni partita</p>
+              <ul className="list-disc pl-5 space-y-0.5">
+                <li>
+                  <strong>MVP della partita</strong> (scelto dall&apos;admin alla chiusura): <strong>+{num(FORM_MVP_POINTS)}</strong>.
+                  Così anche un difensore che non segna può salire.
+                </li>
+                <li>
+                  <strong>Voti MVP dei giocatori</strong>, da {FORM_MIN_VOTES} voti in su: <strong>+{num(FORM_VOTE_POINTS)} per voto</strong>{' '}
+                  (2 voti +0,2 · 3 voti +0,3 · 5 voti +0,5). Per chi è l&apos;MVP vale il +{num(FORM_MVP_POINTS)} al posto dei voti.
+                </li>
+                <li>
+                  <strong>{FORM_GOALS_MIN} o più gol</strong> nella stessa partita: <strong>+{num(FORM_GOALS_POINTS)}</strong>.
+                </li>
+                <li>Vittorie, pareggi e sconfitte non contano.</li>
+              </ul>
+            </div>
+            <div>
+              <p className="font-bold text-white mb-1">Stato forma</p>
+              <ul className="list-disc pl-5 space-y-0.5">
+                <li>
+                  È la <strong>media dei punti delle ultime {FORM_MATCHES} partite</strong> archiviate (una partita non giocata conta 0),
+                  al massimo <strong>+{num(FORM_MAX)}</strong>.
+                </li>
+                <li>
+                  Si aggiunge a <strong>tutti i parametri</strong> (massimo 10) e all&apos;<strong>OVR</strong>, e conta quando si
+                  bilanciano le squadre.
+                </li>
+                <li>
+                  È <strong>temporaneo</strong>: se nelle partite dopo non fa punti, torna a 0 da solo. I valori scritti nella scheda
+                  del giocatore non vengono mai modificati.
+                </li>
+              </ul>
+            </div>
+            <div>
+              <p className="font-bold text-white mb-1">Esempio</p>
+              <p>
+                Marco B. nell&apos;ultima partita è MVP (+1) e segna 4 gol (+0,5) = 1,5 punti; nelle 2 partite prima 0. Media su 3
+                partite: 1,5 ÷ 3 = <strong>+0,5</strong>. Tiro 7 diventa 7,5, Visione 6 diventa 6,5, OVR 7,2 diventa 7,7.
+              </p>
+            </div>
+            <p className="text-slate-400">Con entrambi gli interruttori spenti lo stato forma è 0 per tutti.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

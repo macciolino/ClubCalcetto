@@ -1,5 +1,7 @@
 'use client';
 
+import { useForms } from '@/lib/hooks/useForms';
+import { withForm } from '@/lib/utils/formUtils';
 import { NumberInput } from '@/components/NumberInput';
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -86,6 +88,12 @@ function SquadreContent() {
 
   const [presences, setPresences] = useState<Presence[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  // Stato forma (ultime 3 partite, se attivato in Admin): conta nel bilanciamento e sul campo
+  const { forms } = useForms();
+  const formProfiles = React.useMemo(
+    () => profiles.map((p) => withForm(p, forms.get(p.id))),
+    [profiles, forms]
+  );
   const [teamRecord, setTeamRecord] = useState<GeneratedTeamRecord | null>(null);
   const [tab, setTab] = useState<'pitch' | 'manual'>('pitch');
   const [manualDraft, setManualDraft] = useState<{ white: MatchTeamPlayer[]; black: MatchTeamPlayer[] } | null>(null);
@@ -240,7 +248,7 @@ function SquadreContent() {
   // Calcola i 10 titolari specifici per la data selezionata (già in ordine di iscrizione)
   const confirmedPresences = presences.filter((p) => p.date === selectedDate && p.status === 'confirmed');
   const starterProfiles: Profile[] = confirmedPresences
-    .map((p) => profiles.find((prof) => prof.id === p.player_id || prof.user_id === p.player_id))
+    .map((p) => formProfiles.find((prof) => prof.id === p.player_id || prof.user_id === p.player_id))
     .filter((prof): prof is Profile => prof !== undefined)
     .slice(0, 10);
   const starters = starterProfiles.map(toTeamPlayer);
@@ -257,8 +265,8 @@ function SquadreContent() {
       : null;
   const balancedResult: BalancedTeamsResult | null = teams
     ? summarizeTeams(
-        teams.white.map((p) => profileForTeamPlayer(p, profiles)),
-        teams.black.map((p) => profileForTeamPlayer(p, profiles))
+        teams.white.map((p) => profileForTeamPlayer(p, formProfiles)),
+        teams.black.map((p) => profileForTeamPlayer(p, formProfiles))
       )
     : null;
   const isConfirmed = Boolean(teamRecord?.confirmed);
@@ -375,8 +383,8 @@ function SquadreContent() {
     setIsSavingManual(true);
     try {
       const sum = summarizeTeams(
-        manualDraft.white.map((p) => profileForTeamPlayer(p, profiles)),
-        manualDraft.black.map((p) => profileForTeamPlayer(p, profiles))
+        manualDraft.white.map((p) => profileForTeamPlayer(p, formProfiles)),
+        manualDraft.black.map((p) => profileForTeamPlayer(p, formProfiles))
       );
       await saveTeams(selectedDate, manualDraft.white, manualDraft.black, {
         manual: true,
@@ -848,6 +856,9 @@ function SquadreContent() {
                     <li key={p.id} className="flex items-center gap-2 text-slate-200">
                       <span className="w-11 flex-shrink-0 font-mono text-[10px] font-bold text-emerald-400">{SLOT_LABELS[i]}</span>
                       <span className="truncate">{p.full_name}</span>
+                      {forms.get(p.id) ? (
+                        <span className="ml-auto flex-shrink-0 text-[10px] font-black text-orange-300">🔥+{String(forms.get(p.id)).replace('.', ',')}</span>
+                      ) : null}
                     </li>
                   ))}
                 </ul>
@@ -884,6 +895,9 @@ function SquadreContent() {
                     <li key={p.id} className="flex items-center gap-2 text-slate-200">
                       <span className="w-11 flex-shrink-0 font-mono text-[10px] font-bold text-emerald-400">{SLOT_LABELS[i]}</span>
                       <span className="truncate">{p.full_name}</span>
+                      {forms.get(p.id) ? (
+                        <span className="ml-auto flex-shrink-0 text-[10px] font-black text-orange-300">🔥+{String(forms.get(p.id)).replace('.', ',')}</span>
+                      ) : null}
                     </li>
                   ))}
                 </ul>

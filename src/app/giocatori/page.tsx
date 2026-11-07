@@ -1,5 +1,6 @@
 'use client';
 
+import { useForms } from '@/lib/hooks/useForms';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/context/AuthContext';
 import { Profile, StatCategory, FIELD_POSITION_ABBR, STAT_CANONICAL_ORDER } from '@/types/database';
@@ -34,6 +35,7 @@ export default function GiocatoriPage() {
   const [mounted, setMounted] = useState(false);
   const [players, setPlayers] = useState<Profile[]>([]);
   const [categories, setCategories] = useState<StatCategory[]>(DEFAULT_CATEGORIES);
+  const { forms } = useForms();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPlayerToEdit, setSelectedPlayerToEdit] = useState<Profile | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -269,6 +271,7 @@ export default function GiocatoriPage() {
                 player={player}
                 isAdmin={isClientAdmin}
                 categories={sortedCategories}
+                form={forms.get(player.id)}
                 onEdit={handleOpenEditModal}
                 onDelete={(p) => handleDeletePlayer(p.id, p.full_name)}
               />
