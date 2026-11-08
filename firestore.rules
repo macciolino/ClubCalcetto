@@ -77,9 +77,10 @@ service cloud.firestore {
             && onlyChanges(['full_name', 'avatar_url', 'position', 'updated_at'])
             && (!('avatar_url' in changedKeys()) || isValidAvatar(request.resource.data.avatar_url)));
 
-      // The super admin profile can never be deleted; only the super admin can delete an admin.
+      // The super admin profile can never be deleted. Admins delete only GUESTS (players without an account);
+      // registered accounts are deleted only by the super admin, from the app via the server (login + data).
       allow delete: if profileId != 'p-1'
-        && (isSuperAdmin() || (isAdmin() && resource.data.role != 'admin'));
+        && (isSuperAdmin() || (isAdmin() && resource.data.get('is_guest', false) == true));
     }
 
     // ---------- presences ----------

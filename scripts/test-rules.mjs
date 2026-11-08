@@ -205,6 +205,7 @@ await expectAllowed('admin deletes a match from history and undoes the win', () 
     tx.delete(doc(adminC.db, 'matches', TODAY));
   }));
 await expectAllowed('deletes a guest player', () => deleteDoc(doc(adminC.db, 'profiles', 'guest-1')));
+await expectDenied('deletes a registered player (only the super admin can)', () => deleteDoc(doc(adminC.db, 'profiles', playerB.uid)));
 
 console.log('\nPlayer A after voting is open');
 await expectAllowed(`signs up for next week (${NEXT_MONDAY})`, () => join(playerA, NEXT_MONDAY, playerA.uid));

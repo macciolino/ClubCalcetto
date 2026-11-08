@@ -1,5 +1,7 @@
 'use client';
 
+import { DeletionFeedbackCard } from '@/components/admin/DeletionFeedbackCard';
+import { deleteAccountAsSuperAdmin } from '@/lib/services/accountService';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -274,11 +276,31 @@ export default function AdminPage() {
     await saveProfileDoc(updated);
   };
 
+  // Ospiti: si cancella la scheda. Account registrati: solo il super admin, eliminazione completa dal server
+  // (accesso Google, scheda, telefoni per le notifiche e iscrizioni; nello storico resta il nome).
   const handleDeletePlayer = async (playerId: string, name: string) => {
-    if (!confirm(`Sei sicuro di voler eliminare definitivamente "${name}"?`)) return;
-    removeStoredPlayer(playerId);
-    setPlayers(getStoredPlayers());
-    await deleteProfileDoc(playerId);
+    const target = players.find((p) => p.id === playerId);
+    if (playerId === 'p-1') return;
+    if (target?.is_guest) {
+      if (!confirm(`Eliminare l'ospite "${name}"? Nelle partite già giocate resta il nome.`)) return;
+      removeStoredPlayer(playerId);
+      setPlayers(getStoredPlayers());
+      await deleteProfileDoc(playerId);
+      return;
+    }
+    if (!isSuperAdmin) {
+      alert('Solo il super admin può eliminare un account registrato.');
+      return;
+    }
+    if (!confirm(`Eliminare DEFINITIVAMENTE l'account di "${name}"? Verranno cancellati accesso, scheda, iscrizioni e notifiche. Non si può annullare.`)) return;
+    const res = await deleteAccountAsSuperAdmin(playerId);
+    if (res.ok) {
+      removeStoredPlayer(playerId);
+      setPlayers(getStoredPlayers());
+      alert(`Account di "${name}" eliminato.`);
+    } else {
+      alert(res.error === 'not_configured' ? 'Eliminazione non disponibile: server non configurato.' : 'Eliminazione non riuscita. Riprova.');
+    }
   };
 
   // Handlers Tab 4: Configurazione Club & Campi
@@ -471,6 +493,11 @@ export default function AdminPage() {
             onDeletePlayer={handleDeletePlayer}
             canManageRoles={isSuperAdmin}
           />
+        )}
+        {activeTab === 'users' && isSuperAdmin && (
+          <div className="mt-6">
+            <DeletionFeedbackCard />
+          </div>
         )}
 
         {activeTab === 'config' && (

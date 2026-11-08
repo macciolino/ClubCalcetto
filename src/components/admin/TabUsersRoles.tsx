@@ -314,9 +314,15 @@ export function TabUsersRoles({
                           <button
                             type="button"
                             onClick={() => onDeletePlayer(player.id, player.full_name)}
-                            disabled={isSuperAdmin}
+                            disabled={isSuperAdmin || (!player.is_guest && !canManageRoles)}
                             className="p-1.5 bg-slate-800 text-slate-400 hover:text-rose-400 hover:bg-rose-500/15 rounded-lg transition-all cursor-pointer disabled:opacity-40"
-                            title="Elimina giocatore"
+                            title={
+                              player.is_guest
+                                ? 'Elimina ospite'
+                                : canManageRoles
+                                ? 'Elimina account (accesso, scheda, iscrizioni)'
+                                : 'Solo il super admin può eliminare un account registrato'
+                            }
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
@@ -398,8 +404,9 @@ export function TabUsersRoles({
                       <button
                         type="button"
                         onClick={() => onDeletePlayer(player.id, player.full_name)}
-                        disabled={isSuperAdmin}
-                        className="p-1.5 bg-slate-800 text-slate-400 hover:text-rose-400 rounded-lg"
+                        disabled={isSuperAdmin || (!player.is_guest && !canManageRoles)}
+                        aria-label={player.is_guest ? 'Elimina ospite' : 'Elimina account'}
+                        className="p-1.5 bg-slate-800 text-slate-400 hover:text-rose-400 rounded-lg disabled:opacity-40"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>

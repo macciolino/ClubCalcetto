@@ -1,5 +1,6 @@
 'use client';
 
+import { deleteAccountAsSuperAdmin } from '@/lib/services/accountService';
 import { useForms } from '@/lib/hooks/useForms';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/context/AuthContext';
@@ -31,7 +32,7 @@ const DEFAULT_CATEGORIES: StatCategory[] = DEFAULT_BASE_CATEGORIES;
 
 
 export default function GiocatoriPage() {
-  const { user, profile, isAdmin } = useAuth();
+  const { user, profile, isAdmin, isSuperAdmin } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [players, setPlayers] = useState<Profile[]>([]);
   const [categories, setCategories] = useState<StatCategory[]>(DEFAULT_CATEGORIES);
@@ -101,17 +102,30 @@ export default function GiocatoriPage() {
     setPlayers(getStoredPlayers());
   };
 
+  // Ospiti: un admin cancella la scheda. Account registrati: solo il super admin, eliminazione completa
   const handleDeletePlayer = async (playerId: string, name: string) => {
-    if (!isStrictAdmin) {
-      alert('Solo l\'amministratore può eliminare i giocatori.');
-      return;
-    }
-    if (!confirm(`Sei sicuro di voler eliminare il giocatore "${name}"?`)) return;
-
+    if (!isStrictAdmin || playerId === 'p-1') return;
+    const target = players.find((p) => p.id === playerId);
     try {
+      if (target?.is_guest) {
+        if (!confirm(`Eliminare l'ospite "${name}"? Nelle partite già giocate resta il nome.`)) return;
+        removeStoredPlayer(playerId);
+        setPlayers(getStoredPlayers());
+        await deleteProfileDoc(playerId);
+        return;
+      }
+      if (!isSuperAdmin) {
+        alert('Solo il super admin può eliminare un account registrato.');
+        return;
+      }
+      if (!confirm(`Eliminare DEFINITIVAMENTE l'account di "${name}"? Verranno cancellati accesso, scheda, iscrizioni e notifiche. Non si può annullare.`)) return;
+      const res = await deleteAccountAsSuperAdmin(playerId);
+      if (!res.ok) {
+        alert('Eliminazione non riuscita. Riprova.');
+        return;
+      }
       removeStoredPlayer(playerId);
       setPlayers(getStoredPlayers());
-      await deleteProfileDoc(playerId);
     } catch (err) {
       console.error('Delete player error:', err);
     }
@@ -273,7 +287,7 @@ export default function GiocatoriPage() {
                 categories={sortedCategories}
                 form={forms.get(player.id)}
                 onEdit={handleOpenEditModal}
-                onDelete={(p) => handleDeletePlayer(p.id, p.full_name)}
+                onDelete={player.is_guest || isSuperAdmin ? (p) => handleDeletePlayer(p.id, p.full_name) : undefined}
               />
             ))
           )}
@@ -451,14 +465,17 @@ export default function GiocatoriPage() {
                               >
                                 <Edit3 className="h-4 w-4" />
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDeletePlayer(player.id, player.full_name)}
-                                className="p-1.5 bg-slate-800 text-slate-400 hover:text-rose-400 hover:bg-rose-500/15 rounded-lg transition-all cursor-pointer"
-                                title="Elimina giocatore"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
+                              {(player.is_guest || isSuperAdmin) && player.id !== 'p-1' && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeletePlayer(player.id, player.full_name)}
+                                  className="p-1.5 bg-slate-800 text-slate-400 hover:text-rose-400 hover:bg-rose-500/15 rounded-lg transition-all cursor-pointer"
+                                  title={player.is_guest ? 'Elimina ospite' : 'Elimina account'}
+                                  aria-label={player.is_guest ? 'Elimina ospite' : 'Elimina account'}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              )}
                             </div>
                           </td>
                         )}

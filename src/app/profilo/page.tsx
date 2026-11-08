@@ -14,6 +14,7 @@ import { subscribeMatches } from '@/lib/firebase/firestoreService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { Match } from '@/types/database';
 import { NotificationGuide } from '@/components/NotificationGuide';
+import { DeleteAccountSection } from '@/components/DeleteAccountSection';
 import { photoToAvatarDataUrl } from '@/lib/utils/imageUtils';
 import { 
   User, 
@@ -417,6 +418,9 @@ export default function ProfiloPage() {
       </div>
 
       <NotificationGuide />
+
+      {/* In fondo: eliminazione dell'account (con motivo e conferma) */}
+      <DeleteAccountSection isSuperAdmin={Boolean(user?.emailVerified && user?.email?.toLowerCase() === 'macciolino84@gmail.com')} />
     </div>
   );
 }
