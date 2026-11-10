@@ -347,15 +347,6 @@ export function AdminSections({ section }: { section: AdminSection }) {
     <div className="space-y-6 animate-in fade-in duration-200">
       {section === 'partita' && (
         <>
-          <div className="flex justify-end">
-            <Link
-              href={`/squadre?date=${activeDate}`}
-              className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs uppercase tracking-wider"
-            >
-              <Trophy className="h-4 w-4" />
-              <span>Vai alle squadre</span>
-            </Link>
-          </div>
           <TabOverviewMatch
             days={upcomingDays}
             activeDate={activeDate}

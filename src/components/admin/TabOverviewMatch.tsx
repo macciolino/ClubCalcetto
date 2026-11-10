@@ -362,7 +362,7 @@ export function TabOverviewMatch({
             className="flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/25 transition-all cursor-pointer"
           >
             <Sparkles className="h-4 w-4" />
-            <span>Generatore Squadre 5v5</span>
+            <span>Vai a squadre</span>
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
