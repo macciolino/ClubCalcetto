@@ -437,6 +437,7 @@ function SquadreContent() {
             quality: 0.95,
             pixelRatio: 2,
             cacheBust: true,
+            style: { margin: '0' },
           });
 
           // Scarica automaticamente l'immagine per permettere all'admin di allegarla
@@ -466,6 +467,7 @@ function SquadreContent() {
       const dataUrl = await toPng(pitchRef.current, {
         quality: 0.95,
         pixelRatio: 2,
+        style: { margin: '0' },
       });
       const link = document.createElement('a');
       link.download = `ClubCalcetto-${selectedDate}.png`;

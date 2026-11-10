@@ -20,7 +20,9 @@ description: ClubCalcetto UI conventions - theme, shared components (tables, dro
 - `NumberInput` - numeric field usable on phones (never plain `type=number`).
 - `PlayerCardFifa` - player card (radar tab + "Statistiche" tab: 6 boxes like the profile); `StatBadge` - OVR pill; `RadarChart`.
 - `VirtualPitch` (with `PlayerSticker` inside) - pitch with upright sticker cards, 1-1-2-1 symmetric on x = 50 and mirrored
-  between the teams; coordinates in `lib/utils/formation.ts`. Without a photo: initials in the photo area, first name below.
+  between the teams; coordinates in `lib/utils/formation.ts`. A "photo" on the pitch is only one uploaded in the app (`data:image/` JPEG); Google's automatic
+  avatar and old emoji avatars show initials in the photo area with the first name below. Downloads use html-to-image
+  with `style: { margin: '0' }` (the `mx-auto` margin would shift and crop the picture).
 - `TeamSwapEditor` - tap-to-swap team editing; `MatchResultFields` - score/MVP/scorers form; `MatchEditModal` - bottom-sheet dialog.
 - Admin modals: `FieldModal`, `StatsLegendModal`; `PlayerModal` for editing a player.
 - Dropdowns are native `<select>` (`bg-slate-950 border border-slate-700 rounded-xl`); give them `min-w-0` inside flex rows.

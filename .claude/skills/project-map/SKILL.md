@@ -14,7 +14,7 @@ Checks: `npx tsc --noEmit -p .`, `npx next build`, `npm run test:rules` (Firesto
 | Route | Page | Notes |
 |---|---|---|
 | `/presenze` | Sign-ups | day strip + `PresenceCard`; admin: opens next week, adds/removes players, forces starter/waitlist (arrows), "Azzera presenze del giorno"; "Primo a 10" badge |
-| `/giocatori` | Players | card view (`PlayerCardFifa`, tabs radar / Statistiche) or table view (players see only name+role and OVR; admins also V-P-S and parameters); admin edit via `PlayerModal` |
+| `/giocatori` | Players | card view (`PlayerCardFifa`, tabs radar / Statistiche) or table view (players see only name, role column and OVR; admins also V-P-S and parameters); admin edit via `PlayerModal` |
 | `/squadre` | Teams | generate / Ribilancia / Conferma Partita / tab "Modifica manuale" (`TeamSwapEditor`), `VirtualPitch`, `MvpVoteCard` |
 | `/history` | Storico | tabs Classifica (leaderboard, sortable by clicking the headers) / Partite (`HistoryCalendar` + match cards), season select, admin delete + `MatchEditModal`. A new year appears from 31 Dec 22:00 Europe/Rome (`getVisibleHistoryYear` in `dateUtils`) |
 | `/profilo` | Own profile | photo, name, position, radar, global stats, `NotificationGuide`, `DeleteAccountSection` (bottom: deactivate or delete) |

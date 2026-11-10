@@ -311,6 +311,7 @@ export default function GiocatoriPage() {
                 <tr className="border-b border-slate-800 bg-slate-950/70 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                   <th className="py-3.5 px-4 w-12 text-center">#</th>
                   <th className="py-3.5 px-4">Giocatore</th>
+                  <th className="py-3.5 px-3 text-center">Ruolo</th>
                   <th className="py-3.5 px-3 text-center">OVR</th>
                   {isClientAdmin && <th className="py-3.5 px-3 text-center">V-P-S</th>}
                   {isClientAdmin && sortedCategories.map((cat) => {
@@ -338,7 +339,7 @@ export default function GiocatoriPage() {
                 {filteredPlayers.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={isClientAdmin ? 5 + sortedCategories.length : 3}
+                      colSpan={isClientAdmin ? 6 + sortedCategories.length : 4}
                       className="py-8 text-center text-slate-500 italic"
                     >
                       Nessun giocatore trovato con questi filtri.
@@ -395,9 +396,6 @@ export default function GiocatoriPage() {
                                   <span className="block">{firstName}</span>
                                   {surname && <span className="block">{surname}</span>}
                                 </span>
-                                <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-800 text-emerald-400 border border-slate-700">
-                                  {FIELD_POSITION_ABBR[player.position || 'Esterno']}
-                                </span>
                                 {isClientAdmin && (
                                   <button
                                     type="button"
@@ -421,6 +419,13 @@ export default function GiocatoriPage() {
                               </div>
                             </div>
                           </div>
+                        </td>
+
+                        {/* Ruolo in campo */}
+                        <td className="py-3 px-3 text-center">
+                          <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-emerald-400 border border-slate-700">
+                            {FIELD_POSITION_ABBR[player.position || 'Esterno']}
+                          </span>
                         </td>
 
                         {/* Overall Rating (OVR) */}

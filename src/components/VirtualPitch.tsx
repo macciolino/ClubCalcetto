@@ -53,9 +53,9 @@ export const VirtualPitch = forwardRef<HTMLDivElement, VirtualPitchProps>(
                 ⚽
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-xs sm:text-sm font-black tracking-tight text-white flex items-center gap-1.5">
-                  <MapPin className="h-3.5 w-3.5 text-emerald-400 flex-shrink-0" />
-                  <span className="truncate max-w-[180px] xs:max-w-[220px] sm:max-w-[260px]">
+                <div className="text-xs sm:text-sm font-black tracking-tight text-white flex items-start gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                  <span className="min-w-0 break-words leading-snug">
                     {matchInfo.location || 'Centro Sportivo Calcetto'}
                   </span>
                 </div>
@@ -194,7 +194,13 @@ function PlayerSticker({
   // Senza foto: iniziali di nome e cognome al posto dell'immagine e, sotto, solo il nome
   const nameParts = (player.full_name || '').trim().split(/\s+/).filter(Boolean);
   const initials = ((nameParts[0]?.[0] || '?') + (nameParts.length > 1 ? nameParts[nameParts.length - 1][0] : '')).toUpperCase();
-  const shortName = player.avatar_url ? getShortPlayerName(player.full_name) : nameParts[0] || '';
+  // "Foto" = solo quella caricata dal giocatore nell'app. L'immagine automatica di Google (una lettera su
+  // sfondo colorato per chi non ha una foto) e i vecchi avatar emoji non contano: per loro si vedono le iniziali.
+  const photo =
+    player.avatar_url && player.avatar_url.startsWith('data:image/') && !player.avatar_url.startsWith('data:image/svg')
+      ? player.avatar_url
+      : null;
+  const shortName = photo ? getShortPlayerName(player.full_name) : nameParts[0] || '';
   const isWhite = team === 'white';
   return (
     <div
@@ -220,9 +226,9 @@ function PlayerSticker({
               : 'bg-gradient-to-b from-amber-200 to-amber-500'
           }`}
         >
-          {player.avatar_url ? (
+          {photo ? (
             <img
-              src={player.avatar_url}
+              src={photo}
               alt=""
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"
