@@ -46,6 +46,12 @@ export default function LoginPage() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  // Arrivo dal logout automatico (sessione di 30 giorni scaduta)
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('expired') === '1') {
+      setErrorMessage('La sessione è scaduta (dura 30 giorni): accedi di nuovo con Google.');
+    }
+  }, []);
   const [successMessage, setSuccessMessage] = useState('');
   const [isCheckingVerification, setIsCheckingVerification] = useState(false);
 

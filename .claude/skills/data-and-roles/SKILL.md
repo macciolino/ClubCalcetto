@@ -42,6 +42,12 @@ Production data is REAL: never rewrite stats, no paid services, never print secr
 - Enforcement is in `firestore.rules` (UI checks are only convenience). After changing rules: `npm run test:rules`, then the
   owner publishes them by hand in the Firebase console (code first, rules second).
 
+## Session
+
+- 30 days from the last real Google sign-in (`SESSION_MAX_DAYS` in `AuthContext.tsx`, based on the token claim `auth_time`).
+  Checked at app start, every 15 minutes and when the app comes back to the foreground; then automatic sign-out to
+  `/login?expired=1`. Client-side only: `firestore.rules` and the API routes do not check `auth_time`.
+
 ## Closing an account (`src/lib/server/accountDeletion.ts`)
 
 - Deactivate (data kept): Auth user disabled, profile marked `deactivated_at`, future presences and push tokens removed.

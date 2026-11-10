@@ -31,6 +31,23 @@ export const SUPER_ADMIN_EMAIL = 'macciolino84@gmail.com';
 export const MARCO_ADMIN_ID = SUPER_ADMIN_PROFILE_ID;
 export const MARCO_ADMIN_EMAIL = SUPER_ADMIN_EMAIL;
 
+/**
+ * Session length: 30 days from the last real Google sign-in (Firebase `auth_time`, set by Google's servers,
+ * so changing the phone clock does not extend it). After that the user is signed out automatically.
+ * Without this, Firebase keeps a user signed in forever (it silently renews the 1-hour token).
+ */
+export const SESSION_MAX_DAYS = 30;
+
+async function isSessionExpired(fbUser: FirebaseUser): Promise<boolean> {
+  try {
+    const { authTime } = await fbUser.getIdTokenResult();
+    const signedInAt = Date.parse(authTime);
+    return Number.isFinite(signedInAt) && Date.now() - signedInAt > SESSION_MAX_DAYS * 24 * 3600 * 1000;
+  } catch {
+    return false; // offline: check again later
+  }
+}
+
 export function isSuperAdminEmail(email?: string | null): boolean {
   return (email || '').toLowerCase().trim() === SUPER_ADMIN_EMAIL;
 }
@@ -180,6 +197,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(firebaseAuth, async (fbUser) => {
       if (!mounted) return;
       if (fbUser) {
+        if (await isSessionExpired(fbUser)) {
+          await expireSession();
+          return;
+        }
         setUser(fbUser);
         await syncProfile(fbUser);
       } else {
@@ -189,9 +210,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       if (mounted) setIsLoading(false);
     });
+    // Controllo anche con l'app già aperta: ogni 15 minuti e quando si torna sull'app
+    const check = async () => {
+      const current = firebaseAuth.currentUser;
+      if (current && (await isSessionExpired(current))) await expireSession();
+    };
+    const timer = setInterval(check, 15 * 60 * 1000);
+    const onVisible = () => document.visibilityState === 'visible' && check();
+    document.addEventListener('visibilitychange', onVisible);
     return () => {
       mounted = false;
       unsubscribe();
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -300,6 +331,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.warn('Errore checkEmailVerification:', err);
       return false;
     }
+  };
+
+  // Sessione scaduta (30 giorni): esce e torna al login con un avviso
+  const expireSession = async () => {
+    try {
+      await firebaseSignOut(firebaseAuth);
+    } catch (e) {
+      console.warn('Firebase signOut error:', e);
+    }
+    setUser(null);
+    setProfile(null);
+    setRoutingCookies(null);
+    setIsLoading(false);
+    if (!window.location.pathname.startsWith('/login')) window.location.href = '/login?expired=1';
   };
 
   const signOut = async () => {
