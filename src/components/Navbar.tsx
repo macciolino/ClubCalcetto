@@ -83,7 +83,8 @@ export function Navbar() {
       {/* Top Header */}
       {/* Header + menu delle pagine restano fissi in alto mentre si scorre */}
       <div className="sticky top-0 z-40">
-      <header className="w-full border-b border-slate-800 bg-slate-950/90 backdrop-blur-md pt-safe">
+      {/* relative z-20: il menu utente (dentro l'header) deve stare SOPRA la barra delle pagine qui sotto */}
+      <header className="relative z-20 w-full border-b border-slate-800 bg-slate-950/90 backdrop-blur-md pt-safe">
         {/* Logo con nome a sinistra, profilo a destra */}
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
           <Link href="/" className="flex items-center gap-2.5 min-w-0 hover:opacity-90">
@@ -184,7 +185,7 @@ export function Navbar() {
       </header>
 
       {/* Menu delle pagine (PC e tablet): sotto l'header, largo come le card */}
-      <div className="hidden md:block bg-slate-950/90 backdrop-blur-md">
+      <div className="relative z-10 hidden md:block bg-slate-950/90 backdrop-blur-md">
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 py-3">
         {/* Desktop Navigation */}
           <nav className="flex items-center gap-1 bg-slate-900/80 p-1.5 rounded-xl border border-slate-800/80">
