@@ -13,7 +13,6 @@ import { formatForm } from '@/lib/utils/formUtils';
 import { subscribeMatches } from '@/lib/firebase/firestoreService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { Match } from '@/types/database';
-import { NotificationGuide } from '@/components/NotificationGuide';
 import { DeleteAccountSection } from '@/components/DeleteAccountSection';
 import { photoToAvatarDataUrl } from '@/lib/utils/imageUtils';
 import { 
@@ -401,7 +400,16 @@ export default function ProfiloPage() {
         </div>
       </div>
 
-      <NotificationGuide />
+      <Link
+        href="/impostazioni"
+        className="flex items-center justify-between gap-3 bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl text-sm text-slate-200 hover:border-emerald-500/50"
+      >
+        <span>
+          <strong className="block text-white">Notifiche</strong>
+          <span className="text-xs text-slate-400">Attivale o disattivale su questo telefono in Impostazioni.</span>
+        </span>
+        <span className="text-emerald-400 font-bold text-xs">Apri →</span>
+      </Link>
 
       {/* In fondo: eliminazione dell'account (con motivo e conferma) */}
       <DeleteAccountSection isSuperAdmin={Boolean(user?.emailVerified && user?.email?.toLowerCase() === 'macciolino84@gmail.com')} />

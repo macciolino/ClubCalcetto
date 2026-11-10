@@ -6,7 +6,8 @@ description: Map of the ClubCalcetto project - folders, routes, where each page 
 # ClubCalcetto - project map
 
 Brand shown to users: **Club Soccer** (renamed 2026-11-10). Code, repo, Vercel domain and storage keys still say ClubCalcetto.
-Header (`Navbar.tsx`): logo + "Club Soccer" on the left, profile + logout on the right. On md+ the page menu is a
+Header (`Navbar.tsx`): logo + "Club Soccer" on the left; on the right icon, name and role open a dropdown menu
+(Profilo, Impostazioni, Logout; closes on outside tap, Esc, page change). On md+ the page menu is a
 separate bar BELOW the header, as wide as the cards (same `max-w-6xl px-4 sm:px-6` container); phones use the bottom bar.
 After login (and email verified) `/login` redirects to `/` (which redirects to `/presenze`).
 
@@ -22,7 +23,8 @@ Checks: `npx tsc --noEmit -p .`, `npx next build`, `npm run test:rules` (Firesto
 | `/giocatori` | Players | card view (`PlayerCardFifa`, tabs radar / Statistiche) or table view (players see only name, role column and OVR; admins also V-P-S and parameters); admin edit via `PlayerModal` |
 | `/squadre` | Teams | generate / Ribilancia / Conferma Partita / tab "Modifica manuale" (`TeamSwapEditor`), `VirtualPitch`, `MvpVoteCard` |
 | `/history` | Storico | tabs Classifica (leaderboard, sortable by clicking the headers) / Partite (`HistoryCalendar` + match cards), season select, admin delete + `MatchEditModal`. A new year appears from 31 Dec 22:00 Europe/Rome (`getVisibleHistoryYear` in `dateUtils`) |
-| `/profilo` | Own profile | photo, name, position, radar, global stats, `NotificationGuide`, `DeleteAccountSection` (bottom: deactivate or delete) |
+| `/profilo` | Own profile | photo, name, position, radar, global stats, link to Impostazioni, `DeleteAccountSection` (bottom: deactivate or delete) |
+| `/impostazioni` | Settings | opened from the header user menu; subsection Notifiche (`NotificationGuide`: on/off switch for this device + guide) for every user |
 | `/admin` | Admin panel | header + `NotificationSettingsCard` + 3 tabs (below) |
 | `/login` | Google login | |
 

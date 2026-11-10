@@ -2,7 +2,7 @@
 
 import { BrandLogo } from '@/components/BrandLogo';
 import { refreshPushRegistration } from '@/lib/services/pushService';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/context/AuthContext';
@@ -14,7 +14,9 @@ import {
   Sparkles,
   Trophy,
   User,
-  History
+  History,
+  Settings,
+  ChevronDown
 } from 'lucide-react';
 
 export function Navbar() {
@@ -27,6 +29,26 @@ export function Navbar() {
     if (profileId) refreshPushRegistration(profileId);
   }, [profileId]);
   const [mounted, setMounted] = useState(false);
+
+  // Menu utente a tendina: si chiude toccando fuori, con Esc o cambiando pagina
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDown = (e: MouseEvent | TouchEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setMenuOpen(false);
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('touchstart', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('touchstart', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [menuOpen]);
+  useEffect(() => setMenuOpen(false), [pathname]);
 
   useEffect(() => {
     setMounted(true);
@@ -70,12 +92,16 @@ export function Navbar() {
           </Link>
           {/* User Info & Actions */}
           <div className="flex items-center justify-end gap-3 min-w-0">
-            {/* Profilo Badge con link a /profilo */}
-            <div className="flex items-center gap-2.5">
-              <Link
-                href="/profilo"
-                className="flex items-center gap-2.5 hover:opacity-85 transition-opacity group"
-                title="Gestisci il tuo Profilo"
+            {/* Icona, nome e ruolo: aprono il menu dell'utente */}
+            <div className="relative" ref={menuRef}>
+              <button
+                type="button"
+                onClick={() => setMenuOpen((o) => !o)}
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                aria-controls="user-menu"
+                className="flex items-center gap-2.5 hover:opacity-85 transition-opacity group cursor-pointer"
+                title="Menu utente"
               >
                 <div className="relative">
                   {avatarUrl ? (
@@ -107,16 +133,48 @@ export function Navbar() {
                     {roleLabel}
                   </div>
                 </div>
-              </Link>
-
-              <button
-                type="button"
-                onClick={() => signOut()}
-                className="p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-900 rounded-lg transition-colors cursor-pointer"
-                title="Disconnetti"
-              >
-                <LogOut className="h-4 w-4" />
+                <ChevronDown
+                  className={`h-4 w-4 text-slate-400 transition-transform ${menuOpen ? 'rotate-180' : ''}`}
+                  aria-hidden="true"
+                />
               </button>
+
+              {menuOpen && (
+                <div
+                  id="user-menu"
+                  role="menu"
+                  className="absolute right-0 top-full mt-2 w-52 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-1.5 z-50"
+                >
+                  <Link
+                    href="/profilo"
+                    role="menuitem"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-200 hover:bg-slate-800"
+                  >
+                    <User className="h-4 w-4 text-emerald-400" /> Profilo
+                  </Link>
+                  <Link
+                    href="/impostazioni"
+                    role="menuitem"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-200 hover:bg-slate-800"
+                  >
+                    <Settings className="h-4 w-4 text-emerald-400" /> Impostazioni
+                  </Link>
+                  <div className="my-1 border-t border-slate-800" />
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      signOut();
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-rose-300 hover:bg-rose-500/10 cursor-pointer"
+                  >
+                    <LogOut className="h-4 w-4" /> Logout
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

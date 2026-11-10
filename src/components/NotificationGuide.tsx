@@ -74,7 +74,7 @@ export function NotificationGuide() {
       <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
         <Bell className="h-5 w-5 text-emerald-400" />
         <h2 id="notif-guide-title" className="text-base font-black text-white uppercase tracking-wider">
-          Come attivare le notifiche
+          Notifiche
         </h2>
       </div>
       <div className="text-xs text-slate-400 space-y-1">
@@ -95,29 +95,40 @@ export function NotificationGuide() {
             status === 'on' ? 'border-emerald-500/40 bg-emerald-500/10' : 'border-slate-700 bg-slate-950'
           }`}
         >
-          <p className="text-sm text-slate-200 flex items-center gap-2">
-            {status === 'on' ? <Bell className="h-4 w-4 text-emerald-400" /> : <BellOff className="h-4 w-4 text-slate-400" />}
-            {STATUS_TEXT[status]}
-          </p>
-          {status === 'off' && (
-            <button
-              type="button"
-              onClick={handleEnable}
-              disabled={busy || !profile}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs uppercase tracking-wider disabled:opacity-50"
-            >
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />}
-              Attiva notifiche su questo telefono
-            </button>
-          )}
-          {status === 'on' && (
-            <button type="button" onClick={handleDisable} disabled={busy} className="text-xs text-slate-400 underline">
-              Disattiva su questo dispositivo
-            </button>
-          )}
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-bold text-white flex items-center gap-2">
+              {status === 'on' ? <Bell className="h-4 w-4 text-emerald-400" /> : <BellOff className="h-4 w-4 text-slate-400" />}
+              Notifiche su questo dispositivo
+            </p>
+            {(status === 'on' || status === 'off') && (
+              <button
+                type="button"
+                role="switch"
+                aria-checked={status === 'on'}
+                aria-label="Notifiche su questo dispositivo"
+                onClick={status === 'on' ? handleDisable : handleEnable}
+                disabled={busy || !profile}
+                className={`relative flex-shrink-0 h-8 w-14 rounded-full transition-colors disabled:opacity-60 ${
+                  status === 'on' ? 'bg-emerald-500' : 'bg-slate-700'
+                }`}
+              >
+                {busy ? (
+                  <Loader2 className="absolute inset-0 m-auto h-4 w-4 animate-spin text-white" />
+                ) : (
+                  <span
+                    className={`absolute top-1 left-1 h-6 w-6 rounded-full bg-white shadow transition-transform ${
+                      status === 'on' ? 'translate-x-6' : ''
+                    }`}
+                  />
+                )}
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-slate-300">{STATUS_TEXT[status]}</p>
         </div>
       )}
 
+      <p className="text-xs font-bold text-slate-300 pt-1">Come attivarle sul telefono</p>
       <div className="flex items-center gap-1 bg-slate-950 border border-slate-800 p-1 rounded-xl text-sm">
         {(['android', 'ios'] as Platform[]).map((p) => (
           <button
