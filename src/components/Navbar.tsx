@@ -68,7 +68,7 @@ export function Navbar() {
     { href: '/giocatori', label: 'Giocatori', icon: Users },
     { href: '/squadre', label: 'Squadre', icon: Trophy },
     { href: '/history', label: 'Storico', icon: History },
-    { href: '/profilo', label: 'Profilo', icon: User },
+    // Profilo: si apre dal menu dell'utente (icona in alto a destra), non serve nella barra
     ...(isStrictAdmin ? [{ href: '/impostazioni?sezione=partita', label: 'Admin', icon: ShieldAlert }] : []),
   ];
 
