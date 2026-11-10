@@ -3,6 +3,7 @@
 import { BrandLogo } from '@/components/BrandLogo';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/context/AuthContext';
 import { FIELD_POSITIONS, FieldPosition } from '@/types/database';
 import { 
@@ -63,6 +64,12 @@ export default function LoginPage() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Accesso fatto (e mail verificata, se serve): si va alla home
+  const router = useRouter();
+  useEffect(() => {
+    if (mounted && user && profile && isEmailVerified) router.replace('/');
+  }, [mounted, user, profile, isEmailVerified, router]);
 
   const isStrictAdmin = Boolean(mounted && user && (profile?.role === 'admin' || isAdmin));
 
@@ -413,7 +420,7 @@ export default function LoginPage() {
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Crea Nuovo Account
+                Registrati
               </button>
             </div>
 
@@ -590,7 +597,7 @@ export default function LoginPage() {
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin text-slate-950" />
                 ) : authMode === 'signin' ? (
-                  <span>Accedi con Email</span>
+                  <span>Login</span>
                 ) : (
                   <span>Registrati e Invia Verifica</span>
                 )}

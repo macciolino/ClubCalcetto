@@ -327,16 +327,13 @@ export default function PresenzePage() {
             </div>
           </div>
 
-          {isStrictAdmin && (
-            <Link
-              href={`/squadre?date=${selectedDayString}`}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-2xl text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/30 transition-all hover:scale-105"
-            >
-              <Sparkles className="h-4 w-4" />
-              Genera Squadre 5v5
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          )}
+          <Link
+            href={`/squadre?date=${selectedDayString}`}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-2xl text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/30 transition-all"
+          >
+            Vai alle squadre
+            <ArrowRight className="h-4 w-4" />
+          </Link>
         </div>
       )}
 

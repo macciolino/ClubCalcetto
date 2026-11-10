@@ -1,5 +1,6 @@
 'use client';
 
+import { BrandLogo } from '@/components/BrandLogo';
 import { refreshPushRegistration } from '@/lib/services/pushService';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -59,11 +60,13 @@ export function Navbar() {
     <>
       {/* Top Header */}
       <header className="sticky top-0 z-40 w-full border-b border-slate-800 bg-slate-950/90 backdrop-blur-md pt-safe">
-        {/* Riga 1: scritta centrata (colonne laterali uguali) e profilo a destra */}
-        <div className="mx-auto grid h-16 max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 sm:px-6">
-          <div aria-hidden="true" />
-          <Link href="/presenze" className="text-lg sm:text-xl font-black tracking-tight text-white whitespace-nowrap hover:opacity-90">
-            Club <span className="text-emerald-400">Soccer</span>
+        {/* Logo con nome a sinistra, profilo a destra */}
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
+          <Link href="/" className="flex items-center gap-2.5 min-w-0 hover:opacity-90">
+            <BrandLogo />
+            <span className="text-lg sm:text-xl font-black tracking-tight text-white whitespace-nowrap">
+              Club <span className="text-emerald-400">Soccer</span>
+            </span>
           </Link>
           {/* User Info & Actions */}
           <div className="flex items-center justify-end gap-3 min-w-0">
@@ -118,9 +121,12 @@ export function Navbar() {
           </div>
         </div>
 
-        {/* Riga 2 (solo PC/tablet): menu delle pagine centrato */}
+      </header>
+
+      {/* Menu delle pagine (PC e tablet): sotto l'header, largo come le card */}
+      <div className="hidden md:block mx-auto w-full max-w-6xl px-4 sm:px-6 pt-6">
         {/* Desktop Navigation */}
-          <nav className="hidden md:flex mx-auto w-fit items-center gap-1 bg-slate-900/80 p-1.5 rounded-xl border border-slate-800/80 mb-2.5">
+          <nav className="flex items-center gap-1 bg-slate-900/80 p-1.5 rounded-xl border border-slate-800/80">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname.startsWith(item.href);
@@ -129,7 +135,7 @@ export function Navbar() {
                   key={item.href}
                   href={item.href}
                   title={item.label}
-                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                  className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all ${
                     isActive
                       ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
                       : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
@@ -142,7 +148,7 @@ export function Navbar() {
             })}
           </nav>
 
-      </header>
+      </div>
 
       {/* Mobile Bottom Navigation Bar */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-slate-950/95 backdrop-blur-lg border-t border-slate-800/80 pt-1.5 pb-safe">
