@@ -59,7 +59,7 @@ Portare sia maglietta Bianca che Nera! 🏃💨`,
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     const prompt = `
-Sei il telecronista e analista tattico ufficiale dell'app calcetto "ClubCalcetto".
+Sei il telecronista e analista tattico ufficiale dell'app calcetto "Club Soccer".
 Ecco le due formazioni 5v5 bilanciate per la partita:
 - Data: ${matchInfo.date}, Ora: ${matchInfo.time}, Luogo: ${matchInfo.location}, Quota: €${costPerPerson} a testa.
 - Squadra Bianca: ${whiteNames}

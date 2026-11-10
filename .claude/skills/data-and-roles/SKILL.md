@@ -10,7 +10,8 @@ Production data is REAL: never rewrite stats, no paid services, never print secr
 ## Collections
 
 - `profiles/{id}` - player. id = Firebase uid (super admin = `p-1`; guests = `guest-<timestamp>` with `is_guest`, `user_id: null`).
-  Fields: full_name (ONE string, no separate surname), email, avatar_url, role, position (Portiere|Difensore|Esterno|Punta),
+  Fields: full_name (ONE string, no separate surname), email, first_name / last_name (only for email sign-ups
+  since 2026-11-10; Google sign-ups and older profiles have just full_name; the profile page edits only full_name), avatar_url, role, position (Portiere|Difensore|Esterno|Punta),
   stats `{<parameter>: 1..10}`, overall_rating, matches_won/drawn/lost (changed ONLY via increment in match transactions),
   `deactivated_at` / `deactivated_by` (set only by the server; `subscribeProfiles` hides deactivated profiles unless asked with `'deactivated'`).
 - `presences/{date}_{playerId}` - sign-up; order from `joined_at` (server time); status COMPUTED by `rankDayPresences`

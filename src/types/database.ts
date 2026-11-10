@@ -114,6 +114,9 @@ export interface Profile {
   user_id: string | null;
   email: string | null;
   full_name: string;
+  /** Given at email sign-up (full_name = first_name + ' ' + last_name). Missing for Google sign-ups and older profiles. */
+  first_name?: string;
+  last_name?: string;
   avatar_url: string | null;
   role: UserRole; // 'admin' | 'player'
   position?: FieldPosition; // 'Portiere' | 'Difensore' | 'Esterno' | 'Punta'

@@ -21,7 +21,7 @@ export function BrandLogo({ size = 'md' }: { size?: 'md' | 'lg' }) {
   return (
     <img
       src={size === 'lg' ? '/brand/logo-header-192.png' : '/brand/logo-header-128.png'}
-      alt="ClubCalcetto"
+      alt="Club Soccer"
       width={size === 'lg' ? 56 : 40}
       height={size === 'lg' ? 56 : 40}
       className={`${box} object-contain drop-shadow-[0_2px_8px_rgba(16,185,129,0.35)]`}

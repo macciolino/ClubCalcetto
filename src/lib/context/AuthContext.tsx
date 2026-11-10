@@ -72,7 +72,8 @@ function defaultStats(): Record<string, number> {
 function buildNewProfile(
   fbUser: FirebaseUser,
   fullName?: string | null,
-  position?: FieldPosition
+  position?: FieldPosition,
+  names?: { firstName: string; lastName: string }
 ): Profile {
   const stats = defaultStats();
   const values = Object.values(stats);
@@ -90,6 +91,7 @@ function buildNewProfile(
     role: isSuperAdminEmail(fbUser.email) ? 'admin' : 'player',
     position: position || 'Esterno',
     is_guest: false,
+    ...(names ? { first_name: names.firstName, last_name: names.lastName } : {}),
     stats,
     overall_rating: ovr,
     matches_won: 0,
@@ -130,7 +132,13 @@ interface AuthContextType {
   isLoading: boolean;
   isEmailVerified: boolean;
   signInWithGoogle: () => Promise<void>;
-  signUpWithEmailPassword: (email: string, password: string, fullName: string, position?: FieldPosition) => Promise<void>;
+  signUpWithEmailPassword: (
+    email: string,
+    password: string,
+    firstName: string,
+    lastName: string,
+    position?: FieldPosition
+  ) => Promise<void>;
   signInWithEmailPassword: (email: string, password: string) => Promise<void>;
   sendVerificationEmail: () => Promise<void>;
   checkEmailVerification: () => Promise<boolean>;
@@ -149,7 +157,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [verifiedTick, setVerifiedTick] = useState(0);
 
   // Name/position typed in the sign-up form, used when the profile document is first created
-  const pendingSignUp = useRef<{ fullName?: string; position?: FieldPosition } | null>(null);
+  const pendingSignUp = useRef<{
+    fullName?: string;
+    position?: FieldPosition;
+    names?: { firstName: string; lastName: string };
+  } | null>(null);
 
   /** Loads (or creates on first login) the profile document of the signed-in user. */
   const syncProfile = async (fbUser: FirebaseUser): Promise<Profile | null> => {
@@ -174,7 +186,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         updateStoredPlayer(resolved);
       } else {
         const pending = pendingSignUp.current;
-        resolved = buildNewProfile(fbUser, pending?.fullName, pending?.position);
+        resolved = buildNewProfile(fbUser, pending?.fullName, pending?.position, pending?.names);
         await setDoc(docRef, resolved);
         addStoredPlayer(resolved);
       }
@@ -275,13 +287,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUpWithEmailPassword = async (
     email: string,
     pass: string,
-    fullName: string,
+    firstName: string,
+    lastName: string,
     position: FieldPosition = 'Esterno'
   ) => {
     ensureConfigured();
     setIsLoading(true);
     try {
-      pendingSignUp.current = { fullName: fullName.trim(), position };
+      const names = { firstName: firstName.trim(), lastName: lastName.trim() };
+      pendingSignUp.current = { fullName: `${names.firstName} ${names.lastName}`.trim(), position, names };
       const cred = await createUserWithEmailAndPassword(firebaseAuth, email.trim(), pass);
       try {
         await sendEmailVerification(cred.user);

@@ -442,7 +442,7 @@ function SquadreContent() {
 
           // Scarica automaticamente l'immagine per permettere all'admin di allegarla
           const link = document.createElement('a');
-          link.download = `ClubCalcetto-${selectedDate}-Squadre.png`;
+          link.download = `ClubSoccer-${selectedDate}-Squadre.png`;
           link.href = dataUrl;
           link.click();
         } catch (imgErr) {
@@ -470,7 +470,7 @@ function SquadreContent() {
         style: { margin: '0' },
       });
       const link = document.createElement('a');
-      link.download = `ClubCalcetto-${selectedDate}.png`;
+      link.download = `ClubSoccer-${selectedDate}.png`;
       link.href = dataUrl;
       link.click();
     } catch (err) {
@@ -489,11 +489,11 @@ function SquadreContent() {
           <div className="flex items-center gap-2">
             <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
               <Trophy className="h-6 w-6 text-emerald-400" />
-              Generatore Squadre Bilanciate 5v5
+              Squadre della Partita
             </h1>
           </div>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Algoritmo combinatorio che distribuisce i 10 presenti tra Squadra Bianca e Nera minimizzando lo scarto delle abilità.
+            Bianchi contro Neri per la data scelta: l&apos;app divide i 10 titolari in due squadre equilibrate, poi un admin le conferma.
           </p>
         </div>
 

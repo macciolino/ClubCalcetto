@@ -11,7 +11,7 @@ self.addEventListener('push', (event) => {
   }
   const data = payload.data || {};
   const notification = payload.notification || {};
-  const title = data.title || notification.title || 'ClubCalcetto';
+  const title = data.title || notification.title || 'Club Soccer';
   const body = data.body || notification.body || '';
   const url = data.url || '/';
   event.waitUntil(

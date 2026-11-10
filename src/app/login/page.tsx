@@ -41,7 +41,12 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [fullName, setFullName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  // Errori mostrati sotto i campi solo dopo il primo tentativo di invio (o quando si esce dal campo)
+  const [submitted, setSubmitted] = useState(false);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const touch = (field: string) => setTouched((t) => ({ ...t, [field]: true }));
   const [position, setPosition] = useState<FieldPosition>('Esterno');
 
   const [isLoading, setIsLoading] = useState(false);
@@ -81,37 +86,49 @@ export default function LoginPage() {
     }
   };
 
+  // Requisiti della password (solo in registrazione)
+  const passwordRules = [
+    { label: 'Almeno 8 caratteri', ok: password.length >= 8 },
+    { label: 'Una lettera maiuscola', ok: /[A-Z]/.test(password) },
+    { label: 'Una lettera minuscola', ok: /[a-z]/.test(password) },
+    { label: 'Un numero', ok: /[0-9]/.test(password) },
+    { label: 'Un carattere speciale (es. ! ? @ # $ %)', ok: /[^A-Za-z0-9]/.test(password) },
+  ];
+  const isSignup = authMode === 'signup';
+  const fieldErrors: Record<string, string> = {};
+  if (isSignup && !firstName.trim()) fieldErrors.firstName = 'Il nome è obbligatorio.';
+  if (isSignup && !lastName.trim()) fieldErrors.lastName = 'Il cognome è obbligatorio.';
+  if (!email.trim()) fieldErrors.email = "L'email è obbligatoria.";
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) fieldErrors.email = 'Inserisci un indirizzo email valido.';
+  if (!password) fieldErrors.password = 'La password è obbligatoria.';
+  else if (isSignup && passwordRules.some((r) => !r.ok)) fieldErrors.password = 'La password non rispetta tutti i requisiti.';
+  if (isSignup && !confirmPassword) fieldErrors.confirmPassword = 'Ripeti la password.';
+  else if (isSignup && confirmPassword !== password) fieldErrors.confirmPassword = 'Le password non coincidono.';
+  const showError = (field: string) => (submitted || touched[field]) && Boolean(fieldErrors[field]);
+  const inputClass = (field: string, withIcon = true) =>
+    `w-full ${withIcon ? 'pl-9' : 'pl-3'} pr-3 py-2 bg-slate-950 border rounded-xl text-white text-xs placeholder:text-slate-600 focus:outline-none transition-colors ${
+      showError(field) ? 'border-rose-500 focus:border-rose-400' : 'border-slate-800 focus:border-emerald-500'
+    }`;
+  const FieldError = ({ field }: { field: string }) =>
+    showError(field) ? (
+      <p id={`${field}-error`} className="mt-1 text-[11px] text-rose-400">
+        {fieldErrors[field]}
+      </p>
+    ) : null;
+
   const handleEmailPasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
     setSuccessMessage('');
-
-    if (!email.trim() || !password.trim()) {
-      setErrorMessage('Inserisci email e password.');
-      return;
-    }
-
-    if (authMode === 'signup') {
-      if (!fullName.trim()) {
-        setErrorMessage('Inserisci il tuo nome e cognome.');
-        return;
-      }
-      if (password.length < 6) {
-        setErrorMessage('La password deve contenere almeno 6 caratteri.');
-        return;
-      }
-      if (password !== confirmPassword) {
-        setErrorMessage('Le password non coincidono.');
-        return;
-      }
-    }
+    setSubmitted(true);
+    if (Object.keys(fieldErrors).length > 0) return;
 
     setIsLoading(true);
     try {
       if (authMode === 'signin') {
         await signInWithEmailPassword(email, password);
       } else {
-        await signUpWithEmailPassword(email, password, fullName, position);
+        await signUpWithEmailPassword(email, password, firstName, lastName, position);
         setSuccessMessage('Account creato con successo! Ti abbiamo inviato una mail di verifica.');
       }
     } catch (err: unknown) {
@@ -122,7 +139,7 @@ export default function LoginPage() {
       } else if (msg.includes('auth/wrong-password') || msg.includes('auth/user-not-found') || msg.includes('auth/invalid-credential')) {
         setErrorMessage('Email o password non corretti.');
       } else if (msg.includes('auth/weak-password')) {
-        setErrorMessage('Password troppo debole (minimo 6 caratteri).');
+        setErrorMessage('Password troppo debole: rispetta tutti i requisiti indicati.');
       } else if (msg.includes('auth/operation-not-allowed')) {
         setErrorMessage(
           'Il provider Email/Password non è ancora abilitato nella console Firebase (Authentication > Sign-in method > Email/Password > Abilita).'
@@ -174,7 +191,7 @@ export default function LoginPage() {
           </div>
           <div>
             <h1 className="text-2xl font-black tracking-tight text-white">
-              Club<span className="text-emerald-400">Calcetto</span>
+              Club <span className="text-emerald-400">Soccer</span>
             </h1>
             <p className="text-xs text-slate-400 font-medium">
               Accesso ufficiale partite 5v5 (Localhost & Web)
@@ -368,6 +385,8 @@ export default function LoginPage() {
                 type="button"
                 onClick={() => {
                   setAuthMode('signin');
+                  setSubmitted(false);
+                  setTouched({});
                   setErrorMessage('');
                   setSuccessMessage('');
                 }}
@@ -383,6 +402,8 @@ export default function LoginPage() {
                 type="button"
                 onClick={() => {
                   setAuthMode('signup');
+                  setSubmitted(false);
+                  setTouched({});
                   setErrorMessage('');
                   setSuccessMessage('');
                 }}
@@ -397,31 +418,63 @@ export default function LoginPage() {
             </div>
 
             {/* FORM EMAIL E PASSWORD */}
-            <form onSubmit={handleEmailPasswordSubmit} className="space-y-3 pt-1">
+            <form onSubmit={handleEmailPasswordSubmit} noValidate className="space-y-3 pt-1">
               {authMode === 'signup' && (
                 <>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">
-                      Nome e Cognome
-                    </label>
-                    <div className="relative">
-                      <User className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                      <input
-                        type="text"
-                        required
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        placeholder="Es. Mario Rossi"
-                        className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 transition-colors"
-                      />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label htmlFor="signup-first-name" className="block text-[11px] font-bold text-slate-300 uppercase mb-1">
+                        Nome <span className="text-rose-400">*</span>
+                      </label>
+                      <div className="relative">
+                        <User className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                        <input
+                          id="signup-first-name"
+                          type="text"
+                          required
+                          autoComplete="given-name"
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                          onBlur={() => touch('firstName')}
+                          aria-invalid={showError('firstName')}
+                          aria-describedby={showError('firstName') ? 'firstName-error' : undefined}
+                          placeholder="Es. Mario"
+                          className={inputClass('firstName')}
+                        />
+                      </div>
+                      <FieldError field="firstName" />
+                    </div>
+                    <div>
+                      <label htmlFor="signup-last-name" className="block text-[11px] font-bold text-slate-300 uppercase mb-1">
+                        Cognome <span className="text-rose-400">*</span>
+                      </label>
+                      <div className="relative">
+                        <User className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                        <input
+                          id="signup-last-name"
+                          type="text"
+                          required
+                          autoComplete="family-name"
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                          onBlur={() => touch('lastName')}
+                          aria-invalid={showError('lastName')}
+                          aria-describedby={showError('lastName') ? 'lastName-error' : undefined}
+                          placeholder="Es. Rossi"
+                          className={inputClass('lastName')}
+                        />
+                      </div>
+                      <FieldError field="lastName" />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">
-                      Ruolo Tattico in Campo
+                    <label htmlFor="signup-position" className="block text-[11px] font-bold text-slate-300 uppercase mb-1">
+                      Ruolo Tattico in Campo <span className="text-rose-400">*</span>
                     </label>
                     <select
+                      id="signup-position"
+                      required
                       value={position}
                       onChange={(e) => setPosition(e.target.value as FieldPosition)}
                       className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-xs focus:outline-none focus:border-emerald-500 transition-colors"
@@ -440,55 +493,92 @@ export default function LoginPage() {
               )}
 
               <div>
-                <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">
-                  Indirizzo Email
+                <label htmlFor="auth-email" className="block text-[11px] font-bold text-slate-300 uppercase mb-1">
+                  Indirizzo Email <span className="text-rose-400">*</span>
                 </label>
                 <div className="relative">
                   <Mail className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                   <input
+                    id="auth-email"
                     type="email"
                     required
+                    autoComplete="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    onBlur={() => touch('email')}
+                    aria-invalid={showError('email')}
+                    aria-describedby={showError('email') ? 'email-error' : undefined}
                     placeholder="nome@esempio.it"
-                    className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 transition-colors"
+                    className={inputClass('email')}
                   />
                 </div>
+                <FieldError field="email" />
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">
-                  Password
+                <label htmlFor="auth-password" className="block text-[11px] font-bold text-slate-300 uppercase mb-1">
+                  Password <span className="text-rose-400">*</span>
                 </label>
                 <div className="relative">
                   <Lock className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                   <input
+                    id="auth-password"
                     type="password"
                     required
+                    autoComplete={isSignup ? 'new-password' : 'current-password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Minimo 6 caratteri"
-                    className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 transition-colors"
+                    onBlur={() => touch('password')}
+                    aria-invalid={showError('password')}
+                    aria-describedby={isSignup ? 'password-rules' : showError('password') ? 'password-error' : undefined}
+                    placeholder={isSignup ? 'Crea una password sicura' : 'La tua password'}
+                    className={inputClass('password')}
                   />
                 </div>
+                <FieldError field="password" />
+                {isSignup && (
+                  <ul id="password-rules" className="mt-1.5 space-y-0.5" aria-label="Requisiti della password">
+                    {passwordRules.map((r) => (
+                      <li
+                        key={r.label}
+                        className={`text-[11px] flex items-center gap-1.5 ${
+                          r.ok ? 'text-emerald-400' : showError('password') ? 'text-rose-400' : 'text-slate-500'
+                        }`}
+                      >
+                        <span aria-hidden="true">{r.ok ? '✓' : '•'}</span>
+                        {r.label}
+                        <span className="sr-only">{r.ok ? ' (rispettato)' : ' (mancante)'}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
 
               {authMode === 'signup' && (
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">
-                    Conferma Password
+                  <label htmlFor="auth-confirm-password" className="block text-[11px] font-bold text-slate-300 uppercase mb-1">
+                    Conferma Password <span className="text-rose-400">*</span>
                   </label>
                   <div className="relative">
                     <Lock className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                     <input
+                      id="auth-confirm-password"
                       type="password"
                       required
+                      autoComplete="new-password"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
+                      onBlur={() => touch('confirmPassword')}
+                      aria-invalid={showError('confirmPassword')}
+                      aria-describedby={showError('confirmPassword') ? 'confirmPassword-error' : undefined}
                       placeholder="Ripeti la password"
-                      className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-xs placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 transition-colors"
+                      className={inputClass('confirmPassword')}
                     />
                   </div>
+                  <FieldError field="confirmPassword" />
+                  {confirmPassword && confirmPassword === password && (
+                    <p className="mt-1 text-[11px] text-emerald-400">✓ Le password coincidono</p>
+                  )}
                 </div>
               )}
 

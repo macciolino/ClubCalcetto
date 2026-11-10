@@ -5,6 +5,9 @@ description: Map of the ClubCalcetto project - folders, routes, where each page 
 
 # ClubCalcetto - project map
 
+Brand shown to users: **Club Soccer** (renamed 2026-11-10). Code, repo, Vercel domain and storage keys still say ClubCalcetto.
+Header (`Navbar.tsx`): text "Club Soccer" centred; on md+ the page menu is a second row below it; phones use the bottom bar.
+
 Next.js 16 App Router + React 19 + TypeScript strict + Tailwind (dark only). Firebase JS SDK v9 (Google Auth,
 Firestore realtime). Deploy: `git push` on `main` → Vercel. Routes are still Italian (English routes are a TODO), UI text Italian.
 Checks: `npx tsc --noEmit -p .`, `npx next build`, `npm run test:rules` (Firestore rules on emulators). No ESLint config.

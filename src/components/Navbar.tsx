@@ -1,7 +1,6 @@
 'use client';
 
 import { refreshPushRegistration } from '@/lib/services/pushService';
-import { BrandLogo } from '@/components/BrandLogo';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -60,47 +59,14 @@ export function Navbar() {
     <>
       {/* Top Header */}
       <header className="sticky top-0 z-40 w-full border-b border-slate-800 bg-slate-950/90 backdrop-blur-md pt-safe">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-          {/* Logo */}
-          <Link href="/presenze" className="flex items-center gap-2.5 group">
-            <div className="transition-transform group-hover:scale-105">
-              <BrandLogo />
-            </div>
-            <div>
-              <span className="text-lg font-black tracking-tight text-white flex items-center gap-1.5">
-                Club<span className="text-emerald-400">Calcetto</span>
-              </span>
-              <span className="hidden sm:block text-[10px] text-slate-400 font-medium tracking-wide uppercase">
-                5v5 League & Matchmaking
-              </span>
-            </div>
+        {/* Riga 1: scritta centrata (colonne laterali uguali) e profilo a destra */}
+        <div className="mx-auto grid h-16 max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 sm:px-6">
+          <div aria-hidden="true" />
+          <Link href="/presenze" className="text-lg sm:text-xl font-black tracking-tight text-white whitespace-nowrap hover:opacity-90">
+            Club <span className="text-emerald-400">Soccer</span>
           </Link>
-
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-1 bg-slate-900/80 p-1.5 rounded-xl border border-slate-800/80">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname.startsWith(item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  title={item.label}
-                  className={`flex items-center gap-2 px-3 lg:px-3.5 py-2 lg:py-1.5 rounded-lg text-sm font-semibold transition-all ${
-                    isActive
-                      ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  <span className="hidden lg:inline">{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
-
           {/* User Info & Actions */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center justify-end gap-3 min-w-0">
             {/* Profilo Badge con link a /profilo */}
             <div className="flex items-center gap-2.5">
               <Link
@@ -151,6 +117,31 @@ export function Navbar() {
             </div>
           </div>
         </div>
+
+        {/* Riga 2 (solo PC/tablet): menu delle pagine centrato */}
+        {/* Desktop Navigation */}
+          <nav className="hidden md:flex mx-auto w-fit items-center gap-1 bg-slate-900/80 p-1.5 rounded-xl border border-slate-800/80 mb-2.5">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname.startsWith(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  title={item.label}
+                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                    isActive
+                      ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+
       </header>
 
       {/* Mobile Bottom Navigation Bar */}

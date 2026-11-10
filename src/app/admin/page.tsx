@@ -346,7 +346,7 @@ export default function AdminPage() {
                 Pannello Amministratore
               </h1>
               <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400">
-                ClubCalcetto - {profile?.full_name || 'Amministratore'}
+                Club Soccer - {profile?.full_name || 'Amministratore'}
               </span>
             </div>
           </div>

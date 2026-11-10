@@ -38,7 +38,7 @@ function buildMessage(
   if (req.type === 'teams_changed') {
     return { title: '🔁 Squadre aggiornate', body: `Le squadre di ${when} sono cambiate: controlla in quale giochi.`, url };
   }
-  if (req.type !== 'substitution') return { title: 'ClubCalcetto', body: when, url };
+  if (req.type !== 'substitution') return { title: 'Club Soccer', body: when, url };
   return {
     title: '🔄 Cambio in squadra',
     body: `${req.inName} prende il posto di ${req.outName} nella partita di ${when}.`,
@@ -114,7 +114,7 @@ export async function POST(request: Request) {
       const tokens = await adminDb().collection('push_tokens').where('uid', '==', caller.uid).get();
       const sent = await sendToTokens(
         tokens.docs.map((d) => d.id),
-        { title: '🔔 Notifica di prova', body: 'Se leggi questo messaggio le notifiche di ClubCalcetto funzionano!', url: '/profilo' }
+        { title: '🔔 Notifica di prova', body: 'Se leggi questo messaggio le notifiche di Club Soccer funzionano!', url: '/profilo' }
       );
       return NextResponse.json({ ok: true, sent, devices: tokens.size });
     }

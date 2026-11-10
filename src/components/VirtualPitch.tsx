@@ -168,9 +168,9 @@ export const VirtualPitch = forwardRef<HTMLDivElement, VirtualPitchProps>(
             />
           ))}
 
-          {/* Watermark ClubCalcetto a bordo centrocampo */}
+          {/* Watermark Club Soccer a bordo centrocampo */}
           <div className="absolute top-[51%] left-2.5 sm:left-3 text-[7px] sm:text-[8px] text-white/35 tracking-wider font-mono uppercase pointer-events-none select-none">
-            ClubCalcetto 5v5
+            Club Soccer 5v5
           </div>
         </div>
       </div>

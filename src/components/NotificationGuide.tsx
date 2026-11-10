@@ -18,19 +18,19 @@ type Platform = 'android' | 'ios';
 
 const STEPS: Record<Platform, string[]> = {
   android: [
-    'Apri ClubCalcetto con Google Chrome.',
+    'Apri Club Soccer con Google Chrome.',
     'Tocca i tre puntini in alto a destra e scegli "Aggiungi a schermata Home" (oppure "Installa app").',
     'Apri l\'app dall\'icona che è comparsa sulla schermata Home.',
     'Torna qui nel Profilo, tocca "Attiva notifiche su questo telefono" e poi "Consenti".',
-    'Se per sbaglio hai negato: Impostazioni del telefono → App → Chrome (o ClubCalcetto) → Notifiche → attiva.',
+    'Se per sbaglio hai negato: Impostazioni del telefono → App → Chrome (o Club Soccer) → Notifiche → attiva.',
   ],
   ios: [
     'Serve iPhone con iOS 16.4 o successivo (Impostazioni → Generali → Info).',
-    'Apri ClubCalcetto con Safari (non con altre app o browser).',
+    'Apri Club Soccer con Safari (non con altre app o browser).',
     'Tocca il pulsante Condividi (il quadrato con la freccia verso l\'alto) e scegli "Aggiungi alla schermata Home".',
     'Apri l\'app SOLO dall\'icona sulla schermata Home: su iPhone le notifiche funzionano solo così.',
     'Dall\'app aperta così, vai nel Profilo, tocca "Attiva notifiche su questo telefono" e poi "Consenti".',
-    'Se per sbaglio hai negato: Impostazioni → Notifiche → ClubCalcetto → Consenti notifiche.',
+    'Se per sbaglio hai negato: Impostazioni → Notifiche → Club Soccer → Consenti notifiche.',
   ],
 };
 
