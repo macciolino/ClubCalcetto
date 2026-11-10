@@ -187,6 +187,16 @@ export default function AdminPage() {
   }, [activeDate]);
 
   // Se non admin o in caricamento, mostra esclusivamente spinner
+  // Account disattivati (solo super admin): elenco per Anagrafica → Disattivati.
+  // (gli hook devono stare PRIMA del return qui sotto)
+  const [deactivatedPlayers, setDeactivatedPlayers] = useState<Profile[]>([]);
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    setDeactivatedPlayers([]);
+    const unsub = subscribeProfiles((list) => setDeactivatedPlayers(list), 'deactivated');
+    return () => unsub();
+  }, [isSuperAdmin]);
+
   if (!isStrictAdmin) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center text-center p-6 space-y-4">
@@ -266,15 +276,6 @@ export default function AdminPage() {
       alert(res.error === 'not_configured' ? 'Operazione non disponibile: server non configurato.' : 'Operazione non riuscita. Riprova.');
     }
   };
-
-  // Account disattivati (solo super admin): riattivazione o eliminazione definitiva
-  const [deactivatedPlayers, setDeactivatedPlayers] = useState<Profile[]>([]);
-  useEffect(() => {
-    if (!isSuperAdmin) return;
-    setDeactivatedPlayers([]);
-    const unsub = subscribeProfiles((list) => setDeactivatedPlayers(list), 'deactivated');
-    return () => unsub();
-  }, [isSuperAdmin]);
 
   const handleReactivatePlayer = async (player: Profile) => {
     if (!confirm(`Riattivare l'account di "${player.full_name}"? Potrà di nuovo entrare e ritroverà scheda, parametri e statistiche.`)) return;

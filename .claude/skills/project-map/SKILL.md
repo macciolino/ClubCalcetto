@@ -26,6 +26,9 @@ Admin tabs (`src/components/admin/`): `TabOverviewMatch` (Match & Cassa: day ele
 `TabClubConfigFields` (Campi & Parametri: `FormSettingsCard`, fields, `StatParametersCard`, "Blocco ritiri" timelock, cost/time).
 The old "Presenze & Blocco" tab no longer exists (its presence tools moved to `/presenze`).
 
+Pages such as `/admin` and `/profilo` return early (not admin / not signed in): every hook (useState, useEffect, use*)
+must be declared ABOVE those early returns, or the page crashes when the user data arrives.
+
 ## API routes (`src/app/api/`, Node runtime, firebase-admin)
 
 - `notify` - push notifications + server reconcile of teams/promotions (Bearer Firebase ID token)
