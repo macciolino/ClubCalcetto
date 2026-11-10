@@ -25,17 +25,15 @@ Checks: `npx tsc --noEmit -p .`, `npx next build`, `npm run test:rules` (Firesto
 | `/squadre` | Teams | generate / Ribilancia / Conferma Partita / tab "Modifica manuale" (`TeamSwapEditor`), `VirtualPitch`, `MvpVoteCard` |
 | `/history` | Storico | tabs Classifica (leaderboard, sortable by clicking the headers) / Partite (`HistoryCalendar` + match cards), season select, admin delete + `MatchEditModal`. A new year appears from 31 Dec 22:00 Europe/Rome (`getVisibleHistoryYear` in `dateUtils`) |
 | `/profilo` | Own profile | photo, name, position, radar, global stats, link to Impostazioni, `DeleteAccountSection` (bottom: deactivate or delete) |
-| `/impostazioni` | Settings | opened from the header user menu; subsection Notifiche (`NotificationGuide`: on/off switch for this device + guide) for every user |
-| `/admin` | Admin panel | header + `NotificationSettingsCard` + 3 tabs (below) |
+| `/impostazioni` | Settings (+ admin panel) | `?sezione=` notifiche (everyone: `NotificationGuide`) · admin: partita, rosa, notifiche-club, regole, parametri · super admin: account. Sidebar on md+, list → section with back link on phones. Admin sections rendered by `components/admin/AdminSections.tsx` |
+| `/admin` | old admin panel | now only redirects to `/impostazioni?sezione=partita` (old links keep working) |
 | `/login` | Google login | |
 
-Admin tabs (`src/components/admin/`): `TabOverviewMatch` (Match & Cassa: day election, cash, match closing),
-`TabUsersRoles` (Anagrafica Rosa: emails, roles; super admin also filter "Disattivati" with Riattiva / delete for good, plus `DeletionFeedbackCard`),
-`TabClubConfigFields` (Campi & Parametri: `FormSettingsCard`, fields, `StatParametersCard`, "Blocco ritiri" timelock, cost/time).
-The old "Presenze & Blocco" tab no longer exists (its presence tools moved to `/presenze`).
-
-Pages such as `/admin` and `/profilo` return early (not admin / not signed in): every hook (useState, useEffect, use*)
-must be declared ABOVE those early returns, or the page crashes when the user data arrives.
+Admin sections (`src/components/admin/AdminSections.tsx`, shown in Impostazioni): partita = `TabOverviewMatch` (day election,
+cash, match closing); rosa = `TabUsersRoles`; notifiche-club = `NotificationSettingsCard`; regole / parametri =
+`TabClubConfigFields` with `part="rules"` (fields, Blocco ritiri, cost/time) or `part="params"` (`FormSettingsCard` incl.
+goalkeeper mode, `StatParametersCard`); account (super admin) = `DeactivatedAccountsList` + `DeletionFeedbackCard`.
+The menu item "Admin" points to `/impostazioni?sezione=partita`.
 
 ## API routes (`src/app/api/`, Node runtime, firebase-admin)
 

@@ -142,7 +142,7 @@ export async function POST(request: Request) {
         if (body.type === 'test_admins' && tokens.size > 0) {
           sent += await sendToTokens(
             tokens.docs.map((d) => d.id),
-            { title: '🔔 Prova per gli admin', body: 'Notifica di prova inviata a tutti gli amministratori.', url: '/admin' }
+            { title: '🔔 Prova per gli admin', body: 'Notifica di prova inviata a tutti gli amministratori.', url: '/impostazioni?sezione=notifiche-club' }
           );
         }
       }

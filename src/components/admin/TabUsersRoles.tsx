@@ -28,10 +28,6 @@ interface TabUsersRolesProps {
   onDeletePlayer: (playerId: string, name: string) => void;
   /** Solo il super admin può promuovere/retrocedere admin */
   canManageRoles?: boolean;
-  /** Super admin only: deactivated accounts (hidden everywhere else), with reactivate / delete for good */
-  deactivatedPlayers?: Profile[];
-  onReactivatePlayer?: (player: Profile) => void;
-  onDeleteDeactivatedPlayer?: (player: Profile) => void;
 }
 
 export function TabUsersRoles({
@@ -41,12 +37,9 @@ export function TabUsersRoles({
   onTogglePlayerRole,
   onDeletePlayer,
   canManageRoles = false,
-  deactivatedPlayers = [],
-  onReactivatePlayer,
-  onDeleteDeactivatedPlayer,
 }: TabUsersRolesProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'player' | 'guest' | 'google' | 'deactivated'>('all');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'player' | 'guest' | 'google'>('all');
 
   // Filtra giocatori
   const filteredPlayers = players.filter((player) => {
@@ -164,65 +157,11 @@ export function TabUsersRoles({
           >
             Ospiti Manuali ({players.filter((p) => p.is_guest).length})
           </button>
-          {canManageRoles && deactivatedPlayers.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setRoleFilter('deactivated')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                roleFilter === 'deactivated'
-                  ? 'bg-rose-500 text-white shadow-md font-black'
-                  : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
-              }`}
-            >
-              Disattivati ({deactivatedPlayers.length})
-            </button>
-          )}
         </div>
       </div>
 
-      {/* ACCOUNT DISATTIVATI (solo super admin): riattiva o elimina definitivamente */}
-      {roleFilter === 'deactivated' && (
-        <ul className="space-y-2">
-          {deactivatedPlayers.map((p) => (
-            <li
-              key={p.id}
-              className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900 border border-slate-800 rounded-2xl p-4"
-            >
-              <div className="min-w-0">
-                <div className="font-bold text-sm text-white truncate">{p.full_name}</div>
-                <div className="text-xs text-slate-400 truncate">{p.email || 'Nessuna mail'}</div>
-                <div className="text-[11px] text-slate-500 mt-0.5">
-                  Disattivato {p.deactivated_by === 'self' ? 'dal giocatore' : 'dal super admin'}
-                  {p.deactivated_at ? ` il ${new Date(p.deactivated_at).toLocaleDateString('it-IT')}` : ''} · OVR {p.overall_rating} ·{' '}
-                  {p.matches_won ?? 0}V-{p.matches_drawn ?? 0}P-{p.matches_lost ?? 0}S
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => onReactivatePlayer?.(p)}
-                  className="flex-1 sm:flex-none px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs uppercase tracking-wider"
-                >
-                  Riattiva
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onDeleteDeactivatedPlayer?.(p)}
-                  aria-label={`Elimina definitivamente ${p.full_name}`}
-                  title="Elimina definitivamente"
-                  className="px-3 py-2.5 rounded-xl text-rose-300 border border-rose-500/40 hover:bg-rose-500/10"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            </li>
-          ))}
-          {deactivatedPlayers.length === 0 && <li className="text-xs text-slate-400">Nessun account disattivato.</li>}
-        </ul>
-      )}
-
       {/* TABELLA ADVANCED DATAGRID (DESKTOP) E CARD COLLAPSED (MOBILE) */}
-      <div className={`bg-slate-900 border border-slate-800 rounded-3xl shadow-xl overflow-hidden ${roleFilter === 'deactivated' ? 'hidden' : ''}`}>
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl shadow-xl overflow-hidden">
         {/* DESKTOP TABLE */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -381,7 +320,7 @@ export function TabUsersRoles({
                               player.is_guest
                                 ? 'Elimina ospite'
                                 : canManageRoles
-                                ? 'Disattiva account (i dati restano salvati)'
+                                ? 'Disattiva account (i dati restano salvati, li trovi in Impostazioni → Account chiusi)'
                                 : 'Solo il super admin può eliminare un account registrato'
                             }
                           >

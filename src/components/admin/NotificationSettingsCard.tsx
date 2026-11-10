@@ -20,13 +20,13 @@ const MODES: { value: Mode; label: string; help: string }[] = [
 ];
 
 /** Admin → Campi & Parametri: who receives notifications + test notification to yourself. */
-export function NotificationSettingsCard() {
+export function NotificationSettingsCard({ defaultOpen = false }: { defaultOpen?: boolean } = {}) {
   const { profile } = useAuth();
   const [mode, setMode] = useState<Mode>('admins');
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [message, setMessage] = useState('');
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
 
   useEffect(() => {
     if (!isFirebaseConfigured) return;

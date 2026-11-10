@@ -34,6 +34,12 @@ description: ClubCalcetto UI conventions - theme, shared components (tables, dro
 - Tables: wrapper `overflow-x-auto`, header `text-xs uppercase text-slate-400`, numbers `font-mono text-center`.
   Sortable columns: the header is a button, active column `text-emerald-300` with a small ▼/▲ and `aria-sort` (see Storico).
 
+## Settings layout (`/impostazioni`)
+
+- md+: sticky sidebar (`grid-cols-[240px_1fr]`) grouped Personali / Amministrazione, active item emerald; content on the right.
+- Phones: list of sections (label + description + chevron) → tap opens the section with "← Impostazioni". One URL per
+  section (`?sezione=`) so Back works. New settings go in a section, not in a new page.
+
 ## Responsive
 
 - Mobile first; breakpoints `sm` 640, `md` 768 (bottom nav disappears, top nav appears), `lg` 1024.

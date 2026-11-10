@@ -48,6 +48,8 @@ interface TabClubConfigFieldsProps {
   timelockEnabled: boolean;
   timelockHours: number;
   onUpdateTimelock: (enabled: boolean, hours: number) => void;
+  /** Impostazioni: 'rules' = campi, blocco ritiri, costo/orario · 'params' = Stato forma e parametri dei giocatori */
+  part: 'rules' | 'params';
 }
 
 export function TabClubConfigFields({
@@ -65,6 +67,7 @@ export function TabClubConfigFields({
   timelockEnabled,
   timelockHours,
   onUpdateTimelock,
+  part,
 }: TabClubConfigFieldsProps) {
   // Modal Campo
   const [isFieldModalOpen, setIsFieldModalOpen] = useState(false);
@@ -115,9 +118,15 @@ export function TabClubConfigFields({
 
   return (
     <div className="space-y-6">
+      {part === 'params' && (
+      <>
       {/* 0. STATO FORMA: cosa fa salire i parametri (sempre aperto, legenda a tendina) */}
       <FormSettingsCard />
+      </>
+      )}
 
+      {part === 'rules' && (
+      <>
       {/* 1. ANAGRAFICA CENTRI SPORTIVI & CAMPI DA CALCIO (a tendina) */}
       <CollapsibleCard
         title="Centri sportivi & campi"
@@ -240,10 +249,18 @@ export function TabClubConfigFields({
           })}
         </div>
       </CollapsibleCard>
+      </>
+      )}
 
+      {part === 'params' && (
+      <>
       {/* 2. PARAMETRI DEI GIOCATORI (aggiunta / rimozione solo qui) */}
       <StatParametersCard categories={categories} onOpenLegend={() => setIsLegendOpen(true)} />
+      </>
+      )}
 
+      {part === 'rules' && (
+      <>
       {/* BLOCCO RITIRI (spostato qui dal vecchio tab "Presenze & Blocco") */}
       <CollapsibleCard
         title="Blocco ritiri"
@@ -282,7 +299,11 @@ export function TabClubConfigFields({
           </button>
         </div>
       </CollapsibleCard>
+      </>
+      )}
 
+      {part === 'rules' && (
+      <>
       {/* 3. PARAMETRI ECONOMICI E LOGISTICI + 4. NOTIFICHE & SYSTEM STATUS (2 COLONNE) */}
       <div className="grid grid-cols-1 gap-5">
         {/* Parametri Economici e Logistici (a tendina) */}
@@ -357,6 +378,8 @@ export function TabClubConfigFields({
         </CollapsibleCard>
 
       </div>
+      </>
+      )}
 
       {/* MODALI: CAMPO SPORTIVO & LEGENDA STATISTICHE */}
       <FieldModal

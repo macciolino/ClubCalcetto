@@ -69,7 +69,7 @@ export function Navbar() {
     { href: '/squadre', label: 'Squadre', icon: Trophy },
     { href: '/history', label: 'Storico', icon: History },
     { href: '/profilo', label: 'Profilo', icon: User },
-    ...(isStrictAdmin ? [{ href: '/admin', label: 'Admin', icon: ShieldAlert }] : []),
+    ...(isStrictAdmin ? [{ href: '/impostazioni?sezione=partita', label: 'Admin', icon: ShieldAlert }] : []),
   ];
 
   const displayName = mounted && profile?.full_name ? profile.full_name : 'Ospite';
@@ -191,7 +191,7 @@ export function Navbar() {
           <nav className="flex items-center gap-1 bg-slate-900/80 p-1.5 rounded-xl border border-slate-800/80">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname.startsWith(item.href);
+              const isActive = pathname.startsWith(item.href.split('?')[0]);
               return (
                 <Link
                   key={item.href}
@@ -219,7 +219,7 @@ export function Navbar() {
         <div className="flex items-center justify-around">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname.startsWith(item.href);
+            const isActive = pathname.startsWith(item.href.split('?')[0]);
             return (
               <Link
                 key={item.href}

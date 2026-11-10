@@ -318,7 +318,7 @@ export default function LoginPage() {
                 </Link>
                 {isStrictAdmin && (
                   <Link
-                    href="/admin"
+                    href="/impostazioni?sezione=partita"
                     className="flex items-center justify-center gap-1.5 py-2 px-3 bg-slate-800 hover:bg-slate-700 text-emerald-300 font-bold rounded-xl text-xs transition-colors"
                   >
                     <ShieldCheck className="h-3.5 w-3.5 text-amber-400" />
