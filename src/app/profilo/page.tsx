@@ -1,6 +1,6 @@
 'use client';
 
-import { getStatValue } from '@/lib/utils/statUtils';
+import { getStatValue, computeMatchStats, EMPTY_MATCH_STATS } from '@/lib/utils/statUtils';
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/context/AuthContext';
@@ -97,23 +97,7 @@ export default function ProfiloPage() {
     );
   }
 
-  const record = (() => {
-    let won = 0, drawn = 0, lost = 0, goals = 0, mvp = 0;
-    for (const m of matches) {
-      const w = m.score_white ?? 0;
-      const b = m.score_black ?? 0;
-      const inWhite = (m.team_white || []).some((p) => p.id === profile.id);
-      const inBlack = (m.team_black || []).some((p) => p.id === profile.id);
-      if (inWhite || inBlack) {
-        if (w === b) drawn += 1;
-        else if (inWhite === w > b) won += 1;
-        else lost += 1;
-      }
-      goals += (m.scorers || []).filter((s) => s.player_id === profile.id).reduce((acc, s) => acc + (s.goals || 0), 0);
-      if (m.mvp_player_id === profile.id) mvp += 1;
-    }
-    return { won, drawn, lost, goals, mvp, total: won + drawn + lost };
-  })();
+  const record = computeMatchStats(matches).get(profile.id) ?? EMPTY_MATCH_STATS;
 
   // Stato forma (ultime 3 partite, se attivato dall'admin): si aggiunge a ogni parametro e all'OVR
   const myForm = forms.get(profile.id) || 0;
@@ -381,7 +365,7 @@ export default function ProfiloPage() {
               <h2 className="text-base font-black text-white uppercase tracking-wider">Le Mie Statistiche</h2>
             </div>
             <p className="text-xs text-slate-400 mt-2">
-              Totali di tutte le partite archiviate ({record.total} giocate).
+              Totali di tutte le partite archiviate ({record.played} giocate).
             </p>
           </div>
 

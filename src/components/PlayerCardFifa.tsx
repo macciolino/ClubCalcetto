@@ -1,12 +1,11 @@
 'use client';
 
 import { formatForm } from '@/lib/utils/formUtils';
-import { getStatValue } from '@/lib/utils/statUtils';
+import { getStatValue, PlayerMatchStats, EMPTY_MATCH_STATS } from '@/lib/utils/statUtils';
 import React, { useState } from 'react';
 import { Profile, StatCategory, FIELD_POSITION_ABBR, STAT_DETAILS, sortStatsByCanonicalOrder } from '@/types/database';
 import { RadarChart } from './RadarChart';
 import { StatBadge } from './StatBadge';
-import { getPlayerMatchRecord } from '@/lib/services/playerService';
 import { 
   Trophy, 
   Swords, 
@@ -29,6 +28,8 @@ interface PlayerCardFifaProps {
   categories?: StatCategory[];
   /** "Stato forma" (ultime 3 partite): aggiunto a ogni parametro e all'OVR mostrati. La scheda salvata non cambia. */
   form?: number;
+  /** Gol, presenze, vinte/pareggiate/perse e MVP dalle partite archiviate (stessi numeri di Storico e Profilo) */
+  matchStats?: PlayerMatchStats;
 }
 
 export function PlayerCardFifa({
@@ -38,9 +39,9 @@ export function PlayerCardFifa({
   onDelete,
   categories,
   form = 0,
+  matchStats = EMPTY_MATCH_STATS,
 }: PlayerCardFifaProps) {
   const [activeTab, setActiveTab] = useState<'radar' | 'stats'>('radar');
-  const record = getPlayerMatchRecord(player);
   const isSuperAdmin = player.email?.toLowerCase().includes('macciolino84');
 
   // Statistiche mostrate: solo i parametri ufficiali dell'admin, con fallback al valore di default
@@ -140,9 +141,6 @@ export function PlayerCardFifa({
                 Google Member
               </span>
             )}
-            <span className="text-[10px] font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full">
-              {record.points} pt
-            </span>
           </div>
         </div>
 
@@ -170,7 +168,7 @@ export function PlayerCardFifa({
             }`}
           >
             <Trophy className="h-3 w-3" />
-            <span>V / P / S</span>
+            <span>Statistiche</span>
           </button>
         </div>
 
@@ -207,49 +205,34 @@ export function PlayerCardFifa({
             </div>
           </div>
         ) : (
-          /* CONTENUTO SCHEDA 2: TABELLA RECORD PARTITE (V - P - S) */
-          <div className="mt-4 p-3 bg-slate-950/90 rounded-2xl border border-slate-800 space-y-3 animate-in fade-in duration-200">
-            <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                <Swords className="h-3.5 w-3.5 text-emerald-400" />
-                Bilancio Partite
-              </span>
-              <span className="text-[11px] font-black text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-md font-mono">
-                {record.winRate}% Win
-              </span>
-            </div>
-
-            {/* Contatori V - P - S */}
+          /* CONTENUTO SCHEDA 2: STATISTICHE DALLE PARTITE ARCHIVIATE (come nel profilo) */
+          <div className="mt-4 space-y-2 animate-in fade-in duration-200">
             <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="bg-emerald-500/10 border border-emerald-500/20 p-2 rounded-xl">
-                <span className="block text-[9px] font-bold text-emerald-400 uppercase">Vittorie</span>
-                <span className="text-lg font-black text-emerald-300 font-mono">{record.won}</span>
+              <div className="bg-emerald-500/10 border border-emerald-500/30 p-2.5 rounded-2xl">
+                <span className="block text-[10px] font-black text-emerald-400 uppercase tracking-wider">Vinte</span>
+                <span className="text-2xl font-black text-emerald-300 font-mono">{matchStats.won}</span>
               </div>
-              <div className="bg-amber-500/10 border border-amber-500/20 p-2 rounded-xl">
-                <span className="block text-[9px] font-bold text-amber-400 uppercase">Pareggi</span>
-                <span className="text-lg font-black text-amber-300 font-mono">{record.drawn}</span>
+              <div className="bg-amber-500/10 border border-amber-500/30 p-2.5 rounded-2xl">
+                <span className="block text-[10px] font-black text-amber-400 uppercase tracking-wider">Pareggiate</span>
+                <span className="text-2xl font-black text-amber-300 font-mono">{matchStats.drawn}</span>
               </div>
-              <div className="bg-rose-500/10 border border-rose-500/20 p-2 rounded-xl">
-                <span className="block text-[9px] font-bold text-rose-400 uppercase">Sconfitte</span>
-                <span className="text-lg font-black text-rose-300 font-mono">{record.lost}</span>
+              <div className="bg-rose-500/10 border border-rose-500/30 p-2.5 rounded-2xl">
+                <span className="block text-[10px] font-black text-rose-400 uppercase tracking-wider">Perse</span>
+                <span className="text-2xl font-black text-rose-300 font-mono">{matchStats.lost}</span>
               </div>
             </div>
-
-            {/* Dettagli Record */}
-            <div className="space-y-1.5 text-xs text-slate-300 pt-1">
-              <div className="flex justify-between items-center text-[11px]">
-                <span className="text-slate-400">Partite Disputate:</span>
-                <span className="font-bold text-white font-mono">{record.total} match</span>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="bg-slate-950/80 border border-slate-800 p-2.5 rounded-2xl">
+                <span className="block text-[10px] font-black text-slate-300 uppercase tracking-wider">Presenze</span>
+                <span className="text-2xl font-black text-white font-mono">{matchStats.played}</span>
               </div>
-              <div className="flex justify-between items-center text-[11px]">
-                <span className="text-slate-400">Punti Classifica:</span>
-                <span className="font-bold text-amber-300 font-mono">{record.points} pt</span>
+              <div className="bg-slate-950/80 border border-slate-800 p-2.5 rounded-2xl">
+                <span className="block text-[10px] font-black text-slate-300 uppercase tracking-wider">⚽ Gol</span>
+                <span className="text-2xl font-black text-white font-mono">{matchStats.goals}</span>
               </div>
-              <div className="flex justify-between items-center text-[11px]">
-                <span className="text-slate-400">Media Punti/Partita:</span>
-                <span className="font-bold text-emerald-400 font-mono">
-                  {record.total > 0 ? (record.points / record.total).toFixed(2) : '0.00'}
-                </span>
+              <div className="bg-slate-950/80 border border-slate-800 p-2.5 rounded-2xl">
+                <span className="block text-[10px] font-black text-slate-300 uppercase tracking-wider">★ MVP</span>
+                <span className="text-2xl font-black text-amber-300 font-mono">{matchStats.mvp}</span>
               </div>
             </div>
           </div>

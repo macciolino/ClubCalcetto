@@ -30,9 +30,9 @@ export function DeletionFeedbackCard() {
       >
         <div>
           <h2 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
-            <MessageSquareWarning className="h-5 w-5 text-rose-300" /> Feedback account eliminati
+            <MessageSquareWarning className="h-5 w-5 text-rose-300" /> Feedback account chiusi
           </h2>
-          <p className="text-xs text-slate-400 mt-0.5">Solo per te (super admin): i motivi lasciati da chi ha eliminato l&apos;account.</p>
+          <p className="text-xs text-slate-400 mt-0.5">Solo per te (super admin): i motivi lasciati da chi ha disattivato o eliminato l&apos;account.</p>
         </div>
         <span className="text-xs text-slate-400">{open ? 'Chiudi' : 'Apri'}</span>
       </button>
@@ -44,14 +44,15 @@ export function DeletionFeedbackCard() {
             </p>
           )}
           {error && <p className="text-xs text-rose-300">{error}</p>}
-          {items && items.length === 0 && <p className="text-xs text-slate-400">Nessun account eliminato finora.</p>}
+          {items && items.length === 0 && <p className="text-xs text-slate-400">Nessun account chiuso finora.</p>}
           {items?.map((f) => (
             <div key={f.id} className="p-3 rounded-2xl bg-slate-950 border border-slate-800 text-xs space-y-1">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="font-bold text-white">{f.name}</span>
                 <span className="text-slate-500">
                   {new Date(f.at).toLocaleString('it-IT', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                  {f.deletedBy === 'super_admin' ? ' · eliminato da te' : ''}
+                  {f.mode === 'deactivate' ? ' · disattivato' : ' · eliminato'}
+                  {f.deletedBy === 'super_admin' ? ' da te' : ''}
                 </span>
               </div>
               <div className="text-rose-200">Motivo: {f.reason}</div>

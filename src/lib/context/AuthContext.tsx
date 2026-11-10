@@ -143,6 +143,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       let resolved: Profile;
       if (snap.exists()) {
         const data = snap.data() as Profile;
+        if (data.deactivated_at) {
+          await firebaseSignOut(firebaseAuth);
+          alert('Questo account è stato disattivato. Per riattivarlo contatta l’amministratore del club.');
+          return null;
+        }
         resolved = {
           ...data,
           id: docId,

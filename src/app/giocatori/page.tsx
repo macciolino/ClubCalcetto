@@ -1,11 +1,12 @@
 'use client';
 
-import { deleteAccountAsSuperAdmin } from '@/lib/services/accountService';
+import { manageAccountAsSuperAdmin } from '@/lib/services/accountService';
 import { useForms } from '@/lib/hooks/useForms';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { computeMatchStats } from '@/lib/utils/statUtils';
 import { useAuth } from '@/lib/context/AuthContext';
-import { Profile, StatCategory, FIELD_POSITION_ABBR, STAT_CANONICAL_ORDER } from '@/types/database';
-import { subscribeProfiles, subscribeStatCategories, deleteProfileDoc } from '@/lib/firebase/firestoreService';
+import { Profile, StatCategory, Match, FIELD_POSITION_ABBR, STAT_CANONICAL_ORDER } from '@/types/database';
+import { subscribeProfiles, subscribeStatCategories, subscribeMatches, deleteProfileDoc } from '@/lib/firebase/firestoreService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { getStoredPlayers, removeStoredPlayer, saveStoredPlayers, getPlayerMatchRecord } from '@/lib/services/playerService';
 import { getStoredCategories, saveStoredCategories, DEFAULT_BASE_CATEGORIES } from '@/lib/services/statCategoryService';
@@ -37,6 +38,14 @@ export default function GiocatoriPage() {
   const [players, setPlayers] = useState<Profile[]>([]);
   const [categories, setCategories] = useState<StatCategory[]>(DEFAULT_CATEGORIES);
   const { forms } = useForms();
+  // Statistiche delle card (tab "Statistiche"): dalle partite archiviate, come Storico e Profilo
+  const [completedMatches, setCompletedMatches] = useState<Match[]>([]);
+  useEffect(() => {
+    if (!isFirebaseConfigured) return;
+    const unsub = subscribeMatches((list) => setCompletedMatches(list.filter((m) => m.status === 'completed')));
+    return () => unsub();
+  }, []);
+  const matchStats = useMemo(() => computeMatchStats(completedMatches), [completedMatches]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPlayerToEdit, setSelectedPlayerToEdit] = useState<Profile | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -115,13 +124,13 @@ export default function GiocatoriPage() {
         return;
       }
       if (!isSuperAdmin) {
-        alert('Solo il super admin può eliminare un account registrato.');
+        alert('Solo il super admin può disattivare un account registrato.');
         return;
       }
-      if (!confirm(`Eliminare DEFINITIVAMENTE l'account di "${name}"? Verranno cancellati accesso, scheda, iscrizioni e notifiche. Non si può annullare.`)) return;
-      const res = await deleteAccountAsSuperAdmin(playerId);
+      if (!confirm(`Disattivare l'account di "${name}"? Non potrà più entrare e sparirà dalle pagine; scheda, parametri e statistiche restano salvati. Potrai riattivarlo o eliminarlo del tutto da Admin → Anagrafica Rosa → Disattivati.`)) return;
+      const res = await manageAccountAsSuperAdmin(playerId, 'deactivate');
       if (!res.ok) {
-        alert('Eliminazione non riuscita. Riprova.');
+        alert('Operazione non riuscita. Riprova.');
         return;
       }
       removeStoredPlayer(playerId);
@@ -286,6 +295,7 @@ export default function GiocatoriPage() {
                 isAdmin={isClientAdmin}
                 categories={sortedCategories}
                 form={forms.get(player.id)}
+                matchStats={matchStats.get(player.id)}
                 onEdit={handleOpenEditModal}
                 onDelete={player.is_guest || isSuperAdmin ? (p) => handleDeletePlayer(p.id, p.full_name) : undefined}
               />
@@ -301,10 +311,9 @@ export default function GiocatoriPage() {
                 <tr className="border-b border-slate-800 bg-slate-950/70 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                   <th className="py-3.5 px-4 w-12 text-center">#</th>
                   <th className="py-3.5 px-4">Giocatore</th>
-                  <th className="py-3.5 px-3 text-center">Ruolo</th>
                   <th className="py-3.5 px-3 text-center">OVR</th>
-                  <th className="py-3.5 px-3 text-center">V-P-S</th>
-                  {sortedCategories.map((cat) => {
+                  {isClientAdmin && <th className="py-3.5 px-3 text-center">V-P-S</th>}
+                  {isClientAdmin && sortedCategories.map((cat) => {
                     const shortName = cat.name.length > 5 ? cat.name.slice(0, 3).toUpperCase() : cat.name;
                     return (
                       <th
@@ -329,7 +338,7 @@ export default function GiocatoriPage() {
                 {filteredPlayers.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={5 + sortedCategories.length + (isClientAdmin ? 1 : 0)}
+                      colSpan={isClientAdmin ? 5 + sortedCategories.length : 3}
                       className="py-8 text-center text-slate-500 italic"
                     >
                       Nessun giocatore trovato con questi filtri.
@@ -340,6 +349,9 @@ export default function GiocatoriPage() {
                     const currentAuthId = (user as any)?.uid || (user as any)?.id;
                     const isCurrent = player.id === (profile?.id || currentAuthId);
                     const rec = getPlayerMatchRecord(player);
+                    // Il nome è un testo unico: prima parola sopra, il resto sotto
+                    const [firstName, ...surnameParts] = player.full_name.trim().split(/\s+/);
+                    const surname = surnameParts.join(' ');
 
                     return (
                       <tr
@@ -379,7 +391,13 @@ export default function GiocatoriPage() {
                             </div>
                             <div>
                               <div className="font-bold text-white flex items-center gap-1.5">
-                                <span>{player.full_name}</span>
+                                <span className="leading-tight">
+                                  <span className="block">{firstName}</span>
+                                  {surname && <span className="block">{surname}</span>}
+                                </span>
+                                <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-800 text-emerald-400 border border-slate-700">
+                                  {FIELD_POSITION_ABBR[player.position || 'Esterno']}
+                                </span>
                                 {isClientAdmin && (
                                   <button
                                     type="button"
@@ -401,18 +419,8 @@ export default function GiocatoriPage() {
                                   </span>
                                 )}
                               </div>
-                              <div className="text-[11px] text-slate-500 truncate max-w-[150px]">
-                                {player.email || (player.is_guest ? 'Giocatore Manuale' : 'Google Auth')}
-                              </div>
                             </div>
                           </div>
-                        </td>
-
-                        {/* Ruolo Tattico */}
-                        <td className="py-3 px-3 text-center">
-                          <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-emerald-400 border border-slate-700">
-                            {FIELD_POSITION_ABBR[player.position || 'Esterno']}
-                          </span>
                         </td>
 
                         {/* Overall Rating (OVR) */}
@@ -420,7 +428,8 @@ export default function GiocatoriPage() {
                           <StatBadge score={player.overall_rating || 6.0} size="md" />
                         </td>
 
-                        {/* Record Partite V-P-S */}
+                        {/* Record Partite V-P-S (solo admin) */}
+                        {isClientAdmin && (
                         <td className="py-3 px-3 text-center font-mono text-[11px] whitespace-nowrap">
                           <span className="text-emerald-400 font-bold">{rec.won}V</span>
                           <span className="text-slate-500 mx-1">-</span>
@@ -428,9 +437,10 @@ export default function GiocatoriPage() {
                           <span className="text-slate-500 mx-1">-</span>
                           <span className="text-rose-400 font-bold">{rec.lost}S</span>
                         </td>
+                        )}
 
                         {/* Statistiche Individuali da 1 a 10 in Ordine Canonico */}
-                        {sortedCategories.map((cat) => {
+                        {isClientAdmin && sortedCategories.map((cat) => {
                           const val = player.stats?.[cat.name] ?? cat.default_value ?? 6;
                           return (
                             <td

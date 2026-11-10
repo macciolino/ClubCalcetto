@@ -14,6 +14,8 @@ import {
   saveCalendarOpenUntil,
   joinPresence,
   leavePresence,
+  setPresenceOverride,
+  clearPresencesForDate,
   saveOfficialMatchDateDoc,
 } from '@/lib/firebase/firestoreService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
@@ -137,6 +139,22 @@ export default function PresenzePage() {
       console.warn('[Presenze] add guest error:', err);
       alert('Impossibile aggiungere il giocatore (forse è già iscritto).');
     }
+  };
+
+  // Azione Admin: forza un giocatore tra i titolari o in lista d'attesa
+  const handleSetOverride = async (presenceId: string, override: 'starter' | 'waitlist') => {
+    try {
+      await setPresenceOverride(presenceId, override);
+    } catch (err) {
+      console.warn('[Presenze] override error:', err);
+      alert('Impossibile spostare il giocatore.');
+    }
+  };
+
+  // Azione Admin: toglie tutte le iscrizioni di un giorno
+  const handleResetDay = async (dateString: string) => {
+    if (!confirm(`Vuoi davvero azzerare tutte le presenze di ${formatItalianDate(dateString)}?`)) return;
+    await clearPresencesForDate(dateString);
   };
 
   // Azione Admin: rimuovi una presenza (la prima riserva subentra da sola)
@@ -445,6 +463,8 @@ export default function PresenzePage() {
                   onTogglePresence={handleTogglePresence}
                   onAddGuestPresence={handleAddGuestPresence}
                   onRemovePresence={handleRemovePresence}
+                  onSetOverride={handleSetOverride}
+                  onResetDay={handleResetDay}
                   isLocked={isDayLocked(currentDay.dateString)}
                   isFirstToTen={firstToTen.has(currentDay.dateString)}
                   isToggling={busyDate === currentDay.dateString}
@@ -467,6 +487,8 @@ export default function PresenzePage() {
                   onTogglePresence={handleTogglePresence}
                   onAddGuestPresence={handleAddGuestPresence}
                   onRemovePresence={handleRemovePresence}
+                  onSetOverride={handleSetOverride}
+                  onResetDay={handleResetDay}
                   isLocked={isDayLocked(day.dateString)}
                   isFirstToTen={firstToTen.has(day.dateString)}
                   isToggling={busyDate === day.dateString}

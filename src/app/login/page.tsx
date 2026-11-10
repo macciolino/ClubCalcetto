@@ -63,7 +63,9 @@ export default function LoginPage() {
     } catch (err: unknown) {
       console.error('Google login error:', err);
       const msg = err instanceof Error ? err.message : 'Errore durante il login con Google';
-      if (msg.includes('auth/unauthorized-domain')) {
+      if (msg.includes('auth/user-disabled')) {
+        setErrorMessage('Questo account è stato disattivato. Per riattivarlo contatta l’amministratore del club.');
+      } else if (msg.includes('auth/unauthorized-domain')) {
         setErrorMessage('Dominio non autorizzato su Firebase Console. Aggiungi localhost nelle impostazioni Auth.');
       } else if (!msg.includes('popup-closed-by-user')) {
         setErrorMessage(msg);

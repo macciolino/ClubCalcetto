@@ -5,7 +5,7 @@ import { Match, Profile } from '@/types/database';
 import { subscribeMatches, subscribeProfiles, deleteMatchResult } from '@/lib/firebase/firestoreService';
 import { useAuth } from '@/lib/context/AuthContext';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
-import { formatItalianDate } from '@/lib/utils/dateUtils';
+import { formatItalianDate, getVisibleHistoryYear } from '@/lib/utils/dateUtils';
 import { History, Trophy, Star, ListOrdered, CalendarDays, Coins, Trash2, Loader2, Pencil } from 'lucide-react';
 import { MatchEditModal } from '@/components/MatchEditModal';
 import { HistoryCalendar } from '@/components/HistoryCalendar';
@@ -21,14 +21,17 @@ interface PlayerLine {
   mvp: number;
 }
 
-type SortKey = 'won' | 'goals' | 'mvp' | 'played';
+type SortKey = 'played' | 'won' | 'drawn' | 'lost' | 'goals' | 'mvp';
 
-const SORT_LABELS: Record<SortKey, string> = {
-  won: 'Vittorie',
-  goals: 'Gol',
-  mvp: 'MVP',
-  played: 'Presenze',
-};
+/** Sortable columns of the leaderboard, in table order */
+const SORT_COLUMNS: { key: SortKey; label: string; title: string; cell: string }[] = [
+  { key: 'played', label: 'PG', title: 'Presenze', cell: '' },
+  { key: 'won', label: 'V', title: 'Partite vinte', cell: 'font-black text-emerald-400' },
+  { key: 'drawn', label: 'P', title: 'Pareggi', cell: 'text-amber-400' },
+  { key: 'lost', label: 'S', title: 'Sconfitte', cell: 'text-rose-400' },
+  { key: 'goals', label: 'Gol', title: 'Gol segnati', cell: '' },
+  { key: 'mvp', label: 'MVP', title: 'Premi MVP', cell: '' },
+];
 
 /** Builds the leaderboard ONLY from archived matches (nothing is stored on the profiles). */
 function buildLeaderboard(matches: Match[], nameOf: (id: string, fallback?: string) => string): PlayerLine[] {
@@ -73,6 +76,21 @@ export default function HistoryPage() {
   const [loaded, setLoaded] = useState(false);
   const [view, setView] = useState<'leaderboard' | 'matches'>('leaderboard');
   const [sortBy, setSortBy] = useState<SortKey>('won');
+  const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc');
+  // Clic sull'intestazione: prima decrescente, secondo clic crescente
+  const handleSort = (key: SortKey) => {
+    if (key === sortBy) setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'));
+    else {
+      setSortBy(key);
+      setSortDir('desc');
+    }
+  };
+  // Ultimo anno visibile: il nuovo anno compare dal 31 dicembre alle 22:00 (ora italiana)
+  const [visibleYear, setVisibleYear] = useState(() => getVisibleHistoryYear());
+  useEffect(() => {
+    const t = setInterval(() => setVisibleYear(getVisibleHistoryYear()), 60000);
+    return () => clearInterval(t);
+  }, []);
   const [editing, setEditing] = useState<Match | null>(null);
   const [pickedDate, setPickedDate] = useState<string | null>(null);
   const [season, setSeason] = useState<string>('all');
@@ -93,9 +111,14 @@ export default function HistoryPage() {
     };
   }, []);
 
+  // Anni con partite + l'anno in corso (anche senza partite), mai oltre l'ultimo anno visibile
   const seasons = useMemo(
-    () => Array.from(new Set(matches.map((m) => (m.match_date || m.id).slice(0, 4)))).sort().reverse(),
-    [matches]
+    () =>
+      Array.from(new Set([String(visibleYear), ...matches.map((m) => (m.match_date || m.id).slice(0, 4))]))
+        .filter((y) => Number(y) <= visibleYear)
+        .sort()
+        .reverse(),
+    [matches, visibleYear]
   );
   const visibleMatches = useMemo(
     () => (season === 'all' ? matches : matches.filter((m) => (m.match_date || m.id).startsWith(season))),
@@ -109,10 +132,14 @@ export default function HistoryPage() {
     const list = buildLeaderboard(visibleMatches, nameOf);
     return list.sort(
       (a, b) =>
-        b[sortBy] - a[sortBy] || b.won - a.won || b.goals - a.goals || a.played - b.played || a.name.localeCompare(b.name)
+        (sortDir === 'desc' ? b[sortBy] - a[sortBy] : a[sortBy] - b[sortBy]) ||
+        b.won - a.won ||
+        b.goals - a.goals ||
+        a.played - b.played ||
+        a.name.localeCompare(b.name)
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibleMatches, profiles, sortBy]);
+  }, [visibleMatches, profiles, sortBy, sortDir]);
 
   // Cancellazione (solo admin): toglie anche le V/P/S che la partita aveva aggiunto ai profili
   const handleDeleteMatch = async (m: Match) => {
@@ -129,8 +156,7 @@ export default function HistoryPage() {
   };
 
   const handleDeleteAll = async () => {
-    const label = season === 'all' ? 'TUTTO lo storico' : `lo storico ${season}`;
-    if (!confirm(`Vuoi davvero cancellare ${label} (${visibleMatches.length} partite)? Vittorie, pareggi e sconfitte di queste partite verranno tolti dai profili. L'operazione non si può annullare.`)) return;
+    if (!confirm(`Vuoi davvero cancellare tutto lo storico${season === 'all' ? '' : ` ${season}`}?`)) return;
     setDeleting('all');
     try {
       for (const m of visibleMatches) {
@@ -165,7 +191,7 @@ export default function HistoryPage() {
             <select
               value={season}
               onChange={(e) => { setSeason(e.target.value); setPickedDate(null); }}
-              className="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
+              className="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-slate-500"
             >
               <option value="all">Tutte</option>
               {seasons.map((y) => (
@@ -244,25 +270,6 @@ export default function HistoryPage() {
         </div>
       ) : view === 'leaderboard' ? (
         <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-2 text-sm">
-            <span className="text-slate-400">Ordina per:</span>
-            {(Object.keys(SORT_LABELS) as SortKey[]).map((k) => (
-              <button
-                key={k}
-                type="button"
-                onClick={() => setSortBy(k)}
-                aria-pressed={sortBy === k}
-                className={`px-3 py-1 rounded-full border font-semibold transition-colors ${
-                  sortBy === k
-                    ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300'
-                    : 'border-slate-700 text-slate-400 hover:text-white'
-                }`}
-              >
-                {SORT_LABELS[k]}
-              </button>
-            ))}
-          </div>
-
           <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -270,12 +277,27 @@ export default function HistoryPage() {
                   <tr className="text-xs uppercase tracking-wider text-slate-400 border-b border-slate-800">
                     <th className="text-left px-3 py-3">#</th>
                     <th className="text-left px-2 py-3">Giocatore</th>
-                    <th className="px-2 py-3" title="Presenze">PG</th>
-                    <th className="px-2 py-3" title="Partite vinte">V</th>
-                    <th className="px-2 py-3" title="Pareggi">P</th>
-                    <th className="px-2 py-3" title="Sconfitte">S</th>
-                    <th className="px-2 py-3">Gol</th>
-                    <th className="px-3 py-3">MVP</th>
+                    {SORT_COLUMNS.map((c) => (
+                      <th
+                        key={c.key}
+                        className="p-0"
+                        aria-sort={sortBy === c.key ? (sortDir === 'desc' ? 'descending' : 'ascending') : 'none'}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => handleSort(c.key)}
+                          title={`Ordina per ${c.title}`}
+                          className={`w-full px-2 py-3 uppercase tracking-wider font-bold whitespace-nowrap ${
+                            sortBy === c.key ? 'text-emerald-300' : 'hover:text-white'
+                          }`}
+                        >
+                          {c.label}
+                          <span className="inline-block w-3 text-[9px]" aria-hidden="true">
+                            {sortBy === c.key ? (sortDir === 'desc' ? '▼' : '▲') : ''}
+                          </span>
+                        </button>
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
@@ -283,12 +305,11 @@ export default function HistoryPage() {
                     <tr key={l.id} className="border-b border-slate-800/60 last:border-0 text-slate-200">
                       <td className="px-3 py-2.5 font-mono text-slate-500">{idx + 1}</td>
                       <td className="px-2 py-2.5 font-semibold whitespace-nowrap">{l.name}</td>
-                      <td className="px-2 py-2.5 text-center font-mono">{l.played}</td>
-                      <td className="px-2 py-2.5 text-center font-mono font-black text-emerald-400">{l.won}</td>
-                      <td className="px-2 py-2.5 text-center font-mono text-amber-400">{l.drawn}</td>
-                      <td className="px-2 py-2.5 text-center font-mono text-rose-400">{l.lost}</td>
-                      <td className="px-2 py-2.5 text-center font-mono">{l.goals}</td>
-                      <td className="px-3 py-2.5 text-center font-mono">{l.mvp}</td>
+                      {SORT_COLUMNS.map((c) => (
+                        <td key={c.key} className={`px-2 py-2.5 text-center font-mono ${c.cell}`}>
+                          {l[c.key]}
+                        </td>
+                      ))}
                     </tr>
                   ))}
                 </tbody>
@@ -302,6 +323,7 @@ export default function HistoryPage() {
           matchDates={visibleMatches.map((m) => m.match_date || m.id)}
           selected={pickedDate}
           onSelect={setPickedDate}
+          maxYear={visibleYear}
         />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {visibleMatches.filter((m) => !pickedDate || (m.match_date || m.id) === pickedDate).map((m) => {

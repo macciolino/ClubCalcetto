@@ -113,3 +113,22 @@ export function formatItalianDate(dateStr: string): string {
   ];
   return `${ITALIAN_DAYS[d.getDay()]} ${day} ${fullMonths[d.getMonth()]} ${year}`;
 }
+
+/**
+ * Latest year shown in the Storico (season menu and calendar).
+ * The new year becomes visible on 31 December at 22:00 Italian time (Europe/Rome), whatever the device time zone;
+ * before that moment it must not appear anywhere. Valid for every year, nothing is hard-coded.
+ */
+export function getVisibleHistoryYear(now: Date = new Date()): number {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Rome',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    hour12: false,
+  }).formatToParts(now);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  const year = get('year');
+  return get('month') === 12 && get('day') === 31 && get('hour') % 24 >= 22 ? year + 1 : year;
+}

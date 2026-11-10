@@ -1,3 +1,4 @@
+import { FieldValue } from 'firebase-admin/firestore';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { sendToProfiles } from '@/lib/server/push';
 
@@ -51,18 +52,62 @@ export async function deleteAccount(profileId: string): Promise<{ name: string; 
   return { name, dates };
 }
 
+/**
+ * Deactivates an account WITHOUT losing its data: the login is blocked and the profile is hidden from every page,
+ * but parameters, W/D/L counters and the link to the archived matches stay, so the super admin can reactivate it.
+ * Future sign-ups and notification devices are removed.
+ */
+export async function deactivateAccount(
+  profileId: string,
+  by: 'self' | 'super_admin'
+): Promise<{ name: string; dates: string[] }> {
+  const db = adminDb();
+  const profileRef = db.doc(`profiles/${profileId}`);
+  const data = (await profileRef.get()).data() || {};
+  const name = (data.full_name as string) || 'Giocatore';
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' });
+
+  const presences = await db.collection('presences').where('player_id', '==', profileId).get();
+  const future = presences.docs.filter((d) => String(d.data().date || '') >= today);
+  const tokens = await db.collection('push_tokens').where('profile_id', '==', profileId).get();
+  const batch = db.batch();
+  [...future, ...tokens.docs].forEach((d) => batch.delete(d.ref));
+  batch.update(profileRef, { deactivated_at: new Date().toISOString(), deactivated_by: by });
+  await batch.commit();
+
+  const uid = (data.user_id as string) || profileId;
+  await adminAuth()
+    .updateUser(uid, { disabled: true })
+    .then(() => adminAuth().revokeRefreshTokens(uid))
+    .catch((err: { code?: string }) => {
+      if (err?.code !== 'auth/user-not-found') throw err;
+    });
+  return { name, dates: Array.from(new Set(future.map((d) => d.data().date as string))) };
+}
+
+/** Super admin: the account can sign in again and is visible again, with all its data. */
+export async function reactivateAccount(profileId: string): Promise<void> {
+  const profileRef = adminDb().doc(`profiles/${profileId}`);
+  const data = (await profileRef.get()).data() || {};
+  await adminAuth().updateUser((data.user_id as string) || profileId, { disabled: false });
+  await profileRef.update({ deactivated_at: FieldValue.delete(), deactivated_by: FieldValue.delete() });
+}
+
 /** Saves the reason in account_feedback (server only) and tells the developer (super admin) with a notification. */
 export async function saveDeletionFeedback(entry: {
   name: string;
   reason: string;
   details: string;
   deletedBy: 'self' | 'super_admin';
+  /** 'deactivate' = data kept, 'delete' = everything removed */
+  mode: 'deactivate' | 'delete';
 }): Promise<void> {
   const at = new Date().toISOString();
   await adminDb().collection('account_feedback').add({ ...entry, at });
-  const who = entry.deletedBy === 'self' ? `${entry.name} ha eliminato il suo account` : `Account di ${entry.name} eliminato`;
+  const verb = entry.mode === 'deactivate' ? 'disattivato' : 'eliminato';
+  const who = entry.deletedBy === 'self' ? `${entry.name} ha ${verb} il suo account` : `Account di ${entry.name} ${verb}`;
   await sendToProfiles([SUPER_ADMIN_PROFILE_ID], {
-    title: '🗑️ Account eliminato',
+    title: entry.mode === 'deactivate' ? '⏸️ Account disattivato' : '🗑️ Account eliminato',
     body: `${who}. Motivo: ${entry.reason}${entry.details ? ` — "${entry.details.slice(0, 120)}"` : ''}`,
     url: '/admin',
   }).catch(() => 0);

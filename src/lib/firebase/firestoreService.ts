@@ -28,7 +28,9 @@ import { requestTeamsCheck } from '@/lib/services/notificationService';
 // ==========================================
 
 export function subscribeProfiles(
-  callback: (profiles: Profile[]) => void
+  callback: (profiles: Profile[]) => void,
+  /** 'active' (default): deactivated accounts are hidden. 'deactivated': only those (super admin, Anagrafica). */
+  which: 'active' | 'deactivated' = 'active'
 ): Unsubscribe | (() => void) {
   if (!isFirebaseConfigured || typeof window === 'undefined') {
     return () => {};
@@ -43,7 +45,8 @@ export function subscribeProfiles(
         if (!snapshot.empty) {
           const list: Profile[] = [];
           snapshot.forEach((docSnap) => {
-            list.push(docSnap.data() as Profile);
+            const p = docSnap.data() as Profile;
+            if (Boolean(p.deactivated_at) === (which === 'deactivated')) list.push(p);
           });
           callback(list);
         }

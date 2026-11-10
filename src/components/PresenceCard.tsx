@@ -5,7 +5,10 @@ import { Presence, Profile } from '@/types/database';
 import { StatBadge } from './StatBadge';
 import { CalendarDay } from '@/lib/utils/dateUtils';
 import { isTimelockActive } from '@/lib/services/presenceService';
-import { CheckCircle2, Clock, UserX, UserPlus, Sparkles, Lock } from 'lucide-react';
+import { CheckCircle2, Clock, UserX, UserPlus, Sparkles, Lock,
+  ArrowUp,
+  ArrowDown,
+} from 'lucide-react';
 
 interface PresenceCardProps {
   day: CalendarDay;
@@ -21,6 +24,10 @@ interface PresenceCardProps {
   isLocked?: boolean;
   /** This day reached 10 starters first in its week */
   isFirstToTen?: boolean;
+  /** Admin only: force a player into the starters or onto the waitlist */
+  onSetOverride?: (presenceId: string, override: 'starter' | 'waitlist') => void;
+  /** Admin only: remove every sign-up of the day */
+  onResetDay?: (dateString: string) => void;
 }
 
 export function PresenceCard({
@@ -35,6 +42,8 @@ export function PresenceCard({
   isToggling = false,
   isLocked = false,
   isFirstToTen = false,
+  onSetOverride,
+  onResetDay,
 }: PresenceCardProps) {
   const [mounted, setMounted] = useState(false);
 
@@ -180,6 +189,17 @@ export function PresenceCard({
                   </div>
                   <div className="flex items-center gap-2">
                     <StatBadge score={rating} size="sm" />
+                    {showAdminActions && onSetOverride && (
+                      <button
+                        type="button"
+                        onClick={() => onSetOverride(item.id, 'waitlist')}
+                        className="text-slate-600 hover:text-amber-400 p-0.5"
+                        title="Sposta in lista d'attesa"
+                        aria-label={`Sposta ${name} in lista d'attesa`}
+                      >
+                        <ArrowDown className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                     {showAdminActions && onRemovePresence && (
                       <button
                         type="button"
@@ -232,6 +252,17 @@ export function PresenceCard({
                     </div>
                     <div className="flex items-center gap-2">
                       <StatBadge score={rating} size="sm" />
+                      {showAdminActions && onSetOverride && (
+                        <button
+                          type="button"
+                          onClick={() => onSetOverride(item.id, 'starter')}
+                          className="text-slate-600 hover:text-emerald-400 p-0.5"
+                          title="Fai titolare"
+                          aria-label={`Fai titolare ${name}`}
+                        >
+                          <ArrowUp className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                       {showAdminActions && onRemovePresence && (
                         <button
                           type="button"
@@ -324,6 +355,15 @@ export function PresenceCard({
                 ))}
             </select>
           </div>
+        )}
+        {showAdminActions && onResetDay && presences.length > 0 && (
+          <button
+            type="button"
+            onClick={() => onResetDay(day.dateString)}
+            className="mt-1 self-start text-[11px] text-rose-400/80 hover:text-rose-300 underline"
+          >
+            Azzera presenze del giorno
+          </button>
         )}
       </div>
     </div>

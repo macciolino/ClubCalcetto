@@ -118,6 +118,9 @@ export interface Profile {
   role: UserRole; // 'admin' | 'player'
   position?: FieldPosition; // 'Portiere' | 'Difensore' | 'Esterno' | 'Punta'
   is_guest: boolean;
+  /** Account deactivated (login blocked, hidden everywhere, data kept): set only by the server. Empty = active. */
+  deactivated_at?: string;
+  deactivated_by?: 'self' | 'super_admin';
   stats: Record<string, number>;
   overall_rating: number;
   matches_won?: number;

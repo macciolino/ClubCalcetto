@@ -22,14 +22,19 @@ async function authFetch(url: string, init: RequestInit = {}) {
   return (await res.json().catch(() => ({ ok: false, error: 'bad_response' }))) as Record<string, unknown>;
 }
 
-/** The signed-in player deletes their own account (the reason goes to the developer). */
-export function deleteMyAccount(reason: string, details: string) {
-  return authFetch('/api/account/delete', { method: 'POST', body: JSON.stringify({ reason, details }) });
+export type AccountRemovalMode = 'deactivate' | 'delete';
+
+/**
+ * The signed-in player closes their own account (the reason goes to the developer).
+ * 'deactivate' = data kept, the super admin can reactivate it; 'delete' = everything removed for good.
+ */
+export function deleteMyAccount(reason: string, details: string, mode: AccountRemovalMode) {
+  return authFetch('/api/account/delete', { method: 'POST', body: JSON.stringify({ reason, details, mode }) });
 }
 
-/** Super admin: deletes another player's account (login, profile, devices, sign-ups). */
-export function deleteAccountAsSuperAdmin(targetProfileId: string) {
-  return authFetch('/api/account/delete', { method: 'POST', body: JSON.stringify({ targetProfileId }) });
+/** Super admin: deactivates (data kept), deletes for good or reactivates another player's account. */
+export function manageAccountAsSuperAdmin(targetProfileId: string, mode: AccountRemovalMode | 'reactivate') {
+  return authFetch('/api/account/delete', { method: 'POST', body: JSON.stringify({ targetProfileId, mode }) });
 }
 
 export interface DeletionFeedback {
@@ -38,6 +43,7 @@ export interface DeletionFeedback {
   reason: string;
   details: string;
   deletedBy: 'self' | 'super_admin';
+  mode?: AccountRemovalMode;
   at: string;
 }
 

@@ -191,7 +191,10 @@ function PlayerSticker({
   pos: PlayerPitchPosition;
 }) {
   const ovr = getPlayerOverallRating(player);
-  const shortName = getShortPlayerName(player.full_name);
+  // Senza foto: iniziali di nome e cognome al posto dell'immagine e, sotto, solo il nome
+  const nameParts = (player.full_name || '').trim().split(/\s+/).filter(Boolean);
+  const initials = ((nameParts[0]?.[0] || '?') + (nameParts.length > 1 ? nameParts[nameParts.length - 1][0] : '')).toUpperCase();
+  const shortName = player.avatar_url ? getShortPlayerName(player.full_name) : nameParts[0] || '';
   const isWhite = team === 'white';
   return (
     <div
@@ -199,7 +202,7 @@ function PlayerSticker({
       style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
       title={player.full_name}
     >
-      <div className="w-[48px] sm:w-[62px] rounded-[5px] bg-[#fdfaf0] p-[2px] shadow-[0_3px_6px_rgba(0,0,0,0.55)] rotate-[-1deg]">
+      <div className="w-[48px] sm:w-[62px] rounded-[5px] bg-[#fdfaf0] p-[2px] shadow-[0_3px_6px_rgba(0,0,0,0.55)]">
         {/* Fascia squadra con ruolo e voto */}
         <div
           className={`flex items-center justify-between px-1 rounded-t-[3px] text-[7px] sm:text-[8px] font-black leading-[11px] sm:leading-[13px] ${
@@ -226,7 +229,7 @@ function PlayerSticker({
             />
           ) : (
             <span className="text-lg sm:text-2xl font-black text-white drop-shadow">
-              {player.full_name ? player.full_name.charAt(0).toUpperCase() : '?'}
+              {initials}
             </span>
           )}
         </div>

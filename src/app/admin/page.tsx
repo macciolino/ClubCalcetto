@@ -1,7 +1,7 @@
 'use client';
 
 import { DeletionFeedbackCard } from '@/components/admin/DeletionFeedbackCard';
-import { deleteAccountAsSuperAdmin } from '@/lib/services/accountService';
+import { manageAccountAsSuperAdmin } from '@/lib/services/accountService';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -9,7 +9,6 @@ import { useAuth } from '@/lib/context/AuthContext';
 import { StatCategory, Profile, Presence, SportField, GeneratedTeamRecord } from '@/types/database';
 import { PlayerModal } from '@/components/PlayerModal';
 import { TabOverviewMatch } from '@/components/admin/TabOverviewMatch';
-import { TabPresencesTimelock } from '@/components/admin/TabPresencesTimelock';
 import { TabUsersRoles } from '@/components/admin/TabUsersRoles';
 import { TabClubConfigFields } from '@/components/admin/TabClubConfigFields';
 import { NotificationSettingsCard } from '@/components/admin/NotificationSettingsCard';
@@ -17,10 +16,6 @@ import {
   subscribeProfiles, 
   subscribeStatCategories, 
   subscribePresencesRange,
-  joinPresence,
-  leavePresence,
-  setPresenceOverride,
-  clearPresencesForDate, 
   saveProfileDoc, 
   deleteProfileDoc, 
   saveOfficialMatchDateDoc,
@@ -57,7 +52,6 @@ import { getCalendarDays } from '@/lib/utils/dateUtils';
 import { 
   ShieldAlert, 
   LayoutDashboard, 
-  CalendarDays, 
   Users, 
   Settings, 
   Loader2, 
@@ -67,7 +61,7 @@ import {
   Coins
 } from 'lucide-react';
 
-type AdminTab = 'overview' | 'presences' | 'users' | 'config';
+type AdminTab = 'overview' | 'users' | 'config';
 
 export default function AdminPage() {
   const router = useRouter();
@@ -209,37 +203,7 @@ export default function AdminPage() {
     saveOfficialMatchDateDoc(dateString);
   };
 
-  // Handlers Tab 2: Presenze & Time-lock
-  const runPresenceAction = async (action: () => Promise<void>, errorMsg: string) => {
-    try {
-      await action();
-    } catch (err) {
-      console.warn('[Admin] presence action error:', err);
-      alert(errorMsg);
-    }
-  };
-
-  // La prima riserva in attesa subentra da sola: l'ordine è calcolato dall'iscrizione
-  const handleRemovePresence = async (presenceId: string, playerName: string) => {
-    if (!confirm(`Rimuovere la presenza di "${playerName}"? La prima riserva in attesa subentrerà in automatico.`)) {
-      return;
-    }
-    await runPresenceAction(() => leavePresence(presenceId), 'Impossibile rimuovere la presenza.');
-  };
-
-  const handlePromoteWaitlistToStarter = (presenceId: string) =>
-    runPresenceAction(() => setPresenceOverride(presenceId, 'starter'), 'Impossibile promuovere il giocatore.');
-
-  const handleDemoteStarterToWaitlist = (presenceId: string) =>
-    runPresenceAction(() => setPresenceOverride(presenceId, 'waitlist'), 'Impossibile spostare il giocatore in waitlist.');
-
-  const handleAddGuestPresence = (dateString: string, guestId: string) =>
-    runPresenceAction(() => joinPresence(dateString, guestId), 'Impossibile aggiungere il giocatore (forse è già iscritto).');
-
-  const handleResetPresences = async (dateString: string) => {
-    await clearPresencesForDate(dateString);
-  };
-
+  // Blocco ritiri (impostazione in Campi & Parametri)
   const handleUpdateTimelock = (enabled: boolean, hours: number) => {
     const updated = saveAppSettings({
       timelock_enabled: enabled,
@@ -289,18 +253,41 @@ export default function AdminPage() {
       return;
     }
     if (!isSuperAdmin) {
-      alert('Solo il super admin può eliminare un account registrato.');
+      alert('Solo il super admin può disattivare un account registrato.');
       return;
     }
-    if (!confirm(`Eliminare DEFINITIVAMENTE l'account di "${name}"? Verranno cancellati accesso, scheda, iscrizioni e notifiche. Non si può annullare.`)) return;
-    const res = await deleteAccountAsSuperAdmin(playerId);
+    if (!confirm(`Disattivare l'account di "${name}"? Non potrà più entrare e sparirà dalle pagine; scheda, parametri e statistiche restano salvati. Potrai riattivarlo o eliminarlo del tutto da Admin → Anagrafica Rosa → Disattivati.`)) return;
+    const res = await manageAccountAsSuperAdmin(playerId, 'deactivate');
     if (res.ok) {
       removeStoredPlayer(playerId);
       setPlayers(getStoredPlayers());
-      alert(`Account di "${name}" eliminato.`);
+      alert(`Account di "${name}" disattivato.`);
     } else {
-      alert(res.error === 'not_configured' ? 'Eliminazione non disponibile: server non configurato.' : 'Eliminazione non riuscita. Riprova.');
+      alert(res.error === 'not_configured' ? 'Operazione non disponibile: server non configurato.' : 'Operazione non riuscita. Riprova.');
     }
+  };
+
+  // Account disattivati (solo super admin): riattivazione o eliminazione definitiva
+  const [deactivatedPlayers, setDeactivatedPlayers] = useState<Profile[]>([]);
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    setDeactivatedPlayers([]);
+    const unsub = subscribeProfiles((list) => setDeactivatedPlayers(list), 'deactivated');
+    return () => unsub();
+  }, [isSuperAdmin]);
+
+  const handleReactivatePlayer = async (player: Profile) => {
+    if (!confirm(`Riattivare l'account di "${player.full_name}"? Potrà di nuovo entrare e ritroverà scheda, parametri e statistiche.`)) return;
+    const res = await manageAccountAsSuperAdmin(player.id, 'reactivate');
+    if (res.ok) setDeactivatedPlayers((prev) => prev.filter((p) => p.id !== player.id));
+    else alert('Riattivazione non riuscita. Riprova.');
+  };
+
+  const handleDeleteDeactivatedPlayer = async (player: Profile) => {
+    if (!confirm(`Eliminare DEFINITIVAMENTE l'account di "${player.full_name}"? Scheda, parametri e statistiche verranno cancellati. Non si può annullare.`)) return;
+    const res = await manageAccountAsSuperAdmin(player.id, 'delete');
+    if (res.ok) setDeactivatedPlayers((prev) => prev.filter((p) => p.id !== player.id));
+    else alert('Eliminazione non riuscita. Riprova.');
   };
 
   // Handlers Tab 4: Configurazione Club & Campi
@@ -366,11 +353,11 @@ export default function AdminPage() {
 
         <div className="flex flex-wrap items-center gap-2">
           <Link
-            href="/presenze"
+            href="/giocatori"
             className="flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-200 font-bold rounded-xl text-xs transition-all border border-slate-700 shadow-md"
           >
             <ArrowLeft className="h-4 w-4 text-emerald-400" />
-            <span>Pagine Giocatori</span>
+            <span>Pagina Giocatori</span>
           </Link>
           <Link
             href={`/squadre?date=${activeDate}`}
@@ -387,7 +374,7 @@ export default function AdminPage() {
 
       {/* 4 TAB ORIZZONTALI PRINCIPALI */}
       <div className="bg-slate-900/90 border border-slate-800 p-1.5 rounded-2xl shadow-xl backdrop-blur-md">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-1">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-1">
           {/* Tab 1: Panoramica, Match & Cassa */}
           <button
             type="button"
@@ -402,20 +389,6 @@ export default function AdminPage() {
             <span className="text-left md:text-center leading-tight">1. Match & Cassa</span>
           </button>
 
-          {/* Tab 2: Gestione Presenze & Time-lock */}
-          <button
-            type="button"
-            onClick={() => setActiveTab('presences')}
-            className={`w-full flex items-center justify-start md:justify-center gap-2.5 py-2.5 md:py-3 px-3.5 md:px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-              activeTab === 'presences'
-                ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/25 scale-[1.01]'
-                : 'text-slate-400 hover:text-white hover:bg-slate-850/60'
-            }`}
-          >
-            <CalendarDays className="h-4 w-4 flex-shrink-0" />
-            <span className="text-left md:text-center leading-tight">2. Presenze & Blocco</span>
-          </button>
-
           {/* Tab 3: Anagrafica Utenti & Ruoli */}
           <button
             type="button"
@@ -427,7 +400,7 @@ export default function AdminPage() {
             }`}
           >
             <Users className="h-4 w-4 flex-shrink-0" />
-            <span className="text-left md:text-center leading-tight">3. Anagrafica Rosa</span>
+            <span className="text-left md:text-center leading-tight">2. Anagrafica Rosa</span>
           </button>
 
           {/* Tab 4: Configurazione & Gestione Campi */}
@@ -441,7 +414,7 @@ export default function AdminPage() {
             }`}
           >
             <Settings className="h-4 w-4 flex-shrink-0" />
-            <span className="text-left md:text-center leading-tight">4. Campi & Parametri</span>
+            <span className="text-left md:text-center leading-tight">3. Campi & Parametri</span>
           </button>
         </div>
       </div>
@@ -460,24 +433,6 @@ export default function AdminPage() {
           />
         )}
 
-        {activeTab === 'presences' && (
-          <TabPresencesTimelock
-            days={upcomingDays}
-            activeDate={activeDate}
-            onSelectDate={handleSelectOfficialDate}
-            players={players}
-            presences={presences}
-            onRemovePresence={handleRemovePresence}
-            onPromoteWaitlistToStarter={handlePromoteWaitlistToStarter}
-            onDemoteStarterToWaitlist={handleDemoteStarterToWaitlist}
-            onAddGuestPresence={handleAddGuestPresence}
-            onResetPresences={handleResetPresences}
-            timelockEnabled={Boolean(appSettings.timelock_enabled)}
-            timelockHours={appSettings.timelock_hours_before || 4}
-            onUpdateTimelock={handleUpdateTimelock}
-          />
-        )}
-
         {activeTab === 'users' && (
           <TabUsersRoles
             players={players}
@@ -492,6 +447,9 @@ export default function AdminPage() {
             onTogglePlayerRole={handleTogglePlayerRole}
             onDeletePlayer={handleDeletePlayer}
             canManageRoles={isSuperAdmin}
+            deactivatedPlayers={isSuperAdmin ? deactivatedPlayers : []}
+            onReactivatePlayer={handleReactivatePlayer}
+            onDeleteDeactivatedPlayer={handleDeleteDeactivatedPlayer}
           />
         )}
         {activeTab === 'users' && isSuperAdmin && (
@@ -513,6 +471,9 @@ export default function AdminPage() {
             standardCost={appSettings.standard_total_cost || 80}
             standardTime={appSettings.standard_match_time || '20:30'}
             onSaveEconomicConfig={handleSaveEconomicConfig}
+            timelockEnabled={Boolean(appSettings.timelock_enabled)}
+            timelockHours={appSettings.timelock_hours_before || 4}
+            onUpdateTimelock={handleUpdateTimelock}
           />
         )}
       </div>

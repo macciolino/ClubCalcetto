@@ -17,14 +17,20 @@ interface HistoryCalendarProps {
   matchDates: string[];
   selected: string | null;
   onSelect: (date: string | null) => void;
+  /** Last year that can be browsed (see getVisibleHistoryYear): later months are not reachable */
+  maxYear: number;
 }
 
 /** Month calendar of the history: days with a match are highlighted, tap one to see that match. */
-export function HistoryCalendar({ matchDates, selected, onSelect }: HistoryCalendarProps) {
+export function HistoryCalendar({ matchDates, selected, onSelect, maxYear }: HistoryCalendarProps) {
   const dates = useMemo(() => new Set(matchDates), [matchDates]);
   const latest = useMemo(() => [...matchDates].sort().pop(), [matchDates]);
   const start = selected || latest || ymd(new Date().getFullYear(), new Date().getMonth(), 1);
-  const [view, setView] = useState(() => ({ y: Number(start.slice(0, 4)), m: Number(start.slice(5, 7)) - 1 }));
+  const [view, setView] = useState(() => {
+    const y = Number(start.slice(0, 4));
+    return y > maxYear ? { y: maxYear, m: 11 } : { y, m: Number(start.slice(5, 7)) - 1 };
+  });
+  const atLastMonth = view.y > maxYear || (view.y === maxYear && view.m === 11);
 
   const move = (delta: number) =>
     setView(({ y, m }) => {
@@ -58,8 +64,9 @@ export function HistoryCalendar({ matchDates, selected, onSelect }: HistoryCalen
         <button
           type="button"
           onClick={() => move(1)}
+          disabled={atLastMonth}
           aria-label="Mese successivo"
-          className="h-10 w-10 flex items-center justify-center rounded-xl text-slate-300 hover:bg-slate-800"
+          className="h-10 w-10 flex items-center justify-center rounded-xl text-slate-300 hover:bg-slate-800 disabled:opacity-30"
         >
           <ChevronRight className="h-5 w-5" />
         </button>

@@ -1,4 +1,4 @@
-import { StatCategory, STAT_DETAILS } from '@/types/database';
+import { Match, StatCategory, STAT_DETAILS } from '@/types/database';
 
 /**
  * 'Tecnica' was replaced by 'Visione'. Old data is NOT rewritten:
@@ -24,4 +24,44 @@ export function getStatValue(
 ): number {
   const v = stats?.[name] ?? (name === 'Visione' ? stats?.Tecnica : undefined);
   return typeof v === 'number' ? v : fallback;
+}
+
+export interface PlayerMatchStats {
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  goals: number;
+  mvp: number;
+}
+
+export const EMPTY_MATCH_STATS: PlayerMatchStats = { played: 0, won: 0, drawn: 0, lost: 0, goals: 0, mvp: 0 };
+
+/** Statistics of every player from the ARCHIVED matches (same numbers as the Storico leaderboard). */
+export function computeMatchStats(completedMatches: Match[]): Map<string, PlayerMatchStats> {
+  const map = new Map<string, PlayerMatchStats>();
+  const of = (id: string) => {
+    let st = map.get(id);
+    if (!st) {
+      st = { ...EMPTY_MATCH_STATS };
+      map.set(id, st);
+    }
+    return st;
+  };
+  for (const m of completedMatches) {
+    const w = m.score_white ?? 0;
+    const b = m.score_black ?? 0;
+    (['white', 'black'] as const).forEach((team) => {
+      ((team === 'white' ? m.team_white : m.team_black) || []).forEach((p) => {
+        const st = of(p.id);
+        st.played += 1;
+        if (w === b) st.drawn += 1;
+        else if ((team === 'white') === w > b) st.won += 1;
+        else st.lost += 1;
+      });
+    });
+    (m.scorers || []).forEach((sc) => (of(sc.player_id).goals += sc.goals || 0));
+    if (m.mvp_player_id) of(m.mvp_player_id).mvp += 1;
+  }
+  return map;
 }

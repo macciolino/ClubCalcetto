@@ -29,7 +29,8 @@ import {
   Info, 
   RotateCcw,
   ShieldCheck,
-  Server
+  Server,
+  Lock
 } from 'lucide-react';
 
 interface TabClubConfigFieldsProps {
@@ -44,6 +45,9 @@ interface TabClubConfigFieldsProps {
   standardCost: number;
   standardTime: string;
   onSaveEconomicConfig: (cost: number, time: string) => void;
+  timelockEnabled: boolean;
+  timelockHours: number;
+  onUpdateTimelock: (enabled: boolean, hours: number) => void;
 }
 
 export function TabClubConfigFields({
@@ -58,6 +62,9 @@ export function TabClubConfigFields({
   standardCost,
   standardTime,
   onSaveEconomicConfig,
+  timelockEnabled,
+  timelockHours,
+  onUpdateTimelock,
 }: TabClubConfigFieldsProps) {
   // Modal Campo
   const [isFieldModalOpen, setIsFieldModalOpen] = useState(false);
@@ -236,6 +243,45 @@ export function TabClubConfigFields({
 
       {/* 2. PARAMETRI DEI GIOCATORI (aggiunta / rimozione solo qui) */}
       <StatParametersCard categories={categories} onOpenLegend={() => setIsLegendOpen(true)} />
+
+      {/* BLOCCO RITIRI (spostato qui dal vecchio tab "Presenze & Blocco") */}
+      <CollapsibleCard
+        title="Blocco ritiri"
+        icon={<Lock className="h-5 w-5 text-amber-400" />}
+        summary={timelockEnabled ? `Attivo: niente ritiri nelle ${timelockHours} ore prima della partita` : 'Spento: ritiri sempre liberi'}
+      >
+        <p className="text-xs text-slate-400">
+          Se attivo, i giocatori non possono annullare la propria presenza a ridosso della partita. Gli admin possono sempre
+          modificare le presenze.
+        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 bg-slate-950 p-2 rounded-2xl border border-slate-800 text-xs">
+            <span className="text-slate-400 font-medium pl-1">Blocca a:</span>
+            <select
+              value={timelockHours}
+              onChange={(e) => onUpdateTimelock(timelockEnabled, parseInt(e.target.value) || 4)}
+              disabled={!timelockEnabled}
+              className="bg-slate-900 border border-slate-700 text-white rounded-lg px-2 py-1 font-semibold focus:outline-none disabled:opacity-50"
+            >
+              <option value="2">2 ore prima</option>
+              <option value="4">4 ore prima</option>
+              <option value="12">12 ore prima</option>
+              <option value="24">24 ore prima</option>
+            </select>
+          </label>
+          <button
+            type="button"
+            onClick={() => onUpdateTimelock(!timelockEnabled, timelockHours)}
+            className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+              timelockEnabled
+                ? 'bg-amber-500 text-slate-950 hover:bg-amber-400'
+                : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+            }`}
+          >
+            {timelockEnabled ? 'Disattiva blocco' : 'Attiva blocco'}
+          </button>
+        </div>
+      </CollapsibleCard>
 
       {/* 3. PARAMETRI ECONOMICI E LOGISTICI + 4. NOTIFICHE & SYSTEM STATUS (2 COLONNE) */}
       <div className="grid grid-cols-1 gap-5">
