@@ -98,7 +98,7 @@ export function MatchResultFields({ value, onChange, white, black, mvpVotes = []
 
   return (
     <div className="space-y-4">
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       {/* Risultato */}
       <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
         <h3 className="text-xs font-bold text-slate-300">Risultato finale</h3>
@@ -174,8 +174,8 @@ export function MatchResultFields({ value, onChange, white, black, mvpVotes = []
         )}
       </div>
 
-      {/* Marcatori */}
-      <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
+      {/* Marcatori: a tutta larghezza, così i nomi si leggono interi */}
+      <div className="sm:col-span-2 bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-bold text-slate-300">Marcatori</h3>
           <span className={`text-xs font-mono font-bold ${error ? 'text-rose-400' : 'text-slate-400'}`}>
@@ -183,7 +183,7 @@ export function MatchResultFields({ value, onChange, white, black, mvpVotes = []
           </span>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 sm:max-w-md">
           <select
             value={newScorerId}
             onChange={(e) => setNewScorerId(e.target.value)}
@@ -217,13 +217,13 @@ export function MatchResultFields({ value, onChange, white, black, mvpVotes = []
         </div>
 
         {value.scorers.length > 0 && (
-          <ul className="space-y-1.5">
+          <ul className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
             {value.scorers.map((s) => (
               <li
                 key={s.player_id}
                 className="flex items-center gap-2 px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-sm"
               >
-                <span className="flex-1 truncate text-slate-200">
+                <span className="flex-1 min-w-0 truncate text-slate-200" title={nameOf(s.player_id) || s.player_name}>
                   {teamOf(s.player_id)} {nameOf(s.player_id) || s.player_name}
                 </span>
                 <button
