@@ -21,6 +21,9 @@ description: ClubCalcetto UI conventions - theme, shared components (tables, dro
 - Cards `bg-slate-900 border border-slate-800 rounded-2xl p-5`, no shadow/gradient/glow; callouts use `border-l-4` in the
   meaning colour (emerald ok, amber attention). Buttons: primary `bg-emerald-500 text-slate-950 font-semibold rounded-xl`,
   secondary `border border-slate-700`, quiet text button. Small text at least `text-xs text-slate-400`.
+- Loading: `PageSkeleton` / `Skeleton` from `components/ui/Skeleton.tsx`, never a big spinner. Motion: `.animate-in`
+  (fade + rise 180ms, defined in globals.css, off with prefers-reduced-motion). Emoji only when they mean something
+  (⚪⚫ team, 🥇 Primo a 10, 🔥❄️ forma, ★ admin), never as decoration in titles.
 - Exceptions that keep a bold "sports" look on purpose: `VirtualPitch` stickers, `PlayerCardFifa`, `StatBadge`.
 - Rollback points: git tags `backup-prima-restyling` (before the restyling), `backup-prima-scheda-presenze`.
 

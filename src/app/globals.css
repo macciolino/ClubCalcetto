@@ -91,3 +91,24 @@ body {
 .sheet-safe-bottom {
   padding-bottom: max(1rem, var(--safe-bottom));
 }
+
+/* Light motion: content that appears fades in and rises slightly (used by .animate-in across the app) */
+@keyframes cc-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-in {
+  animation: cc-enter 180ms ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-in,
+  .animate-pulse {
+    animation: none !important;
+  }
+}

@@ -101,7 +101,7 @@ export function MatchResultFields({ value, onChange, white, black, mvpVotes = []
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       {/* Risultato */}
       <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
-        <h3 className="text-xs font-bold text-slate-300">⚽ Risultato finale</h3>
+        <h3 className="text-xs font-bold text-slate-300">Risultato finale</h3>
         <div className="flex items-center justify-around gap-3">
           <label className="text-center space-y-1">
             <span className="text-xs font-bold text-white block">⚪ Bianchi</span>
@@ -272,7 +272,7 @@ export function MatchResultFields({ value, onChange, white, black, mvpVotes = []
 
     {fixedKeeper && keepers.length > 0 && (
       <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
-        <h3 className="text-xs font-bold text-slate-300">🧤 Rigori parati (portiere)</h3>
+        <h3 className="text-xs font-bold text-slate-300">Rigori parati (portiere)</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {keepers.map((p, i) => (
             <div key={p.id} className="flex items-center gap-2 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-sm">

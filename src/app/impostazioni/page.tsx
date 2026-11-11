@@ -1,5 +1,6 @@
 'use client';
 
+import { PageSkeleton } from '@/components/ui/Skeleton';
 import React, { Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -45,13 +46,7 @@ function SettingsContent() {
   const { user, profile, isAdmin, isSuperAdmin, isLoading } = useAuth();
   const params = useSearchParams();
 
-  if (isLoading) {
-    return (
-      <div className="min-h-[40vh] flex items-center justify-center">
-        <Loader2 className="h-6 w-6 text-emerald-400 animate-spin" />
-      </div>
-    );
-  }
+  if (isLoading) return <PageSkeleton />;
   if (!user || !profile) {
     return (
       <div className="min-h-[50vh] flex flex-col items-center justify-center text-center gap-3">
@@ -146,11 +141,7 @@ function SettingsContent() {
 export default function ImpostazioniPage() {
   return (
     <Suspense
-      fallback={
-        <div className="min-h-[40vh] flex items-center justify-center">
-          <Loader2 className="h-6 w-6 text-emerald-400 animate-spin" />
-        </div>
-      }
+      fallback={<PageSkeleton />}
     >
       <SettingsContent />
     </Suspense>

@@ -1,5 +1,6 @@
 'use client';
 
+import { PageSkeleton } from '@/components/ui/Skeleton';
 import { askConfirm } from '@/components/ui/Feedback';
 
 import { useForms } from '@/lib/hooks/useForms';
@@ -824,7 +825,7 @@ function SquadreContent() {
               <div className="bg-slate-950/70 border border-slate-800 p-4 rounded-2xl space-y-2.5">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-xs text-white flex items-center gap-1.5">
-                    ⚪ SQUADRA BIANCA
+                    ⚪ Squadra bianca
                   </span>
                   <StatBadge score={balancedResult.whiteStats.overallAvg} size="md" />
                 </div>
@@ -866,7 +867,7 @@ function SquadreContent() {
               <div className="bg-slate-950/70 border border-slate-800 p-4 rounded-2xl space-y-2.5">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-xs text-white flex items-center gap-1.5">
-                    ⚫ SQUADRA NERA
+                    ⚫ Squadra nera
                   </span>
                   <StatBadge score={balancedResult.blackStats.overallAvg} size="md" />
                 </div>
@@ -1067,14 +1068,7 @@ function SquadreContent() {
 export default function SquadrePage() {
   return (
     <Suspense
-      fallback={
-        <div className="min-h-[50vh] flex items-center justify-center">
-          <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
-            <Loader2 className="h-5 w-5 animate-spin" />
-            Caricamento generatore squadre...
-          </div>
-        </div>
-      }
+      fallback={<PageSkeleton />}
     >
       <SquadreContent />
     </Suspense>

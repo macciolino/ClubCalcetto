@@ -1,5 +1,6 @@
 'use client';
 
+import { PageSkeleton } from '@/components/ui/Skeleton';
 import { askConfirm } from '@/components/ui/Feedback';
 
 import { getStatValue, computeMatchStats, EMPTY_MATCH_STATS } from '@/lib/utils/statUtils';
@@ -69,14 +70,7 @@ export default function ProfiloPage() {
   }, [profile]);
 
 
-  if (!mounted) {
-    return (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center text-center p-6 space-y-4">
-        <Loader2 className="h-8 w-8 text-emerald-400 animate-spin" />
-        <p className="text-sm text-slate-400 font-medium">Caricamento profilo...</p>
-      </div>
-    );
-  }
+  if (!mounted) return <PageSkeleton />;
 
   if (!profile) {
     return (
@@ -373,11 +367,11 @@ export default function ProfiloPage() {
 
           <div className="grid grid-cols-2 gap-3 text-center">
             <div className="bg-slate-950/80 border border-slate-800 p-3.5 rounded-2xl space-y-1">
-              <div className="text-xs font-bold text-slate-300">⚽ Gol segnati</div>
+              <div className="text-xs font-bold text-slate-300">Gol segnati</div>
               <div className="text-3xl font-bold text-white font-mono">{record.goals}</div>
             </div>
             <div className="bg-slate-950/80 border border-slate-800 p-3.5 rounded-2xl space-y-1">
-              <div className="text-xs font-bold text-slate-300">★ MVP</div>
+              <div className="text-xs font-bold text-slate-300">MVP</div>
               <div className="text-3xl font-bold text-amber-300 font-mono">{record.mvp}</div>
             </div>
           </div>

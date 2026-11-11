@@ -1,5 +1,6 @@
 'use client';
 
+import { Skeleton } from '@/components/ui/Skeleton';
 import { notify, askConfirm } from '@/components/ui/Feedback';
 
 import { DeletionFeedbackCard } from '@/components/admin/DeletionFeedbackCard';
@@ -195,9 +196,9 @@ export function AdminSections({ section }: { section: AdminSection }) {
 
   if (!isStrictAdmin) {
     return (
-      <div className="min-h-[30vh] flex flex-col items-center justify-center text-center p-6 space-y-4">
-        <Loader2 className="h-8 w-8 text-emerald-400 animate-spin" />
-        <p className="text-sm text-slate-400 font-medium">Verifica permessi amministratore in corso...</p>
+      <div className="space-y-4" role="status" aria-label="Verifica permessi in corso">
+        <Skeleton className="h-32 w-full rounded-2xl" />
+        <Skeleton className="h-24 w-full rounded-2xl" />
       </div>
     );
   }

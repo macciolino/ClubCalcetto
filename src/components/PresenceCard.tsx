@@ -35,7 +35,7 @@ const initialsOf = (name: string) => {
 };
 
 /** Ring that fills up to 10 starters */
-function CountRing({ count }: { count: number }) {
+export function CountRing({ count }: { count: number }) {
   const r = 26;
   const c = 2 * Math.PI * r;
   const full = count >= MAX;

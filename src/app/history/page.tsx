@@ -1,5 +1,6 @@
 'use client';
 
+import { Skeleton } from '@/components/ui/Skeleton';
 import { notify, askConfirm } from '@/components/ui/Feedback';
 
 import React, { useEffect, useMemo, useState } from 'react';
@@ -256,7 +257,10 @@ export default function HistoryPage() {
       )}
 
       {!loaded ? (
-        <p className="text-sm text-slate-400">Caricamento…</p>
+        <div className="space-y-3" role="status" aria-label="Caricamento in corso">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-64 w-full rounded-2xl" />
+        </div>
       ) : visibleMatches.length === 0 ? (
         <div className="bg-slate-900 border border-dashed border-slate-700 rounded-2xl p-8 text-center space-y-2">
           <Trophy className="h-8 w-8 text-slate-600 mx-auto" />

@@ -122,7 +122,7 @@ export function FormSettingsCard() {
 
       {/* Come gioca il club in porta */}
       <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
-        <div className="text-sm font-bold text-white">🧤 Portiere</div>
+        <div className="text-sm font-bold text-white">Portiere</div>
         <div className="grid grid-cols-2 gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl text-xs" role="radiogroup" aria-label="Portiere">
           {([
             ['rotation', 'A rotazione'],

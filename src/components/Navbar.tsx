@@ -15,6 +15,7 @@ import {
   Trophy,
   User,
   History,
+  Home,
   Settings,
   ChevronDown
 } from 'lucide-react';
@@ -64,6 +65,7 @@ export function Navbar() {
   const isStrictAdmin = Boolean(mounted && user && (profile?.role === 'admin' || isAdmin));
 
   const navItems = [
+    { href: '/', label: 'Home', icon: Home },
     { href: '/presenze', label: 'Presenze', icon: CalendarDays },
     { href: '/giocatori', label: 'Giocatori', icon: Users },
     { href: '/squadre', label: 'Squadre', icon: Trophy },
@@ -191,7 +193,7 @@ export function Navbar() {
           <nav className="flex items-center gap-1 bg-slate-900/80 p-1.5 rounded-xl border border-slate-800/80">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname.startsWith(item.href.split('?')[0]);
+              const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href.split('?')[0]);
               return (
                 <Link
                   key={item.href}
@@ -219,7 +221,7 @@ export function Navbar() {
         <div className="flex items-center justify-around">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname.startsWith(item.href.split('?')[0]);
+            const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href.split('?')[0]);
             return (
               <Link
                 key={item.href}
