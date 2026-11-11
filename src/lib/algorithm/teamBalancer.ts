@@ -203,12 +203,11 @@ export function balanceTeams(players: Profile[], options: BalanceOptions = {}): 
 
   // Portiere fisso: con almeno 2 portieri, un portiere per squadra
   const keepers = new Set(players.filter((p) => p.position === 'Portiere').map((p) => p.id));
-  const allowed =
-    options.fixedKeeper && keepers.size >= 2
-      ? candidates.filter((c) => c.white.some((p) => keepers.has(p.id)) && c.black.some((p) => keepers.has(p.id)))
-      : candidates;
-  candidates.length = 0;
-  candidates.push(...allowed);
+  // (filter crea una nuova lista: senza il filtro si tengono tutte le divisioni)
+  if (options.fixedKeeper && keepers.size >= 2) {
+    const allowed = candidates.filter((c) => c.white.some((p) => keepers.has(p.id)) && c.black.some((p) => keepers.has(p.id)));
+    if (allowed.length > 0) candidates.splice(0, candidates.length, ...allowed);
+  }
 
   // Più equilibrate prima (differenze sotto 0.05 considerate pari, poi conta difesa + attacco)
   candidates.sort((a, b) =>
