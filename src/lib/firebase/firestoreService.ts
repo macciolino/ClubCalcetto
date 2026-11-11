@@ -609,6 +609,21 @@ const teamIdsKey = (white: { id: string }[] = [], black: { id: string }[] = []) 
  * Saves the teams of a match day (generate, "Ribilancia" or manual edit by an admin).
  * A confirmed match stays confirmed: the new teams become the official ones.
  */
+/** Dates (YYYY-MM-DD) that have saved teams from `fromDate` on, in real time (used to close past matches). */
+export function subscribeTeamDatesSince(fromDate: string, callback: (dates: string[]) => void): Unsubscribe | (() => void) {
+  if (!isFirebaseConfigured || typeof window === 'undefined') return () => {};
+  try {
+    return onSnapshot(
+      query(collection(db, 'generated_teams'), where('date', '>=', fromDate)),
+      (snap) => callback(snap.docs.map((d) => (d.data() as GeneratedTeamRecord).date).filter(Boolean)),
+      (err) => console.warn('[Firestore] subscribeTeamDatesSince warning:', err.message)
+    );
+  } catch (err) {
+    console.warn('[Firestore] subscribeTeamDatesSince exception:', err);
+    return () => {};
+  }
+}
+
 export async function saveTeams(
   date: string,
   white: MatchTeamPlayer[],

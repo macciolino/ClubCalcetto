@@ -71,7 +71,7 @@ export function Navbar() {
     { href: '/squadre', label: 'Squadre', icon: Trophy },
     { href: '/history', label: 'Storico', icon: History },
     // Profilo: si apre dal menu dell'utente (icona in alto a destra), non serve nella barra
-    ...(isStrictAdmin ? [{ href: '/impostazioni?sezione=partita', label: 'Admin', icon: ShieldAlert }] : []),
+    // Admin: non è più nella barra. Si entra da Impostazioni (menu dell'icona), che per gli admin apre la partita della settimana
   ];
 
   const displayName = mounted && profile?.full_name ? profile.full_name : 'Ospite';
@@ -159,7 +159,7 @@ export function Navbar() {
                     <User className="h-4 w-4 text-emerald-400" /> Profilo
                   </Link>
                   <Link
-                    href="/impostazioni"
+                    href={isStrictAdmin ? '/impostazioni?sezione=partita' : '/impostazioni'}
                     role="menuitem"
                     onClick={() => setMenuOpen(false)}
                     className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-200 hover:bg-slate-800"

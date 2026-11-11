@@ -7,7 +7,8 @@ import { notify, askConfirm } from '@/components/ui/Feedback';
 import { manageAccountAsSuperAdmin } from '@/lib/services/accountService';
 import { useForms } from '@/lib/hooks/useForms';
 import React, { useState, useEffect, useMemo } from 'react';
-import { computeMatchStats } from '@/lib/utils/statUtils';
+import { computeMatchStats, computeRecentResults } from '@/lib/utils/statUtils';
+import { PlayerCompare } from '@/components/PlayerCompare';
 import { useAuth } from '@/lib/context/AuthContext';
 import { Profile, StatCategory, Match, FIELD_POSITION_ABBR, STAT_CANONICAL_ORDER } from '@/types/database';
 import { subscribeProfiles, subscribeStatCategories, subscribeMatches, deleteProfileDoc } from '@/lib/firebase/firestoreService';
@@ -51,11 +52,14 @@ export default function GiocatoriPage() {
     return () => unsub();
   }, []);
   const matchStats = useMemo(() => computeMatchStats(completedMatches), [completedMatches]);
+  const recentResults = useMemo(() => computeRecentResults(completedMatches), [completedMatches]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPlayerToEdit, setSelectedPlayerToEdit] = useState<Profile | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
-  const [sortBy, setSortBy] = useState<'ovr' | 'wins' | 'name'>('ovr');
+  const [sortBy, setSortBy] = useState<'ovr' | 'wins' | 'name' | 'goals' | 'mvp' | 'played' | 'form'>('ovr');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'Portiere' | 'Difensore' | 'Esterno' | 'Punta'>('all');
+  const [compareOpen, setCompareOpen] = useState(false);
   // Vista tabella: si ordina cliccando le intestazioni (primo clic decrescente, secondo crescente; il nome parte da A-Z)
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [tableSort, setTableSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: 'ovr', dir: 'desc' });
@@ -164,6 +168,7 @@ export default function GiocatoriPage() {
   };
   const filteredPlayers = players
     .filter((p) => p.full_name.toLowerCase().includes(searchQuery.toLowerCase()))
+    .filter((p) => roleFilter === 'all' || (p.position || 'Esterno') === roleFilter)
     .sort((a, b) => {
       if (viewMode === 'table') {
         const va = tableValue(a, tableSort.key);
@@ -177,8 +182,27 @@ export default function GiocatoriPage() {
       if (sortBy === 'wins') {
         return (b.matches_won || 0) - (a.matches_won || 0);
       }
+      if (sortBy === 'goals' || sortBy === 'mvp' || sortBy === 'played') {
+        return (matchStats.get(b.id)?.[sortBy] || 0) - (matchStats.get(a.id)?.[sortBy] || 0) || a.full_name.localeCompare(b.full_name);
+      }
+      if (sortBy === 'form') {
+        return (forms.get(b.id) || 0) - (forms.get(a.id) || 0) || a.full_name.localeCompare(b.full_name);
+      }
       return a.full_name.localeCompare(b.full_name);
     });
+
+  // 1. Classifiche lampo: il migliore per gol, MVP, presenze e forma (tocca per ordinare l'elenco così)
+  const leaders = (() => {
+    const best = (value: (p: Profile) => number) =>
+      players.reduce<{ p: Profile | null; v: number }>((acc, p) => (value(p) > acc.v ? { p, v: value(p) } : acc), { p: null, v: 0 });
+    const fmt = (n: number) => String(n).replace('.', ',');
+    return [
+      { key: 'goals' as const, title: 'Capocannoniere', ...best((p) => matchStats.get(p.id)?.goals || 0), unit: (v: number) => `${v} gol` },
+      { key: 'mvp' as const, title: 'Più MVP', ...best((p) => matchStats.get(p.id)?.mvp || 0), unit: (v: number) => `${v} MVP` },
+      { key: 'played' as const, title: 'Più presenze', ...best((p) => matchStats.get(p.id)?.played || 0), unit: (v: number) => `${v} partite` },
+      { key: 'form' as const, title: 'In forma', ...best((p) => forms.get(p.id) || 0), unit: (v: number) => `+${fmt(v)}` },
+    ].filter((l) => l.p);
+  })();
   const SortHeader = ({ k, label, title, className = '' }: { k: string; label: string; title?: string; className?: string }) => (
     <th className={`p-0 ${className}`} aria-sort={tableSort.key === k ? (tableSort.dir === 'desc' ? 'descending' : 'ascending') : 'none'}>
       <button
@@ -234,6 +258,69 @@ export default function GiocatoriPage() {
           </div>
         )}
       </header>
+
+      {/* 1. Classifiche lampo */}
+      {leaders.length > 0 && (
+        <section aria-label="I migliori" className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {leaders.map((l) => (
+            <button
+              key={l.key}
+              type="button"
+              onClick={() => {
+                setSortBy(l.key);
+                setViewMode('cards');
+              }}
+              aria-pressed={viewMode === 'cards' && sortBy === l.key}
+              className={`text-left bg-slate-900 border rounded-2xl p-4 transition-colors ${
+                viewMode === 'cards' && sortBy === l.key ? 'border-emerald-500/60' : 'border-slate-800 hover:border-slate-700'
+              }`}
+            >
+              <span className="block text-xs text-slate-400">{l.title}</span>
+              <span className="block text-sm font-semibold text-white truncate mt-1">{l.p?.full_name}</span>
+              <span className="block text-lg font-bold text-emerald-300 tabular-nums">{l.unit(l.v)}</span>
+            </button>
+          ))}
+        </section>
+      )}
+
+      {/* 6. Filtri per ruolo + 2. confronto */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtra per ruolo">
+          {(
+            [
+              ['all', 'Tutti'],
+              ['Portiere', 'Portieri'],
+              ['Difensore', 'Difensori'],
+              ['Esterno', 'Esterni'],
+              ['Punta', 'Punte'],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setRoleFilter(value)}
+              aria-pressed={roleFilter === value}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                roleFilter === value ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white border border-slate-800'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {players.length >= 2 && (
+          <button
+            type="button"
+            onClick={() => setCompareOpen(true)}
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold border border-slate-700 text-slate-200 hover:bg-slate-800"
+          >
+            Confronta due giocatori
+          </button>
+        )}
+      </div>
+      {compareOpen && (
+        <PlayerCompare players={players} categories={sortedCategories} initialA={profile?.id} onClose={() => setCompareOpen(false)} />
+      )}
 
       {/* Barra Ricerca, Ordinamento e Switcher Vista */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-900/60 p-3 rounded-2xl border border-slate-800">
@@ -335,6 +422,7 @@ export default function GiocatoriPage() {
                 categories={sortedCategories}
                 form={forms.get(player.id)}
                 matchStats={matchStats.get(player.id)}
+                recentResults={recentResults.get(player.id)}
                 onEdit={handleOpenEditModal}
                 onDelete={player.is_guest || isSuperAdmin ? (p) => handleDeletePlayer(p.id, p.full_name) : undefined}
               />

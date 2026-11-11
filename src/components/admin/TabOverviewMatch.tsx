@@ -13,8 +13,8 @@ import { Profile, Presence, Match, GeneratedTeamRecord } from '@/types/database'
 const EMPTY_RESULT: MatchResultValue = { scoreWhite: 0, scoreBlack: 0, mvpPlayerId: '', scorers: [] };
 import { useAuth } from '@/lib/context/AuthContext';
 import { effectiveMatchCost } from '@/lib/utils/matchUtils';
-import { subscribeMatch, subscribeMatches, saveMatchResult, subscribeMvpVotes, countMvpVotes } from '@/lib/firebase/firestoreService';
-import { CalendarDay, formatItalianDate } from '@/lib/utils/dateUtils';
+import { subscribeMatch, subscribeMatches, saveMatchResult, subscribeMvpVotes, countMvpVotes, subscribeGeneratedTeams, subscribeTeamDatesSince } from '@/lib/firebase/firestoreService';
+import { CalendarDay, formatItalianDate, toDateString } from '@/lib/utils/dateUtils';
 import { 
   getMatchPayments, 
   togglePlayerPayment, 
@@ -72,6 +72,32 @@ export function TabOverviewMatch({
     const unsub = subscribeMatch(activeDate, (m) => setSavedMatch(m));
     return () => unsub();
   }, [activeDate]);
+
+  // Partita da chiudere: di default il giorno ufficiale, ma si può scegliere una partita già giocata
+  // (es. quella di ieri, che non è più nel calendario delle presenze)
+  const [closingDate, setClosingDate] = useState(activeDate);
+  useEffect(() => setClosingDate(activeDate), [activeDate]);
+  const [closingMatch, setClosingMatch] = useState<Match | null>(null);
+  const [closingTeams, setClosingTeams] = useState<GeneratedTeamRecord | null>(null);
+  useEffect(() => {
+    setClosingMatch(null);
+    setClosingTeams(null);
+    const u1 = subscribeMatch(closingDate, (m) => setClosingMatch(m));
+    const u2 = subscribeGeneratedTeams(closingDate, (r) => setClosingTeams(r));
+    return () => {
+      u1();
+      u2();
+    };
+  }, [closingDate]);
+  const [recentDates, setRecentDates] = useState<string[]>([]);
+  useEffect(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    const from = toDateString(d);
+    const unsub = subscribeTeamDatesSince(from, (dates) => setRecentDates(dates));
+    return () => unsub();
+  }, []);
+  const closingOptions = Array.from(new Set([activeDate, ...recentDates])).sort().reverse();
 
   // Quota: quella della partita se impostata, altrimenti il costo standard dell'admin
   const totalMatchCost = effectiveMatchCost(savedMatch, standardMatchCost);
@@ -145,42 +171,42 @@ export function TabOverviewMatch({
     // Cambio data: modulo vuoto, poi eventualmente ricaricato dalla partita salvata
     prefilledFor.current = null;
     setResult(EMPTY_RESULT);
-  }, [activeDate]);
+  }, [closingDate]);
   useEffect(() => {
     if (
-      savedMatch?.status === 'completed' &&
-      savedMatch.match_date === activeDate &&
-      prefilledFor.current !== activeDate
+      closingMatch?.status === 'completed' &&
+      closingMatch.match_date === closingDate &&
+      prefilledFor.current !== closingDate
     ) {
-      prefilledFor.current = activeDate;
+      prefilledFor.current = closingDate;
       setResult({
-        scoreWhite: savedMatch.score_white ?? 0,
-        scoreBlack: savedMatch.score_black ?? 0,
-        mvpPlayerId: savedMatch.mvp_player_id || '',
-        scorers: savedMatch.scorers || [],
-        penaltySaves: savedMatch.penalty_saves || [],
+        scoreWhite: closingMatch.score_white ?? 0,
+        scoreBlack: closingMatch.score_black ?? 0,
+        mvpPlayerId: closingMatch.mvp_player_id || '',
+        scorers: closingMatch.scorers || [],
+        penaltySaves: closingMatch.penalty_saves || [],
       });
     }
-  }, [activeDate, savedMatch]);
+  }, [closingDate, closingMatch]);
 
   // Voti MVP dei giocatori per questa partita: il più votato viene proposto (l'admin può scegliere chiunque)
   const [mvpVotes, setMvpVotes] = useState<{ playerId: string; count: number }[]>([]);
   useEffect(() => {
     setMvpVotes([]);
-    const unsub = subscribeMvpVotes(activeDate, (votes) => setMvpVotes(countMvpVotes(votes)));
+    const unsub = subscribeMvpVotes(closingDate, (votes) => setMvpVotes(countMvpVotes(votes)));
     return () => unsub();
-  }, [activeDate]);
+  }, [closingDate]);
   const proposedFor = useRef<string | null>(null);
   useEffect(() => {
-    if (proposedFor.current === activeDate || savedMatch?.status === 'completed' || !mvpVotes[0]) return;
-    proposedFor.current = activeDate;
+    if (proposedFor.current === closingDate || closingMatch?.status === 'completed' || !mvpVotes[0]) return;
+    proposedFor.current = closingDate;
     setResult((r) => (r.mvpPlayerId ? r : { ...r, mvpPlayerId: mvpVotes[0].playerId }));
-  }, [activeDate, mvpVotes, savedMatch?.status]);
+  }, [closingDate, mvpVotes, closingMatch?.status]);
 
   // Per ogni settimana: il giorno che ha raggiunto PER PRIMO 10 iscritti
   const firstToTenByWeek = computeFirstToTen(days, presences);
 
-  const isAlreadyClosed = savedMatch?.status === 'completed';
+  const isAlreadyClosed = closingMatch?.status === 'completed';
 
   // Handlers Cassa
   const handleTogglePayment = (playerId: string) => {
@@ -201,11 +227,16 @@ export function TabOverviewMatch({
   // Squadre della partita: quelle archiviate (mai più cambiate da sole), altrimenti quelle generate in Squadre
   // con le eventuali sostituzioni (chi si è ritirato viene sostituito al suo posto). Mai "i primi 5 iscritti".
   const teams = (() => {
-    if (savedMatch?.status === 'completed' && savedMatch.team_white?.length && savedMatch.team_black?.length) {
-      return { white: savedMatch.team_white, black: savedMatch.team_black, fromArchive: true };
+    if (closingMatch?.status === 'completed' && closingMatch.team_white?.length && closingMatch.team_black?.length) {
+      return { white: closingMatch.team_white, black: closingMatch.team_black, fromArchive: true };
     }
-    if (generatedTeamRecord?.team_white?.length && generatedTeamRecord?.team_black?.length) {
-      const r = reconcileTeams(generatedTeamRecord, starterProfiles.map(toTeamPlayer));
+    const record = closingDate === activeDate ? generatedTeamRecord || closingTeams : closingTeams;
+    if (record?.team_white?.length && record?.team_black?.length) {
+      // Giorno ufficiale: con le sostituzioni dalle presenze; partita passata: le squadre salvate così come sono
+      if (closingDate !== activeDate) {
+        return { white: record.team_white.map(toTeamPlayer), black: record.team_black.map(toTeamPlayer), fromArchive: false };
+      }
+      const r = reconcileTeams(record, starterProfiles.map(toTeamPlayer));
       if (r.white.length === 5 && r.black.length === 5) return { white: r.white, black: r.black, fromArchive: false };
     }
     return null;
@@ -230,7 +261,7 @@ export function TabOverviewMatch({
     setArchiveSuccessMessage('');
     try {
       await saveMatchResult({
-        date: activeDate,
+        date: closingDate,
         scoreWhite: result.scoreWhite,
         scoreBlack: result.scoreBlack,
         teamWhite: teams.white,
@@ -238,11 +269,11 @@ export function TabOverviewMatch({
         mvpPlayerId: result.mvpPlayerId || null,
         scorers: result.scorers,
         penaltySaves: result.penaltySaves || [],
-        totalCost: totalMatchCost,
+        totalCost: effectiveMatchCost(closingMatch, standardMatchCost),
         closedBy: profile?.id || '',
       });
       setArchiveSuccessMessage(
-        `Partita del ${formatItalianDate(activeDate)} salvata! V/P/S aggiornati nei profili. La trovi nella pagina Storico.`
+        `Partita del ${formatItalianDate(closingDate)} salvata! V/P/S aggiornati nei profili. La trovi nella pagina Storico.`
       );
       setTimeout(() => setArchiveSuccessMessage(''), 8000);
     } catch (err) {
@@ -557,11 +588,28 @@ export function TabOverviewMatch({
           </p>
         </div>
 
+        <label className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm">
+          <span className="text-slate-300 font-semibold">Partita da chiudere</span>
+          <select
+            value={closingDate}
+            onChange={(e) => setClosingDate(e.target.value)}
+            className="w-full sm:w-auto min-w-0 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-slate-500"
+          >
+            {closingOptions.map((d) => (
+              <option key={d} value={d}>
+                {formatItalianDate(d)}
+                {d === activeDate ? ' (giorno ufficiale)' : ''}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs text-slate-400">Anche le partite degli ultimi 30 giorni con squadre salvate.</span>
+        </label>
+
         {isAlreadyClosed && !archiveSuccessMessage && (
           <div className="p-3 bg-slate-800/60 border border-slate-700 text-slate-300 rounded-2xl text-xs font-semibold flex items-center gap-2">
             <Check className="h-4 w-4 text-emerald-400" />
             <span>
-              Partita già archiviata ({savedMatch?.score_white ?? 0} - {savedMatch?.score_black ?? 0}). Puoi correggere i dati e risalvare.{' '}
+              Partita già archiviata ({closingMatch?.score_white ?? 0} - {closingMatch?.score_black ?? 0}). Puoi correggere i dati e risalvare.{' '}
               <Link href="/history" className="text-emerald-400 underline">Vai allo Storico</Link>
             </span>
           </div>
@@ -590,7 +638,7 @@ export function TabOverviewMatch({
               {teams.fromArchive ? (
                 <>Squadre archiviate: per correggerle usa la matita nello <Link href="/history" className="text-emerald-400 underline">Storico</Link>.</>
               ) : (
-                <>Squadre prese dalla sezione <Link href={`/squadre?date=${activeDate}`} className="text-emerald-400 underline">Squadre</Link>: se sono sbagliate correggile lì prima di salvare.</>
+                <>Squadre prese dalla sezione <Link href={`/squadre?date=${closingDate}`} className="text-emerald-400 underline">Squadre</Link>: se sono sbagliate correggile lì prima di salvare.</>
               )}
             </p>
             <MatchResultFields fixedKeeper={fixedKeeper} value={result} onChange={setResult} white={teams.white} black={teams.black} mvpVotes={mvpVotes} />
@@ -600,7 +648,7 @@ export function TabOverviewMatch({
             <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
             <span>
               Per salvare il risultato servono le squadre complete (5 contro 5) generate nella sezione{' '}
-              <Link href={`/squadre?date=${activeDate}`} className="underline font-bold">Squadre</Link>.
+              <Link href={`/squadre?date=${closingDate}`} className="underline font-bold">Squadre</Link>.
             </span>
           </div>
         )}

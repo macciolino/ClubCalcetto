@@ -128,6 +128,14 @@ export function TabClubConfigFields({
       )}
 
       {part === 'rules' && (
+        <p className="text-sm text-slate-400 leading-relaxed">
+          Sono i valori usati per <strong className="text-slate-200">ogni partita</strong>: campo predefinito, orario, costo
+          (la quota a testa è il costo diviso 10) e blocco ritiri. Per cambiarli in una <strong className="text-slate-200">sola
+          partita</strong> usa la pagina Squadre: lì valgono solo per quel giorno.
+        </p>
+      )}
+
+      {part === 'rules' && (
       <>
       {/* 1. ANAGRAFICA CENTRI SPORTIVI & CAMPI DA CALCIO (a tendina) */}
       <CollapsibleCard

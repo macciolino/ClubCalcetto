@@ -65,3 +65,22 @@ export function computeMatchStats(completedMatches: Match[]): Map<string, Player
   }
   return map;
 }
+
+/** For each player, the results of their last `n` archived matches, newest first. */
+export function computeRecentResults(completedMatches: Match[], n = 5): Map<string, ('won' | 'drawn' | 'lost')[]> {
+  const map = new Map<string, ('won' | 'drawn' | 'lost')[]>();
+  const sorted = [...completedMatches].sort((a, b) => (b.match_date || b.id).localeCompare(a.match_date || a.id));
+  for (const m of sorted) {
+    const w = m.score_white ?? 0;
+    const b = m.score_black ?? 0;
+    (['white', 'black'] as const).forEach((team) => {
+      ((team === 'white' ? m.team_white : m.team_black) || []).forEach((p) => {
+        const list = map.get(p.id) || [];
+        if (list.length >= n) return;
+        list.push(w === b ? 'drawn' : (team === 'white') === w > b ? 'won' : 'lost');
+        map.set(p.id, list);
+      });
+    });
+  }
+  return map;
+}

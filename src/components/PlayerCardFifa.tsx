@@ -32,6 +32,8 @@ interface PlayerCardFifaProps {
   form?: number;
   /** Gol, presenze, vinte/pareggiate/perse e MVP dalle partite archiviate (stessi numeri di Storico e Profilo) */
   matchStats?: PlayerMatchStats;
+  /** Results of the player's last archived matches, newest first (max 5) */
+  recentResults?: ('won' | 'drawn' | 'lost')[];
 }
 
 export function PlayerCardFifa({
@@ -42,6 +44,7 @@ export function PlayerCardFifa({
   categories,
   form = 0,
   matchStats = EMPTY_MATCH_STATS,
+  recentResults = [],
 }: PlayerCardFifaProps) {
   const [activeTab, setActiveTab] = useState<'radar' | 'stats'>('radar');
   const isSuperAdmin = player.email?.toLowerCase().includes('macciolino84');
@@ -156,6 +159,18 @@ export function PlayerCardFifa({
                 <span className="bg-amber-400" style={{ width: `${(matchStats.drawn / matchStats.played) * 100}%` }} />
                 <span className="bg-rose-400" style={{ width: `${(matchStats.lost / matchStats.played) * 100}%` }} />
               </div>
+              {recentResults.length > 0 && (
+                <div className="flex items-center justify-center gap-1 pt-1" aria-label="Ultime partite">
+                  <span className="text-[10px] text-slate-500 mr-1">Ultime</span>
+                  {recentResults.map((r, i) => (
+                    <span
+                      key={i}
+                      title={r === 'won' ? 'Vinta' : r === 'drawn' ? 'Pareggiata' : 'Persa'}
+                      className={`h-2.5 w-2.5 rounded-full ${r === 'won' ? 'bg-emerald-400' : r === 'drawn' ? 'bg-slate-500' : 'bg-rose-400'}`}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             <p className="mt-2 text-xs text-slate-500">Nessuna partita archiviata</p>
@@ -204,7 +219,13 @@ export function PlayerCardFifa({
         {/* CONTENUTO SCHEDA 1: RADAR OTTAGONALE STILE PES/FIFA */}
         {activeTab === 'radar' ? (
           <div className="mt-3 py-2 flex flex-col items-center justify-center animate-in fade-in duration-200">
-            <RadarChart stats={displayStats} size={180} color="emerald" showLabels={true} />
+            <RadarChart
+              stats={Object.fromEntries(baseStats.map((b) => [b.name, b.value]))}
+              overlay={form !== 0 ? { stats: displayStats, kind: 'form' } : undefined}
+              size={180}
+              color="emerald"
+              showLabels={true}
+            />
 
             {/* Parametri come barre 1-10 (con la parte dovuta alla forma) */}
             <div className="mt-4 w-full">
@@ -229,6 +250,12 @@ export function PlayerCardFifa({
                 <span className="block text-[11px] text-slate-400">{label}</span>
               </div>
             ))}
+            {matchStats.played > 0 && (
+              <p className="col-span-3 pt-1 text-xs text-slate-400 tabular-nums">
+                {Math.round((matchStats.won / matchStats.played) * 100)}% vittorie ·{' '}
+                {String((matchStats.goals / matchStats.played).toFixed(1)).replace('.', ',')} gol a partita
+              </p>
+            )}
           </div>
         )}
       </div>

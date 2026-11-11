@@ -14,6 +14,12 @@ interface RadarChartProps {
   size?: number;
   color?: string; // 'emerald' | 'amber' | 'blue'
   showLabels?: boolean;
+  /**
+   * Second shape drawn as an outline over the first one:
+   * 'form'    → the values with the "Stato forma" (light green, dashed)
+   * 'compare' → another player (blue)
+   */
+  overlay?: { stats: Record<string, number>; kind: 'form' | 'compare' };
 }
 
 const STAT_ABBR_MAP: Record<string, string> = {
@@ -33,6 +39,7 @@ export function RadarChart({
   size = 200,
   color = 'emerald',
   showLabels = true,
+  overlay,
 }: RadarChartProps) {
   const statKeys = sortStatsByCanonicalOrder(Object.keys(stats));
   const totalAxes = Math.max(statKeys.length, 3);
@@ -59,6 +66,16 @@ export function RadarChart({
     })
     .join(' ');
 
+  const overlayPoints = overlay
+    ? statKeys
+        .map((key, i) => {
+          const val = Math.max(1, Math.min(10, overlay.stats[key] ?? 6));
+          const { x, y } = getCoordinates(i, val / 10);
+          return `${x.toFixed(1)},${y.toFixed(1)}`;
+        })
+        .join(' ')
+    : '';
+
   // Guide concentriche (25%, 50%, 75%, 100%)
   const gridLevels = [0.25, 0.5, 0.75, 1.0];
 
@@ -75,12 +92,6 @@ export function RadarChart({
         viewBox={`0 0 ${size} ${size}`}
         className="overflow-visible"
       >
-        <defs>
-          <radialGradient id={`radarGrad-${color}`} cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor={strokeColor} stopOpacity="0.6" />
-            <stop offset="100%" stopColor={strokeColor} stopOpacity="0.15" />
-          </radialGradient>
-        </defs>
 
         {/* Poligoni concentrici della ragnatela / griglia */}
         {gridLevels.map((level, idx) => {
@@ -95,10 +106,9 @@ export function RadarChart({
             <polygon
               key={`grid-${idx}`}
               points={ringPoints}
-              fill={level === 1.0 ? 'rgba(15, 23, 42, 0.6)' : 'none'}
-              stroke="rgba(255, 255, 255, 0.12)"
-              strokeWidth={level === 1.0 ? '1.5' : '1'}
-              strokeDasharray={level === 1.0 ? 'none' : '2,2'}
+              fill={level === 1.0 ? 'rgba(15, 23, 42, 0.5)' : 'none'}
+              stroke="rgba(255, 255, 255, 0.08)"
+              strokeWidth="1"
             />
           );
         })}
@@ -113,20 +123,25 @@ export function RadarChart({
               y1={center}
               x2={x}
               y2={y}
-              stroke="rgba(255, 255, 255, 0.12)"
+              stroke="rgba(255, 255, 255, 0.06)"
               strokeWidth="1"
             />
           );
         })}
 
         {/* Poligono delle statistiche del giocatore */}
-        <polygon
-          points={polygonPoints}
-          fill={`url(#radarGrad-${color})`}
-          stroke={strokeColor}
-          strokeWidth="2.5"
-          className="transition-all duration-300"
-        />
+        <polygon points={polygonPoints} fill={fillColor} stroke={strokeColor} strokeWidth="2" className="transition-all duration-300" />
+
+        {/* Seconda forma: valori con la forma, oppure il giocatore da confrontare */}
+        {overlay && (
+          <polygon
+            points={overlayPoints}
+            fill={overlay.kind === 'compare' ? 'rgba(59, 130, 246, 0.18)' : 'none'}
+            stroke={overlay.kind === 'compare' ? '#60a5fa' : '#6ee7b7'}
+            strokeWidth="2"
+            strokeDasharray={overlay.kind === 'form' ? '4,3' : undefined}
+          />
+        )}
 
         {/* Pallini sui vertici */}
         {statKeys.map((key, i) => {
@@ -149,7 +164,8 @@ export function RadarChart({
         {/* Etichette esterne per vertice */}
         {showLabels &&
           statKeys.map((key, i) => {
-            const val = Math.max(1, Math.min(10, stats[key] ?? 6));
+            const shown = overlay?.kind === 'form' ? overlay.stats[key] ?? stats[key] : stats[key];
+            const val = Math.max(1, Math.min(10, shown ?? 6));
             // Posiziona l'etichetta leggermente fuori dal raggio massimo
             const labelCoord = getCoordinates(i, 1.25);
             const abbr = STAT_ABBR_MAP[key] || key.slice(0, 3).toUpperCase();
@@ -159,7 +175,7 @@ export function RadarChart({
                 <text
                   textAnchor="middle"
                   dominantBaseline="central"
-                  className="text-[9px] font-black fill-slate-300 tracking-wider"
+                  className="text-[9px] font-semibold fill-slate-400"
                   style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}
                 >
                   {abbr}
@@ -168,7 +184,7 @@ export function RadarChart({
                   y="10"
                   textAnchor="middle"
                   dominantBaseline="central"
-                  className="text-[8px] font-mono font-bold fill-emerald-400"
+                  className="text-[9px] font-semibold fill-slate-200"
                 >
                   {val}
                 </text>

@@ -251,7 +251,7 @@ export default function HomePage() {
       </nav>
       {admin && (
         <p className="text-xs text-slate-400 flex items-center gap-1.5">
-          <Users className="h-3.5 w-3.5" /> Sei admin: il giorno ufficiale si sceglie in Presenze o in Impostazioni → Partita della settimana.
+          <Users className="h-3.5 w-3.5" /> Sei admin: il giorno ufficiale si sceglie in Presenze o in Impostazioni → Partita della settimana (menu della tua icona in alto a destra).
         </p>
       )}
     </div>

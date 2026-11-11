@@ -37,7 +37,7 @@ const SECTIONS: SectionDef[] = [
   { id: 'partita', label: 'Partita della settimana', description: 'Giorno ufficiale, cassa e pagamenti, chiusura partita', icon: Trophy, access: 'admin' },
   { id: 'rosa', label: 'Rosa giocatori', description: 'Elenco, ruoli, ospiti e schede dei giocatori', icon: Users, access: 'admin' },
   { id: 'notifiche-club', label: 'Notifiche del club', description: 'Chi riceve le notifiche, prova, telefoni degli admin', icon: Megaphone, access: 'admin' },
-  { id: 'regole', label: 'Regole partita', description: 'Campi sportivi, blocco ritiri, costo e orario', icon: Ruler, access: 'admin' },
+  { id: 'regole', label: 'Valori della partita', description: 'Valori di ogni partita: campo, orario, costo e blocco ritiri', icon: Ruler, access: 'admin' },
   { id: 'parametri', label: 'Parametri e forma', description: 'Parametri dei giocatori, Stato forma e portiere', icon: BarChart3, access: 'admin' },
   { id: 'account', label: 'Account chiusi', description: 'Account disattivati e motivi di chi lascia', icon: Lock, access: 'super' },
 ];
@@ -61,8 +61,8 @@ function SettingsContent() {
   const admin = isAdmin || profile.role === 'admin';
   const visible = SECTIONS.filter((s) => s.access === 'all' || (s.access === 'admin' && admin) || (s.access === 'super' && isSuperAdmin));
   const requested = visible.find((s) => s.id === params.get('sezione'));
-  // Su PC senza sezione scelta si apre la prima; su telefono si vede l'elenco
-  const current = requested || visible[0];
+  // Su PC senza sezione scelta si apre la prima (per gli admin: la partita della settimana); su telefono l'elenco
+  const current = requested || (admin ? visible.find((s) => s.id === 'partita') : undefined) || visible[0];
   const groups = [
     { title: 'Personali', items: visible.filter((s) => s.access === 'all') },
     { title: 'Amministrazione', items: visible.filter((s) => s.access !== 'all') },

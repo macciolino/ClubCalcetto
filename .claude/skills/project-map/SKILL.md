@@ -8,7 +8,8 @@ description: Map of the ClubCalcetto project - folders, routes, where each page 
 Brand shown to users: **Club Soccer** (renamed 2026-11-10). Code, repo, Vercel domain and storage keys still say ClubCalcetto.
 Header (`Navbar.tsx`): logo + "Club Soccer" on the left; on the right icon, name and role open a dropdown menu
 (Profilo, Impostazioni, Logout; closes on outside tap, Esc, page change). Profilo is NOT in the page menu / bottom bar
-(Home, Presenze, Giocatori, Squadre, Storico, Admin for admins). On md+ the page menu is a
+(Home, Presenze, Giocatori, Squadre, Storico). Admins reach the admin sections from the user menu → Impostazioni,
+which opens `?sezione=partita` for them (no "Admin" item in the bar). On md+ the page menu is a
 separate bar BELOW the header, as wide as the cards (same `max-w-6xl px-4 sm:px-6` container); header and menu
 are wrapped in ONE sticky container so both stay at the top while scrolling; phones use the bottom bar.
 After login (and email verified) `/login` redirects to `/` (the Home).
@@ -23,7 +24,8 @@ Checks: `npx tsc --noEmit -p .`, `npx next build`, `npm run test:rules` (Firesto
 |---|---|---|
 | `/` | Home "Prossima partita" | official match date: when/where/cost, own status with "Ci sono"/"Ritirati", ring + places, own team, shortcuts. After login users land here |
 | `/presenze` | Sign-ups | day strip + `PresenceCard`; admin: opens next week, adds/removes players, forces starter/waitlist (arrows), "Azzera presenze del giorno"; "Primo a 10" badge |
-| `/giocatori` | Players | card view (`PlayerCardFifa`, tabs radar / Statistiche) or table view (players see only name, role column and OVR; admins also V-P-S and parameters); admin edit via `PlayerModal` |
+| `/giocatori` | Players: leaders row (Capocannoniere, Più MVP, Più presenze, In forma → tap sorts the cards), role filters, "Confronta" (`PlayerCompare`) |
+| `/giocatori` (cont.) | Players | card view (`PlayerCardFifa`, tabs radar / Statistiche) or table view (players see only name, role column and OVR; admins also V-P-S and parameters); admin edit via `PlayerModal` |
 | `/squadre` | Teams | generate / Ribilancia / Conferma Partita / tab "Modifica manuale" (`TeamSwapEditor`), `VirtualPitch`, `MvpVoteCard` |
 | `/history` | Storico | tabs Classifica (leaderboard, sortable by clicking the headers) / Partite (`HistoryCalendar` + match cards), season select, admin delete + `MatchEditModal`. A new year appears from 31 Dec 22:00 Europe/Rome (`getVisibleHistoryYear` in `dateUtils`) |
 | `/profilo` | Own profile | photo, name, position, radar, global stats, link to Impostazioni, `DeleteAccountSection` (bottom: deactivate or delete) |
