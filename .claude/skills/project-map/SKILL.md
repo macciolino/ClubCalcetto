@@ -24,7 +24,7 @@ Checks: `npx tsc --noEmit -p .`, `npx next build`, `npm run test:rules` (Firesto
 | Route | Page | Notes |
 |---|---|---|
 | `/` | Home "Prossima partita" | official match date: when/where/cost, own status with "Ci sono"/"Ritirati", ring + places, own team, shortcuts. After login users land here |
-| `/presenze` | Sign-ups | day strip + `PresenceCard`; admin: opens next week, adds/removes players, forces starter/waitlist (arrows), "Azzera presenze del giorno"; "Primo a 10" badge; "Partita al completo" card: admin "Conferma partita" (same as Squadre: `confirmTeams` + match_confirmed notification) or "Genera squadre" if no teams yet |
+| `/presenze` | Sign-ups | day strip + `PresenceCard`; admin: opens next week, adds/removes players, forces starter/waitlist (arrows), "Azzera presenze del giorno"; "Primo a 10" badge |
 | `/giocatori` | Players: leaders row (Capocannoniere, Più MVP, Più presenze, In forma → tap sorts the cards), role filters, "Confronta" (`PlayerCompare`) |
 | `/giocatori` (cont.) | Players | card view (`PlayerCardFifa`, tabs radar / Statistiche) or table view (players see only name, role column and OVR; admins also V-P-S and parameters); admin edit via `PlayerModal` |
 | `/squadre` | Teams | generate / Ribilancia / Conferma Partita / tab "Modifica manuale" (`TeamSwapEditor`), `VirtualPitch`, `MvpVoteCard` |

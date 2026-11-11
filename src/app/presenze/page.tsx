@@ -7,7 +7,7 @@ import { firstToTenByWeek } from '@/lib/utils/presenceRanking';
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/context/AuthContext';
-import { GeneratedTeamRecord, Match, Presence, Profile } from '@/types/database';
+import { Presence, Profile } from '@/types/database';
 import {
   subscribePresencesRange,
   subscribeProfiles,
@@ -19,12 +19,7 @@ import {
   setPresenceOverride,
   clearPresencesForDate,
   saveOfficialMatchDateDoc,
-  subscribeGeneratedTeams,
-  subscribeMatch,
-  confirmTeams,
 } from '@/lib/firebase/firestoreService';
-import { notifyMatchPlayers } from '@/lib/services/notificationService';
-import { reconcileTeams, toTeamPlayer } from '@/lib/utils/teamUtils';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { getOfficialMatchDate, setOfficialMatchDate } from '@/lib/services/presenceService';
 import {
@@ -59,10 +54,6 @@ export default function PresenzePage() {
   const [viewMode, setViewMode] = useState<'focus' | 'grid'>('focus');
   const [busyDate, setBusyDate] = useState<string | null>(null);
   const [isSavingCalendar, setIsSavingCalendar] = useState(false);
-  // Squadre e partita del giorno scelto: per confermare la partita anche da qui (admin)
-  const [dayTeams, setDayTeams] = useState<GeneratedTeamRecord | null>(null);
-  const [dayMatch, setDayMatch] = useState<Match | null>(null);
-  const [isConfirming, setIsConfirming] = useState(false);
 
   const firstDay = days[0]?.dateString || '';
   const lastDay = days[days.length - 1]?.dateString || '';
@@ -204,49 +195,6 @@ export default function PresenzePage() {
   const selectedStarters = selectedDayPresences.filter((p) => p.status === 'confirmed');
   const isMatchReady = selectedStarters.length >= 10;
 
-  useEffect(() => {
-    setDayTeams(null);
-    setDayMatch(null);
-    if (!isFirebaseConfigured || !selectedDayString) return;
-    const u1 = subscribeGeneratedTeams(selectedDayString, (r) => setDayTeams(r));
-    const u2 = subscribeMatch(selectedDayString, (m) => setDayMatch(m));
-    return () => {
-      u1();
-      u2();
-    };
-  }, [selectedDayString]);
-
-  // Squadre del giorno con le eventuali sostituzioni (come nella pagina Squadre)
-  const dayStarterPlayers = selectedStarters
-    .map((p) => profiles.find((prof) => prof.id === p.player_id || prof.user_id === p.player_id))
-    .filter((prof): prof is Profile => prof !== undefined)
-    .slice(0, 10)
-    .map(toTeamPlayer);
-  const dayReconciled = dayTeams ? reconcileTeams(dayTeams, dayStarterPlayers) : null;
-  const dayTeamsComplete = Boolean(dayReconciled && dayReconciled.white.length === 5 && dayReconciled.black.length === 5);
-  const isDayConfirmed = Boolean(dayTeams?.confirmed);
-  const isDayArchived = dayMatch?.status === 'completed';
-
-  const handleConfirmMatch = async () => {
-    if (!dayReconciled || !dayTeamsComplete) return;
-    if (!(await askConfirm(`Confermi la partita del ${formatItalianDate(selectedDayString)} con le squadre salvate?`))) return;
-    setIsConfirming(true);
-    try {
-      await confirmTeams(selectedDayString, profile?.id || '');
-      notifyMatchPlayers({
-        type: 'match_confirmed',
-        date: selectedDayString,
-        playerIds: [...dayReconciled.white, ...dayReconciled.black].map((p) => p.id),
-      });
-      notify('Partita confermata.');
-    } catch (err) {
-      console.warn('[Presenze] conferma non riuscita:', err);
-      notify('Conferma non riuscita. Riprova.');
-    } finally {
-      setIsConfirming(false);
-    }
-  };
-
   // Giorni che hanno raggiunto il quorum dei 10 titolari
   // Il giorno arrivato per primo a 10 iscritti in ogni settimana (come in Admin → Match)
   const firstToTen = firstToTenByWeek(days, presences);
@@ -351,37 +299,15 @@ export default function PresenzePage() {
             </h2>
             <p className="text-sm text-slate-400 mt-0.5">
               {formatItalianDate(selectedDayString)} · 10 titolari su 10
-              {isDayArchived ? ' · archiviata' : isDayConfirmed ? ' · confermata' : ''}
             </p>
-            {isStrictAdmin && !isDayArchived && !isDayConfirmed && !dayTeams && (
-              <p className="text-xs text-slate-500 mt-1">Per confermare la partita genera prima le squadre.</p>
-            )}
           </div>
-          <div className="flex flex-col sm:flex-row gap-2">
-            {isStrictAdmin && !isDayArchived && !isDayConfirmed && dayTeams && (
-              <button
-                type="button"
-                onClick={handleConfirmMatch}
-                disabled={isConfirming || !dayTeamsComplete}
-                title={dayTeamsComplete ? undefined : 'Servono squadre complete 5 contro 5'}
-                className="flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-xl text-sm transition-colors disabled:opacity-40"
-              >
-                <CheckCircle2 className="h-4 w-4" />
-                {isConfirming ? 'Conferma…' : 'Conferma partita'}
-              </button>
-            )}
-            <Link
-              href={`/squadre?date=${selectedDayString}`}
-              className={`flex items-center justify-center gap-2 px-5 py-2.5 font-semibold rounded-xl text-sm transition-colors ${
-                isStrictAdmin && !isDayArchived && !isDayConfirmed && dayTeams
-                  ? 'border border-slate-700 text-slate-200 hover:bg-slate-800'
-                  : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
-              }`}
-            >
-              {isStrictAdmin && !dayTeams && !isDayArchived ? 'Genera squadre' : 'Vai alle squadre'}
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
+          <Link
+            href={`/squadre?date=${selectedDayString}`}
+            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-xl text-sm transition-colors"
+          >
+            Vai alle squadre
+            <ArrowRight className="h-4 w-4" />
+          </Link>
         </section>
       )}
 
