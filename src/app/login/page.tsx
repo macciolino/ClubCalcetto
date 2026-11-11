@@ -90,11 +90,11 @@ export default function LoginPage() {
 
   // Requisiti della password (solo in registrazione)
   const passwordRules = [
-    { label: 'Almeno 8 caratteri', ok: password.length >= 8 },
-    { label: 'Una lettera maiuscola', ok: /[A-Z]/.test(password) },
-    { label: 'Una lettera minuscola', ok: /[a-z]/.test(password) },
-    { label: 'Un numero', ok: /[0-9]/.test(password) },
-    { label: 'Un carattere speciale (es. ! ? @ # $ %)', ok: /[^A-Za-z0-9]/.test(password) },
+    { label: 'Almeno 8 caratteri', ok: [...password].length >= 8 },
+    { label: 'Una lettera maiuscola', ok: /\p{Lu}/u.test(password) },
+    { label: 'Una lettera minuscola', ok: /\p{Ll}/u.test(password) },
+    { label: 'Un numero', ok: /\p{N}/u.test(password) },
+    { label: 'Un carattere speciale (es. ! ? @ # $ %)', ok: /[^\p{L}\p{N}\s]/u.test(password) }, // lettere accentate e spazi non contano
   ];
   const isSignup = authMode === 'signup';
   const fieldErrors: Record<string, string> = {};
@@ -246,8 +246,11 @@ export default function LoginPage() {
       <section className="w-full max-w-md mx-auto space-y-8">
         {/* Logo e titolo (su telefono e tablet; su PC sono nel pannello a sinistra) */}
         <div className="text-center space-y-3 lg:text-left">
-          <div className="inline-flex lg:hidden">
+          <div className="inline-flex lg:hidden items-center gap-3 pb-3">
             <BrandLogo size="lg" />
+            <span className="text-2xl font-bold tracking-tight text-white">
+              Club <span className="text-emerald-400">Soccer</span>
+            </span>
           </div>
           <div className="space-y-1">
             <h1 className="text-3xl font-bold tracking-tight text-white">

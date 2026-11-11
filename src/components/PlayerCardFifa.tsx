@@ -1,25 +1,12 @@
 'use client';
 
-import { StatBars } from './StatBars';
 import { initialsOf, uploadedPhoto } from '@/lib/utils/playerUtils';
 import { formatForm } from '@/lib/utils/formUtils';
 import { getStatValue, PlayerMatchStats, EMPTY_MATCH_STATS } from '@/lib/utils/statUtils';
 import React, { useState } from 'react';
-import { Profile, StatCategory, FIELD_POSITION_ABBR, STAT_DETAILS, sortStatsByCanonicalOrder } from '@/types/database';
+import { Profile, StatCategory, sortStatsByCanonicalOrder } from '@/types/database';
 import { RadarChart } from './RadarChart';
-import { StatBadge } from './StatBadge';
-import { 
-  Trophy, 
-  Swords, 
-  Minus, 
-  X, 
-  Percent, 
-  Edit3, 
-  Trash2, 
-  Sparkles,
-  Flame,
-  Award
-} from 'lucide-react';
+import { ChevronDown, Edit3, Trash2 } from 'lucide-react';
 
 interface PlayerCardFifaProps {
   player: Profile;
@@ -47,6 +34,8 @@ export function PlayerCardFifa({
   recentResults = [],
 }: PlayerCardFifaProps) {
   const [activeTab, setActiveTab] = useState<'radar' | 'stats'>('radar');
+  // Chiusa all'inizio: si apre con un tocco (fisarmonica)
+  const [open, setOpen] = useState(false);
   const isSuperAdmin = player.email?.toLowerCase().includes('macciolino84');
 
   // Statistiche mostrate: solo i parametri ufficiali dell'admin, con fallback al valore di default
@@ -75,238 +64,193 @@ export function PlayerCardFifa({
   const ovrValue = clamp((Number(player.overall_rating) || 6) + form);
   const ovrDisplay = Math.round(ovrValue * 10); // stile FIFA (es. 7.9 -> 79)
 
+  const photo = uploadedPhoto(player.avatar_url);
+  const panelId = `card-${player.id}`;
+
   return (
-    <div className="relative group bg-gradient-to-b from-slate-900 via-slate-900/95 to-slate-950 border border-slate-800 hover:border-emerald-500/50 rounded-3xl p-4 sm:p-5 shadow-xl hover:shadow-2xl transition-all duration-300 flex flex-col justify-between overflow-hidden">
-      {/* Glow Effetto Card */}
-      <div className="absolute -top-12 -right-12 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none group-hover:bg-emerald-500/20 transition-all" />
-
-      {/* HEADER CARD: Stile FUT / PES Card */}
-      <div>
-        <div className="flex items-start justify-between gap-3 border-b border-slate-800/80 pb-3">
-          {/* OVR & Dettagli Sinistra */}
-          <div className="flex flex-col items-center">
-            <div className="flex items-baseline gap-0.5">
-              <span className="text-2xl sm:text-3xl font-black text-amber-400 tracking-tight font-mono">
-                {ovrDisplay}
-              </span>
-              <span className="text-[10px] font-bold text-slate-400 uppercase">OVR</span>
-            </div>
-            {/* Ruolo Tattico (POR, DIF, EST, PUN) */}
-            <span className="text-[11px] font-black text-emerald-400 uppercase tracking-widest mt-0.5">
-              {FIELD_POSITION_ABBR[player.position || 'Esterno']}
+    <div
+      className={`bg-slate-900 border rounded-2xl transition-colors ${open ? 'border-slate-700' : 'border-slate-800'}`}
+    >
+      {/* Parte compatta, sempre visibile: tocca per aprire l'ottagono */}
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-controls={panelId}
+        className="w-full flex items-center gap-3 p-4 text-left"
+      >
+        <span className="relative flex-shrink-0">
+          {photo ? (
+            <img src={photo} alt="" className="w-12 h-12 rounded-full object-cover" />
+          ) : (
+            <span className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center font-bold text-emerald-300 text-sm">
+              {initialsOf(player.full_name)}
             </span>
-            {player.role === 'admin' ? (
-              <span className="text-[9px] font-bold text-amber-400 uppercase tracking-wide">CAP</span>
-            ) : (
-              <span className="text-base mt-0.5">⚽</span>
-            )}
-          </div>
+          )}
+          {isSuperAdmin && (
+            <span
+              className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-bold text-slate-950 ring-2 ring-slate-900"
+              title="Super Admin"
+            >
+              ★
+            </span>
+          )}
+        </span>
 
-          {/* Avatar Giocatore */}
-          <div className="relative">
-            {uploadedPhoto(player.avatar_url) ? (
-              <img
-                src={uploadedPhoto(player.avatar_url) as string}
-                alt={player.full_name}
-                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover ring-2 ring-emerald-500/40 shadow-lg"
-              />
-            ) : (
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-950 border-2 border-emerald-500/40 flex items-center justify-center font-black text-2xl text-emerald-400 shadow-lg">
-                {initialsOf(player.full_name)}
-              </div>
-            )}
-            {isSuperAdmin && (
-              <span
-                className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-[10px] font-black text-slate-950 ring-2 ring-slate-950 shadow"
-                title="Super Admin"
-              >
-                ★
+        <span className="flex-1 min-w-0">
+          <span className="block text-base font-semibold text-white truncate">{player.full_name}</span>
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-400">
+            <span>{player.position || 'Esterno'}</span>
+            {player.is_guest && <span>· ospite</span>}
+            {form !== 0 && (
+              <span className={form > 0 ? 'text-orange-300' : 'text-sky-300'}>
+                · {form > 0 ? '🔥' : '❄️'} {formatForm(form)}
               </span>
             )}
-          </div>
-        </div>
-
-        {/* Nome Giocatore e Tipo Profilo */}
-        <div className="mt-3 text-center">
-          <h3 className="font-black text-sm sm:text-base text-white truncate uppercase tracking-wide">
-            {player.full_name}
-          </h3>
-          {form !== 0 && (
-            <div
-              className={`mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase border ${
-                form > 0
-                  ? 'bg-orange-500/15 border-orange-400/40 text-orange-300'
-                  : 'bg-sky-500/15 border-sky-400/40 text-sky-300'
-              }`}
-            >
-              {form > 0 ? '🔥 In forma' : '❄️ Fuori forma'} {formatForm(form)}
-            </div>
+          </span>
+          {matchStats.played > 0 && recentResults.length > 0 && (
+            <span className="mt-1.5 flex items-center gap-1" aria-label="Ultime partite">
+              {recentResults.map((r, i) => (
+                <span
+                  key={i}
+                  title={r === 'won' ? 'Vinta' : r === 'drawn' ? 'Pareggiata' : 'Persa'}
+                  className={`h-2 w-2 rounded-full ${r === 'won' ? 'bg-emerald-500' : r === 'drawn' ? 'bg-slate-500' : 'bg-rose-400'}`}
+                />
+              ))}
+            </span>
           )}
-          {matchStats.played > 0 ? (
-            <div className="mt-2 space-y-1">
-              <p className="text-xs text-slate-400 tabular-nums">
-                {matchStats.played} {matchStats.played === 1 ? 'partita' : 'partite'} ·{' '}
-                <span className="text-emerald-300">{matchStats.won} V</span> ·{' '}
-                <span className="text-amber-300">{matchStats.drawn} P</span> ·{' '}
-                <span className="text-rose-300">{matchStats.lost} S</span>
-              </p>
-              <div
-                className="mx-auto flex h-1 w-28 overflow-hidden rounded-full bg-slate-800"
-                role="img"
-                aria-label={`${matchStats.won} vinte, ${matchStats.drawn} pareggiate, ${matchStats.lost} perse`}
-              >
-                <span className="bg-emerald-400" style={{ width: `${(matchStats.won / matchStats.played) * 100}%` }} />
-                <span className="bg-amber-400" style={{ width: `${(matchStats.drawn / matchStats.played) * 100}%` }} />
-                <span className="bg-rose-400" style={{ width: `${(matchStats.lost / matchStats.played) * 100}%` }} />
+        </span>
+
+        <span className="flex-shrink-0 text-right">
+          <span className="block text-2xl font-bold text-white tabular-nums leading-none">{ovrDisplay}</span>
+          <span className="block text-[10px] font-semibold text-slate-400 mt-1">OVR</span>
+        </span>
+        <ChevronDown className={`h-5 w-5 text-slate-500 flex-shrink-0 transition-transform duration-300 ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {/* Dettaglio a fisarmonica (altezza animata) */}
+      <div
+        id={panelId}
+        className={`grid transition-[grid-template-rows] duration-300 ease-out ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+      >
+        <div className="overflow-hidden">
+          <div className={`px-4 pb-4 transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0'}`}>
+            <div className="flex bg-slate-950 p-1 rounded-xl text-xs" role="tablist">
+              {(
+                [
+                  ['radar', 'Abilità'],
+                  ['stats', 'Statistiche'],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === key}
+                  tabIndex={open ? 0 : -1}
+                  onClick={() => setActiveTab(key)}
+                  className={`flex-1 py-1.5 rounded-lg font-semibold transition-colors ${
+                    activeTab === key ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {activeTab === 'radar' ? (
+              /* Solo la forma dell'ottagono: i numeri non servono, parla la geometria */
+              <div className="pt-2 flex flex-col items-center">
+                <RadarChart
+                  stats={Object.fromEntries(baseStats.map((b) => [b.name, b.value]))}
+                  overlay={form !== 0 ? { stats: displayStats, kind: 'form' } : undefined}
+                  size={240}
+                  color="emerald"
+                  showLabels={true}
+                  showValues={false}
+                />
+                {form !== 0 && (
+                  <p className="text-xs text-slate-400 flex items-center gap-1.5">
+                    <span className="inline-block w-4 border-t-2 border-dashed border-emerald-300" aria-hidden="true" /> con lo stato forma
+                  </p>
+                )}
               </div>
-              {recentResults.length > 0 && (
-                <div className="flex items-center justify-center gap-1 pt-1" aria-label="Ultime partite">
-                  <span className="text-[10px] text-slate-500 mr-1">Ultime</span>
-                  {recentResults.map((r, i) => (
-                    <span
-                      key={i}
-                      title={r === 'won' ? 'Vinta' : r === 'drawn' ? 'Pareggiata' : 'Persa'}
-                      className={`h-2.5 w-2.5 rounded-full ${r === 'won' ? 'bg-emerald-400' : r === 'drawn' ? 'bg-slate-500' : 'bg-rose-400'}`}
-                    />
-                  ))}
+            ) : matchStats.played === 0 ? (
+              <div className="py-8 text-center space-y-1">
+                <p className="text-sm font-semibold text-slate-300">Ancora nessuna partita</p>
+                <p className="text-xs text-slate-500">Le statistiche compaiono dopo la prima partita archiviata.</p>
+              </div>
+            ) : (
+              <div className="pt-4 space-y-4">
+                <div className="space-y-2">
+                  <div className="grid grid-cols-3 text-center">
+                    {(
+                      [
+                        ['Vinte', matchStats.won, 'text-emerald-300'],
+                        ['Pari', matchStats.drawn, 'text-amber-300'],
+                        ['Perse', matchStats.lost, 'text-rose-300'],
+                      ] as const
+                    ).map(([label, value, color]) => (
+                      <div key={label}>
+                        <span className={`block text-3xl font-bold tabular-nums leading-none ${color}`}>{value}</span>
+                        <span className="block text-xs text-slate-400 mt-1">{label}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex h-1.5 overflow-hidden rounded-full bg-slate-800" aria-hidden="true">
+                    <span className="bg-emerald-500" style={{ width: `${(matchStats.won / matchStats.played) * 100}%` }} />
+                    <span className="bg-amber-500" style={{ width: `${(matchStats.drawn / matchStats.played) * 100}%` }} />
+                    <span className="bg-rose-400" style={{ width: `${(matchStats.lost / matchStats.played) * 100}%` }} />
+                  </div>
                 </div>
-              )}
-            </div>
-          ) : (
-            <p className="mt-2 text-xs text-slate-500">Nessuna partita archiviata</p>
-          )}
-          {player.is_guest && (
-            <div className="flex items-center justify-center mt-2">
-              <span className="text-[11px] font-medium text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded-full">Ospite</span>
-            </div>
-          )}
-        </div>
-
-        {/* Switcher Tab: Radar Ottagonale vs Record Partite */}
-        <div className="mt-4 flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
-          <button
-            type="button"
-            onClick={() => setActiveTab('radar')}
-            className={`flex-1 py-1 rounded-lg font-bold text-[11px] transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-              activeTab === 'radar'
-                ? 'bg-emerald-500 text-slate-950 shadow-md font-black'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Sparkles className="h-3 w-3" />
-            <span>Ottagono Abilità</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('stats')}
-            className={`flex-1 py-1 rounded-lg font-bold text-[11px] transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-              activeTab === 'stats'
-                ? 'bg-emerald-500 text-slate-950 shadow-md font-black'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Trophy className="h-3 w-3" />
-            <span>Statistiche</span>
-          </button>
-        </div>
-
-        {/* CONTENUTO SCHEDA 1: RADAR OTTAGONALE STILE PES/FIFA */}
-        {activeTab === 'radar' ? (
-          <div className="mt-3 py-2 flex flex-col items-center justify-center animate-in fade-in duration-200">
-            <RadarChart
-              stats={Object.fromEntries(baseStats.map((b) => [b.name, b.value]))}
-              overlay={form !== 0 ? { stats: displayStats, kind: 'form' } : undefined}
-              size={180}
-              color="emerald"
-              showLabels={true}
-              showValues={false}
-            />
-
-            {/* Parametri come barre 1-10 (con la parte dovuta alla forma) */}
-            <div className="mt-4 w-full">
-              <StatBars stats={baseStats} form={form} compact />
-            </div>
-          </div>
-        ) : (
-          /* CONTENUTO SCHEDA 2: STATISTICHE DALLE PARTITE ARCHIVIATE (come nel profilo) */
-          matchStats.played === 0 ? (
-            <div className="mt-6 mb-2 text-center space-y-1 animate-in">
-              <p className="text-sm font-semibold text-slate-300">Ancora nessuna partita</p>
-              <p className="text-xs text-slate-500">Le statistiche compaiono dopo la prima partita archiviata.</p>
-            </div>
-          ) : (
-            <div className="mt-4 space-y-4 animate-in">
-              {/* Bilancio: numeri grandi su una riga + barra in proporzione */}
-              <div className="space-y-2">
-                <div className="grid grid-cols-3 text-center">
+                <dl className="divide-y divide-slate-800 rounded-xl bg-slate-950/50 px-3 text-sm">
                   {(
                     [
-                      ['Vinte', matchStats.won, 'text-emerald-300'],
-                      ['Pari', matchStats.drawn, 'text-amber-300'],
-                      ['Perse', matchStats.lost, 'text-rose-300'],
+                      ['Presenze', String(matchStats.played)],
+                      ['Gol', String(matchStats.goals)],
+                      ['MVP', String(matchStats.mvp)],
+                      ['% vittorie', `${Math.round((matchStats.won / matchStats.played) * 100)}%`],
+                      ['Gol a partita', String((matchStats.goals / matchStats.played).toFixed(1)).replace('.', ',')],
                     ] as const
-                  ).map(([label, value, color]) => (
-                    <div key={label}>
-                      <span className={`block text-3xl font-bold tabular-nums leading-none ${color}`}>{value}</span>
-                      <span className="block text-xs text-slate-400 mt-1">{label}</span>
+                  ).map(([label, value]) => (
+                    <div key={label} className="flex items-center justify-between py-2">
+                      <dt className="text-slate-400">{label}</dt>
+                      <dd className="font-semibold text-white tabular-nums">{value}</dd>
                     </div>
                   ))}
-                </div>
-                <div className="flex h-1.5 overflow-hidden rounded-full bg-slate-800" aria-hidden="true">
-                  <span className="bg-emerald-400" style={{ width: `${(matchStats.won / matchStats.played) * 100}%` }} />
-                  <span className="bg-amber-400" style={{ width: `${(matchStats.drawn / matchStats.played) * 100}%` }} />
-                  <span className="bg-rose-400" style={{ width: `${(matchStats.lost / matchStats.played) * 100}%` }} />
-                </div>
+                </dl>
               </div>
+            )}
 
-              {/* Dettagli: righe leggere, valore a destra */}
-              <dl className="divide-y divide-slate-800/80 rounded-xl bg-slate-950/50 px-3 text-sm">
-                {(
-                  [
-                    ['Presenze', String(matchStats.played)],
-                    ['Gol', String(matchStats.goals)],
-                    ['MVP', String(matchStats.mvp)],
-                    ['% vittorie', `${Math.round((matchStats.won / matchStats.played) * 100)}%`],
-                    ['Gol a partita', String((matchStats.goals / matchStats.played).toFixed(1)).replace('.', ',')],
-                  ] as const
-                ).map(([label, value]) => (
-                  <div key={label} className="flex items-center justify-between py-2">
-                    <dt className="text-slate-400">{label}</dt>
-                    <dd className="font-semibold text-white tabular-nums">{value}</dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-          )
-        )}
-      </div>
-
-      {/* FOOTER CARD: AZIONI ADMIN */}
-      {isAdmin && (
-        <div className="mt-4 pt-3 border-t border-slate-800 flex items-center justify-end gap-2">
-          {onEdit && (
-            <button
-              type="button"
-              onClick={() => onEdit(player)}
-              className="flex items-center gap-1 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-300 font-bold rounded-xl text-xs transition-colors cursor-pointer"
-            >
-              <Edit3 className="h-3.5 w-3.5" />
-              <span>Modifica</span>
-            </button>
-          )}
-
-          {onDelete && !isSuperAdmin && (
-            <button
-              type="button"
-              onClick={() => onDelete(player)}
-              className="flex items-center gap-1 p-1.5 bg-slate-800 hover:bg-rose-950/60 text-slate-400 hover:text-rose-400 border border-transparent hover:border-rose-500/30 rounded-xl text-xs transition-colors cursor-pointer"
-              title="Elimina giocatore"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          )}
+            {isAdmin && (onEdit || (onDelete && !isSuperAdmin)) && (
+              <div className="mt-4 pt-3 border-t border-slate-800 flex items-center justify-end gap-2">
+                {onEdit && (
+                  <button
+                    type="button"
+                    tabIndex={open ? 0 : -1}
+                    onClick={() => onEdit(player)}
+                    className="flex items-center gap-1.5 px-3 py-2 border border-slate-700 hover:bg-slate-800 text-slate-200 font-semibold rounded-xl text-xs transition-colors"
+                  >
+                    <Edit3 className="h-3.5 w-3.5" /> Modifica
+                  </button>
+                )}
+                {onDelete && !isSuperAdmin && (
+                  <button
+                    type="button"
+                    tabIndex={open ? 0 : -1}
+                    onClick={() => onDelete(player)}
+                    className="p-2 border border-slate-700 text-slate-400 hover:text-rose-300 hover:border-rose-500/40 rounded-xl transition-colors"
+                    title="Elimina giocatore"
+                    aria-label={`Elimina ${player.full_name}`}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
