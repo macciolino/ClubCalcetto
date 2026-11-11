@@ -192,93 +192,82 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-[calc(100vh-2rem)] grid lg:grid-cols-2 gap-10 items-center py-8 sm:py-12 animate-in">
-      {/* Lato sinistro (solo schermi grandi): il club, su un campo visto dall'alto */}
-      <section className="hidden lg:flex relative min-h-[640px] h-full rounded-3xl overflow-hidden border border-slate-800 bg-slate-900 p-10 flex-col">
-        {/* Erba: strisce tenui + campo disegnato, sfumato verso l'alto per lasciare pulito il marchio */}
-        <div
-          className="absolute inset-0 opacity-60"
-          style={{
-            backgroundImage:
-              'repeating-linear-gradient(180deg, rgba(16,185,129,0.06) 0px, rgba(16,185,129,0.06) 56px, transparent 56px, transparent 112px)',
-          }}
-          aria-hidden="true"
-        />
+      {/* Lato sinistro (solo schermi grandi): un campo da calcio visto dall'alto, con le linee che si disegnano */}
+      <section className="hidden lg:block relative w-full max-w-[560px] mx-auto aspect-[2/3] rounded-3xl overflow-hidden border border-slate-800 bg-slate-900">
         <svg
-          className="absolute inset-0 h-full w-full text-emerald-400/20 [mask-image:linear-gradient(to_bottom,transparent_0%,black_35%,black_100%)]"
-          viewBox="0 0 400 640"
-          preserveAspectRatio="xMidYMax slice"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
+          className="absolute inset-0 h-full w-full"
+          viewBox="0 0 400 600"
+          preserveAspectRatio="xMidYMid meet"
           aria-hidden="true"
         >
-          <rect x="40" y="60" width="320" height="560" rx="10" />
-          <line x1="40" y1="340" x2="360" y2="340" />
-          <circle cx="200" cy="340" r="56" />
-          <circle cx="200" cy="340" r="3" fill="currentColor" />
-          <path d="M130 620 v-70 a70 70 0 0 1 140 0 v70" />
-          <rect x="170" y="620" width="60" height="8" rx="2" />
+          {/* Erba a strisce */}
+          {Array.from({ length: 8 }, (_, i) => (
+            <rect key={i} x="20" y={20 + i * 70} width="360" height="70" fill={i % 2 ? 'rgba(16,185,129,0.03)' : 'rgba(16,185,129,0.075)'} />
+          ))}
+          <g className="pitch-draw text-emerald-400/30" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+            {/* Linee esterne e metà campo */}
+            <rect x="20" y="20" width="360" height="560" rx="2" pathLength={1} />
+            <line x1="20" y1="300" x2="380" y2="300" pathLength={1} />
+            <circle cx="200" cy="300" r="50" pathLength={1} />
+            {/* Area di rigore, area piccola e lunetta (sopra) */}
+            <rect x="90" y="20" width="220" height="90" pathLength={1} />
+            <rect x="145" y="20" width="110" height="32" pathLength={1} />
+            <path d="M156.7 110 A50 50 0 0 0 243.3 110" pathLength={1} />
+            {/* Area di rigore, area piccola e lunetta (sotto) */}
+            <rect x="90" y="490" width="220" height="90" pathLength={1} />
+            <rect x="145" y="548" width="110" height="32" pathLength={1} />
+            <path d="M156.7 490 A50 50 0 0 1 243.3 490" pathLength={1} />
+            {/* Bandierine */}
+            <path d="M20 30 A10 10 0 0 0 30 20" pathLength={1} />
+            <path d="M370 20 A10 10 0 0 0 380 30" pathLength={1} />
+            <path d="M20 570 A10 10 0 0 1 30 580" pathLength={1} />
+            <path d="M370 580 A10 10 0 0 1 380 570" pathLength={1} />
+            {/* Porte */}
+            <rect x="175" y="12" width="50" height="8" rx="1" pathLength={1} />
+            <rect x="175" y="580" width="50" height="8" rx="1" pathLength={1} />
+          </g>
+          <g className="pitch-dots text-emerald-400/40" fill="currentColor">
+            <circle cx="200" cy="300" r="3" />
+            <circle cx="200" cy="85" r="2.5" />
+            <circle cx="200" cy="515" r="2.5" />
+          </g>
         </svg>
-        <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-emerald-500/20 blur-3xl pointer-events-none" aria-hidden="true" />
-        <div className="absolute -bottom-32 -left-24 h-80 w-80 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" aria-hidden="true" />
+        <div className="absolute -top-24 left-1/2 -translate-x-1/2 h-72 w-72 rounded-full bg-emerald-500/15 blur-3xl pointer-events-none" aria-hidden="true" />
 
-        {/* Marchio */}
-        <div className="relative flex items-center gap-3">
+        {/* Marchio: al centro della metà campo superiore */}
+        <div className="absolute inset-x-0 top-[22%] flex flex-col items-center text-center animate-in">
           <BrandLogo size="lg" />
-          <div className="leading-tight">
-            <span className="block text-2xl font-bold tracking-tight text-white">
-              Club <span className="text-emerald-400">Soccer</span>
-            </span>
-            <span className="block text-xs text-slate-400">Calcetto 5 contro 5</span>
-          </div>
+          <span className="mt-3 block text-3xl font-bold tracking-tight text-white">
+            Club <span className="text-emerald-400">Soccer</span>
+          </span>
+          <span className="mt-1 block text-sm text-slate-400">Calcetto 5 contro 5</span>
         </div>
 
-        {/* Messaggio e punti forti */}
-        <div className="relative mt-auto space-y-8">
-          <h2 className="text-[2.6rem] font-bold tracking-tight text-white leading-[1.1]">
-            Il tuo calcetto,
-            <br />
-            <span className="text-emerald-400">senza chat infinite.</span>
+        {/* Messaggio e punti forti: nella metà campo inferiore, centrati */}
+        <div className="absolute inset-x-0 top-[53%] px-10 flex flex-col items-center text-center gap-6">
+          <h2 className="text-3xl xl:text-[2.1rem] font-bold tracking-tight text-white leading-tight">
+            Il tuo calcetto, <span className="text-emerald-400">senza chat infinite.</span>
           </h2>
-
-          <ul className="space-y-3">
+          <ul className="w-full max-w-sm space-y-2.5 text-left">
             {[
-              { icon: CalendarCheck, title: 'Presenze', text: 'Segna i giorni in cui ci sei: i primi 10 giocano.' },
-              { icon: Shuffle, title: 'Squadre equilibrate', text: 'Bianchi contro Neri, divisi in base ai parametri.' },
-              { icon: BarChart3, title: 'Statistiche', text: 'Gol, MVP, vittorie e stato di forma.' },
+              { icon: CalendarCheck, title: 'Presenze', text: 'I primi 10 che ci sono giocano.' },
+              { icon: Shuffle, title: 'Squadre equilibrate', text: 'Bianchi contro Neri, divisi bene.' },
+              { icon: BarChart3, title: 'Statistiche', text: 'Gol, MVP, vittorie e forma.' },
             ].map(({ icon: Icon, title, text }) => (
               <li
                 key={title}
-                className="flex items-center gap-4 rounded-2xl bg-slate-950/50 backdrop-blur-sm border border-slate-800/80 px-4 py-3"
+                className="flex items-center gap-3 rounded-2xl bg-slate-950/70 backdrop-blur-sm border border-slate-800/80 px-3.5 py-2.5"
               >
-                <span className="flex-shrink-0 h-10 w-10 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
-                  <Icon className="h-5 w-5" />
+                <span className="flex-shrink-0 h-9 w-9 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+                  <Icon className="h-[18px] w-[18px]" />
                 </span>
                 <span className="min-w-0">
                   <span className="block text-sm font-semibold text-white">{title}</span>
-                  <span className="block text-sm text-slate-400">{text}</span>
+                  <span className="block text-xs text-slate-400">{text}</span>
                 </span>
               </li>
             ))}
           </ul>
-
-          {/* Piccola anteprima: come appare una partita al completo */}
-          <div className="flex items-center gap-3 text-xs text-slate-400" aria-hidden="true">
-            <span className="flex -space-x-2">
-              {['MB', 'AS', 'SC', 'LR', 'GF'].map((i) => (
-                <span
-                  key={i}
-                  className="h-8 w-8 rounded-full bg-slate-800 ring-2 ring-slate-900 flex items-center justify-center text-[10px] font-bold text-emerald-300"
-                >
-                  {i}
-                </span>
-              ))}
-              <span className="h-8 w-8 rounded-full bg-emerald-500 ring-2 ring-slate-900 flex items-center justify-center text-[10px] font-bold text-slate-950">
-                +5
-              </span>
-            </span>
-            <span>10 su 10 · si gioca</span>
-          </div>
         </div>
       </section>
 
