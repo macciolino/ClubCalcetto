@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#020617',
+  themeColor: '#0B0F19',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -32,8 +32,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="it" className={`dark ${inter.variable}`} suppressHydrationWarning style={{ backgroundColor: '#020617', colorScheme: 'dark' }}>
-      <body className="min-h-screen bg-slate-950 text-slate-100 flex flex-col antialiased selection:bg-emerald-500 selection:text-slate-950 body-safe-bottom px-safe" suppressHydrationWarning style={{ backgroundColor: '#020617' }}>
+    <html lang="it" className={`dark ${inter.variable}`} suppressHydrationWarning style={{ backgroundColor: '#0B0F19', colorScheme: 'dark' }}>
+      <body className="min-h-screen bg-slate-950 text-slate-100 flex flex-col antialiased selection:bg-emerald-500 selection:text-slate-950 body-safe-bottom px-safe" suppressHydrationWarning style={{ backgroundColor: '#0B0F19' }}>
         <AuthProvider>
           <Navbar />
           <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-6">

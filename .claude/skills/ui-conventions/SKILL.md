@@ -10,8 +10,16 @@ description: ClubCalcetto UI conventions - theme, shared components (tables, dro
 - ONE theme: dark. `<html class="dark">` with `color-scheme: dark` forced in `layout.tsx` / `globals.css`. There is no
   light theme and no toggle (Tailwind `darkMode: 'class'` is set, but `dark:` variants are not used).
   The phone/OS light mode can only affect native controls (e.g. `<select>` popups) and the browser chrome.
-- Palette: page `slate-950`, cards `slate-900`, borders `slate-800/700`, accent `emerald-500/400`,
-  amber = highlight/MVP, rose = destructive, violet = test mode, orange/sky = in forma / fuori forma.
+- Palette (design system, set in `tailwind.config.ts` by overriding slate-900/950): page `slate-950` = #0B0F19,
+  cards `slate-900` = #131C2E, borders `slate-800` = #1E293B, green `emerald-500` = #10B981 (starters, confirmations,
+  main CTA), amber `amber-500` = #F59E0B (waiting, "Primo a 10"), muted text `slate-400` = #94A3B8.
+  Rose = destructive, violet = test mode, orange/sky = in forma / fuori forma. Never hard-code other hex backgrounds.
+- Day pills (Presenze, Squadre): ONLY the selected day has a background (`bg-emerald-500 text-slate-950`); the
+  others have no border/background, just a small status dot under the date (grey = sign-ups, green = full,
+  amber = first to 10) and a legend.
+- Risky actions ("Ritirati", remove a player) are real buttons with icon + `askConfirm`, never a bare text link.
+- Admin per-row actions on mobile: tap the row → bottom sheet (`fixed inset-0 … items-end sm:items-center`,
+  `rounded-t-2xl sm:rounded-2xl`, big buttons), not rows of tiny icons.
 - Older cards were `rounded-3xl shadow-xl` with `font-black uppercase` titles: replaced by the style below (keep it that way).
 
 ## Current style (approved 2026-11-11, applied to every page)

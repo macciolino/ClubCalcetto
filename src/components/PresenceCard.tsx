@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Presence, Profile } from '@/types/database';
 import { CalendarDay } from '@/lib/utils/dateUtils';
 import { isTimelockActive } from '@/lib/services/presenceService';
-import { Lock, ArrowUp, ArrowDown, UserX, ChevronDown, MoreHorizontal, Check } from 'lucide-react';
+import { askConfirm } from '@/components/ui/Feedback';
+import { Lock, ArrowUp, ArrowDown, UserX, ChevronDown, ChevronRight, MoreHorizontal, Check, LogOut, X } from 'lucide-react';
 
 interface PresenceCardProps {
   day: CalendarDay;
@@ -86,10 +87,26 @@ export function PresenceCard({
   const [showWaitlist, setShowWaitlist] = useState(false);
   const [showManage, setShowManage] = useState(false);
   const [revealedId, setRevealedId] = useState<string | null>(null);
+  const [actionsFor, setActionsFor] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Nome sopra il pallino toccato: si chiude da solo dopo qualche secondo
+  useEffect(() => {
+    if (!revealedId) return;
+    const t = setTimeout(() => setRevealedId(null), 2500);
+    return () => clearTimeout(t);
+  }, [revealedId]);
+
+  // Menu azioni admin: si chiude con Esc
+  useEffect(() => {
+    if (!actionsFor) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setActionsFor(null);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [actionsFor]);
 
   const showAdminActions = mounted && isAdmin;
   const effectiveUserId = mounted ? currentUserId : undefined;
@@ -109,7 +126,16 @@ export function PresenceCard({
   const myWaitIdx = mine ? waitlist.findIndex((p) => p.id === mine.id) : -1;
   const timelockCheck = mounted && !isAdmin ? isTimelockActive(day.dateString) : { locked: false };
   const cancelLocked = Boolean(mine) && timelockCheck.locked;
-  const revealed = enriched.find((p) => p.id === revealedId);
+  const actionTarget = enriched.find((p) => p.id === actionsFor);
+
+  // Ritiro: chiede conferma, così un tocco per sbaglio non toglie il posto
+  const handleWithdraw = async () => {
+    const msg =
+      myStarterIdx >= 0
+        ? `Vuoi ritirarti da ${day.dayName} ${day.dayNumber} ${day.monthName}? Il tuo posto passa al primo in lista d'attesa.`
+        : `Vuoi uscire dalla lista d'attesa di ${day.dayName} ${day.dayNumber} ${day.monthName}?`;
+    if (await askConfirm(msg)) onTogglePresence(day.dateString);
+  };
 
   const availableToAdd = allProfiles.filter((p) => !presences.some((pr) => pr.player_id === p.id));
 
@@ -168,11 +194,11 @@ export function PresenceCard({
             ) : (
               <button
                 type="button"
-                onClick={() => onTogglePresence(day.dateString)}
+                onClick={handleWithdraw}
                 disabled={isToggling}
-                className="text-xs text-slate-400 hover:text-rose-300 underline disabled:opacity-50"
+                className="flex-shrink-0 flex items-center gap-1.5 min-h-[36px] px-3 rounded-lg border border-slate-700 text-xs font-medium text-slate-300 hover:text-rose-300 hover:border-rose-500/40 disabled:opacity-50"
               >
-                Ritirati
+                <LogOut className="h-3.5 w-3.5" /> Ritirati
               </button>
             )}
           </div>
@@ -197,47 +223,57 @@ export function PresenceCard({
         )}
       </div>
 
-      {/* Titolari: anello + dieci pallini */}
+      {/* Titolari: anello e posti liberi, poi i dieci pallini su una griglia a tutta larghezza */}
       <div className="mt-5 flex items-center gap-4">
         <CountRing count={starters.length} />
-        <div className="flex-1 min-w-0">
-          <div className="grid grid-cols-5 gap-1.5 w-fit">
-            {Array.from({ length: MAX }, (_, i) => {
-              const p = starters[i];
-              if (!p) {
-                return (
-                  <span
-                    key={`free-${i}`}
-                    className="h-8 w-8 rounded-full border-2 border-dashed border-slate-700"
-                    aria-label="Posto libero"
-                  />
-                );
-              }
-              const isMe = p.player_id === effectiveUserId;
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => setRevealedId((id) => (id === p.id ? null : p.id))}
-                  title={p.name}
-                  aria-label={p.name}
-                  className={`h-8 w-8 rounded-full flex items-center justify-center text-[10px] font-black ${
-                    isMe ? 'bg-emerald-500 text-slate-950 ring-2 ring-emerald-300' : 'bg-slate-800 text-emerald-300 border border-slate-700'
-                  } ${revealedId === p.id ? 'ring-2 ring-white' : ''}`}
-                >
-                  {initialsOf(p.name)}
-                </button>
-              );
-            })}
-          </div>
-          {revealed ? (
-            <p className="mt-1.5 text-xs text-white font-semibold truncate">{revealed.name}</p>
-          ) : (
-            <p className="mt-1.5 text-xs text-slate-400">
-              {isFull ? 'Completo' : `${MAX - starters.length} ${MAX - starters.length === 1 ? 'posto libero' : 'posti liberi'}`}
-            </p>
-          )}
+        <div className="text-sm min-w-0">
+          <p className="font-semibold text-white">
+            {isFull ? 'Al completo' : `${MAX - starters.length} ${MAX - starters.length === 1 ? 'posto libero' : 'posti liberi'}`}
+          </p>
+          <p className="text-slate-400">{waitlist.length > 0 ? `${waitlist.length} in lista d’attesa` : 'Tocca un pallino per il nome'}</p>
         </div>
+      </div>
+      <div className="mt-4 grid grid-cols-5 gap-y-3 justify-items-center max-w-sm">
+        {Array.from({ length: MAX }, (_, i) => {
+          const p = starters[i];
+          if (!p) {
+            return (
+              <span
+                key={`free-${i}`}
+                className="h-10 w-10 rounded-full border-2 border-dashed border-slate-700"
+                aria-label="Posto libero"
+              />
+            );
+          }
+          const isMe = p.player_id === effectiveUserId;
+          const open = revealedId === p.id;
+          const col = i % 5;
+          const bubblePos = col === 0 ? 'left-0' : col === 4 ? 'right-0' : 'left-1/2 -translate-x-1/2';
+          return (
+            <div key={p.id} className="relative">
+              <button
+                type="button"
+                onClick={() => setRevealedId((id) => (id === p.id ? null : p.id))}
+                aria-label={p.name}
+                aria-describedby={open ? `tip-${p.id}` : undefined}
+                className={`h-10 w-10 rounded-full flex items-center justify-center text-[11px] font-bold transition-shadow ${
+                  isMe ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-emerald-300'
+                } ${open ? 'ring-2 ring-white' : ''}`}
+              >
+                {initialsOf(p.name)}
+              </button>
+              {open && (
+                <span
+                  id={`tip-${p.id}`}
+                  role="tooltip"
+                  className={`absolute bottom-full mb-2 z-20 whitespace-nowrap rounded-lg bg-white px-2.5 py-1 text-xs font-semibold text-slate-950 shadow-lg animate-in ${bubblePos}`}
+                >
+                  {p.name}
+                </span>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* Nomi dei titolari, su richiesta */}
@@ -289,37 +325,30 @@ export function PresenceCard({
       {/* Strumenti admin, solo su richiesta */}
       {showAdminActions && showManage && (
         <div className="mt-4 pt-4 border-t border-slate-800 space-y-3">
-          <p className="text-xs font-semibold text-slate-400">Gestione admin</p>
+          <p className="text-xs font-semibold text-slate-400">Gestione admin · tocca un giocatore per le azioni</p>
           {enriched.length === 0 && <p className="text-xs text-slate-500">Nessun iscritto.</p>}
-          <ul className="space-y-1">
-            {enriched.map((p) => {
+          <ul className="divide-y divide-slate-800 rounded-xl bg-slate-950/50">
+            {enriched.map((p, i) => {
               const isStarter = p.status === 'confirmed';
               return (
-                <li key={p.id} className="flex items-center gap-2 text-xs">
-                  <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isStarter ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-                  <span className="flex-1 min-w-0 truncate text-slate-200">{p.name}</span>
-                  {onSetOverride && (
-                    <button
-                      type="button"
-                      onClick={() => onSetOverride(p.id, isStarter ? 'waitlist' : 'starter')}
-                      className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800"
-                      title={isStarter ? "Sposta in lista d'attesa" : 'Fai titolare'}
-                      aria-label={isStarter ? `Sposta ${p.name} in lista d'attesa` : `Fai titolare ${p.name}`}
+                <li key={p.id}>
+                  <button
+                    type="button"
+                    onClick={() => setActionsFor(p.id)}
+                    className="w-full flex items-center gap-3 px-3 py-3 text-left text-sm hover:bg-slate-800/60 first:rounded-t-xl last:rounded-b-xl"
+                    aria-haspopup="dialog"
+                  >
+                    <span className="w-5 text-right tabular-nums text-xs text-slate-500">{i + 1}</span>
+                    <span className="flex-1 min-w-0 truncate text-slate-200">{p.name}</span>
+                    <span
+                      className={`flex-shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full ${
+                        isStarter ? 'bg-emerald-500/15 text-emerald-300' : 'bg-amber-500/15 text-amber-300'
+                      }`}
                     >
-                      {isStarter ? <ArrowDown className="h-3.5 w-3.5" /> : <ArrowUp className="h-3.5 w-3.5" />}
-                    </button>
-                  )}
-                  {onRemovePresence && (
-                    <button
-                      type="button"
-                      onClick={() => onRemovePresence(p.id)}
-                      className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-slate-800"
-                      title="Rimuovi"
-                      aria-label={`Rimuovi ${p.name}`}
-                    >
-                      <UserX className="h-3.5 w-3.5" />
-                    </button>
-                  )}
+                      {isStarter ? 'Titolare' : 'In attesa'}
+                    </span>
+                    <ChevronRight className="h-4 w-4 text-slate-500 flex-shrink-0" />
+                  </button>
                 </li>
               );
             })}
@@ -356,6 +385,69 @@ export function PresenceCard({
               Azzera presenze del giorno
             </button>
           )}
+        </div>
+      )}
+      {showAdminActions && actionTarget && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center modal-safe" onClick={() => setActionsFor(null)}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Azioni per ${actionTarget.name}`}
+            className="w-full sm:max-w-sm bg-slate-900 border border-slate-800 rounded-t-2xl sm:rounded-2xl p-4 pb-6 space-y-2 shadow-2xl animate-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-3 px-1 pb-2">
+              <div className="min-w-0">
+                <p className="text-base font-semibold text-white truncate">{actionTarget.name}</p>
+                <p className="text-xs text-slate-400 capitalize">
+                  {day.dayName} {day.dayNumber} {day.monthName} · {actionTarget.status === 'confirmed' ? 'titolare' : 'in lista d’attesa'}
+                </p>
+              </div>
+              <button type="button" onClick={() => setActionsFor(null)} aria-label="Chiudi" className="p-2 -m-1 text-slate-400 hover:text-white">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {onSetOverride && (
+              <button
+                type="button"
+                onClick={() => {
+                  onSetOverride(actionTarget.id, actionTarget.status === 'confirmed' ? 'waitlist' : 'starter');
+                  setActionsFor(null);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-slate-950/60 hover:bg-slate-800 text-sm font-medium text-white"
+              >
+                {actionTarget.status === 'confirmed' ? (
+                  <>
+                    <ArrowDown className="h-4 w-4 text-amber-300" /> Sposta in lista d&apos;attesa
+                  </>
+                ) : (
+                  <>
+                    <ArrowUp className="h-4 w-4 text-emerald-300" /> Fai titolare
+                  </>
+                )}
+              </button>
+            )}
+            {onRemovePresence && (
+              <button
+                type="button"
+                onClick={async () => {
+                  const target = actionTarget;
+                  setActionsFor(null);
+                  if (await askConfirm(`Rimuovere ${target.name} da ${day.dayName} ${day.dayNumber} ${day.monthName}?`)) onRemovePresence(target.id);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-slate-950/60 hover:bg-slate-800 text-sm font-medium text-rose-300"
+              >
+                <UserX className="h-4 w-4" /> Rimuovi dal giorno
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setActionsFor(null)}
+              className="w-full px-4 py-3 rounded-xl text-sm font-medium text-slate-400 hover:text-white"
+            >
+              Annulla
+            </button>
+          </div>
         </div>
       )}
     </div>

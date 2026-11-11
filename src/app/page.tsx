@@ -28,8 +28,8 @@ import { formatForm } from '@/lib/utils/formUtils';
 import { reconcileTeams } from '@/lib/utils/teamUtils';
 import { CountRing } from '@/components/PresenceCard';
 import { PageSkeleton } from '@/components/ui/Skeleton';
-import { notify } from '@/components/ui/Feedback';
-import { ArrowRight, Check, Clock, Lock, MapPin } from 'lucide-react';
+import { notify, askConfirm } from '@/components/ui/Feedback';
+import { ArrowRight, Check, Clock, Lock, LogOut, MapPin } from 'lucide-react';
 
 /** "oggi", "domani", the weekday within a week ("mercoledì"), otherwise "mer 18 nov". */
 function dayLabel(date: string, today: string): string {
@@ -290,8 +290,19 @@ export default function HomePage() {
                   <Lock className="h-3.5 w-3.5" /> Ritiri bloccati
                 </span>
               ) : (
-                <button type="button" onClick={handleToggle} disabled={busy} className="text-sm text-slate-400 hover:text-rose-300 underline disabled:opacity-50">
-                  Ritirati
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const msg =
+                      myStarterIdx >= 0
+                        ? "Vuoi ritirarti dalla partita? Il tuo posto passa al primo in lista d'attesa."
+                        : "Vuoi uscire dalla lista d'attesa?";
+                    if (await askConfirm(msg)) handleToggle();
+                  }}
+                  disabled={busy}
+                  className="flex-shrink-0 flex items-center gap-1.5 min-h-[36px] px-3 rounded-lg border border-slate-700 text-sm font-medium text-slate-300 hover:text-rose-300 hover:border-rose-500/40 disabled:opacity-50"
+                >
+                  <LogOut className="h-4 w-4" /> Ritirati
                 </button>
               )}
             </div>

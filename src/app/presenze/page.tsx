@@ -51,7 +51,6 @@ export default function PresenzePage() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [openUntil, setOpenUntil] = useState<string>('');
   const [selectedDayString, setSelectedDayString] = useState<string>(days[0]?.dateString || '');
-  const [viewMode, setViewMode] = useState<'focus' | 'grid'>('focus');
   const [busyDate, setBusyDate] = useState<string | null>(null);
   const [isSavingCalendar, setIsSavingCalendar] = useState(false);
 
@@ -332,85 +331,52 @@ export default function PresenzePage() {
                   type="button"
                   onClick={() => handleSelectDay(day.dateString)}
                   aria-pressed={isSelected}
-                  title={locked ? 'Iscrizioni non ancora aperte' : undefined}
-                  className={`relative flex-shrink-0 flex flex-col items-center w-[4.5rem] sm:w-20 py-3 rounded-2xl transition-colors ${
-                    isSelected
-                      ? 'bg-emerald-500 text-slate-950'
-                      : locked
-                      ? 'bg-slate-900/60 text-slate-500'
-                      : 'bg-slate-900 text-slate-300 hover:bg-slate-800'
+                  aria-label={`${day.dayName} ${day.dayNumber} ${day.monthName}: ${locked ? 'chiuso' : `${confirmedCount} su 10`}${isFirstToTen ? ', primo a 10' : ''}`}
+                  title={locked ? 'Iscrizioni non ancora aperte' : `${confirmedCount}/10`}
+                  className={`flex-shrink-0 flex flex-col items-center w-14 sm:w-16 py-2.5 rounded-2xl transition-colors ${
+                    isSelected ? 'bg-emerald-500 text-slate-950' : locked ? 'text-slate-600' : 'text-slate-300 hover:bg-slate-900'
                   }`}
                 >
-                  {isFirstToTen && (
-                    <span
-                      className={`absolute top-1.5 right-1.5 h-2 w-2 rounded-full ${isSelected ? 'bg-slate-950' : 'bg-amber-400'}`}
-                      title="Primo a 10"
-                      aria-label="Primo a 10"
-                    />
-                  )}
-                  <span className={`text-xs font-medium capitalize ${isSelected ? 'text-slate-900' : 'text-slate-400'}`}>
+                  <span className={`text-xs font-medium capitalize ${isSelected ? 'text-slate-900' : locked ? 'text-slate-600' : 'text-slate-400'}`}>
                     {day.dayName.slice(0, 3)}
                   </span>
                   <span className="text-xl font-bold leading-tight mt-0.5">{day.dayNumber}</span>
-                  <span
-                    className={`mt-1 flex items-center gap-1 text-xs font-semibold tabular-nums ${
-                      isSelected ? 'text-slate-900' : isFull ? 'text-emerald-400' : 'text-slate-400'
-                    }`}
-                  >
-                    {locked ? <Lock className="h-3 w-3" aria-label="Chiuso" /> : `${confirmedCount}/10`}
+                  {/* Pallino di stato: ambra = primo a 10, verde = completo, grigio = qualcuno iscritto */}
+                  <span className="mt-1.5 h-1.5 flex items-center" aria-hidden="true">
+                    {locked ? (
+                      <Lock className="h-3 w-3" />
+                    ) : isFirstToTen || isFull || confirmedCount > 0 ? (
+                      <span
+                        className={`h-1.5 w-1.5 rounded-full ${
+                          isSelected ? 'bg-slate-950' : isFirstToTen ? 'bg-amber-500' : isFull ? 'bg-emerald-500' : 'bg-slate-500'
+                        }`}
+                      />
+                    ) : null}
                   </span>
                 </button>
               </React.Fragment>
             );
           })}
         </div>
-        <p className="text-xs text-slate-400 flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-amber-400" aria-hidden="true" /> primo giorno arrivato a 10 nella settimana
+        <p className="text-xs text-slate-400 flex flex-wrap items-center gap-x-4 gap-y-1">
+          <span className="flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-slate-500" aria-hidden="true" /> iscritti
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" /> completo
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true" /> primo a 10 della settimana
+          </span>
         </p>
       </section>
 
-      {/* Schede dei giorni */}
-      <section className="space-y-4" aria-labelledby="days-title">
-        <div className="flex items-center justify-between gap-3">
-          <h2 id="days-title" className="text-sm font-semibold text-slate-300">
-            {viewMode === 'focus' ? 'Giorno scelto' : 'Tutti i giorni'}
-          </h2>
-          <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl text-xs" role="group" aria-label="Vista">
-            {(
-              [
-                ['focus', 'Giorno scelto'],
-                ['grid', 'Tutti i giorni'],
-              ] as const
-            ).map(([mode, label]) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => setViewMode(mode)}
-                aria-pressed={viewMode === mode}
-                className={`px-3 py-1.5 rounded-lg font-semibold transition-colors ${
-                  viewMode === mode ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {viewMode === 'focus' ? (
-          focusDay ? (
-            <div className="max-w-xl mx-auto w-full animate-in fade-in duration-200">
-              <PresenceCard {...cardProps(focusDay)} />
-            </div>
-          ) : null
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-in fade-in duration-200">
-            {days.map((day) => (
-              <PresenceCard key={day.dateString} {...cardProps(day)} />
-            ))}
-          </div>
-        )}
-      </section>
+      {/* Scheda del giorno scelto nel calendario */}
+      {focusDay && (
+        <section aria-label="Giorno scelto" className="max-w-xl mx-auto w-full animate-in" key={focusDay.dateString}>
+          <PresenceCard {...cardProps(focusDay)} />
+        </section>
+      )}
     </div>
   );
 }
