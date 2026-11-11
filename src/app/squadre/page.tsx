@@ -25,6 +25,7 @@ import {
   confirmTeams,
   applyTeamSubstitutions,
   subscribePresences, 
+  subscribePresencesRange,
   subscribeProfiles 
 } from '@/lib/firebase/firestoreService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
@@ -32,8 +33,9 @@ import { getStoredPlayers } from '@/lib/services/playerService';
 import { getOfficialMatchDate } from '@/lib/services/presenceService';
 import { balanceTeams, BalancedTeamsResult, summarizeTeams } from '@/lib/algorithm/teamBalancer';
 import { VirtualPitch } from '@/components/VirtualPitch';
-import { StatBadge } from '@/components/StatBadge';
-import { formatItalianDate } from '@/lib/utils/dateUtils';
+import { formatItalianDate, getCalendarDays } from '@/lib/utils/dateUtils';
+import Link from 'next/link';
+import { CollapsibleCard } from '@/components/CollapsibleCard';
 import { generateWhatsAppMessage, getWhatsAppShareUrl, copyToClipboard } from '@/lib/utils/whatsapp';
 import { toPng } from 'html-to-image';
 import { TacticalAnalysisResult } from '@/lib/gemini/client';
@@ -41,22 +43,18 @@ import {
   Trophy, 
   Sparkles, 
   Share2, 
-  Copy, 
   Download, 
   MapPin, 
-  Clock, 
-  Coins, 
   Check, 
   AlertCircle,
   Shuffle,
   Shield,
-  Zap,
   Loader2,
-  Bot,
   Lock,
   BadgeCheck,
   Pencil,
-  ArrowLeftRight
+  ArrowLeftRight,
+  ArrowRight
 } from 'lucide-react';
 
 
@@ -481,543 +479,408 @@ function SquadreContent() {
     }
   };
 
+  // Pillole delle date: i giorni del calendario presenze (+ la data aperta), con i titolari di ciascuno
+  const calendarDays = React.useMemo(() => getCalendarDays(), []);
+  const [dayCounts, setDayCounts] = useState<Map<string, number>>(new Map());
+  useEffect(() => {
+    if (!isFirebaseConfigured || calendarDays.length === 0) return;
+    const unsub = subscribePresencesRange(calendarDays[0].dateString, calendarDays[calendarDays.length - 1].dateString, (list) => {
+      const m = new Map<string, number>();
+      list.forEach((pr) => pr.status === 'confirmed' && m.set(pr.date, (m.get(pr.date) || 0) + 1));
+      setDayCounts(m);
+    });
+    return () => unsub();
+  }, [calendarDays]);
+  const officialDate = mounted ? getOfficialMatchDate() : '';
+  const pillDays = Array.from(new Set([...calendarDays.map((d) => d.dateString), ...(selectedDate ? [selectedDate] : [])])).sort();
+
   const costPerPerson = (Number(totalCost || 80) / 10).toFixed(2);
   const selectedField = fields.find((f) => fieldLabel(f) === matchLocation || f.name === matchLocation);
 
+  // Stato della partita in una frase (barra di stato)
+  const status: { tone: 'done' | 'ok' | 'wait' | 'todo'; title: string; detail: string } = isCompleted
+    ? { tone: 'done', title: 'Partita archiviata', detail: 'Squadre bloccate: risultato e marcatori sono nello Storico.' }
+    : isConfirmed
+    ? { tone: 'ok', title: 'Partita confermata', detail: 'Le squadre restano queste salvo sostituzioni o modifiche.' }
+    : teamRecord
+    ? {
+        tone: 'todo',
+        title: isClientAdmin ? 'Squadre pronte, da confermare' : 'Squadre provvisorie',
+        detail: isClientAdmin ? 'Controlla il campo e conferma: i giocatori ricevono l’avviso.' : 'Un admin deve ancora confermare la partita.',
+      }
+    : starterProfiles.length >= 10
+    ? {
+        tone: 'todo',
+        title: isClientAdmin ? 'Pronti per generare le squadre' : 'Squadre in arrivo',
+        detail: isClientAdmin ? '10 titolari su 10: l’app li divide in due squadre equilibrate.' : '10 titolari su 10: un admin genera a breve le squadre.',
+      }
+    : {
+        tone: 'wait',
+        title: `In attesa dei titolari (${starterProfiles.length}/10)`,
+        detail: `Mancano ${10 - starterProfiles.length} giocatori: le squadre si generano a quota 10.`,
+      };
+  const statusIcon =
+    status.tone === 'done' ? (
+      <Lock className="h-5 w-5 text-slate-300" />
+    ) : status.tone === 'ok' ? (
+      <BadgeCheck className="h-5 w-5 text-emerald-400" />
+    ) : status.tone === 'todo' ? (
+      <Shield className="h-5 w-5 text-amber-300" />
+    ) : (
+      <AlertCircle className="h-5 w-5 text-slate-400" />
+    );
+
+  const generateLabel = teamRecord ? 'Ribilancia' : 'Genera squadre';
+  const primaryBtn =
+    'w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-xl text-sm transition-colors disabled:opacity-40';
+  const secondaryBtn =
+    'w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 border border-slate-700 text-slate-200 hover:bg-slate-800 font-semibold rounded-xl text-sm transition-colors disabled:opacity-40';
+
+  // Barre di confronto Bianchi / Neri
+  const compareRows = balancedResult
+    ? ([
+        ['Media', balancedResult.whiteStats.overallAvg, balancedResult.blackStats.overallAvg],
+        ['Difesa', balancedResult.whiteStats.defenseAvg, balancedResult.blackStats.defenseAvg],
+        ['Attacco', balancedResult.whiteStats.attackAvg, balancedResult.blackStats.attackAvg],
+        ['Resistenza', balancedResult.whiteStats.staminaAvg, balancedResult.blackStats.staminaAvg],
+        ['Tecnica', balancedResult.whiteStats.techniqueAvg, balancedResult.blackStats.techniqueAvg],
+      ] as const)
+    : [];
+  const fmtNum = (n: number) => String(n).replace('.', ',');
+
+  const teamList = (team: Profile[], label: string, dot: string) => (
+    <div className="min-w-0">
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <span className="text-sm font-semibold text-white flex items-center gap-1.5 min-w-0">
+          <span className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${dot}`} aria-hidden="true" />
+          <span className="truncate">{label}</span>
+        </span>
+      </div>
+      <ul className="space-y-1.5 text-sm">
+        {team.map((p, i) => {
+          const f = forms.get(p.id) || 0;
+          return (
+            <li key={p.id} className="flex flex-col sm:flex-row sm:items-center sm:gap-2 min-w-0">
+              <span className="sm:w-12 flex-shrink-0 text-[10px] font-semibold text-slate-500">{slotLabel(i, fixedKeeper)}</span>
+              <span className="truncate text-slate-200">
+                {p.full_name}
+                {f ? (
+                  <span className={`ml-1.5 text-[11px] font-semibold ${f > 0 ? 'text-orange-300' : 'text-sky-300'}`}>
+                    {f > 0 ? '🔥' : '❄️'}
+                    {formatForm(f)}
+                  </span>
+                ) : null}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+
   return (
     <div className="space-y-6 pb-16">
-      {/* Titolo della pagina (senza riquadro) */}
-      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div className="space-y-1.5">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Squadre</h1>
-          <p className="text-sm text-slate-400 max-w-xl leading-relaxed">
-            Bianchi contro Neri per la data scelta: l&apos;app divide i 10 titolari in due squadre equilibrate, poi un admin le conferma.
-          </p>
-        </div>
-
-        {/* Titolari pronti */}
-        <div className="text-sm sm:text-right">
-          <span className="text-slate-400">Titolari </span>
-          <span className={`font-semibold tabular-nums ${starterProfiles.length >= 10 ? 'text-emerald-400' : 'text-amber-400'}`}>
-            {starterProfiles.length}/10
-          </span>
-        </div>
+      {/* 1. Titolo + riepilogo della partita in una riga */}
+      <header className="space-y-2">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Squadre</h1>
+        <p className="text-sm text-slate-300 flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="capitalize">{formatItalianDate(selectedDate)}</span>
+          <span className="text-slate-600" aria-hidden="true">·</span>
+          <span className="tabular-nums">{matchTime}</span>
+          {matchLocation && (
+            <>
+              <span className="text-slate-600" aria-hidden="true">·</span>
+              <span>{selectedField?.name || matchLocation}</span>
+            </>
+          )}
+          <span className="text-slate-600" aria-hidden="true">·</span>
+          <span className="text-emerald-300 font-semibold tabular-nums">€{costPerPerson.replace('.', ',')} a testa</span>
+        </p>
+        {selectedField?.address && (
+          <a
+            href={
+              selectedField.maps_url ||
+              `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${selectedField.name} ${selectedField.address}`)}`
+            }
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-start gap-1 text-xs text-slate-400 hover:text-emerald-300"
+          >
+            <MapPin className="h-3.5 w-3.5 flex-shrink-0 mt-px" />
+            <span>{selectedField.address}</span>
+          </a>
+        )}
       </header>
 
-      {/* Form Impostazioni Evento (Admin & Match Info) */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-          <h2 className="text-xs font-bold text-slate-300 flex items-center gap-2">
-            <Clock className="h-4 w-4 text-emerald-400" />
-            Configurazione Partita & Luogo
-          </h2>
-          <span className="text-xs font-mono text-emerald-400 font-bold">
-            €{costPerPerson} a testa
-          </span>
+      {/* 2. Scelta della data: pillole come in Presenze */}
+      <section aria-label="Data della partita" className="space-y-2">
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
+          {pillDays.map((d) => {
+            const [y, m, dd] = d.split('-').map(Number);
+            const dt = new Date(y, m - 1, dd);
+            const selected = d === selectedDate;
+            const count = d === selectedDate ? confirmedPresences.length : dayCounts.get(d) || 0;
+            const official = d === officialDate;
+            return (
+              <button
+                key={d}
+                type="button"
+                onClick={() => setSelectedDate(d)}
+                aria-pressed={selected}
+                className={`relative flex-shrink-0 flex flex-col items-center w-[4.5rem] py-2.5 rounded-2xl transition-colors ${
+                  selected ? 'bg-emerald-500 text-slate-950' : 'bg-slate-900 text-slate-300 hover:bg-slate-800'
+                }`}
+              >
+                {official && (
+                  <span
+                    className={`absolute top-1.5 right-1.5 h-2 w-2 rounded-full ${selected ? 'bg-slate-950' : 'bg-emerald-400'}`}
+                    title="Giorno ufficiale"
+                    aria-label="Giorno ufficiale"
+                  />
+                )}
+                <span className={`text-xs font-medium capitalize ${selected ? 'text-slate-900' : 'text-slate-400'}`}>
+                  {dt.toLocaleDateString('it-IT', { weekday: 'short' }).replace('.', '')}
+                </span>
+                <span className="text-xl font-bold leading-tight">{dd}</span>
+                <span
+                  className={`text-xs font-semibold tabular-nums ${
+                    selected ? 'text-slate-900' : count >= 10 ? 'text-emerald-400' : 'text-slate-500'
+                  }`}
+                >
+                  {count}/10
+                </span>
+              </button>
+            );
+          })}
         </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-          {/* Selezione Data */}
-          <div>
-            <label className="block text-slate-400 font-semibold mb-1">Data Partita</label>
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+          <span className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-emerald-400" aria-hidden="true" /> giorno ufficiale
+          </span>
+          <label className="flex items-center gap-2">
+            <span>Altra data</span>
             <input
               type="date"
               value={selectedDate}
-              onChange={(e) => {
-                setSelectedDate(e.target.value);
-              }}
-              className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-medium focus:outline-none focus:border-emerald-500"
+              onChange={(e) => e.target.value && setSelectedDate(e.target.value)}
+              className="px-2 py-1 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:border-emerald-500"
             />
-          </div>
+          </label>
+        </div>
+      </section>
 
-          {/* Orario */}
-          <div>
-            <label className="block text-slate-400 font-semibold mb-1">Ora Inizio</label>
-            <input
-              type="time"
-              value={matchTime}
-              onChange={(e) => {
-                markDirty('time');
-                setMatchTime(e.target.value);
-              }}
-              disabled={!isClientAdmin}
-              className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-medium focus:outline-none focus:border-emerald-500 disabled:opacity-70"
-            />
-          </div>
-
-          {/* Luogo Campo con Dropdown Centri Censiti */}
-          <div>
-            <label className="block text-slate-400 font-semibold mb-1">Luogo / Campo</label>
-            {fields.length > 0 ? (
-              <select
-                value={matchLocation}
-                onChange={(e) => {
-                  markDirty('location');
-                  setMatchLocation(e.target.value);
-                }}
-                disabled={!isClientAdmin}
-                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-medium focus:outline-none focus:border-emerald-500 disabled:opacity-70 text-xs"
-              >
-                {matchLocation && !fields.some((f) => fieldLabel(f) === matchLocation) && (
-                  <option value={matchLocation}>{matchLocation}</option>
-                )}
-                {fields.map((f) => (
-                  <option key={f.id} value={fieldLabel(f)}>
-                    {f.name}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                type="text"
-                value={matchLocation}
-                onChange={(e) => {
-                  markDirty('location');
-                  setMatchLocation(e.target.value);
-                }}
-                disabled={!isClientAdmin}
-                placeholder="Es. Centro Sportivo"
-                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-medium focus:outline-none focus:border-emerald-500 disabled:opacity-70 text-xs"
-              />
-            )}
-            {selectedField?.address && (
-              <a
-                href={
-                  selectedField.maps_url ||
-                  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${selectedField.name} ${selectedField.address}`)}`
-                }
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-1 flex items-start gap-1 text-[11px] text-emerald-300 hover:underline"
-              >
-                <MapPin className="h-3.5 w-3.5 flex-shrink-0 mt-px" />
-                <span>{selectedField.address}</span>
-              </a>
-            )}
-          </div>
-
-          {/* Costo Totale */}
-          <div>
-            <label className="block text-slate-400 font-semibold mb-1">Costo Totale (€)</label>
-            <NumberInput
-              value={totalCost}
-              onValueChange={(v) => {
-                markDirty('cost');
-                setTotalCost(v);
-              }}
-              decimal
-              disabled={!isClientAdmin}
-              className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-medium focus:outline-none focus:border-emerald-500 disabled:opacity-70"
-            />
+      {/* 3. Stato della partita + un solo pulsante principale */}
+      <section className="rounded-2xl bg-slate-900 border border-slate-800 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-start gap-3 min-w-0">
+          <span className="mt-0.5 flex-shrink-0">{statusIcon}</span>
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold text-white">{status.title}</h2>
+            <p className="text-sm text-slate-400 mt-0.5">
+              {status.detail}
+              {isConfirmed && !isCompleted && isClientAdmin && (
+                <>
+                  {' '}
+                  <button type="button" onClick={handleUnconfirmMatch} className="text-slate-300 underline">
+                    Annulla conferma
+                  </button>
+                </>
+              )}
+            </p>
           </div>
         </div>
+        {isClientAdmin && !isCompleted && (
+          <div className="flex flex-col-reverse sm:flex-row gap-2 flex-shrink-0">
+            <button
+              type="button"
+              onClick={handleGenerateTeams}
+              disabled={isGenerating || starterProfiles.length < 10}
+              className={teamRecord ? secondaryBtn : primaryBtn}
+            >
+              {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shuffle className="h-4 w-4" />}
+              {generateLabel}
+            </button>
+            {teamRecord && !isConfirmed && (
+              <button type="button" onClick={handleConfirmMatch} disabled={isConfirming || !teamsComplete} className={primaryBtn}>
+                {isConfirming ? <Loader2 className="h-4 w-4 animate-spin" /> : <BadgeCheck className="h-4 w-4" />}
+                Conferma partita
+              </button>
+            )}
+          </div>
+        )}
+      </section>
 
-        {isClientAdmin && (
+      {/* 2. Dettagli modificabili: solo admin, chiusi di default */}
+      {isClientAdmin && (
+        <CollapsibleCard
+          title="Modifica dettagli partita"
+          icon={<Pencil className="h-4 w-4 text-slate-400" />}
+          summary={hasCustomValues ? 'Costo o orario personalizzati per questa partita' : 'Orario, campo e costo di questa partita'}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+            <label className="block">
+              <span className="block text-xs text-slate-400 font-semibold mb-1">Ora inizio</span>
+              <input
+                type="time"
+                value={matchTime}
+                onChange={(e) => {
+                  markDirty('time');
+                  setMatchTime(e.target.value);
+                }}
+                className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
+              />
+            </label>
+            <label className="block">
+              <span className="block text-xs text-slate-400 font-semibold mb-1">Campo</span>
+              {fields.length > 0 ? (
+                <select
+                  value={matchLocation}
+                  onChange={(e) => {
+                    markDirty('location');
+                    setMatchLocation(e.target.value);
+                  }}
+                  className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
+                >
+                  {matchLocation && !fields.some((f) => fieldLabel(f) === matchLocation) && (
+                    <option value={matchLocation}>{matchLocation}</option>
+                  )}
+                  {fields.map((f) => (
+                    <option key={f.id} value={fieldLabel(f)}>
+                      {f.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  value={matchLocation}
+                  onChange={(e) => {
+                    markDirty('location');
+                    setMatchLocation(e.target.value);
+                  }}
+                  placeholder="Es. Centro Sportivo"
+                  className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
+                />
+              )}
+            </label>
+            <label className="block">
+              <span className="block text-xs text-slate-400 font-semibold mb-1">Costo totale (€)</span>
+              <NumberInput
+                value={totalCost}
+                onValueChange={(v) => {
+                  markDirty('cost');
+                  setTotalCost(v);
+                }}
+                decimal
+                className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
+              />
+            </label>
+          </div>
           <p className="text-xs text-slate-400">
             {hasCustomValues ? (
               <>
-                Questa partita ha costo/orario personalizzati.{' '}
-                <button
-                  type="button"
-                  onClick={handleResetToStandard}
-                  className="text-emerald-400 underline font-semibold"
-                >
+                Questa partita ha costo o orario personalizzati.{' '}
+                <button type="button" onClick={handleResetToStandard} className="text-emerald-400 underline font-semibold">
                   Usa valori standard
                 </button>
               </>
             ) : (
-              'Costo e orario seguono i valori standard (Admin → Campi & Parametri). Se li modifichi qui valgono solo per questa partita.'
+              'Seguono i valori standard (Impostazioni → Partita). Se li cambi qui valgono solo per questa partita; si salvano da soli.'
             )}
           </p>
-        )}
+        </CollapsibleCard>
+      )}
 
-        {/* Stato squadre + pulsanti admin */}
-        <div className="pt-2 space-y-3">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
-            {starterProfiles.length >= 10 ? (
-              <span className="text-emerald-400 font-semibold flex items-center gap-1.5">
-                <Check className="h-4 w-4" /> 10 titolari per il {formatItalianDate(selectedDate)}
-              </span>
-            ) : (
-              <span className="text-amber-400 font-semibold flex items-center gap-1.5">
-                <AlertCircle className="h-4 w-4" /> Mancano {10 - starterProfiles.length} giocatori per arrivare a 10
-              </span>
-            )}
-            {isCompleted ? (
-              <span className="text-slate-300 font-semibold flex items-center gap-1.5">
-                <Lock className="h-4 w-4 text-slate-400" /> Partita archiviata: squadre bloccate
-              </span>
-            ) : isConfirmed ? (
-              <span className="text-emerald-300 font-semibold flex items-center gap-1.5">
-                <BadgeCheck className="h-4 w-4" /> Partita confermata
-                {isClientAdmin && (
-                  <button type="button" onClick={handleUnconfirmMatch} className="ml-1 text-slate-400 underline font-normal">
-                    annulla
-                  </button>
-                )}
-              </span>
-            ) : teamRecord ? (
-              <span className="text-slate-400 flex items-center gap-1.5">
-                <Shield className="h-4 w-4" /> Squadre salvate, partita non ancora confermata
-              </span>
-            ) : null}
-          </div>
-
-          {isClientAdmin && !isCompleted ? (
-            <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
-              <button
-                type="button"
-                onClick={handleGenerateTeams}
-                disabled={isGenerating || starterProfiles.length < 10}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs border border-slate-700 transition-all disabled:opacity-40 cursor-pointer"
-              >
-                {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shuffle className="h-4 w-4" />}
-                {teamRecord ? 'Ribilancia Squadre' : 'Genera Squadre Bilanciate'}
-              </button>
-              {teamRecord && !isConfirmed && (
-                <button
-                  type="button"
-                  onClick={handleConfirmMatch}
-                  disabled={isConfirming || !teamsComplete}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition-all disabled:opacity-40 cursor-pointer"
-                >
-                  {isConfirming ? <Loader2 className="h-4 w-4 animate-spin" /> : <BadgeCheck className="h-4 w-4" />}
-                  Conferma Partita
-                </button>
-              )}
-            </div>
-          ) : !isClientAdmin && !teamRecord ? (
-            <p className="text-xs text-slate-500 italic">Le squadre vengono generate e confermate dagli amministratori.</p>
-          ) : null}
-        </div>
-      </div>
-
+      {/* 7. Messaggi */}
       {errorMsg && (
-        <div className="p-3 text-xs bg-rose-500/15 border border-rose-500/30 text-rose-300 rounded-2xl flex items-center gap-2">
-          <AlertCircle className="h-4 w-4 flex-shrink-0" />
+        <div className="rounded-xl bg-rose-500/10 px-4 py-3 text-sm text-rose-200 flex items-start gap-2">
+          <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
           <span>{errorMsg}</span>
         </div>
       )}
-
       {infoMsg && (
-        <div className="p-3 text-xs bg-emerald-500/15 border border-emerald-500/30 text-emerald-200 rounded-2xl flex items-center gap-2">
-          <Check className="h-4 w-4 flex-shrink-0" />
+        <div className="rounded-xl bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200 flex items-start gap-2">
+          <Check className="h-4 w-4 flex-shrink-0 mt-0.5" />
           <span>{infoMsg}</span>
         </div>
       )}
-
-      {/* Sostituzioni avvenute (chi si è ritirato e chi ha preso il posto) */}
+      {copySuccess && (
+        <div className="rounded-xl bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200 flex items-start gap-2">
+          <Check className="h-4 w-4 flex-shrink-0 mt-0.5" />
+          <span>Testo copiato: si apre WhatsApp per incollarlo.</span>
+        </div>
+      )}
       {!isCompleted && (teamRecord?.substitutions?.length || reconciled?.substitutions.length) ? (
-        <div className="p-3 text-xs bg-amber-500/10 border border-amber-500/30 text-amber-200 rounded-2xl space-y-1">
+        <div className="rounded-xl bg-amber-500/10 px-4 py-3 text-sm text-amber-100 space-y-1">
           {[...(teamRecord?.substitutions || []), ...(reconciled?.substitutions || [])].slice(-4).map((sub, i) => (
-            <div key={`${sub.out_id}-${sub.in_id}-${i}`} className="flex items-center gap-1.5">
-              <ArrowLeftRight className="h-3.5 w-3.5 flex-shrink-0" />
+            <div key={`${sub.out_id}-${sub.in_id}-${i}`} className="flex items-start gap-2">
+              <ArrowLeftRight className="h-4 w-4 flex-shrink-0 mt-0.5 text-amber-300" />
               <span>
-                <strong>{sub.in_name}</strong> subentra al posto di {sub.out_name}
+                <span className="font-semibold">{sub.in_name}</span> subentra al posto di {sub.out_name}
               </span>
             </div>
           ))}
         </div>
       ) : null}
       {reconciled && reconciled.emptySlots > 0 && !isCompleted && (
-        <div className="p-3 text-xs bg-rose-500/10 border border-rose-500/30 text-rose-200 rounded-2xl flex items-center gap-2">
-          <AlertCircle className="h-4 w-4 flex-shrink-0" />
+        <div className="rounded-xl bg-rose-500/10 px-4 py-3 text-sm text-rose-200 flex items-start gap-2">
+          <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
           <span>
             {reconciled.emptySlots === 1 ? 'Manca 1 giocatore' : `Mancano ${reconciled.emptySlots} giocatori`}: il posto verrà preso dal primo che si iscrive.
           </span>
         </div>
       )}
 
-      {/* Tab: campo / modifica manuale (solo admin) */}
+      {/* Campo / modifica manuale (solo admin) */}
       {isClientAdmin && teams && !isCompleted && (
-        <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl text-sm">
-          <button
-            type="button"
-            onClick={() => setTab('pitch')}
-            aria-pressed={tab === 'pitch'}
-            className={`flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg font-bold transition-all ${
-              tab === 'pitch' ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Trophy className="h-4 w-4" /> Campo
-          </button>
-          <button
-            type="button"
-            onClick={openManualTab}
-            aria-pressed={tab === 'manual'}
-            className={`flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg font-bold transition-all ${
-              tab === 'manual' ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Pencil className="h-4 w-4" /> Modifica manuale
-          </button>
+        <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl text-sm" role="tablist">
+          {(
+            [
+              ['pitch', 'Campo', <Trophy key="t" className="h-4 w-4" />],
+              ['manual', 'Modifica manuale', <Pencil key="p" className="h-4 w-4" />],
+            ] as const
+          ).map(([key, label, icon]) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={tab === key}
+              onClick={() => (key === 'manual' ? openManualTab() : setTab('pitch'))}
+              className={`flex-1 flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg font-semibold transition-colors ${
+                tab === key ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              {icon} {label}
+            </button>
+          ))}
         </div>
       )}
 
-      {/* FEEDBACK COPIA WHATSAPP */}
-      {copySuccess && (
-        <div className="p-3.5 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 rounded-2xl text-xs font-bold flex items-center justify-between animate-in fade-in">
-          <div className="flex items-center gap-2">
-            <Check className="h-4 w-4 text-emerald-400" />
-            <span>Testo convocazioni copiato negli appunti e apertura WhatsApp in corso!</span>
-          </div>
-          <span className="text-[10px] bg-emerald-500 text-slate-950 px-2 py-0.5 rounded-full uppercase">
-            Copiato
-          </span>
-        </div>
-      )}
-
-      {/* RISULTATO: CAMPO VIRTUALE & CONDIVISIONE */}
       {tab === 'manual' && manualDraft && isClientAdmin && !isCompleted ? (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
-          <h3 className="text-sm font-bold text-white flex items-center gap-2">
-            <Pencil className="h-4 w-4 text-emerald-400" /> Modifica manuale squadre
-          </h3>
+          <div>
+            <h3 className="text-base font-semibold text-white">Modifica manuale</h3>
+            <p className="text-sm text-slate-400 mt-0.5">Scambia i giocatori tra le squadre o i ruoli, poi salva.</p>
+          </div>
           <TeamSwapEditor
             fixedKeeper={fixedKeeper}
             white={manualDraft.white}
             black={manualDraft.black}
             onChange={(white, black) => setManualDraft({ white, black })}
           />
-          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2 border-t border-slate-800">
-            <button
-              type="button"
-              onClick={() => setTab('pitch')}
-              className="w-full sm:w-auto px-5 py-3 rounded-xl text-xs font-bold text-slate-300 border border-slate-700 hover:bg-slate-800"
-            >
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-3 border-t border-slate-800">
+            <button type="button" onClick={() => setTab('pitch')} className={secondaryBtn}>
               Annulla
             </button>
-            <button
-              type="button"
-              onClick={handleSaveManual}
-              disabled={isSavingManual}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs disabled:opacity-40"
-            >
+            <button type="button" onClick={handleSaveManual} disabled={isSavingManual} className={primaryBtn}>
               {isSavingManual ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
               Salva squadre
             </button>
           </div>
         </div>
       ) : balancedResult ? (
-        <div className="space-y-6 animate-in fade-in duration-300">
-          {/* Card Bilanciamento e Statistiche a Confronto */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <Zap className="h-5 w-5 text-amber-400" />
-                <h3 className="text-sm font-bold text-white">
-                  Equilibrio Squadre Generato
-                </h3>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-slate-400">Indice di Equità:</span>
-                <span className="font-mono text-xs font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-1 rounded-lg">
-                  {balancedResult.fairnessScore}% Fair
-                </span>
-                <span className="text-xs text-slate-500 font-mono">
-                  (Delta OVR: {balancedResult.difference})
-                </span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Bianca */}
-              <div className="bg-slate-950/70 border border-slate-800 p-4 rounded-2xl space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-xs text-white flex items-center gap-1.5">
-                    ⚪ Squadra bianca
-                  </span>
-                  <StatBadge score={balancedResult.whiteStats.overallAvg} size="md" />
-                </div>
-                <div className="grid grid-cols-4 gap-1 text-[11px] font-mono text-center text-slate-400">
-                  <div className="bg-slate-900/90 p-1 rounded">
-                    <span className="block text-[9px] text-slate-500">DIF</span>
-                    {balancedResult.whiteStats.defenseAvg}
-                  </div>
-                  <div className="bg-slate-900/90 p-1 rounded">
-                    <span className="block text-[9px] text-slate-500">ATT</span>
-                    {balancedResult.whiteStats.attackAvg}
-                  </div>
-                  <div className="bg-slate-900/90 p-1 rounded">
-                    <span className="block text-[9px] text-slate-500">RES</span>
-                    {balancedResult.whiteStats.staminaAvg}
-                  </div>
-                  <div className="bg-slate-900/90 p-1 rounded">
-                    <span className="block text-[9px] text-slate-500">TEC</span>
-                    {balancedResult.whiteStats.techniqueAvg}
-                  </div>
-                </div>
-                <ul className="pt-2 border-t border-slate-800 space-y-1 text-xs">
-                  {balancedResult.teamWhite.map((p, i) => (
-                    <li key={p.id} className="flex items-center gap-2 text-slate-200">
-                      <span className="w-11 flex-shrink-0 font-mono text-[10px] font-bold text-emerald-400">{slotLabel(i, fixedKeeper)}</span>
-                      <span className="truncate">{p.full_name}</span>
-                      {forms.get(p.id) ? (
-                        <span className={`ml-auto flex-shrink-0 text-[10px] font-bold ${(forms.get(p.id) || 0) > 0 ? 'text-orange-300' : 'text-sky-300'}`}>
-                          {(forms.get(p.id) || 0) > 0 ? '🔥' : '❄️'}
-                          {formatForm(forms.get(p.id) || 0)}
-                        </span>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Nera */}
-              <div className="bg-slate-950/70 border border-slate-800 p-4 rounded-2xl space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-xs text-white flex items-center gap-1.5">
-                    ⚫ Squadra nera
-                  </span>
-                  <StatBadge score={balancedResult.blackStats.overallAvg} size="md" />
-                </div>
-                <div className="grid grid-cols-4 gap-1 text-[11px] font-mono text-center text-slate-400">
-                  <div className="bg-slate-900/90 p-1 rounded">
-                    <span className="block text-[9px] text-slate-500">DIF</span>
-                    {balancedResult.blackStats.defenseAvg}
-                  </div>
-                  <div className="bg-slate-900/90 p-1 rounded">
-                    <span className="block text-[9px] text-slate-500">ATT</span>
-                    {balancedResult.blackStats.attackAvg}
-                  </div>
-                  <div className="bg-slate-900/90 p-1 rounded">
-                    <span className="block text-[9px] text-slate-500">RES</span>
-                    {balancedResult.blackStats.staminaAvg}
-                  </div>
-                  <div className="bg-slate-900/90 p-1 rounded">
-                    <span className="block text-[9px] text-slate-500">TEC</span>
-                    {balancedResult.blackStats.techniqueAvg}
-                  </div>
-                </div>
-                <ul className="pt-2 border-t border-slate-800 space-y-1 text-xs">
-                  {balancedResult.teamBlack.map((p, i) => (
-                    <li key={p.id} className="flex items-center gap-2 text-slate-200">
-                      <span className="w-11 flex-shrink-0 font-mono text-[10px] font-bold text-emerald-400">{slotLabel(i, fixedKeeper)}</span>
-                      <span className="truncate">{p.full_name}</span>
-                      {forms.get(p.id) ? (
-                        <span className={`ml-auto flex-shrink-0 text-[10px] font-bold ${(forms.get(p.id) || 0) > 0 ? 'text-orange-300' : 'text-sky-300'}`}>
-                          {(forms.get(p.id) || 0) > 0 ? '🔥' : '❄️'}
-                          {formatForm(forms.get(p.id) || 0)}
-                        </span>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            {/* BOTTONI CONDIVISIONE WHATSAPP & GOOGLE AI STUDIO */}
-            <div className="pt-3 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleDownloadPitchImage}
-                  className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-850 hover:bg-slate-800 text-slate-300 font-bold rounded-xl text-xs transition-colors border border-slate-700"
-                >
-                  <Download className="h-4 w-4 text-emerald-400" />
-                  Scarica Campo
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleGenerateAiAnalysis}
-                  disabled={isAiLoading}
-                  className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl text-xs transition-all"
-                >
-                  {isAiLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin text-white" />
-                  ) : (
-                    <Bot className="h-4 w-4 text-amber-300" />
-                  )}
-                  <span>Analisi AI (Google AI Studio)</span>
-                </button>
-              </div>
-
-              {isClientAdmin && (
-                <button
-                  type="button"
-                  onClick={handleShareWhatsApp}
-                  disabled={isSharing}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-[#25D366] hover:bg-[#20ba59] text-slate-950 font-bold rounded-xl text-xs transition-all"
-                >
-                  {isSharing ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Share2 className="h-4 w-4" />
-                  )}
-                  Condividi su WhatsApp
-                </button>
-              )}
-            </div>
-
-            {/* SCHEDA ANALISI TATTICA GOOGLE AI STUDIO (GEMINI) */}
-            {aiAnalysis && (
-              <div className="mt-4 p-5 rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/40 space-y-4 animate-in fade-in duration-300">
-                <div className="flex items-center justify-between border-b border-indigo-500/30 pb-3">
-                  <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs">
-                    <Sparkles className="h-4 w-4 text-amber-400" />
-                    <span>Report Tattico Ufficiale Google Gemini</span>
-                  </div>
-                  <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full font-mono">
-                    AI Studio
-                  </span>
-                </div>
-
-                <div>
-                  <h4 className="text-base font-bold text-white leading-snug">
-                    {aiAnalysis.headline}
-                  </h4>
-                  <p className="text-xs text-amber-300 font-semibold mt-1">
-                    {aiAnalysis.prediction}
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                  <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800">
-                    <span className="font-bold text-white block mb-1">⚪ Chiave Tattica Bianca:</span>
-                    <p className="text-slate-300 leading-relaxed">{aiAnalysis.whiteTactics}</p>
-                  </div>
-                  <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800">
-                    <span className="font-bold text-white block mb-1">⚫ Chiave Tattica Nera:</span>
-                    <p className="text-slate-300 leading-relaxed">{aiAnalysis.blackTactics}</p>
-                  </div>
-                </div>
-
-                <div className="bg-slate-950/60 p-3 rounded-xl border border-indigo-500/20 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <span className="font-bold text-emerald-400 block">{aiAnalysis.keyDuel}</span>
-                    <p className="text-slate-400 italic text-[11px] mt-0.5">{aiAnalysis.funnyLockerRoomQuote}</p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      await copyToClipboard(aiAnalysis.epicWhatsAppText);
-                      setCopySuccess(true);
-                      setTimeout(() => setCopySuccess(false), 3000);
-                      window.open(getWhatsAppShareUrl(aiAnalysis.epicWhatsAppText), '_blank');
-                    }}
-                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-[#25D366] hover:bg-[#20ba59] text-slate-950 font-bold rounded-lg text-xs"
-                  >
-                    <Share2 className="h-3.5 w-3.5" />
-                    Copia Commento AI su WhatsApp
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* VIRTUAL PITCH RENDERING */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-slate-400">
-                Campo da Calcetto Virtuale (Formazione 5v5)
-              </h3>
-              <span className="text-[11px] text-slate-500 font-mono">
-                Screenshot automatico incluso
-              </span>
-            </div>
-
+        <div className="space-y-6 animate-in">
+          {/* 4. Prima il campo */}
+          <section className="space-y-3">
             <VirtualPitch
               fixedKeeper={fixedKeeper}
               ref={pitchRef}
@@ -1032,35 +895,173 @@ function SquadreContent() {
                 totalCost,
               }}
             />
-          </div>
+
+            {/* 6. Condivisione in una riga */}
+            <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+              {isClientAdmin && (
+                <button
+                  type="button"
+                  onClick={handleShareWhatsApp}
+                  disabled={isSharing}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-[#25D366] hover:bg-[#20ba59] text-slate-950 font-semibold rounded-xl text-sm transition-colors disabled:opacity-40"
+                >
+                  {isSharing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}
+                  Condividi su WhatsApp
+                </button>
+              )}
+              <button type="button" onClick={handleDownloadPitchImage} className={secondaryBtn}>
+                <Download className="h-4 w-4" />
+                Scarica immagine
+              </button>
+              <button
+                type="button"
+                onClick={handleGenerateAiAnalysis}
+                disabled={isAiLoading}
+                className="w-full sm:w-auto sm:ml-auto flex items-center justify-center gap-2 px-4 py-2.5 text-slate-400 hover:text-white rounded-xl text-sm transition-colors disabled:opacity-40"
+              >
+                {isAiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                Analisi AI
+              </button>
+            </div>
+          </section>
+
+          {/* Report AI: stesso stile delle altre schede */}
+          {aiAnalysis && (
+            <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 animate-in">
+              <div>
+                <p className="text-xs text-slate-500 flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5" /> Analisi AI
+                </p>
+                <h3 className="text-base font-semibold text-white mt-1 leading-snug">{aiAnalysis.headline}</h3>
+                <p className="text-sm text-amber-200 mt-1">{aiAnalysis.prediction}</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                <div className="rounded-xl bg-slate-950/60 p-3">
+                  <span className="font-semibold text-white block mb-1">Bianchi</span>
+                  <p className="text-slate-300 leading-relaxed">{aiAnalysis.whiteTactics}</p>
+                </div>
+                <div className="rounded-xl bg-slate-950/60 p-3">
+                  <span className="font-semibold text-white block mb-1">Neri</span>
+                  <p className="text-slate-300 leading-relaxed">{aiAnalysis.blackTactics}</p>
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm">
+                <div>
+                  <span className="font-semibold text-emerald-300 block">{aiAnalysis.keyDuel}</span>
+                  <p className="text-slate-400 italic text-xs mt-0.5">{aiAnalysis.funnyLockerRoomQuote}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await copyToClipboard(aiAnalysis.epicWhatsAppText);
+                    setCopySuccess(true);
+                    setTimeout(() => setCopySuccess(false), 3000);
+                    window.open(getWhatsAppShareUrl(aiAnalysis.epicWhatsAppText), '_blank');
+                  }}
+                  className={secondaryBtn}
+                >
+                  <Share2 className="h-4 w-4" />
+                  Manda su WhatsApp
+                </button>
+              </div>
+            </section>
+          )}
+
+          {/* Voto MVP aperto a tutti, 45 minuti dopo la fine della partita */}
+          {teams && teamsComplete && (
+            <MvpVoteCard
+              date={selectedDate}
+              matchTime={matchTime}
+              white={teams.white}
+              black={teams.black}
+              voterUid={user?.uid || null}
+              isAdmin={isClientAdmin}
+              testMode={teamRecord?.mvp_vote_test === 'all' ? 'all' : teamRecord?.mvp_vote_test ? 'admins' : false}
+            />
+          )}
+
+          {/* 5. Confronto Bianchi / Neri */}
+          <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-5">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h3 className="text-base font-semibold text-white">Equilibrio</h3>
+                <p className="text-sm text-slate-400 mt-0.5">Medie dei parametri delle due squadre</p>
+              </div>
+              <div className="text-right">
+                <span className="block text-2xl font-bold text-emerald-300 tabular-nums leading-none">
+                  {balancedResult.fairnessScore}%
+                </span>
+                <span className="text-xs text-slate-400">equilibrio</span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex justify-between text-xs font-semibold text-slate-400">
+                <span>Bianchi</span>
+                <span>Neri</span>
+              </div>
+              {compareRows.map(([label, w, b]) => {
+                const total = w + b || 1;
+                return (
+                  <div key={label} className="space-y-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className={`tabular-nums font-semibold ${w > b ? 'text-white' : 'text-slate-400'}`}>{fmtNum(w)}</span>
+                      <span className="text-xs text-slate-400">{label}</span>
+                      <span className={`tabular-nums font-semibold ${b > w ? 'text-white' : 'text-slate-400'}`}>{fmtNum(b)}</span>
+                    </div>
+                    <div className="flex h-1.5 gap-0.5 overflow-hidden rounded-full" aria-hidden="true">
+                      <span className="bg-slate-200 rounded-l-full" style={{ width: `${(w / total) * 100}%` }} />
+                      <span className="bg-slate-600 rounded-r-full" style={{ width: `${(b / total) * 100}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-800">
+              {teamList(balancedResult.teamWhite, 'Bianchi', 'bg-white')}
+              {teamList(balancedResult.teamBlack, 'Neri', 'bg-slate-950 border border-slate-500')}
+            </div>
+          </section>
         </div>
-      ) : null}
-
-      {/* Voto MVP aperto a tutti, 45 minuti dopo la fine della partita */}
-      {teams && teamsComplete && tab === 'pitch' && (
-        <MvpVoteCard
-          date={selectedDate}
-          matchTime={matchTime}
-          white={teams.white}
-          black={teams.black}
-          voterUid={user?.uid || null}
-          isAdmin={isClientAdmin}
-          testMode={teamRecord?.mvp_vote_test === 'all' ? 'all' : teamRecord?.mvp_vote_test ? 'admins' : false}
-        />
-      )}
-
-      {!balancedResult && !(tab === 'manual' && manualDraft) && (
-        /* Placeholder quando non ancora generato */
-        <div className="bg-slate-900/60 border border-dashed border-slate-800 rounded-2xl p-10 text-center space-y-3">
+      ) : (
+        /* 8. Nessuna squadra: cosa succede adesso */
+        <div className="rounded-2xl bg-slate-900/60 border border-dashed border-slate-800 p-8 sm:p-10 text-center space-y-3">
           <div className="inline-flex p-3 bg-slate-800 text-emerald-400 rounded-2xl">
-            <Trophy className="h-8 w-8" />
+            <Trophy className="h-7 w-7" />
           </div>
-          <h3 className="text-base font-bold text-white">Nessuna squadra generata per questa data</h3>
-          <p className="text-xs text-slate-400 max-w-md mx-auto">
-            Quando ci sono 10 titolari un amministratore genera le squadre: da quel momento restano quelle (cambiano solo se qualcuno subentra, con la modifica manuale o con &quot;Ribilancia&quot;).
-          </p>
+          <h3 className="text-base font-semibold text-white">Nessuna squadra per questa data</h3>
+          {isClientAdmin && starterProfiles.length >= 10 ? (
+            <>
+              <p className="text-sm text-slate-400 max-w-md mx-auto">
+                Ci sono 10 titolari: genera le squadre, restano quelle finché non le cambi.
+              </p>
+              <button
+                type="button"
+                onClick={handleGenerateTeams}
+                disabled={isGenerating}
+                className={`${primaryBtn} mx-auto`}
+              >
+                {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shuffle className="h-4 w-4" />}
+                Genera squadre
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-slate-400 max-w-md mx-auto">
+                Le squadre arrivano quando ci sono 10 titolari (ora {starterProfiles.length}/10).
+              </p>
+              <Link
+                href="/presenze"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-300 hover:text-emerald-200"
+              >
+                Vai alle presenze <ArrowRight className="h-4 w-4" />
+              </Link>
+            </>
+          )}
         </div>
       )}
+
     </div>
   );
 }
