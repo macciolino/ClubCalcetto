@@ -7,8 +7,6 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/context/AuthContext';
 import { FIELD_POSITIONS, FieldPosition } from '@/types/database';
 import { 
-  ShieldCheck, 
-  Users, 
   Loader2, 
   ArrowRight, 
   CheckCircle2, 
@@ -16,11 +14,8 @@ import {
   Mail,
   Lock,
   User,
-  Shield,
   Send,
-  RefreshCw,
-  ExternalLink,
-  Sparkles
+  RefreshCw
 } from 'lucide-react';
 
 export default function LoginPage() {
@@ -113,12 +108,12 @@ export default function LoginPage() {
   else if (isSignup && confirmPassword !== password) fieldErrors.confirmPassword = 'Le password non coincidono.';
   const showError = (field: string) => (submitted || touched[field]) && Boolean(fieldErrors[field]);
   const inputClass = (field: string, withIcon = true) =>
-    `w-full ${withIcon ? 'pl-9' : 'pl-3'} pr-3 py-2 bg-slate-950 border rounded-xl text-white text-xs placeholder:text-slate-600 focus:outline-none transition-colors ${
+    `w-full ${withIcon ? 'pl-9' : 'pl-3'} pr-3 py-3 bg-slate-950 border rounded-xl text-white text-sm placeholder:text-slate-600 focus:outline-none transition-colors ${
       showError(field) ? 'border-rose-500 focus:border-rose-400' : 'border-slate-800 focus:border-emerald-500'
     }`;
   const FieldError = ({ field }: { field: string }) =>
     showError(field) ? (
-      <p id={`${field}-error`} className="mt-1 text-[11px] text-rose-400">
+      <p id={`${field}-error`} className="mt-1 text-xs text-rose-400">
         {fieldErrors[field]}
       </p>
     ) : null;
@@ -184,178 +179,231 @@ export default function LoginPage() {
     }
   };
 
-  return (
-    <div className="min-h-[85vh] flex flex-col items-center justify-center py-8 px-4">
-      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 space-y-6 relative overflow-hidden">
-        {/* Glow Effetto Sfondo */}
-        <div className="absolute -top-24 -left-24 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-green-500/10 rounded-full blur-3xl pointer-events-none" />
+  const switchMode = (mode: 'signin' | 'signup') => {
+    setAuthMode(mode);
+    setSubmitted(false);
+    setTouched({});
+    setErrorMessage('');
+    setSuccessMessage('');
+  };
+  const labelClass = 'block text-xs font-medium text-slate-300 mb-1.5';
 
-        {/* Intestazione e Logo */}
-        <div className="text-center space-y-2 relative">
-          <div className="inline-flex">
+  return (
+    <div className="min-h-[calc(100vh-2rem)] grid lg:grid-cols-2 gap-10 items-center py-8 sm:py-12 animate-in">
+      {/* Lato sinistro (solo schermi grandi): il club, su un campo stilizzato */}
+      <section className="hidden lg:flex relative h-full min-h-[560px] rounded-3xl overflow-hidden bg-slate-900 border border-slate-800 p-10 flex-col justify-between">
+        <svg
+          className="absolute inset-0 h-full w-full text-emerald-500/10"
+          viewBox="0 0 400 600"
+          preserveAspectRatio="xMidYMid slice"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          aria-hidden="true"
+        >
+          <rect x="30" y="30" width="340" height="540" rx="6" />
+          <line x1="30" y1="300" x2="370" y2="300" />
+          <circle cx="200" cy="300" r="60" />
+          <circle cx="200" cy="300" r="3" fill="currentColor" />
+          <rect x="120" y="30" width="160" height="80" />
+          <rect x="120" y="490" width="160" height="80" />
+        </svg>
+        <div className="absolute -bottom-32 -left-32 h-80 w-80 rounded-full bg-emerald-500/15 blur-3xl pointer-events-none" />
+
+        <div className="relative flex items-center gap-3">
+          <BrandLogo size="lg" />
+          <span className="text-xl font-bold text-white">
+            Club <span className="text-emerald-400">Soccer</span>
+          </span>
+        </div>
+
+        <div className="relative space-y-6">
+          <h2 className="text-4xl font-bold tracking-tight text-white leading-tight">
+            Il tuo calcetto,
+            <br />
+            senza chat infinite.
+          </h2>
+          <ul className="space-y-3 text-sm text-slate-300">
+            {[
+              ['Presenze', 'Segna i giorni in cui ci sei: i primi 10 giocano.'],
+              ['Squadre equilibrate', 'Bianchi contro Neri, divisi in base ai parametri.'],
+              ['Statistiche', 'Gol, MVP, vittorie e stato di forma di ogni giocatore.'],
+            ].map(([title, text]) => (
+              <li key={title} className="flex items-start gap-3">
+                <CheckCircle2 className="h-5 w-5 text-emerald-400 flex-shrink-0 mt-px" />
+                <span>
+                  <span className="font-semibold text-white">{title}</span> · {text}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <p className="relative text-xs text-slate-500">5 contro 5 · ogni settimana</p>
+      </section>
+
+      {/* Lato destro: accesso */}
+      <section className="w-full max-w-md mx-auto space-y-8">
+        {/* Logo e titolo (su telefono e tablet; su PC sono nel pannello a sinistra) */}
+        <div className="text-center space-y-3 lg:text-left">
+          <div className="inline-flex lg:hidden">
             <BrandLogo size="lg" />
           </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white">
-              Club <span className="text-emerald-400">Soccer</span>
+          <div className="space-y-1">
+            <h1 className="text-3xl font-bold tracking-tight text-white">
+              {user && !isEmailVerified
+                ? 'Verifica la tua email'
+                : profile
+                ? 'Bentornato'
+                : authMode === 'signin'
+                ? 'Bentornato in campo'
+                : 'Entra nel club'}
             </h1>
-            <p className="text-xs text-slate-400 font-medium">
-              Accesso ufficiale partite 5v5 (Localhost & Web)
+            <p className="text-sm text-slate-400">
+              {user && !isEmailVerified
+                ? 'Manca solo un passaggio.'
+                : profile
+                ? 'Sei già collegato.'
+                : authMode === 'signin'
+                ? 'Accedi per segnare la tua presenza.'
+                : 'Crea il tuo account in un minuto.'}
             </p>
           </div>
         </div>
 
         {!mounted ? (
-          <div className="py-12 flex flex-col items-center justify-center space-y-3">
-            <Loader2 className="h-8 w-8 text-emerald-400 animate-spin" />
-            <p className="text-xs text-slate-400">Caricamento sessione...</p>
+          <div className="py-12 flex flex-col items-center justify-center gap-3">
+            <Loader2 className="h-7 w-7 text-emerald-400 animate-spin" />
+            <p className="text-sm text-slate-400">Caricamento…</p>
           </div>
         ) : user && !isEmailVerified ? (
-          <div className="p-5 bg-amber-950/40 border-2 border-amber-500/50 rounded-2xl space-y-4 animate-in fade-in">
+          /* STATO 1: EMAIL DA VERIFICARE */
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5 animate-in">
             <div className="flex items-start gap-3">
-              <Mail className="h-6 w-6 text-amber-400 flex-shrink-0 mt-0.5" />
-              <div>
-                <h2 className="text-sm font-bold text-amber-300">
-                  Verifica Email Richiesta
-                </h2>
-                <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-                  Ti abbiamo inviato un link di conferma all&apos;indirizzo <strong className="text-white font-mono">{user.email}</strong>. Clicca sul link nell&apos;email per sbloccare l&apos;accesso completo.
-                </p>
-              </div>
+              <span className="flex-shrink-0 h-10 w-10 rounded-full bg-amber-500/15 flex items-center justify-center">
+                <Mail className="h-5 w-5 text-amber-400" />
+              </span>
+              <p className="text-sm text-slate-300 leading-relaxed">
+                Ti abbiamo inviato un link a <span className="font-semibold text-white break-all">{user.email}</span>. Aprilo per
+                attivare l&apos;account, poi torna qui.
+              </p>
             </div>
 
-            {errorMessage && (
-              <div className="p-3 bg-rose-500/15 border border-rose-500/30 text-rose-300 rounded-xl text-xs">
-                {errorMessage}
-              </div>
-            )}
-            {successMessage && (
-              <div className="p-3 bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 rounded-xl text-xs">
-                {successMessage}
-              </div>
-            )}
+            {errorMessage && <div className="rounded-xl bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{errorMessage}</div>}
+            {successMessage && <div className="rounded-xl bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">{successMessage}</div>}
 
-            <div className="space-y-2 pt-2 border-t border-amber-500/20">
+            <div className="space-y-2">
               <button
                 type="button"
                 onClick={handleCheckVerification}
                 disabled={isCheckingVerification}
-                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs transition-all cursor-pointer disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-xl text-sm transition-colors disabled:opacity-50"
               >
                 <RefreshCw className={`h-4 w-4 ${isCheckingVerification ? 'animate-spin' : ''}`} />
-                <span>Ho verificato l&apos;email (Ricarica Stato)</span>
+                Ho verificato l&apos;email
               </button>
-
               <button
                 type="button"
                 onClick={handleResendVerification}
-                className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-xs transition-colors cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-slate-700 text-slate-200 hover:bg-slate-800 font-semibold rounded-xl text-sm transition-colors"
               >
-                <Send className="h-3.5 w-3.5 text-amber-400" />
-                <span>Reinvia email di verifica</span>
+                <Send className="h-4 w-4" />
+                Reinvia l&apos;email
               </button>
-
               <button
                 type="button"
                 onClick={() => signOut()}
-                className="w-full flex items-center justify-center gap-1.5 py-2 text-slate-400 hover:text-rose-400 text-xs font-semibold transition-colors cursor-pointer"
+                className="w-full flex items-center justify-center gap-1.5 py-2.5 text-slate-400 hover:text-white text-sm transition-colors"
               >
-                <LogOut className="h-3.5 w-3.5" />
-                <span>Esci e prova con un altro account</span>
+                <LogOut className="h-4 w-4" />
+                Usa un altro account
               </button>
             </div>
           </div>
         ) : profile ? (
-          /* STATO 2: UTENTE GIÀ CONNESSO E VERIFICATO */
-          <div className="p-5 bg-emerald-950/40 border border-emerald-500/30 rounded-2xl space-y-4">
-            <div className="flex items-center justify-between gap-2.5">
-              <div className="flex items-center gap-2.5">
-                <CheckCircle2 className="h-5 w-5 text-emerald-400 flex-shrink-0" />
-                <div className="text-xs">
-                  <span className="text-slate-400">Attualmente collegato: </span>
-                  <div className="text-white font-bold text-sm">{profile.full_name}</div>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                      isStrictAdmin ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-blue-500/20 text-blue-300'
-                    }`}>
-                      {isStrictAdmin ? '★ Amministratore' : 'Giocatore'}
-                    </span>
-                    {profile.position && (
-                      <span className="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-[10px] font-mono">
-                        {profile.position}
-                      </span>
-                    )}
-                  </div>
-                </div>
+          /* STATO 2: GIÀ COLLEGATO */
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5 animate-in">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="flex-shrink-0 h-11 w-11 rounded-full bg-emerald-500/15 text-emerald-300 flex items-center justify-center text-sm font-bold">
+                {profile.full_name
+                  .trim()
+                  .split(/\s+/)
+                  .map((w) => w[0])
+                  .slice(0, 2)
+                  .join('')
+                  .toUpperCase()}
+              </span>
+              <div className="min-w-0">
+                <p className="text-base font-semibold text-white truncate">{profile.full_name}</p>
+                <p className="text-xs text-slate-400">
+                  {isStrictAdmin ? 'Amministratore' : 'Giocatore'}
+                  {profile.position ? ` · ${profile.position}` : ''}
+                </p>
               </div>
+            </div>
+            <div className="space-y-2">
+              <Link
+                href="/"
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-xl text-sm transition-colors"
+              >
+                Vai alla Home <ArrowRight className="h-4 w-4" />
+              </Link>
               <button
                 type="button"
                 onClick={() => signOut()}
-                className="flex items-center gap-1 text-[11px] text-rose-400 hover:text-rose-300 font-semibold p-1.5 hover:bg-slate-800/60 rounded-lg transition-colors cursor-pointer"
-                title="Disconnetti"
+                className="w-full flex items-center justify-center gap-1.5 py-2.5 text-slate-400 hover:text-rose-300 text-sm transition-colors"
               >
-                <LogOut className="h-3.5 w-3.5" />
-                <span>Esci</span>
+                <LogOut className="h-4 w-4" />
+                Esci
               </button>
-            </div>
-
-            <div className="flex flex-col gap-2 pt-1">
-              <Link
-                href="/presenze"
-                className="flex items-center justify-center gap-2 py-2.5 px-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition-all"
-              >
-                <span>Vai alle Presenze</span>
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <div className={isStrictAdmin ? "grid grid-cols-2 gap-2" : "flex flex-col gap-2"}>
-                <Link
-                  href="/giocatori"
-                  className="flex items-center justify-center gap-1.5 py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-xl text-xs transition-colors"
-                >
-                  <Users className="h-3.5 w-3.5 text-emerald-400" />
-                  <span>Rosa Giocatori</span>
-                </Link>
-                {isStrictAdmin && (
-                  <Link
-                    href="/impostazioni?sezione=partita"
-                    className="flex items-center justify-center gap-1.5 py-2 px-3 bg-slate-800 hover:bg-slate-700 text-emerald-300 font-bold rounded-xl text-xs transition-colors"
-                  >
-                    <ShieldCheck className="h-3.5 w-3.5 text-amber-400" />
-                    <span>Pannello Admin</span>
-                  </Link>
-                )}
-              </div>
             </div>
           </div>
         ) : (
-          /* STATO 3: FORM DI AUTENTICAZIONE COMPLETO (GOOGLE + EMAIL & PASSWORD) */
-          <div className="space-y-4">
+          /* STATO 3: ACCESSO / REGISTRAZIONE */
+          <div className="space-y-5">
+            {/* Accedi / Registrati */}
+            <div className="flex bg-slate-900 border border-slate-800 p-1 rounded-xl text-sm" role="tablist" aria-label="Accesso">
+              {(
+                [
+                  ['signin', 'Accedi'],
+                  ['signup', 'Registrati'],
+                ] as const
+              ).map(([mode, label]) => (
+                <button
+                  key={mode}
+                  type="button"
+                  role="tab"
+                  aria-selected={authMode === mode}
+                  onClick={() => switchMode(mode)}
+                  className={`flex-1 py-2 rounded-lg font-semibold transition-colors ${
+                    authMode === mode ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
             {errorMessage && (
-              <div className="p-3.5 bg-rose-500/15 border border-rose-500/30 text-rose-300 rounded-2xl text-xs space-y-1 animate-in fade-in">
-                <div className="font-bold flex items-center gap-1.5 text-rose-400">
-                  <span>⚠️ Errore di Accesso</span>
-                </div>
-                <p className="leading-relaxed">{errorMessage}</p>
+              <div role="alert" className="rounded-xl bg-rose-500/10 px-4 py-3 text-sm text-rose-200 animate-in">
+                {errorMessage}
               </div>
             )}
             {successMessage && (
-              <div className="p-3.5 bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 rounded-2xl text-xs animate-in fade-in">
-                {successMessage}
-              </div>
+              <div className="rounded-xl bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200 animate-in">{successMessage}</div>
             )}
 
-            {/* ACCESSO RAPIDO GOOGLE */}
+            {/* Google */}
             <button
               type="button"
               onClick={handleGoogleLogin}
               disabled={isLoading}
-              className="w-full flex items-center justify-center gap-3 py-3 px-5 bg-white hover:bg-slate-100 text-slate-900 font-bold rounded-2xl text-xs sm:text-sm transition-all active:scale-[0.99] disabled:opacity-60 cursor-pointer"
+              className="w-full flex items-center justify-center gap-3 py-3 px-5 bg-white hover:bg-slate-100 text-slate-900 font-semibold rounded-xl text-sm transition-colors active:scale-[0.99] disabled:opacity-60"
             >
               {isLoading ? (
                 <Loader2 className="h-5 w-5 animate-spin text-slate-700" />
               ) : (
-                <svg className="h-5 w-5" viewBox="0 0 24 24">
+                <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
                   <path
                     fill="#4285F4"
                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -374,64 +422,22 @@ export default function LoginPage() {
                   />
                 </svg>
               )}
-              <span>Accedi con Google</span>
+              Continua con Google
             </button>
 
-            {/* SEPARATORE */}
-            <div className="flex items-center my-3 w-full">
+            <div className="flex items-center gap-3">
               <div className="flex-1 border-t border-slate-800" />
-              <span className="px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap shrink-0 select-none">
-                oppure accedi con email
-              </span>
+              <span className="text-xs text-slate-500">oppure con email</span>
               <div className="flex-1 border-t border-slate-800" />
             </div>
 
-            {/* TABS: ACCEDI vs REGISTRATI */}
-            <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthMode('signin');
-                  setSubmitted(false);
-                  setTouched({});
-                  setErrorMessage('');
-                  setSuccessMessage('');
-                }}
-                className={`flex-1 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
-                  authMode === 'signin'
-                    ? 'bg-emerald-500 text-slate-950 font-bold'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Accedi
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthMode('signup');
-                  setSubmitted(false);
-                  setTouched({});
-                  setErrorMessage('');
-                  setSuccessMessage('');
-                }}
-                className={`flex-1 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
-                  authMode === 'signup'
-                    ? 'bg-emerald-500 text-slate-950 font-bold'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Registrati
-              </button>
-            </div>
-
-            {/* FORM EMAIL E PASSWORD */}
-            <form onSubmit={handleEmailPasswordSubmit} noValidate className="space-y-3 pt-1">
+            <form onSubmit={handleEmailPasswordSubmit} noValidate className="space-y-4">
               {authMode === 'signup' && (
                 <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label htmlFor="signup-first-name" className="block text-[11px] font-bold text-slate-300 uppercase mb-1">
-                        Nome <span className="text-rose-400">*</span>
+                      <label htmlFor="signup-first-name" className={labelClass}>
+                        Nome
                       </label>
                       <div className="relative">
                         <User className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
@@ -445,15 +451,15 @@ export default function LoginPage() {
                           onBlur={() => touch('firstName')}
                           aria-invalid={showError('firstName')}
                           aria-describedby={showError('firstName') ? 'firstName-error' : undefined}
-                          placeholder="Es. Mario"
+                          placeholder="Mario"
                           className={inputClass('firstName')}
                         />
                       </div>
                       <FieldError field="firstName" />
                     </div>
                     <div>
-                      <label htmlFor="signup-last-name" className="block text-[11px] font-bold text-slate-300 uppercase mb-1">
-                        Cognome <span className="text-rose-400">*</span>
+                      <label htmlFor="signup-last-name" className={labelClass}>
+                        Cognome
                       </label>
                       <div className="relative">
                         <User className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
@@ -467,7 +473,7 @@ export default function LoginPage() {
                           onBlur={() => touch('lastName')}
                           aria-invalid={showError('lastName')}
                           aria-describedby={showError('lastName') ? 'lastName-error' : undefined}
-                          placeholder="Es. Rossi"
+                          placeholder="Rossi"
                           className={inputClass('lastName')}
                         />
                       </div>
@@ -476,15 +482,15 @@ export default function LoginPage() {
                   </div>
 
                   <div>
-                    <label htmlFor="signup-position" className="block text-[11px] font-bold text-slate-300 uppercase mb-1">
-                      Ruolo Tattico in Campo <span className="text-rose-400">*</span>
+                    <label htmlFor="signup-position" className={labelClass}>
+                      Ruolo in campo
                     </label>
                     <select
                       id="signup-position"
                       required
                       value={position}
                       onChange={(e) => setPosition(e.target.value as FieldPosition)}
-                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white text-xs focus:outline-none focus:border-emerald-500 transition-colors"
+                      className="w-full px-3 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500 transition-colors"
                     >
                       {FIELD_POSITIONS.map((pos) => (
                         <option key={pos} value={pos}>
@@ -492,16 +498,14 @@ export default function LoginPage() {
                         </option>
                       ))}
                     </select>
-                    <p className="text-[10px] text-slate-500 mt-0.5">
-                      Ruolo di gioco per il campetto e l&apos;algoritmo (ruolo applicativo di default: Giocatore)
-                    </p>
+                    <p className="text-xs text-slate-500 mt-1">Serve per comporre squadre equilibrate. Puoi cambiarlo dopo.</p>
                   </div>
                 </>
               )}
 
               <div>
-                <label htmlFor="auth-email" className="block text-[11px] font-bold text-slate-300 uppercase mb-1">
-                  Indirizzo Email <span className="text-rose-400">*</span>
+                <label htmlFor="auth-email" className={labelClass}>
+                  Email
                 </label>
                 <div className="relative">
                   <Mail className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
@@ -523,8 +527,8 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <label htmlFor="auth-password" className="block text-[11px] font-bold text-slate-300 uppercase mb-1">
-                  Password <span className="text-rose-400">*</span>
+                <label htmlFor="auth-password" className={labelClass}>
+                  Password
                 </label>
                 <div className="relative">
                   <Lock className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
@@ -544,11 +548,11 @@ export default function LoginPage() {
                 </div>
                 <FieldError field="password" />
                 {isSignup && (
-                  <ul id="password-rules" className="mt-1.5 space-y-0.5" aria-label="Requisiti della password">
+                  <ul id="password-rules" className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1" aria-label="Requisiti della password">
                     {passwordRules.map((r) => (
                       <li
                         key={r.label}
-                        className={`text-[11px] flex items-center gap-1.5 ${
+                        className={`text-xs flex items-center gap-1.5 ${
                           r.ok ? 'text-emerald-400' : showError('password') ? 'text-rose-400' : 'text-slate-500'
                         }`}
                       >
@@ -563,8 +567,8 @@ export default function LoginPage() {
 
               {authMode === 'signup' && (
                 <div>
-                  <label htmlFor="auth-confirm-password" className="block text-[11px] font-bold text-slate-300 uppercase mb-1">
-                    Conferma Password <span className="text-rose-400">*</span>
+                  <label htmlFor="auth-confirm-password" className={labelClass}>
+                    Conferma password
                   </label>
                   <div className="relative">
                     <Lock className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
@@ -584,7 +588,7 @@ export default function LoginPage() {
                   </div>
                   <FieldError field="confirmPassword" />
                   {confirmPassword && confirmPassword === password && (
-                    <p className="mt-1 text-[11px] text-emerald-400">✓ Le password coincidono</p>
+                    <p className="mt-1 text-xs text-emerald-400">✓ Le password coincidono</p>
                   )}
                 </div>
               )}
@@ -592,27 +596,28 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full mt-2 py-2.5 px-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition-all active:scale-[0.99] disabled:opacity-60 cursor-pointer flex items-center justify-center gap-2"
+                className="w-full py-3 px-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-xl text-sm transition-colors active:scale-[0.99] disabled:opacity-60 flex items-center justify-center gap-2"
               >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin text-slate-950" />
-                ) : authMode === 'signin' ? (
-                  <span>Login</span>
-                ) : (
-                  <span>Registrati e Invia Verifica</span>
-                )}
+                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : authMode === 'signin' ? 'Login' : 'Registrati'}
               </button>
+              {isSignup && (
+                <p className="text-xs text-slate-500 text-center">Ti invieremo un&apos;email per confermare l&apos;indirizzo.</p>
+              )}
             </form>
+
+            <p className="text-sm text-slate-400 text-center">
+              {authMode === 'signin' ? 'Non hai un account? ' : 'Hai già un account? '}
+              <button
+                type="button"
+                onClick={() => switchMode(authMode === 'signin' ? 'signup' : 'signin')}
+                className="font-semibold text-emerald-300 hover:text-emerald-200"
+              >
+                {authMode === 'signin' ? 'Registrati' : 'Accedi'}
+              </button>
+            </p>
           </div>
         )}
-
-        {/* Footer Informativo */}
-        <div className="pt-2 border-t border-slate-800/80 text-center">
-          <p className="text-[11px] text-slate-500">
-            Ambiente di sviluppo locale attivo su <strong className="text-slate-400">localhost</strong>.
-          </p>
-        </div>
-      </div>
+      </section>
     </div>
   );
 }
