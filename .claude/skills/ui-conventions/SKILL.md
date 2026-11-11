@@ -23,6 +23,9 @@ description: ClubCalcetto UI conventions - theme, shared components (tables, dro
   between the teams; coordinates in `lib/utils/formation.ts`. A "photo" on the pitch is only one uploaded in the app (`data:image/` JPEG); Google's automatic
   avatar and old emoji avatars show initials in the photo area with the first name below. Downloads use html-to-image
   with `style: { margin: '0' }` (the `mx-auto` margin would shift and crop the picture).
+- `PresenceCard` (Presenze): main action first ("Ci sono" / "Mettimi in attesa" / "Sei titolare (n° X)" + small
+  "Ritirati" link / "Iscrizioni chiuse"), ring 0-10, 10 dots with initials (tap = name), "Vedi nomi ▾", waitlist on one
+  line, admin tools behind "⋯ Gestisci". No OVR on this card. Previous design: git tag `backup-prima-scheda-presenze`.
 - `TeamSwapEditor` - tap-to-swap team editing; `MatchResultFields` - score/MVP/scorers form; `MatchEditModal` - bottom-sheet dialog.
 - Admin modals: `FieldModal`, `StatsLegendModal`; `PlayerModal` for editing a player.
 - Dropdowns are native `<select>` (`bg-slate-950 border border-slate-700 rounded-xl`); give them `min-w-0` inside flex rows.

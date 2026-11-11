@@ -2,13 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { Presence, Profile } from '@/types/database';
-import { StatBadge } from './StatBadge';
 import { CalendarDay } from '@/lib/utils/dateUtils';
 import { isTimelockActive } from '@/lib/services/presenceService';
-import { CheckCircle2, Clock, UserX, UserPlus, Sparkles, Lock,
-  ArrowUp,
-  ArrowDown,
-} from 'lucide-react';
+import { Lock, ArrowUp, ArrowDown, UserX, ChevronDown, MoreHorizontal, Check } from 'lucide-react';
 
 interface PresenceCardProps {
   day: CalendarDay;
@@ -30,6 +26,46 @@ interface PresenceCardProps {
   onResetDay?: (dateString: string) => void;
 }
 
+const MAX = 10;
+
+/** Initials of first name and surname ("Marco Bianchi" → "MB") */
+const initialsOf = (name: string) => {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return ((parts[0]?.[0] || '?') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+};
+
+/** Ring that fills up to 10 starters */
+function CountRing({ count }: { count: number }) {
+  const r = 26;
+  const c = 2 * Math.PI * r;
+  const full = count >= MAX;
+  return (
+    <div className="relative h-16 w-16 flex-shrink-0" role="img" aria-label={`${count} titolari su ${MAX}`}>
+      <svg viewBox="0 0 64 64" className="h-16 w-16 -rotate-90">
+        <circle cx="32" cy="32" r={r} fill="none" strokeWidth="6" className="stroke-slate-800" />
+        <circle
+          cx="32"
+          cy="32"
+          r={r}
+          fill="none"
+          strokeWidth="6"
+          strokeLinecap="round"
+          strokeDasharray={c}
+          strokeDashoffset={c * (1 - Math.min(count, MAX) / MAX)}
+          className={`transition-all duration-500 ${full ? 'stroke-emerald-400' : 'stroke-emerald-600'}`}
+        />
+      </svg>
+      <span className={`absolute inset-0 flex items-center justify-center font-mono font-black text-sm ${full ? 'text-emerald-300' : 'text-white'}`}>
+        {Math.min(count, MAX)}/{MAX}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Card of one day in Presenze. In front: the question "Ci sei?" (one main button), a ring with the starters
+ * and ten dots with the initials. Names, waitlist and admin tools open only on request.
+ */
 export function PresenceCard({
   day,
   presences,
@@ -46,6 +82,10 @@ export function PresenceCard({
   onResetDay,
 }: PresenceCardProps) {
   const [mounted, setMounted] = useState(false);
+  const [showNames, setShowNames] = useState(false);
+  const [showWaitlist, setShowWaitlist] = useState(false);
+  const [showManage, setShowManage] = useState(false);
+  const [revealedId, setRevealedId] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -54,45 +94,35 @@ export function PresenceCard({
   const showAdminActions = mounted && isAdmin;
   const effectiveUserId = mounted ? currentUserId : undefined;
 
-  // Ordina per order_index
-  const sortedPresences = [...presences].sort((a, b) => a.order_index - b.order_index);
+  const enriched = [...presences]
+    .sort((a, b) => a.order_index - b.order_index)
+    .map((p) => {
+      const profile = allProfiles.find((prof) => prof.id === p.player_id) || p.profile;
+      return { ...p, profile, name: profile?.full_name || 'Giocatore' };
+    });
+  const starters = enriched.filter((p) => p.status === 'confirmed');
+  const waitlist = enriched.filter((p) => p.status === 'waitlist');
+  const isFull = starters.length >= MAX;
 
-  // Mappa i profili ai giocatori
-  const enrichedPresences = sortedPresences.map((p) => {
-    const profile = allProfiles.find((prof) => prof.id === p.player_id) || p.profile;
-    return {
-      ...p,
-      profile,
-    };
-  });
-
-  const starters = enrichedPresences.filter((p) => p.status === 'confirmed');
-  const waitlist = enrichedPresences.filter((p) => p.status === 'waitlist');
-
-  const isUserPresent = effectiveUserId
-    ? presences.some((p) => p.player_id === effectiveUserId)
-    : false;
-
-  const userPresence = effectiveUserId
-    ? presences.find((p) => p.player_id === effectiveUserId)
-    : null;
-
-  const isFull = starters.length >= 10;
+  const mine = effectiveUserId ? enriched.find((p) => p.player_id === effectiveUserId) : undefined;
+  const myStarterIdx = mine ? starters.findIndex((p) => p.id === mine.id) : -1;
+  const myWaitIdx = mine ? waitlist.findIndex((p) => p.id === mine.id) : -1;
   const timelockCheck = mounted && !isAdmin ? isTimelockActive(day.dateString) : { locked: false };
-  const isCancelLocked = isUserPresent && timelockCheck.locked;
+  const cancelLocked = Boolean(mine) && timelockCheck.locked;
+  const revealed = enriched.find((p) => p.id === revealedId);
+
+  const availableToAdd = allProfiles.filter((p) => !presences.some((pr) => pr.player_id === p.id));
 
   return (
     <div
       className={`relative flex flex-col bg-slate-900 border rounded-2xl p-5 shadow-xl transition-all ${
-        day.isToday
-          ? 'border-emerald-500/60 ring-1 ring-emerald-500/30'
-          : 'border-slate-800 hover:border-slate-700'
+        day.isToday ? 'border-emerald-500/60 ring-1 ring-emerald-500/30' : 'border-slate-800 hover:border-slate-700'
       }`}
     >
-      {/* Header Giorno */}
-      <div className="flex items-start justify-between pb-4 border-b border-slate-800">
-        <div>
-          <div className="flex items-center gap-2">
+      {/* Giorno */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-lg font-black text-white capitalize">{day.dayName}</h3>
             {day.isToday && (
               <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-emerald-500/30">
@@ -109,233 +139,202 @@ export function PresenceCard({
             {day.dayNumber} {day.monthName} {day.dateObj.getFullYear()}
           </p>
         </div>
-
-        {/* Badge Conteggio */}
-        <div className="text-right">
-          <div className="flex items-center gap-1.5 font-mono text-sm">
-            <span
-              className={`font-black ${
-                isFull ? 'text-emerald-400' : 'text-slate-300'
-              }`}
-            >
-              {starters.length}/10
-            </span>
-            <span className="text-xs text-slate-500">Titolari</span>
-          </div>
-          {waitlist.length > 0 && (
-            <div className="text-[11px] font-bold text-amber-400 font-mono">
-              +{waitlist.length} in waitlist
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Barra di Avanzamento Titolari */}
-      <div className="w-full bg-slate-950 h-2 rounded-full mt-3 overflow-hidden border border-slate-800">
-        <div
-          className={`h-full transition-all duration-500 ${
-            isFull ? 'bg-emerald-500 shadow-emerald-500/50' : 'bg-emerald-600'
-          }`}
-          style={{ width: `${Math.min(100, (starters.length / 10) * 100)}%` }}
-        />
-      </div>
-
-      {/* Lista Titolari (1..10) */}
-      <div className="mt-4 flex-1 space-y-2">
-        <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider">
-          <span className="flex items-center gap-1 text-emerald-400">
-            <CheckCircle2 className="h-3.5 w-3.5" /> Titolari ({starters.length})
-          </span>
-          {isFull && (
-            <span className="text-[10px] bg-emerald-500/10 text-emerald-300 px-1.5 py-0.5 rounded">
-              Completo
-            </span>
-          )}
-        </div>
-
-        {starters.length === 0 ? (
-          <div className="py-4 text-center text-xs text-slate-500 italic bg-slate-950/40 rounded-xl border border-dashed border-slate-800">
-            Nessuna presenza confermata. Sii il primo!
-          </div>
-        ) : (
-          <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-            {starters.map((item, idx) => {
-              const name = item.profile?.full_name || 'Giocatore';
-              const rating = item.profile?.overall_rating || 6.0;
-              const isCurrentUser = Boolean(effectiveUserId && item.player_id === effectiveUserId);
-
-              return (
-                <div
-                  key={item.id}
-                  className={`flex items-center justify-between px-3 py-1.5 rounded-xl text-xs border transition-colors ${
-                    isCurrentUser
-                      ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-200'
-                      : 'bg-slate-950/60 border-slate-800/80 text-slate-200'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 truncate">
-                    <span className="font-mono font-bold text-[10px] text-slate-500 w-4">
-                      {idx + 1}.
-                    </span>
-                    <div className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-[10px] font-bold text-emerald-400">
-                      {name.charAt(0).toUpperCase()}
-                    </div>
-                    <span className="font-semibold truncate flex-1 min-w-0">{name}</span>
-                    {item.profile?.is_guest && (
-                      <span className="text-[9px] bg-slate-800 text-slate-400 px-1 rounded">
-                        Ospite
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <StatBadge score={rating} size="sm" />
-                    {showAdminActions && onSetOverride && (
-                      <button
-                        type="button"
-                        onClick={() => onSetOverride(item.id, 'waitlist')}
-                        className="text-slate-600 hover:text-amber-400 p-0.5"
-                        title="Sposta in lista d'attesa"
-                        aria-label={`Sposta ${name} in lista d'attesa`}
-                      >
-                        <ArrowDown className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                    {showAdminActions && onRemovePresence && (
-                      <button
-                        type="button"
-                        onClick={() => onRemovePresence(item.id)}
-                        className="text-slate-600 hover:text-rose-400 p-0.5"
-                        title="Rimuovi presenza"
-                      >
-                        <UserX className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Lista Waitlist (Dall'11esimo in poi) */}
-        {waitlist.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-slate-800/80 space-y-1.5">
-            <div className="flex items-center justify-between text-xs font-bold text-amber-400 uppercase tracking-wider">
-              <span className="flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5" /> In Attesa (Waitlist)
-              </span>
-              <span className="text-[10px] text-amber-400/80 font-mono">
-                Subentro automatico
-              </span>
-            </div>
-
-            <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
-              {waitlist.map((item, idx) => {
-                const name = item.profile?.full_name || 'Riserva';
-                const rating = item.profile?.overall_rating || 6.0;
-                const isCurrentUser = Boolean(effectiveUserId && item.player_id === effectiveUserId);
-
-                return (
-                  <div
-                    key={item.id}
-                    className={`flex items-center justify-between px-3 py-1.5 rounded-xl text-xs border ${
-                      isCurrentUser
-                        ? 'bg-amber-500/15 border-amber-500/40 text-amber-200'
-                        : 'bg-slate-950/40 border-slate-800/60 text-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 truncate">
-                      <span className="font-mono font-bold text-[10px] text-amber-500 w-5">
-                        +{idx + 1}
-                      </span>
-                      <span className="font-medium truncate flex-1 min-w-0">{name}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <StatBadge score={rating} size="sm" />
-                      {showAdminActions && onSetOverride && (
-                        <button
-                          type="button"
-                          onClick={() => onSetOverride(item.id, 'starter')}
-                          className="text-slate-600 hover:text-emerald-400 p-0.5"
-                          title="Fai titolare"
-                          aria-label={`Fai titolare ${name}`}
-                        >
-                          <ArrowUp className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                      {showAdminActions && onRemovePresence && (
-                        <button
-                          type="button"
-                          onClick={() => onRemovePresence(item.id)}
-                          className="text-slate-600 hover:text-rose-400 p-0.5"
-                          title="Rimuovi da waitlist"
-                        >
-                          <UserX className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+        {showAdminActions && (
+          <button
+            type="button"
+            onClick={() => setShowManage((o) => !o)}
+            aria-expanded={showManage}
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border ${
+              showManage ? 'border-emerald-500 text-emerald-300' : 'border-slate-700 text-slate-400 hover:text-white'
+            }`}
+          >
+            <MoreHorizontal className="h-4 w-4" /> Gestisci
+          </button>
         )}
       </div>
 
-      {/* Pulsante Azione Partecipazione */}
-      <div className="mt-5 pt-3 border-t border-slate-800 flex flex-col gap-2">
-        {isLocked && !isUserPresent ? (
-          <div className="w-full py-2.5 px-3 rounded-xl bg-slate-800/60 border border-slate-700 text-slate-300 text-xs text-center flex items-center justify-center gap-2">
-            <Lock className="h-4 w-4 text-slate-400 flex-shrink-0" />
-            <span className="font-semibold text-[11px] leading-tight">
-              Votazioni non ancora aperte: l&apos;admin le apre per la settimana prossima.
+      {/* Ci sei? — l'azione principale */}
+      <div className="mt-4">
+        {mine ? (
+          <div
+            className={`w-full rounded-xl border px-4 py-3 flex items-center justify-between gap-3 ${
+              myStarterIdx >= 0 ? 'bg-emerald-500/10 border-emerald-500/40' : 'bg-amber-500/10 border-amber-500/40'
+            }`}
+          >
+            <span className={`text-sm font-black flex items-center gap-2 ${myStarterIdx >= 0 ? 'text-emerald-300' : 'text-amber-300'}`}>
+              <Check className="h-4 w-4" />
+              {myStarterIdx >= 0 ? `Sei titolare (n° ${myStarterIdx + 1})` : `In attesa (${myWaitIdx + 1}°)`}
             </span>
+            {cancelLocked ? (
+              <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                <Lock className="h-3 w-3" /> Ritiri bloccati
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onTogglePresence(day.dateString)}
+                disabled={isToggling}
+                className="text-xs text-slate-400 hover:text-rose-300 underline disabled:opacity-50"
+              >
+                Ritirati
+              </button>
+            )}
           </div>
-        ) : isCancelLocked ? (
-          <div className="w-full py-2.5 px-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs text-center flex items-center justify-center gap-2">
-            <Lock className="h-4 w-4 text-amber-400 flex-shrink-0" />
-            <span className="font-semibold text-[11px] leading-tight">
-              Disdette bloccate (Time-lock attivo). Contatta l&apos;Admin per disdire.
+        ) : isLocked ? (
+          <div className="w-full rounded-xl border border-slate-700 bg-slate-800/60 px-4 py-3 text-center">
+            <span className="text-sm font-black text-slate-300 flex items-center justify-center gap-2">
+              <Lock className="h-4 w-4" /> Iscrizioni chiuse
             </span>
+            <span className="block text-[11px] text-slate-500 mt-0.5">L&apos;admin le apre per la settimana prossima.</span>
           </div>
         ) : (
           <button
             type="button"
             onClick={() => onTogglePresence(day.dateString)}
             disabled={isToggling}
-            className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer disabled:opacity-50 disabled:cursor-wait ${
-              isUserPresent
-                ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30'
-                : isFull
+            className={`w-full py-3.5 px-4 rounded-xl font-black text-sm uppercase tracking-wider transition-all shadow-lg disabled:opacity-50 disabled:cursor-wait ${
+              isFull
                 ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-500/25'
                 : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/25'
             }`}
           >
-            {isUserPresent ? (
-              <>
-                <UserX className="h-4 w-4" />
-                Annulla Presenza ({userPresence?.status === 'confirmed' ? 'Titolare' : 'Waitlist'})
-              </>
-            ) : isFull ? (
-              <>
-                <Clock className="h-4 w-4" />
-                Mettiti in Waitlist (+{waitlist.length + 1})
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4" />
-                Vota Presenza (Gioca)
-              </>
-            )}
+            {isFull ? 'Mettimi in attesa' : 'Ci sono'}
           </button>
         )}
+      </div>
 
-        {/* Per l'Admin: Assegna giocatore ospite */}
-        {showAdminActions && onAddGuestPresence && (
-          <div className="flex items-center gap-1.5 mt-1">
+      {/* Titolari: anello + dieci pallini */}
+      <div className="mt-5 flex items-center gap-4">
+        <CountRing count={starters.length} />
+        <div className="flex-1 min-w-0">
+          <div className="grid grid-cols-5 gap-1.5 w-fit">
+            {Array.from({ length: MAX }, (_, i) => {
+              const p = starters[i];
+              if (!p) {
+                return (
+                  <span
+                    key={`free-${i}`}
+                    className="h-8 w-8 rounded-full border-2 border-dashed border-slate-700"
+                    aria-label="Posto libero"
+                  />
+                );
+              }
+              const isMe = p.player_id === effectiveUserId;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setRevealedId((id) => (id === p.id ? null : p.id))}
+                  title={p.name}
+                  aria-label={p.name}
+                  className={`h-8 w-8 rounded-full flex items-center justify-center text-[10px] font-black ${
+                    isMe ? 'bg-emerald-500 text-slate-950 ring-2 ring-emerald-300' : 'bg-slate-800 text-emerald-300 border border-slate-700'
+                  } ${revealedId === p.id ? 'ring-2 ring-white' : ''}`}
+                >
+                  {initialsOf(p.name)}
+                </button>
+              );
+            })}
+          </div>
+          {revealed ? (
+            <p className="mt-1.5 text-xs text-white font-semibold truncate">{revealed.name}</p>
+          ) : (
+            <p className="mt-1.5 text-[11px] text-slate-500">
+              {isFull ? 'Completo' : `${MAX - starters.length} ${MAX - starters.length === 1 ? 'posto libero' : 'posti liberi'}`}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Nomi dei titolari, su richiesta */}
+      {starters.length > 0 && (
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={() => setShowNames((o) => !o)}
+            aria-expanded={showNames}
+            className="text-xs font-bold text-slate-400 hover:text-white flex items-center gap-1"
+          >
+            Vedi nomi <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showNames ? 'rotate-180' : ''}`} />
+          </button>
+          {showNames && (
+            <ol className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs">
+              {starters.map((p, i) => (
+                <li
+                  key={p.id}
+                  className={`truncate ${p.player_id === effectiveUserId ? 'text-emerald-300 font-bold' : 'text-slate-300'}`}
+                >
+                  <span className="font-mono text-slate-500 mr-1.5">{i + 1}.</span>
+                  {p.name}
+                  {p.profile?.is_guest && <span className="text-[10px] text-slate-500"> · ospite</span>}
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+      )}
+
+      {/* Lista d'attesa in una riga */}
+      {waitlist.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setShowWaitlist((o) => !o)}
+          aria-expanded={showWaitlist}
+          className="mt-3 w-full text-left text-xs text-amber-300/90 hover:text-amber-200"
+        >
+          <span className="font-bold">In attesa:</span>{' '}
+          {showWaitlist
+            ? waitlist.map((p, i) => `${i + 1}. ${p.name}`).join(' · ')
+            : `${waitlist
+                .slice(0, 2)
+                .map((p) => p.name.split(/\s+/)[0])
+                .join(', ')}${waitlist.length > 2 ? ` +${waitlist.length - 2}` : ''}`}
+        </button>
+      )}
+
+      {/* Strumenti admin, solo su richiesta */}
+      {showAdminActions && showManage && (
+        <div className="mt-4 pt-4 border-t border-slate-800 space-y-3">
+          <p className="text-[11px] font-black uppercase tracking-wider text-slate-500">Gestione admin</p>
+          {enriched.length === 0 && <p className="text-xs text-slate-500">Nessun iscritto.</p>}
+          <ul className="space-y-1">
+            {enriched.map((p) => {
+              const isStarter = p.status === 'confirmed';
+              return (
+                <li key={p.id} className="flex items-center gap-2 text-xs">
+                  <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isStarter ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                  <span className="flex-1 min-w-0 truncate text-slate-200">{p.name}</span>
+                  {onSetOverride && (
+                    <button
+                      type="button"
+                      onClick={() => onSetOverride(p.id, isStarter ? 'waitlist' : 'starter')}
+                      className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800"
+                      title={isStarter ? "Sposta in lista d'attesa" : 'Fai titolare'}
+                      aria-label={isStarter ? `Sposta ${p.name} in lista d'attesa` : `Fai titolare ${p.name}`}
+                    >
+                      {isStarter ? <ArrowDown className="h-3.5 w-3.5" /> : <ArrowUp className="h-3.5 w-3.5" />}
+                    </button>
+                  )}
+                  {onRemovePresence && (
+                    <button
+                      type="button"
+                      onClick={() => onRemovePresence(p.id)}
+                      className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-slate-800"
+                      title="Rimuovi"
+                      aria-label={`Rimuovi ${p.name}`}
+                    >
+                      <UserX className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          {onAddGuestPresence && (
             <select
-              className="flex-1 min-w-0 text-xs bg-slate-950 border border-slate-800 text-slate-300 rounded-lg px-2 py-1.5 focus:outline-none focus:border-emerald-500"
+              className="w-full min-w-0 text-xs bg-slate-950 border border-slate-800 text-slate-300 rounded-lg px-2 py-2 focus:outline-none focus:border-slate-500"
               defaultValue=""
+              aria-label="Aggiungi un giocatore a questo giorno"
               onChange={(e) => {
                 if (e.target.value) {
                   onAddGuestPresence(day.dateString, e.target.value);
@@ -344,28 +343,27 @@ export function PresenceCard({
               }}
             >
               <option value="" disabled>
-                + Aggiungi ospite al giorno...
+                + Aggiungi giocatore o ospite…
               </option>
-              {allProfiles
-                .filter((p) => !presences.some((pr) => pr.player_id === p.id))
-                .map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.full_name} ({p.overall_rating}) {p.is_guest ? '[Ospite]' : ''}
-                  </option>
-                ))}
+              {availableToAdd.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.full_name}
+                  {p.is_guest ? ' (ospite)' : ''}
+                </option>
+              ))}
             </select>
-          </div>
-        )}
-        {showAdminActions && onResetDay && presences.length > 0 && (
-          <button
-            type="button"
-            onClick={() => onResetDay(day.dateString)}
-            className="mt-1 self-start text-[11px] text-rose-400/80 hover:text-rose-300 underline"
-          >
-            Azzera presenze del giorno
-          </button>
-        )}
-      </div>
+          )}
+          {onResetDay && presences.length > 0 && (
+            <button
+              type="button"
+              onClick={() => onResetDay(day.dateString)}
+              className="text-[11px] text-rose-400/80 hover:text-rose-300 underline"
+            >
+              Azzera presenze del giorno
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
