@@ -1,5 +1,7 @@
 'use client';
 
+import { notify } from '@/components/ui/Feedback';
+
 import React, { useEffect, useState } from 'react';
 import { Bell, BellOff, Smartphone, Loader2 } from 'lucide-react';
 import { useAuth } from '@/lib/context/AuthContext';
@@ -51,7 +53,7 @@ export function NotificationGuide() {
       setStatus(await enablePush(profile.id));
     } catch (err) {
       console.warn('[Push] attivazione:', err);
-      alert('Attivazione non riuscita. Riprova; su iPhone apri l\'app dall\'icona sulla schermata Home.');
+      notify('Attivazione non riuscita. Riprova; su iPhone apri l\'app dall\'icona sulla schermata Home.');
     } finally {
       setBusy(false);
     }

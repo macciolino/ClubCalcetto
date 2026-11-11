@@ -1,5 +1,7 @@
 'use client';
 
+import { notify, askConfirm } from '@/components/ui/Feedback';
+
 import { DeletionFeedbackCard } from '@/components/admin/DeletionFeedbackCard';
 import { DeactivatedAccountsList } from '@/components/admin/DeactivatedAccountsList';
 import { manageAccountAsSuperAdmin } from '@/lib/services/accountService';
@@ -223,12 +225,12 @@ export function AdminSections({ section }: { section: AdminSection }) {
   // Handlers Tab 3: Anagrafica & Ruoli
   const handleTogglePlayerRole = async (targetPlayer: Profile) => {
     if (!isSuperAdmin) {
-      alert('Solo il super admin può promuovere o retrocedere gli amministratori.');
+      notify('Solo il super admin può promuovere o retrocedere gli amministratori.');
       return;
     }
     const isMarco = targetPlayer.email?.toLowerCase().includes('macciolino84');
     if (isMarco && targetPlayer.role === 'admin') {
-      alert('Non è possibile retrocedere l\'amministratore principale.');
+      notify('Non è possibile retrocedere l\'amministratore principale.');
       return;
     }
 
@@ -250,39 +252,39 @@ export function AdminSections({ section }: { section: AdminSection }) {
     const target = players.find((p) => p.id === playerId);
     if (playerId === 'p-1') return;
     if (target?.is_guest) {
-      if (!confirm(`Eliminare l'ospite "${name}"? Nelle partite già giocate resta il nome.`)) return;
+      if (!(await askConfirm(`Eliminare l'ospite "${name}"? Nelle partite già giocate resta il nome.`))) return;
       removeStoredPlayer(playerId);
       setPlayers(getStoredPlayers());
       await deleteProfileDoc(playerId);
       return;
     }
     if (!isSuperAdmin) {
-      alert('Solo il super admin può disattivare un account registrato.');
+      notify('Solo il super admin può disattivare un account registrato.');
       return;
     }
-    if (!confirm(`Disattivare l'account di "${name}"? Non potrà più entrare e sparirà dalle pagine; scheda, parametri e statistiche restano salvati. Potrai riattivarlo o eliminarlo del tutto da Impostazioni → Account chiusi.`)) return;
+    if (!(await askConfirm(`Disattivare l'account di "${name}"? Non potrà più entrare e sparirà dalle pagine; scheda, parametri e statistiche restano salvati. Potrai riattivarlo o eliminarlo del tutto da Impostazioni → Account chiusi.`))) return;
     const res = await manageAccountAsSuperAdmin(playerId, 'deactivate');
     if (res.ok) {
       removeStoredPlayer(playerId);
       setPlayers(getStoredPlayers());
-      alert(`Account di "${name}" disattivato.`);
+      notify(`Account di "${name}" disattivato.`);
     } else {
-      alert(res.error === 'not_configured' ? 'Operazione non disponibile: server non configurato.' : 'Operazione non riuscita. Riprova.');
+      notify(res.error === 'not_configured' ? 'Operazione non disponibile: server non configurato.' : 'Operazione non riuscita. Riprova.');
     }
   };
 
   const handleReactivatePlayer = async (player: Profile) => {
-    if (!confirm(`Riattivare l'account di "${player.full_name}"? Potrà di nuovo entrare e ritroverà scheda, parametri e statistiche.`)) return;
+    if (!(await askConfirm(`Riattivare l'account di "${player.full_name}"? Potrà di nuovo entrare e ritroverà scheda, parametri e statistiche.`))) return;
     const res = await manageAccountAsSuperAdmin(player.id, 'reactivate');
     if (res.ok) setDeactivatedPlayers((prev) => prev.filter((p) => p.id !== player.id));
-    else alert('Riattivazione non riuscita. Riprova.');
+    else notify('Riattivazione non riuscita. Riprova.');
   };
 
   const handleDeleteDeactivatedPlayer = async (player: Profile) => {
-    if (!confirm(`Eliminare DEFINITIVAMENTE l'account di "${player.full_name}"? Scheda, parametri e statistiche verranno cancellati. Non si può annullare.`)) return;
+    if (!(await askConfirm(`Eliminare DEFINITIVAMENTE l'account di "${player.full_name}"? Scheda, parametri e statistiche verranno cancellati. Non si può annullare.`))) return;
     const res = await manageAccountAsSuperAdmin(player.id, 'delete');
     if (res.ok) setDeactivatedPlayers((prev) => prev.filter((p) => p.id !== player.id));
-    else alert('Eliminazione non riuscita. Riprova.');
+    else notify('Eliminazione non riuscita. Riprova.');
   };
 
   // Handlers Tab 4: Configurazione Club & Campi

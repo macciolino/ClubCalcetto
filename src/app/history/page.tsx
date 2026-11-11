@@ -1,5 +1,7 @@
 'use client';
 
+import { notify, askConfirm } from '@/components/ui/Feedback';
+
 import React, { useEffect, useMemo, useState } from 'react';
 import { Match, Profile } from '@/types/database';
 import { subscribeMatches, subscribeProfiles, deleteMatchResult } from '@/lib/firebase/firestoreService';
@@ -143,20 +145,20 @@ export default function HistoryPage() {
 
   // Cancellazione (solo admin): toglie anche le V/P/S che la partita aveva aggiunto ai profili
   const handleDeleteMatch = async (m: Match) => {
-    if (!confirm(`Cancellare dallo storico la partita del ${formatItalianDate(m.match_date || m.id)}? Vittorie/pareggi/sconfitte di questa partita verranno tolti dai profili.`)) return;
+    if (!(await askConfirm(`Cancellare dallo storico la partita del ${formatItalianDate(m.match_date || m.id)}? Vittorie/pareggi/sconfitte di questa partita verranno tolti dai profili.`))) return;
     setDeleting(m.id);
     try {
       await deleteMatchResult(m.match_date || m.id);
     } catch (err) {
       console.warn('[Storico] cancellazione non riuscita:', err);
-      alert('Cancellazione non riuscita. Riprova.');
+      notify('Cancellazione non riuscita. Riprova.');
     } finally {
       setDeleting(null);
     }
   };
 
   const handleDeleteAll = async () => {
-    if (!confirm(`Vuoi davvero cancellare tutto lo storico${season === 'all' ? '' : ` ${season}`}?`)) return;
+    if (!(await askConfirm(`Vuoi davvero cancellare tutto lo storico${season === 'all' ? '' : ` ${season}`}?`))) return;
     setDeleting('all');
     try {
       for (const m of visibleMatches) {
@@ -164,7 +166,7 @@ export default function HistoryPage() {
       }
     } catch (err) {
       console.warn('[Storico] cancellazione non riuscita:', err);
-      alert('Cancellazione interrotta. Alcune partite potrebbero essere ancora presenti: riprova.');
+      notify('Cancellazione interrotta. Alcune partite potrebbero essere ancora presenti: riprova.');
     } finally {
       setDeleting(null);
     }

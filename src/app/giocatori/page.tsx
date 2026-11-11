@@ -1,5 +1,7 @@
 'use client';
 
+import { notify, askConfirm } from '@/components/ui/Feedback';
+
 import { manageAccountAsSuperAdmin } from '@/lib/services/accountService';
 import { useForms } from '@/lib/hooks/useForms';
 import React, { useState, useEffect, useMemo } from 'react';
@@ -117,20 +119,20 @@ export default function GiocatoriPage() {
     const target = players.find((p) => p.id === playerId);
     try {
       if (target?.is_guest) {
-        if (!confirm(`Eliminare l'ospite "${name}"? Nelle partite già giocate resta il nome.`)) return;
+        if (!(await askConfirm(`Eliminare l'ospite "${name}"? Nelle partite già giocate resta il nome.`))) return;
         removeStoredPlayer(playerId);
         setPlayers(getStoredPlayers());
         await deleteProfileDoc(playerId);
         return;
       }
       if (!isSuperAdmin) {
-        alert('Solo il super admin può disattivare un account registrato.');
+        notify('Solo il super admin può disattivare un account registrato.');
         return;
       }
-      if (!confirm(`Disattivare l'account di "${name}"? Non potrà più entrare e sparirà dalle pagine; scheda, parametri e statistiche restano salvati. Potrai riattivarlo o eliminarlo del tutto da Admin → Anagrafica Rosa → Disattivati.`)) return;
+      if (!(await askConfirm(`Disattivare l'account di "${name}"? Non potrà più entrare e sparirà dalle pagine; scheda, parametri e statistiche restano salvati. Potrai riattivarlo o eliminarlo del tutto da Admin → Anagrafica Rosa → Disattivati.`))) return;
       const res = await manageAccountAsSuperAdmin(playerId, 'deactivate');
       if (!res.ok) {
-        alert('Operazione non riuscita. Riprova.');
+        notify('Operazione non riuscita. Riprova.');
         return;
       }
       removeStoredPlayer(playerId);

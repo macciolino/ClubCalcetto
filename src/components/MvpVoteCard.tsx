@@ -1,5 +1,7 @@
 'use client';
 
+import { askConfirm } from '@/components/ui/Feedback';
+
 import React, { useEffect, useState } from 'react';
 import { MatchTeamPlayer, MvpVote } from '@/types/database';
 import { castMvpVote, countMvpVotes, subscribeMvpVotes, setMvpVoteTest, clearMvpVotes } from '@/lib/firebase/firestoreService';
@@ -53,7 +55,7 @@ export function MvpVoteCard({ date, matchTime, white, black, voterUid, isAdmin =
   const leader = tally[0] ? players.find((p) => p.id === tally[0].playerId) : undefined;
 
   const changeTest = async (mode: 'admins' | 'all' | false) => {
-    if (mode === 'all' && !confirm('Il voto di prova si apre ADESSO per tutti i giocatori. Ricordati di azzerare i voti alla fine. Continuare?')) return;
+    if (mode === 'all' && !(await askConfirm('Il voto di prova si apre ADESSO per tutti i giocatori. Ricordati di azzerare i voti alla fine. Continuare?'))) return;
     try {
       await setMvpVoteTest(date, mode);
     } catch (err) {
@@ -63,7 +65,7 @@ export function MvpVoteCard({ date, matchTime, white, black, voterUid, isAdmin =
   };
 
   const handleClearVotes = async () => {
-    if (!confirm(`Cancellare tutti i ${votes.length} voti MVP di questa partita?`)) return;
+    if (!(await askConfirm(`Cancellare tutti i ${votes.length} voti MVP di questa partita?`))) return;
     try {
       await clearMvpVotes(date);
     } catch (err) {

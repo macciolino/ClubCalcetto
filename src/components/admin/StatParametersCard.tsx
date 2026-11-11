@@ -1,5 +1,7 @@
 'use client';
 
+import { askConfirm } from '@/components/ui/Feedback';
+
 import React, { useState } from 'react';
 import { StatCategory } from '@/types/database';
 import { addStatParameter, removeStatParameter } from '@/lib/firebase/firestoreService';
@@ -39,7 +41,7 @@ export function StatParametersCard({ categories, onOpenLegend }: StatParametersC
       setError(`"${clean}" esiste già.`);
       return;
     }
-    if (!confirm(`Aggiungere il parametro "${clean}"? Tutti i giocatori che non ce l'hanno riceveranno il valore ${defaultValue}.`)) return;
+    if (!(await askConfirm(`Aggiungere il parametro "${clean}"? Tutti i giocatori che non ce l'hanno riceveranno il valore ${defaultValue}.`))) return;
     setBusy('add');
     try {
       const updated = await addStatParameter(clean, defaultValue);
@@ -61,7 +63,7 @@ export function StatParametersCard({ categories, onOpenLegend }: StatParametersC
   const handleRemove = async (cat: StatCategory) => {
     setError('');
     setMessage('');
-    if (!confirm(`Togliere "${cat.name}"? Non verrà più mostrato né usato per OVR e squadre. I valori dei giocatori restano salvati: se lo rimetti tornano quelli di prima.`)) return;
+    if (!(await askConfirm(`Togliere "${cat.name}"? Non verrà più mostrato né usato per OVR e squadre. I valori dei giocatori restano salvati: se lo rimetti tornano quelli di prima.`))) return;
     setBusy(cat.id);
     try {
       await removeStatParameter(cat.id);

@@ -1,5 +1,7 @@
 'use client';
 
+import { askConfirm } from '@/components/ui/Feedback';
+
 import { StatParametersCard } from '@/components/admin/StatParametersCard';
 import { FormSettingsCard } from '@/components/admin/FormSettingsCard';
 import { CollapsibleCard } from '@/components/CollapsibleCard';
@@ -233,8 +235,8 @@ export function TabClubConfigFields({
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      if (confirm(`Eliminare il campo "${field.name}"?`)) {
+                    onClick={async () => {
+                      if ((await askConfirm(`Eliminare il campo "${field.name}"?`))) {
                         onDeleteField(field.id);
                       }
                     }}

@@ -40,7 +40,9 @@ description: ClubCalcetto UI conventions - theme, shared components (tables, dro
 - Admin modals: `FieldModal`, `StatsLegendModal`; `PlayerModal` for editing a player.
 - Dropdowns are native `<select>` (`bg-slate-950 border border-slate-700 rounded-xl`); give them `min-w-0` inside flex rows.
   Use a neutral focus border (`focus:border-slate-500`): an emerald one peeks out behind the native popup.
-- Confirmations: native `confirm()` with a full Italian sentence, no typed confirmations. Errors: `alert()` or inline rose text.
+- Messages and confirmations: NEVER `alert()` / `confirm()`. Use `notify(msg, kind?)` (toast at the bottom, kind guessed:
+  error / info / success) and `if (!(await askConfirm(msg))) return;` (app dialog, red button when the text sounds destructive)
+  from `components/ui/Feedback.tsx`; `<FeedbackHost />` is mounted in `layout.tsx`. Inline rose text for form errors.
 - Forms (see `/login`): `noValidate`, required fields marked with a rose `*`, errors shown after submit or blur:
   `border-rose-500` + message under the field (`aria-invalid`, `aria-describedby`). Password rules listed live under the field.
 - Segmented switchers (tabs): `flex gap-1 bg-slate-900 border p-1 rounded-xl`, active = `bg-emerald-500 text-slate-950`, with `aria-pressed`.

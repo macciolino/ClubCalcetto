@@ -1,5 +1,7 @@
 'use client';
 
+import { askConfirm } from '@/components/ui/Feedback';
+
 import { useForms } from '@/lib/hooks/useForms';
 import { withForm, formatForm } from '@/lib/utils/formUtils';
 import { NumberInput } from '@/components/NumberInput';
@@ -321,7 +323,7 @@ function SquadreContent() {
       return;
     }
     const isRebalance = Boolean(teamRecord);
-    if (isRebalance && isConfirmed && !confirm('La partita è già confermata con queste squadre. Vuoi davvero rimescolarle? I giocatori verranno avvisati.')) {
+    if (isRebalance && isConfirmed && !(await askConfirm('La partita è già confermata con queste squadre. Vuoi davvero rimescolarle? I giocatori verranno avvisati.'))) {
       return;
     }
 
@@ -350,7 +352,7 @@ function SquadreContent() {
   // Conferma partita: da qui in poi queste sono le squadre (i giocatori vengono avvisati)
   const handleConfirmMatch = async () => {
     if (!teamRecord || !teamsComplete) return;
-    if (!confirm(`Confermi la partita del ${formatItalianDate(selectedDate)} con queste squadre?`)) return;
+    if (!(await askConfirm(`Confermi la partita del ${formatItalianDate(selectedDate)} con queste squadre?`))) return;
     setIsConfirming(true);
     try {
       await confirmTeams(selectedDate, profile?.id || '');
@@ -365,7 +367,7 @@ function SquadreContent() {
   };
 
   const handleUnconfirmMatch = async () => {
-    if (!confirm('Annullare la conferma della partita?')) return;
+    if (!(await askConfirm('Annullare la conferma della partita?'))) return;
     try {
       await confirmTeams(selectedDate, profile?.id || '', false);
     } catch (err) {

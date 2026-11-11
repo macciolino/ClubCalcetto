@@ -1,5 +1,7 @@
 'use client';
 
+import { askConfirm } from '@/components/ui/Feedback';
+
 import React, { useEffect, useState } from 'react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '@/lib/firebase/config';
@@ -42,7 +44,7 @@ export function NotificationSettingsCard({ defaultOpen = false }: { defaultOpen?
 
   const handleMode = async (next: Mode) => {
     if (next === mode) return;
-    if (next === 'all' && !confirm('Da ora le notifiche arriveranno a tutti i giocatori interessati. Confermi?')) return;
+    if (next === 'all' && !(await askConfirm('Da ora le notifiche arriveranno a tutti i giocatori interessati. Confermi?'))) return;
     setSaving(true);
     try {
       await setDoc(

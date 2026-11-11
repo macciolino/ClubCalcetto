@@ -1,5 +1,7 @@
 'use client';
 
+import { notify } from '@/components/ui/Feedback';
+
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { Profile, UserRole, FieldPosition } from '@/types/database';
 import { updateStoredPlayer, addStoredPlayer, getStoredPlayers } from '@/lib/services/playerService';
@@ -174,7 +176,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const data = snap.data() as Profile;
         if (data.deactivated_at) {
           await firebaseSignOut(firebaseAuth);
-          alert('Questo account è stato disattivato. Per riattivarlo contatta l’amministratore del club.');
+          notify('Questo account è stato disattivato. Per riattivarlo contatta l’amministratore del club.');
           return null;
         }
         resolved = {

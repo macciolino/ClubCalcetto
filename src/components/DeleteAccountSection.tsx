@@ -1,5 +1,7 @@
 'use client';
 
+import { notify, askConfirm } from '@/components/ui/Feedback';
+
 import React, { useState } from 'react';
 import { useAuth } from '@/lib/context/AuthContext';
 import { AccountRemovalMode, DELETE_REASONS, deleteMyAccount } from '@/lib/services/accountService';
@@ -40,12 +42,12 @@ export function DeleteAccountSection({ isSuperAdmin }: { isSuperAdmin: boolean }
       mode === 'deactivate'
         ? 'Confermi la disattivazione del tuo account? Non potrai più entrare finché un amministratore non lo riattiva.'
         : 'Confermi l’eliminazione DEFINITIVA del tuo account e di tutti i tuoi dati? Non si può annullare.';
-    if (!confirm(question)) return;
+    if (!(await askConfirm(question))) return;
     setBusy(true);
     try {
       const res = await deleteMyAccount(reason, details.trim(), mode);
       if (res.ok) {
-        alert(
+        notify(
           mode === 'deactivate'
             ? 'Il tuo account è stato disattivato. Per tornare chiedi a un amministratore di riattivarlo.'
             : 'Il tuo account è stato eliminato. Grazie per aver giocato con noi!'

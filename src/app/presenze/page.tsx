@@ -1,5 +1,7 @@
 'use client';
 
+import { notify, askConfirm } from '@/components/ui/Feedback';
+
 import { callNotifyApi } from '@/lib/services/pushService';
 import { firstToTenByWeek } from '@/lib/utils/presenceRanking';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -108,12 +110,12 @@ export default function PresenzePage() {
   const handleTogglePresence = async (dateString: string) => {
     const currentId = profile?.id;
     if (!currentId) {
-      alert('Profilo non ancora caricato, riprova tra un attimo.');
+      notify('Profilo non ancora caricato, riprova tra un attimo.');
       return;
     }
     const existing = presences.find((p) => p.date === dateString && p.player_id === currentId);
     if (!existing && isDayLocked(dateString)) {
-      alert('Le votazioni per questo giorno non sono ancora aperte.');
+      notify('Le votazioni per questo giorno non sono ancora aperte.');
       return;
     }
     setBusyDate(dateString);
@@ -125,7 +127,7 @@ export default function PresenzePage() {
       }
     } catch (err) {
       console.warn('[Presenze] toggle error:', err);
-      alert('Operazione non riuscita. Controlla la connessione e riprova.');
+      notify('Operazione non riuscita. Controlla la connessione e riprova.');
     } finally {
       setBusyDate(null);
     }
@@ -137,7 +139,7 @@ export default function PresenzePage() {
       await joinPresence(dateString, guestId);
     } catch (err) {
       console.warn('[Presenze] add guest error:', err);
-      alert('Impossibile aggiungere il giocatore (forse è già iscritto).');
+      notify('Impossibile aggiungere il giocatore (forse è già iscritto).');
     }
   };
 
@@ -147,13 +149,13 @@ export default function PresenzePage() {
       await setPresenceOverride(presenceId, override);
     } catch (err) {
       console.warn('[Presenze] override error:', err);
-      alert('Impossibile spostare il giocatore.');
+      notify('Impossibile spostare il giocatore.');
     }
   };
 
   // Azione Admin: toglie tutte le iscrizioni di un giorno
   const handleResetDay = async (dateString: string) => {
-    if (!confirm(`Vuoi davvero azzerare tutte le presenze di ${formatItalianDate(dateString)}?`)) return;
+    if (!(await askConfirm(`Vuoi davvero azzerare tutte le presenze di ${formatItalianDate(dateString)}?`))) return;
     await clearPresencesForDate(dateString);
   };
 
@@ -163,7 +165,7 @@ export default function PresenzePage() {
       await leavePresence(presenceId);
     } catch (err) {
       console.warn('[Presenze] remove error:', err);
-      alert('Impossibile rimuovere la presenza.');
+      notify('Impossibile rimuovere la presenza.');
     }
   };
 
@@ -173,7 +175,7 @@ export default function PresenzePage() {
     const msg = isNextWeekOpen
       ? 'Richiudere le votazioni della settimana prossima? Chi è già iscritto resta iscritto.'
       : `Aprire le votazioni fino a ${formatItalianDate(nextWeekEnd)}?`;
-    if (!confirm(msg)) return;
+    if (!(await askConfirm(msg))) return;
     setIsSavingCalendar(true);
     try {
       await saveCalendarOpenUntil(next, profile?.id || '');
@@ -181,7 +183,7 @@ export default function PresenzePage() {
       if (next) callNotifyApi({ type: 'voting_open', until: next }).catch(() => undefined);
     } catch (err) {
       console.warn('[Presenze] calendar error:', err);
-      alert('Impossibile aggiornare il calendario.');
+      notify('Impossibile aggiornare il calendario.');
     } finally {
       setIsSavingCalendar(false);
     }

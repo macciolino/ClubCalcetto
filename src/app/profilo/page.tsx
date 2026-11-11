@@ -1,5 +1,7 @@
 'use client';
 
+import { askConfirm } from '@/components/ui/Feedback';
+
 import { getStatValue, computeMatchStats, EMPTY_MATCH_STATS } from '@/lib/utils/statUtils';
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
@@ -126,7 +128,7 @@ export default function ProfiloPage() {
   };
 
   const handleRemovePhoto = async () => {
-    if (!confirm('Vuoi togliere la tua foto?')) return;
+    if (!(await askConfirm('Vuoi togliere la tua foto?'))) return;
     await updateProfile({ avatar_url: null });
   };
 

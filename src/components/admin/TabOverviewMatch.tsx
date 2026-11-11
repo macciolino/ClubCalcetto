@@ -1,5 +1,7 @@
 'use client';
 
+import { notify, askConfirm } from '@/components/ui/Feedback';
+
 import { useFormSettings } from '@/lib/hooks/useForms';
 import { MatchResultFields, MatchResultValue, validateScorers } from '@/components/MatchResultFields';
 import { reconcileTeams, toTeamPlayer } from '@/lib/utils/teamUtils';
@@ -213,14 +215,14 @@ export function TabOverviewMatch({
 
   const handleArchiveMatch = async () => {
     if (!teams) {
-      alert('Prima genera le squadre nella sezione Squadre: il risultato viene salvato sulle squadre generate.');
+      notify('Prima genera le squadre nella sezione Squadre: il risultato viene salvato sulle squadre generate.');
       return;
     }
     if (validation.error) {
-      alert(validation.error);
+      notify(validation.error);
       return;
     }
-    if (isAlreadyClosed && !confirm('Questa partita è già archiviata. Vuoi aggiornare il risultato? Le squadre restano quelle archiviate; vittorie/pareggi/sconfitte vengono corretti, non sommati di nuovo.')) {
+    if (isAlreadyClosed && !(await askConfirm('Questa partita è già archiviata. Vuoi aggiornare il risultato? Le squadre restano quelle archiviate; vittorie/pareggi/sconfitte vengono corretti, non sommati di nuovo.'))) {
       return;
     }
 
@@ -245,7 +247,7 @@ export function TabOverviewMatch({
       setTimeout(() => setArchiveSuccessMessage(''), 8000);
     } catch (err) {
       console.error('Archiviazione fallita:', err);
-      alert('Errore durante il salvataggio della partita. Controlla la connessione e riprova.');
+      notify('Errore durante il salvataggio della partita. Controlla la connessione e riprova.');
     } finally {
       setIsArchiving(false);
     }

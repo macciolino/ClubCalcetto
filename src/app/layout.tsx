@@ -5,6 +5,7 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'], display: 'swap', variable: '--font-inter' });
 import { AuthProvider } from '@/lib/context/AuthContext';
 import { Navbar } from '@/components/Navbar';
+import { FeedbackHost } from '@/components/ui/Feedback';
 
 export const metadata: Metadata = {
   title: 'Club Soccer - Gestione Partite & Squadre Bilanciate',
@@ -38,6 +39,7 @@ export default function RootLayout({
           <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-6">
             {children}
           </main>
+          <FeedbackHost />
         </AuthProvider>
       </body>
     </html>
