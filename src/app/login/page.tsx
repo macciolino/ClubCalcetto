@@ -2,6 +2,7 @@
 
 import { BrandLogo } from '@/components/BrandLogo';
 import { PitchLines, useScreenPitchHeight } from '@/components/PitchLines';
+import { SHOW_SPLASH_EVENT } from '@/components/SplashScreen';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -73,7 +74,11 @@ export default function LoginPage() {
   // Accesso fatto (e mail verificata, se serve): si va alla home
   const router = useRouter();
   useEffect(() => {
-    if (mounted && user && profile && isEmailVerified) router.replace('/');
+    if (mounted && user && profile && isEmailVerified) {
+      router.replace('/');
+      // Entrando nell'app dopo il login: animazione del campo
+      setTimeout(() => window.dispatchEvent(new Event(SHOW_SPLASH_EVENT)), 0);
+    }
   }, [mounted, user, profile, isEmailVerified, router]);
 
   const isStrictAdmin = Boolean(mounted && user && (profile?.role === 'admin' || isAdmin));

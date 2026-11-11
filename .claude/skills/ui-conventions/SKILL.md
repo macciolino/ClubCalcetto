@@ -82,8 +82,9 @@ description: ClubCalcetto UI conventions - theme, shared components (tables, dro
 ## Pitch & motion
 - `components/PitchLines.tsx`: football pitch SVG (2:3, grass stripes, areas, arcs, goals) whose lines draw themselves
   (`.pitch-draw`, `.pitch-dots` in globals.css; `pitch-fast` parent = quicker). Used by the login panel and the splash.
-- `components/SplashScreen.tsx` (in layout): pitch + logo, ~1.3 s, once per session (sessionStorage `cc_splash_seen`),
-  never on /login; the inline `SPLASH_GUARD` script hides it before paint.
+- `components/SplashScreen.tsx` (in layout): full-screen pitch + logo, ~1.3 s. Plays on every app open (full load),
+  right after login (`SHOW_SPLASH_EVENT`, dispatched by /login) and when the app returns after 10+ min in background.
+  Never on /login (inline `SPLASH_GUARD` hides it before paint).
 - `VirtualPitch` stickers enter from their own half one after another (`.sticker-enter`, `--from-y`, delay = order × 70 ms).
 - Every animation has a `prefers-reduced-motion` fallback.
 - Form tracker "Ultime 5" = `components/FormDots.tsx` (Home "Il tuo rendimento" and `PlayerCardFifa`): ALWAYS 5 dots for the
