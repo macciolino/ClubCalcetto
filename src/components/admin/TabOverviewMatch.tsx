@@ -157,10 +157,15 @@ export function TabOverviewMatch({
 
   // Partite archiviate totali
   const [archivedMatchesCount, setArchivedMatchesCount] = useState(0);
+  const [archivedDates, setArchivedDates] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const unsub = subscribeMatches((list) =>
-      setArchivedMatchesCount(list.filter((m) => m.status === 'completed').length)
+      {
+        const done = list.filter((m) => m.status === 'completed');
+        setArchivedMatchesCount(done.length);
+        setArchivedDates(new Set(done.map((m) => m.match_date || m.id)));
+      }
     );
     return () => unsub();
   }, []);
@@ -585,22 +590,54 @@ export function TabOverviewMatch({
               Risultato, marcatori e MVP: al salvataggio si aggiornano vittorie, pareggi e sconfitte.
             </p>
           </div>
-          <label className="sm:w-64 flex-shrink-0">
-            <span className="sr-only">Partita da chiudere</span>
-            <select
-              value={closingDate}
-              onChange={(e) => setClosingDate(e.target.value)}
-              className="w-full min-w-0 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-slate-500"
-            >
-              {closingOptions.map((d) => (
-                <option key={d} value={d}>
-                  {formatItalianDate(d)}
-                  {d === activeDate ? ' · ufficiale' : ''}
-                </option>
-              ))}
-            </select>
-            <span className="block text-[11px] text-slate-500 mt-1">Anche partite degli ultimi 30 giorni</span>
-          </label>
+        </div>
+
+        {/* Quale partita chiudere: pillole con la data e lo stato (ultimi 30 giorni + giorno ufficiale) */}
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-slate-300">Partita</p>
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none" role="radiogroup" aria-label="Partita da chiudere">
+            {closingOptions.map((d) => {
+              const [y, m, dd] = d.split('-').map(Number);
+              const dt = new Date(y, m - 1, dd);
+              const selected = d === closingDate;
+              const archived = archivedDates.has(d);
+              const status = archived ? 'Archiviata' : d === activeDate ? 'Ufficiale' : 'Da chiudere';
+              return (
+                <button
+                  key={d}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => setClosingDate(d)}
+                  className={`flex-shrink-0 flex flex-col items-center w-[4.75rem] py-2.5 rounded-2xl transition-colors ${
+                    selected ? 'bg-emerald-500 text-slate-950' : 'bg-slate-950/70 text-slate-300 hover:bg-slate-800'
+                  }`}
+                >
+                  <span className={`text-xs font-medium capitalize ${selected ? 'text-slate-900' : 'text-slate-400'}`}>
+                    {dt.toLocaleDateString('it-IT', { weekday: 'short' }).replace('.', '')}
+                  </span>
+                  <span className="text-xl font-bold leading-tight">{dd}</span>
+                  <span className={`text-[11px] ${selected ? 'text-slate-900' : 'text-slate-400'}`}>
+                    {dt.toLocaleDateString('it-IT', { month: 'short' }).replace('.', '')}
+                  </span>
+                  <span
+                    className={`mt-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                      selected
+                        ? 'bg-slate-950/15 text-slate-950'
+                        : archived
+                        ? 'bg-emerald-500/15 text-emerald-300'
+                        : d === activeDate
+                        ? 'bg-slate-700 text-white'
+                        : 'bg-amber-500/15 text-amber-300'
+                    }`}
+                  >
+                    {status}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-[11px] text-slate-500">Il giorno ufficiale e le partite degli ultimi 30 giorni con squadre salvate.</p>
         </div>
 
         {isAlreadyClosed && !archiveSuccessMessage && (
