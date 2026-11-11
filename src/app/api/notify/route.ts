@@ -164,7 +164,7 @@ export async function POST(request: Request) {
       const result = await deliver(await registeredProfileIds(), {
         title: '📅 Iscrizioni aperte',
         body: `Sono aperte le iscrizioni della settimana prossima (fino a ${italianDate(body.until)}): segna le tue presenze!`,
-        url: '/presenze',
+        url: '/presenze?da=notifica',
       });
       return NextResponse.json({ ok: true, ...result });
     }

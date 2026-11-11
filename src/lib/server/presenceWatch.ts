@@ -58,7 +58,7 @@ async function notifyPromoted(date: string, starterIds: string[], waitlistIds: s
   await deliver(promoted, {
     title: '✅ Sei titolare!',
     body: `Si è liberato un posto: sei tra i 10 titolari della partita di ${italianDate(date)}.`,
-    url: '/presenze',
+    url: '/presenze?da=notifica',
   });
 }
 

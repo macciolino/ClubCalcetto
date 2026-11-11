@@ -81,5 +81,11 @@ export function SplashScreen() {
   );
 }
 
-/** Inline script (runs before paint): no splash on /login. */
-export const SPLASH_GUARD = `try{if(location.pathname.indexOf('/login')===0)document.documentElement.classList.add('no-splash')}catch(e){}`;
+/**
+ * Inline script (runs before paint):
+ * - no splash on /login;
+ * - the installed app (standalone) that starts on the old address /presenze (phones keep the start address they had
+ *   when the app was added to the home screen) goes to the Home instead. Only on a fresh launch: not on reload,
+ *   not when a notification opens /presenze?da=notifica, not when navigating inside the app.
+ */
+export const SPLASH_GUARD = `try{var d=document.documentElement;if(location.pathname.indexOf('/login')===0)d.classList.add('no-splash');var sa=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;var nav=performance.getEntriesByType&&performance.getEntriesByType('navigation')[0];if(sa&&location.pathname==='/presenze'&&!location.search&&!document.referrer&&(!nav||nav.type==='navigate'))location.replace('/')}catch(e){}`;
