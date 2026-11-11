@@ -230,9 +230,9 @@ export default function HomePage() {
   return (
     <div className="space-y-8 pb-12 animate-in">
       <header className="space-y-1.5">
-        <p className="text-sm text-slate-400">Ciao {firstName}</p>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white first-letter:uppercase">{presences === null ? '\u00a0' : head.title}</h1>
-        <p className="text-sm text-slate-300">{presences === null ? '\u00a0' : head.detail}</p>
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white">Ciao {firstName}</h1>
+        <p className="pt-1 text-lg sm:text-xl font-semibold text-slate-100 first-letter:uppercase">{presences === null ? '\u00a0' : head.title}</p>
+        <p className="text-sm text-slate-400">{presences === null ? '\u00a0' : head.detail}</p>
         {presences !== null && head.action && (
           <Link
             href={head.action.href}
