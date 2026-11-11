@@ -143,7 +143,7 @@ export function TabClubConfigFields({
           <button
             type="button"
             onClick={handleOpenAddField}
-            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/20 transition-all hover:scale-105 cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition-all cursor-pointer"
           >
             <Plus className="h-4 w-4" />
             <span>+ Aggiungi Campo</span>
@@ -165,9 +165,9 @@ export function TabClubConfigFields({
               >
                 <div>
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-black text-sm text-white">{field.name}</h3>
+                    <h3 className="font-bold text-sm text-white">{field.name}</h3>
                     {isDefault ? (
-                      <span className="text-[10px] bg-emerald-500 text-slate-950 px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
+                      <span className="text-[10px] bg-emerald-500 text-slate-950 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
                         ★ Predefinito
                       </span>
                     ) : (
@@ -289,7 +289,7 @@ export function TabClubConfigFields({
           <button
             type="button"
             onClick={() => onUpdateTimelock(!timelockEnabled, timelockHours)}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               timelockEnabled
                 ? 'bg-amber-500 text-slate-950 hover:bg-amber-400'
                 : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
@@ -369,7 +369,7 @@ export function TabClubConfigFields({
 
             <button
               type="submit"
-              className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs uppercase tracking-wider transition-all shadow-md shadow-emerald-500/20 cursor-pointer"
+              className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition-all cursor-pointer"
             >
               <Check className="h-4 w-4" />
               <span>Salva Impostazioni Economiche</span>

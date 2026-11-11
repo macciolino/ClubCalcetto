@@ -12,16 +12,17 @@ description: ClubCalcetto UI conventions - theme, shared components (tables, dro
   The phone/OS light mode can only affect native controls (e.g. `<select>` popups) and the browser chrome.
 - Palette: page `slate-950`, cards `slate-900`, borders `slate-800/700`, accent `emerald-500/400`,
   amber = highlight/MVP, rose = destructive, violet = test mode, orange/sky = in forma / fuori forma.
-- Cards: `bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl`. Titles: `text-sm font-black uppercase tracking-wider`.
+- Older cards were `rounded-3xl shadow-xl` with `font-black uppercase` titles: replaced by the style below (keep it that way).
 
-## New style (pilot on /presenze, 2026-11-11) — to be extended page by page if approved
+## Current style (approved 2026-11-11, applied to every page)
 
 - Font Inter (next/font, `--font-inter`, global). Page title on the page, no header card: `h1 text-2xl sm:text-3xl font-bold`,
   subtitle `text-sm text-slate-400`. Section titles `text-sm font-semibold text-slate-300`. Avoid `font-black` + uppercase + tracking.
 - Cards `bg-slate-900 border border-slate-800 rounded-2xl p-5`, no shadow/gradient/glow; callouts use `border-l-4` in the
   meaning colour (emerald ok, amber attention). Buttons: primary `bg-emerald-500 text-slate-950 font-semibold rounded-xl`,
   secondary `border border-slate-700`, quiet text button. Small text at least `text-xs text-slate-400`.
-- Rollback points: git tags `backup-prima-restyling` (before the pilot), `backup-prima-scheda-presenze`.
+- Exceptions that keep a bold "sports" look on purpose: `VirtualPitch` stickers, `PlayerCardFifa`, `StatBadge`.
+- Rollback points: git tags `backup-prima-restyling` (before the restyling), `backup-prima-scheda-presenze`.
 
 ## Shared components (`src/components/`)
 

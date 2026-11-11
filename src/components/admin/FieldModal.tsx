@@ -71,13 +71,13 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center modal-safe bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-5">
+      <div className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-5">
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
           <div className="flex items-center gap-2.5">
             <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl">
               <Building2 className="h-5 w-5" />
             </div>
-            <h3 className="text-base font-black text-white">
+            <h3 className="text-base font-bold text-white">
               {fieldToEdit ? 'Modifica Campo da Gioco' : 'Aggiungi Nuovo Centro Sportivo'}
             </h3>
           </div>
@@ -170,7 +170,7 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
             </button>
             <button
               type="submit"
-              className="flex items-center gap-1.5 px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs uppercase tracking-wider transition-all shadow-md shadow-emerald-500/25 cursor-pointer"
+              className="flex items-center gap-1.5 px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition-all shadow-md shadow-emerald-500/25 cursor-pointer"
             >
               <Save className="h-4 w-4" />
               <span>{fieldToEdit ? 'Aggiorna Campo' : 'Salva Campo'}</span>

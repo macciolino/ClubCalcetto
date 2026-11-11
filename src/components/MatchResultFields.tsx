@@ -101,7 +101,7 @@ export function MatchResultFields({ value, onChange, white, black, mvpVotes = []
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       {/* Risultato */}
       <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
-        <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">⚽ Risultato finale</h3>
+        <h3 className="text-xs font-bold text-slate-300">⚽ Risultato finale</h3>
         <div className="flex items-center justify-around gap-3">
           <label className="text-center space-y-1">
             <span className="text-xs font-bold text-white block">⚪ Bianchi</span>
@@ -110,10 +110,10 @@ export function MatchResultFields({ value, onChange, white, black, mvpVotes = []
               max={50}
               value={value.scoreWhite}
               onValueChange={(v) => set({ scoreWhite: v })}
-              className="w-16 h-14 bg-slate-900 border-2 border-slate-700 text-center text-2xl font-black text-white rounded-xl focus:border-emerald-500 focus:outline-none"
+              className="w-16 h-14 bg-slate-900 border-2 border-slate-700 text-center text-2xl font-bold text-white rounded-xl focus:border-emerald-500 focus:outline-none"
             />
           </label>
-          <span className="text-xl font-black text-slate-600">-</span>
+          <span className="text-xl font-bold text-slate-600">-</span>
           <label className="text-center space-y-1">
             <span className="text-xs font-bold text-white block">⚫ Neri</span>
             <NumberInput
@@ -121,7 +121,7 @@ export function MatchResultFields({ value, onChange, white, black, mvpVotes = []
               max={50}
               value={value.scoreBlack}
               onValueChange={(v) => set({ scoreBlack: v })}
-              className="w-16 h-14 bg-slate-900 border-2 border-slate-700 text-center text-2xl font-black text-white rounded-xl focus:border-emerald-500 focus:outline-none"
+              className="w-16 h-14 bg-slate-900 border-2 border-slate-700 text-center text-2xl font-bold text-white rounded-xl focus:border-emerald-500 focus:outline-none"
             />
           </label>
         </div>
@@ -136,7 +136,7 @@ export function MatchResultFields({ value, onChange, white, black, mvpVotes = []
 
       {/* MVP */}
       <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
-        <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+        <h3 className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
           <Star className="h-4 w-4 text-amber-400" /> MVP
         </h3>
         <select
@@ -177,7 +177,7 @@ export function MatchResultFields({ value, onChange, white, black, mvpVotes = []
       {/* Marcatori */}
       <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Marcatori</h3>
+          <h3 className="text-xs font-bold text-slate-300">Marcatori</h3>
           <span className={`text-xs font-mono font-bold ${error ? 'text-rose-400' : 'text-slate-400'}`}>
             {scorerGoals}/{totalGoals} gol
           </span>
@@ -234,7 +234,7 @@ export function MatchResultFields({ value, onChange, white, black, mvpVotes = []
                 >
                   <Minus className="h-4 w-4" />
                 </button>
-                <span className="w-6 text-center font-mono font-black text-emerald-300">{s.goals}</span>
+                <span className="w-6 text-center font-mono font-bold text-emerald-300">{s.goals}</span>
                 <button
                   type="button"
                   onClick={() => addGoal(s.player_id, 1)}
@@ -272,7 +272,7 @@ export function MatchResultFields({ value, onChange, white, black, mvpVotes = []
 
     {fixedKeeper && keepers.length > 0 && (
       <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
-        <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">🧤 Rigori parati (portiere)</h3>
+        <h3 className="text-xs font-bold text-slate-300">🧤 Rigori parati (portiere)</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {keepers.map((p, i) => (
             <div key={p.id} className="flex items-center gap-2 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-sm">
@@ -287,7 +287,7 @@ export function MatchResultFields({ value, onChange, white, black, mvpVotes = []
               >
                 <Minus className="h-4 w-4" />
               </button>
-              <span className="w-6 text-center font-mono font-black text-emerald-300">{savesOf(p.id)}</span>
+              <span className="w-6 text-center font-mono font-bold text-emerald-300">{savesOf(p.id)}</span>
               <button
                 type="button"
                 onClick={() => setSaves(p, Math.min(5, savesOf(p.id) + 1))}

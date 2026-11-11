@@ -186,7 +186,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-[85vh] flex flex-col items-center justify-center py-8 px-4">
-      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 relative overflow-hidden">
+      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 space-y-6 relative overflow-hidden">
         {/* Glow Effetto Sfondo */}
         <div className="absolute -top-24 -left-24 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-green-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -197,7 +197,7 @@ export default function LoginPage() {
             <BrandLogo size="lg" />
           </div>
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-white">
+            <h1 className="text-2xl font-bold tracking-tight text-white">
               Club <span className="text-emerald-400">Soccer</span>
             </h1>
             <p className="text-xs text-slate-400 font-medium">
@@ -216,7 +216,7 @@ export default function LoginPage() {
             <div className="flex items-start gap-3">
               <Mail className="h-6 w-6 text-amber-400 flex-shrink-0 mt-0.5" />
               <div>
-                <h2 className="text-sm font-black text-amber-300 uppercase tracking-wide">
+                <h2 className="text-sm font-bold text-amber-300">
                   Verifica Email Richiesta
                 </h2>
                 <p className="text-xs text-slate-300 mt-1 leading-relaxed">
@@ -241,7 +241,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={handleCheckVerification}
                 disabled={isCheckingVerification}
-                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs transition-all cursor-pointer disabled:opacity-50"
               >
                 <RefreshCw className={`h-4 w-4 ${isCheckingVerification ? 'animate-spin' : ''}`} />
                 <span>Ho verificato l&apos;email (Ricarica Stato)</span>
@@ -303,7 +303,7 @@ export default function LoginPage() {
             <div className="flex flex-col gap-2 pt-1">
               <Link
                 href="/presenze"
-                className="flex items-center justify-center gap-2 py-2.5 px-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs uppercase tracking-wider transition-all shadow-md hover:scale-[1.01]"
+                className="flex items-center justify-center gap-2 py-2.5 px-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition-all"
               >
                 <span>Vai alle Presenze</span>
                 <ArrowRight className="h-4 w-4" />
@@ -350,7 +350,7 @@ export default function LoginPage() {
               type="button"
               onClick={handleGoogleLogin}
               disabled={isLoading}
-              className="w-full flex items-center justify-center gap-3 py-3 px-5 bg-white hover:bg-slate-100 text-slate-900 font-bold rounded-2xl text-xs sm:text-sm transition-all shadow-lg hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60 cursor-pointer"
+              className="w-full flex items-center justify-center gap-3 py-3 px-5 bg-white hover:bg-slate-100 text-slate-900 font-bold rounded-2xl text-xs sm:text-sm transition-all active:scale-[0.99] disabled:opacity-60 cursor-pointer"
             >
               {isLoading ? (
                 <Loader2 className="h-5 w-5 animate-spin text-slate-700" />
@@ -399,7 +399,7 @@ export default function LoginPage() {
                 }}
                 className={`flex-1 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
                   authMode === 'signin'
-                    ? 'bg-emerald-500 text-slate-950 shadow-md font-black'
+                    ? 'bg-emerald-500 text-slate-950 font-bold'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -416,7 +416,7 @@ export default function LoginPage() {
                 }}
                 className={`flex-1 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
                   authMode === 'signup'
-                    ? 'bg-emerald-500 text-slate-950 shadow-md font-black'
+                    ? 'bg-emerald-500 text-slate-950 font-bold'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -592,7 +592,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full mt-2 py-2.5 px-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs uppercase tracking-wider transition-all shadow-md hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60 cursor-pointer flex items-center justify-center gap-2"
+                className="w-full mt-2 py-2.5 px-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition-all active:scale-[0.99] disabled:opacity-60 cursor-pointer flex items-center justify-center gap-2"
               >
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin text-slate-950" />

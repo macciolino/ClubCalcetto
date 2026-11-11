@@ -165,19 +165,14 @@ export default function GiocatoriPage() {
 
   return (
     <div className="space-y-6 pb-12">
-      {/* Header & Azioni */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-xl">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
-              <Users className="h-6 w-6 text-emerald-400" />
-              Profili Giocatori & Valutazioni
-            </h1>
-          </div>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1">
+      {/* Titolo della pagina (senza riquadro) */}
+      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div className="space-y-1.5">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Giocatori</h1>
+          <p className="text-sm text-slate-400 max-w-xl leading-relaxed">
             {isClientAdmin
-              ? 'Pannello Amministratore: gestisci abilità, analizza gli ottagoni radar ed elimina profili.'
-              : 'Card stile FIFA/PES con radar ottagonale e statistiche di vittoria, pareggio e sconfitta.'}
+              ? 'Abilità, statistiche e schede di tutti i giocatori: da qui le modifichi.'
+              : 'Le card di tutti i giocatori, con abilità e statistiche.'}
           </p>
         </div>
 
@@ -187,14 +182,14 @@ export default function GiocatoriPage() {
             <button
               type="button"
               onClick={handleOpenNewGuestModal}
-              className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-black uppercase tracking-wider shadow-lg shadow-emerald-500/20 transition-all hover:scale-105 cursor-pointer"
+              className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-bold transition-all cursor-pointer"
             >
               <UserPlus className="h-4 w-4" />
               Nuovo Ospite
             </button>
           </div>
         )}
-      </div>
+      </header>
 
       {/* Barra Ricerca, Ordinamento e Switcher Vista */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-900/60 p-3 rounded-2xl border border-slate-800">
@@ -217,7 +212,7 @@ export default function GiocatoriPage() {
               onClick={() => setViewMode('cards')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
                 viewMode === 'cards'
-                  ? 'bg-emerald-500 text-slate-950 shadow-md font-black'
+                  ? 'bg-emerald-500 text-slate-950 font-bold'
                   : 'text-slate-400 hover:text-white'
               }`}
               title="Vista Card FIFA/PES con Ottagono"
@@ -230,7 +225,7 @@ export default function GiocatoriPage() {
               onClick={() => setViewMode('table')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
                 viewMode === 'table'
-                  ? 'bg-emerald-500 text-slate-950 shadow-md font-black'
+                  ? 'bg-emerald-500 text-slate-950 font-bold'
                   : 'text-slate-400 hover:text-white'
               }`}
               title="Vista Tabella"
@@ -284,7 +279,7 @@ export default function GiocatoriPage() {
         /* GRIGLIA DI CARD CON OTTAGONO E STATISTICHE V-P-S */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 animate-in fade-in duration-300">
           {filteredPlayers.length === 0 ? (
-            <div className="col-span-full py-16 text-center text-slate-500 italic bg-slate-900/60 border border-slate-800 rounded-3xl">
+            <div className="col-span-full py-16 text-center text-slate-500 italic bg-slate-900/60 border border-slate-800 rounded-2xl">
               Nessun giocatore trovato per la ricerca &quot;{searchQuery}&quot;.
             </div>
           ) : (
@@ -304,7 +299,7 @@ export default function GiocatoriPage() {
         </div>
       ) : (
         /* TABELLA GIOCATORI CLASSICA */
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden animate-in fade-in duration-200">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden animate-in fade-in duration-200">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -383,7 +378,7 @@ export default function GiocatoriPage() {
                               )}
                               {player.role === 'admin' && (
                                 <span
-                                  className="absolute -bottom-1 -right-1 bg-amber-500 text-slate-950 text-[8px] font-black rounded-full h-3.5 w-3.5 flex items-center justify-center ring-1 ring-slate-950"
+                                  className="absolute -bottom-1 -right-1 bg-amber-500 text-slate-950 text-[8px] font-bold rounded-full h-3.5 w-3.5 flex items-center justify-center ring-1 ring-slate-950"
                                   title="Admin"
                                 >
                                   ★
@@ -475,7 +470,7 @@ export default function GiocatoriPage() {
                               <button
                                 type="button"
                                 onClick={() => handleOpenEditModal(player)}
-                                className="p-1.5 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 rounded-lg transition-all cursor-pointer shadow-sm"
+                                className="p-1.5 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 rounded-lg transition-all cursor-pointer"
                                 title="Modifica voti e dettagli"
                               >
                                 <Edit3 className="h-4 w-4" />

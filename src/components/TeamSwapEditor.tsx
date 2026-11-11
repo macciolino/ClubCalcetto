@@ -79,7 +79,7 @@ export function TeamSwapEditor({ white, black, onChange, bench = [], disabled, f
 
   const renderTeam = (side: 'white' | 'black', title: string) => (
     <div className="space-y-1.5">
-      <div className="text-xs font-black uppercase tracking-wider text-slate-300">{title}</div>
+      <div className="text-xs font-bold text-slate-300">{title}</div>
       {listOf(side).map((p, i) => (
         <button
           key={`${side}-${p.id}-${i}`}
@@ -114,7 +114,7 @@ export function TeamSwapEditor({ white, black, onChange, bench = [], disabled, f
       </div>
       {benchPlayers.length > 0 && (
         <div className="space-y-1.5">
-          <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
+          <div className="text-xs font-bold text-slate-400">
             Altri giocatori (tocca e poi scegli chi sostituire)
           </div>
           <div className="flex flex-wrap gap-1.5">

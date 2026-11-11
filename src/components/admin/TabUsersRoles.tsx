@@ -62,11 +62,11 @@ export function TabUsersRoles({
   return (
     <div className="space-y-6">
       {/* HEADER & AZIONE PRIMARIA "+ NUOVO OSPITE" */}
-      <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <Users className="h-5 w-5 text-emerald-400" />
-            <h2 className="text-sm font-black text-white uppercase tracking-wider">
+            <h2 className="text-sm font-bold text-white">
               Anagrafica Utenti, Ruoli & Gestione Permessi
             </h2>
           </div>
@@ -79,7 +79,7 @@ export function TabUsersRoles({
         <button
           type="button"
           onClick={onOpenAddModal}
-          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/25 transition-all hover:scale-105 cursor-pointer"
+          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition-all cursor-pointer"
         >
           <UserPlus className="h-4 w-4" />
           <span>+ Nuovo Ospite</span>
@@ -87,7 +87,7 @@ export function TabUsersRoles({
       </div>
 
       {/* BARRA DI RICERCA & CHIP DI FILTRAGGIO */}
-      <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-xl flex flex-col md:flex-row items-center justify-between gap-3">
+      <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-3">
         {/* Input Ricerca */}
         <div className="relative w-full md:w-80">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
@@ -107,7 +107,7 @@ export function TabUsersRoles({
             onClick={() => setRoleFilter('all')}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               roleFilter === 'all'
-                ? 'bg-emerald-500 text-slate-950 shadow-md font-black'
+                ? 'bg-emerald-500 text-slate-950 font-bold'
                 : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
             }`}
           >
@@ -118,7 +118,7 @@ export function TabUsersRoles({
             onClick={() => setRoleFilter('admin')}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               roleFilter === 'admin'
-                ? 'bg-amber-500 text-slate-950 shadow-md font-black'
+                ? 'bg-amber-500 text-slate-950 font-bold'
                 : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
             }`}
           >
@@ -129,7 +129,7 @@ export function TabUsersRoles({
             onClick={() => setRoleFilter('player')}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               roleFilter === 'player'
-                ? 'bg-blue-500 text-white shadow-md font-black'
+                ? 'bg-blue-500 text-white font-bold'
                 : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
             }`}
           >
@@ -140,7 +140,7 @@ export function TabUsersRoles({
             onClick={() => setRoleFilter('google')}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               roleFilter === 'google'
-                ? 'bg-purple-500 text-white shadow-md font-black'
+                ? 'bg-purple-500 text-white font-bold'
                 : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
             }`}
           >
@@ -151,7 +151,7 @@ export function TabUsersRoles({
             onClick={() => setRoleFilter('guest')}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               roleFilter === 'guest'
-                ? 'bg-slate-700 text-white shadow-md font-black'
+                ? 'bg-slate-700 text-white font-bold'
                 : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
             }`}
           >
@@ -161,7 +161,7 @@ export function TabUsersRoles({
       </div>
 
       {/* TABELLA ADVANCED DATAGRID (DESKTOP) E CARD COLLAPSED (MOBILE) */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl shadow-xl overflow-hidden">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
         {/* DESKTOP TABLE */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -216,7 +216,7 @@ export function TabUsersRoles({
                             )}
                             {player.role === 'admin' && (
                               <span
-                                className="absolute -bottom-1 -right-1 bg-amber-500 text-slate-950 text-[8px] font-black rounded-full h-3.5 w-3.5 flex items-center justify-center ring-1 ring-slate-950"
+                                className="absolute -bottom-1 -right-1 bg-amber-500 text-slate-950 text-[8px] font-bold rounded-full h-3.5 w-3.5 flex items-center justify-center ring-1 ring-slate-950"
                                 title="Amministratore"
                               >
                                 ★
@@ -242,7 +242,7 @@ export function TabUsersRoles({
                       {/* Ruolo Sistema */}
                       <td className="py-3.5 px-3 text-center">
                         <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                             player.role === 'admin'
                               ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
                               : 'bg-blue-500/15 text-blue-300 border border-blue-500/30'

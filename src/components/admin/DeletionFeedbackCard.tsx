@@ -21,7 +21,7 @@ export function DeletionFeedbackCard() {
   }, [open, items]);
 
   return (
-    <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-3xl shadow-xl">
+    <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -29,7 +29,7 @@ export function DeletionFeedbackCard() {
         className="w-full flex items-center justify-between gap-3 text-left"
       >
         <div>
-          <h2 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+          <h2 className="text-sm font-bold text-white flex items-center gap-2">
             <MessageSquareWarning className="h-5 w-5 text-rose-300" /> Feedback account chiusi
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">Solo per te (super admin): i motivi lasciati da chi ha disattivato o eliminato l&apos;account.</p>

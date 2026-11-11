@@ -79,7 +79,7 @@ export default function ProfiloPage() {
   if (!profile) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center text-center p-6 space-y-4">
-        <div className="p-4 bg-emerald-500/15 text-emerald-400 rounded-3xl border border-emerald-500/30">
+        <div className="p-4 bg-emerald-500/15 text-emerald-400 rounded-2xl border border-emerald-500/30">
           <User className="h-10 w-10" />
         </div>
         <h2 className="text-xl font-bold text-white">Effettua il Login</h2>
@@ -88,7 +88,7 @@ export default function ProfiloPage() {
         </p>
         <Link
           href="/login"
-          className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs uppercase tracking-wider shadow-lg transition-all"
+          className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition-all"
         >
           Vai al Login
         </Link>
@@ -156,25 +156,11 @@ export default function ProfiloPage() {
 
   return (
     <div className="space-y-6 pb-16 max-w-5xl mx-auto">
-      {/* Header Pagina */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-xl">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/presenze"
-            className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-colors"
-            title="Torna alle presenze"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
-              <User className="h-6 w-6 text-emerald-400" />
-              Il Mio Profilo Giocatore
-            </h1>
-            <p className="text-xs text-slate-400 mt-0.5">
-              I tuoi dati, le tue abilità e le tue statistiche di tutte le partite archiviate.
-            </p>
-          </div>
+      {/* Titolo della pagina (senza riquadro) */}
+      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div className="space-y-1.5">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Profilo</h1>
+          <p className="text-sm text-slate-400 max-w-xl leading-relaxed">I tuoi dati, le tue abilità e le tue statistiche di tutte le partite archiviate.</p>
         </div>
 
         {saveSuccess && (
@@ -183,10 +169,10 @@ export default function ProfiloPage() {
             <span>Profilo aggiornato con successo!</span>
           </div>
         )}
-      </div>
+      </header>
 
       {/* SCHEDA DATI PERSONALI & UPLOAD FOTO */}
-      <form onSubmit={handleSaveProfile} className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-6">
+      <form onSubmit={handleSaveProfile} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6">
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
           {/* Foto profilo */}
           <div className="flex flex-col items-center space-y-2">
@@ -195,10 +181,10 @@ export default function ProfiloPage() {
                 src={profile.avatar_url}
                 alt={`Foto di ${fullName}`}
                 referrerPolicy="no-referrer"
-                className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl object-cover ring-4 ring-emerald-500/40 shadow-xl"
+                className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover ring-4 ring-emerald-500/40"
               />
             ) : (
-              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-slate-800 border-2 border-slate-700 flex items-center justify-center font-black text-3xl text-emerald-400 shadow-xl">
+              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-slate-800 border-2 border-slate-700 flex items-center justify-center font-bold text-3xl text-emerald-400">
                 {fullName.charAt(0).toUpperCase()}
               </div>
             )}
@@ -223,7 +209,7 @@ export default function ProfiloPage() {
           <div className="flex-1 w-full space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-bold text-slate-400 mb-1.5">
                   Nome Giocatore Visualizzato
                 </label>
                 <input
@@ -237,7 +223,7 @@ export default function ProfiloPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-bold text-slate-400 mb-1.5">
                   Email Account
                 </label>
                 <div className="px-3.5 py-2.5 bg-slate-950/60 border border-slate-800 rounded-xl text-slate-400 text-sm font-mono flex items-center gap-2">
@@ -249,7 +235,7 @@ export default function ProfiloPage() {
 
             {/* Posizione Tattica in Campo (Separata dal ruolo applicativo) */}
             <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-bold text-slate-400 mb-1.5">
                 Posizione Tattica Preferita (Campetto & Rombo 1-1-2-1)
               </label>
               <select
@@ -269,7 +255,7 @@ export default function ProfiloPage() {
               <div className="flex items-center gap-2">
                 <span className="text-xs text-slate-400">Ruolo Piattaforma:</span>
                 <span
-                  className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
+                  className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${
                     isStrictAdmin
                       ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
                       : 'bg-blue-500/15 text-blue-300 border border-blue-500/30'
@@ -283,7 +269,7 @@ export default function ProfiloPage() {
               <button
                 type="submit"
                 disabled={isSaving}
-                className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/25 transition-all cursor-pointer"
+                className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition-all cursor-pointer"
               >
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 Salva Modifiche
@@ -302,12 +288,12 @@ export default function ProfiloPage() {
       {/* SEZIONE STATISTICHE E BILANCIO PARTITE (AFFIANCATE) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* COLONNA 1: OTTAGONO ABILITÀ STILE FIFA/PES */}
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-4 flex flex-col justify-between">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-emerald-400" />
-                <h2 className="text-base font-black text-white uppercase tracking-wider">
+                <h2 className="text-base font-bold text-white">
                   Le Mie Abilità Tecniche
                 </h2>
               </div>
@@ -344,7 +330,7 @@ export default function ProfiloPage() {
                 <div key={statName} className="bg-slate-950/70 border border-slate-800 p-2 rounded-xl flex items-center justify-between">
                   <span className="text-[11px] font-semibold text-slate-300">{statName}</span>
                   <span
-                    className={`text-xs font-mono font-black ${
+                    className={`text-xs font-mono font-bold ${
                       val >= 8 ? 'text-emerald-400' : val >= 6 ? 'text-white' : 'text-rose-400'
                     }`}
                   >
@@ -357,11 +343,11 @@ export default function ProfiloPage() {
         </div>
 
         {/* COLONNA 2: LE MIE STATISTICHE GLOBALI */}
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-5">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-5">
           <div className="border-b border-slate-800 pb-3">
             <div className="flex items-center gap-2">
               <Trophy className="h-5 w-5 text-amber-400" />
-              <h2 className="text-base font-black text-white uppercase tracking-wider">Le Mie Statistiche</h2>
+              <h2 className="text-base font-bold text-white">Le Mie Statistiche</h2>
             </div>
             <p className="text-xs text-slate-400 mt-2">
               Totali di tutte le partite archiviate ({record.played} giocate).
@@ -370,27 +356,27 @@ export default function ProfiloPage() {
 
           <div className="grid grid-cols-3 gap-3 text-center">
             <div className="bg-emerald-500/10 border border-emerald-500/30 p-3.5 rounded-2xl space-y-1">
-              <div className="text-xs font-black text-emerald-400 uppercase tracking-wider">Vinte</div>
-              <div className="text-3xl font-black text-emerald-300 font-mono">{record.won}</div>
+              <div className="text-xs font-bold text-emerald-400">Vinte</div>
+              <div className="text-3xl font-bold text-emerald-300 font-mono">{record.won}</div>
             </div>
             <div className="bg-amber-500/10 border border-amber-500/30 p-3.5 rounded-2xl space-y-1">
-              <div className="text-xs font-black text-amber-400 uppercase tracking-wider">Pareggiate</div>
-              <div className="text-3xl font-black text-amber-300 font-mono">{record.drawn}</div>
+              <div className="text-xs font-bold text-amber-400">Pareggiate</div>
+              <div className="text-3xl font-bold text-amber-300 font-mono">{record.drawn}</div>
             </div>
             <div className="bg-rose-500/10 border border-rose-500/30 p-3.5 rounded-2xl space-y-1">
-              <div className="text-xs font-black text-rose-400 uppercase tracking-wider">Perse</div>
-              <div className="text-3xl font-black text-rose-300 font-mono">{record.lost}</div>
+              <div className="text-xs font-bold text-rose-400">Perse</div>
+              <div className="text-3xl font-bold text-rose-300 font-mono">{record.lost}</div>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3 text-center">
             <div className="bg-slate-950/80 border border-slate-800 p-3.5 rounded-2xl space-y-1">
-              <div className="text-xs font-black text-slate-300 uppercase tracking-wider">⚽ Gol segnati</div>
-              <div className="text-3xl font-black text-white font-mono">{record.goals}</div>
+              <div className="text-xs font-bold text-slate-300">⚽ Gol segnati</div>
+              <div className="text-3xl font-bold text-white font-mono">{record.goals}</div>
             </div>
             <div className="bg-slate-950/80 border border-slate-800 p-3.5 rounded-2xl space-y-1">
-              <div className="text-xs font-black text-slate-300 uppercase tracking-wider">★ MVP</div>
-              <div className="text-3xl font-black text-amber-300 font-mono">{record.mvp}</div>
+              <div className="text-xs font-bold text-slate-300">★ MVP</div>
+              <div className="text-3xl font-bold text-amber-300 font-mono">{record.mvp}</div>
             </div>
           </div>
 
@@ -402,7 +388,7 @@ export default function ProfiloPage() {
 
       <Link
         href="/impostazioni"
-        className="flex items-center justify-between gap-3 bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl text-sm text-slate-200 hover:border-emerald-500/50"
+        className="flex items-center justify-between gap-3 bg-slate-900 border border-slate-800 rounded-2xl p-5 text-sm text-slate-200 hover:border-emerald-500/50"
       >
         <span>
           <strong className="block text-white">Notifiche</strong>

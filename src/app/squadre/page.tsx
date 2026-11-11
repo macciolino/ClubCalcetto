@@ -483,39 +483,28 @@ function SquadreContent() {
 
   return (
     <div className="space-y-6 pb-16">
-      {/* Intestazione */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-xl">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
-              <Trophy className="h-6 w-6 text-emerald-400" />
-              Squadre della Partita
-            </h1>
-          </div>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1">
+      {/* Titolo della pagina (senza riquadro) */}
+      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div className="space-y-1.5">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Squadre</h1>
+          <p className="text-sm text-slate-400 max-w-xl leading-relaxed">
             Bianchi contro Neri per la data scelta: l&apos;app divide i 10 titolari in due squadre equilibrate, poi un admin le conferma.
           </p>
         </div>
 
-        {/* Status Quorum */}
-        <div className="flex items-center gap-2.5 bg-slate-950 px-3.5 py-2 rounded-2xl border border-slate-800">
-          <div className="text-right">
-            <div className="text-[10px] text-slate-500 font-bold uppercase">Quorum Titolari</div>
-            <div
-              className={`font-mono font-black text-sm ${
-                starterProfiles.length >= 10 ? 'text-emerald-400' : 'text-amber-400'
-              }`}
-            >
-              {starterProfiles.length}/10 Pronti
-            </div>
-          </div>
+        {/* Titolari pronti */}
+        <div className="text-sm sm:text-right">
+          <span className="text-slate-400">Titolari </span>
+          <span className={`font-semibold tabular-nums ${starterProfiles.length >= 10 ? 'text-emerald-400' : 'text-amber-400'}`}>
+            {starterProfiles.length}/10
+          </span>
         </div>
-      </div>
+      </header>
 
       {/* Form Impostazioni Evento (Admin & Match Info) */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-4">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+          <h2 className="text-xs font-bold text-slate-300 flex items-center gap-2">
             <Clock className="h-4 w-4 text-emerald-400" />
             Configurazione Partita & Luogo
           </h2>
@@ -677,7 +666,7 @@ function SquadreContent() {
                 type="button"
                 onClick={handleGenerateTeams}
                 disabled={isGenerating || starterProfiles.length < 10}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 bg-slate-800 hover:bg-slate-700 text-white font-black rounded-xl text-xs uppercase tracking-wider border border-slate-700 transition-all disabled:opacity-40 cursor-pointer"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs border border-slate-700 transition-all disabled:opacity-40 cursor-pointer"
               >
                 {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shuffle className="h-4 w-4" />}
                 {teamRecord ? 'Ribilancia Squadre' : 'Genera Squadre Bilanciate'}
@@ -687,7 +676,7 @@ function SquadreContent() {
                   type="button"
                   onClick={handleConfirmMatch}
                   disabled={isConfirming || !teamsComplete}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/25 transition-all disabled:opacity-40 cursor-pointer"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition-all disabled:opacity-40 cursor-pointer"
                 >
                   {isConfirming ? <Loader2 className="h-4 w-4 animate-spin" /> : <BadgeCheck className="h-4 w-4" />}
                   Conferma Partita
@@ -764,7 +753,7 @@ function SquadreContent() {
 
       {/* FEEDBACK COPIA WHATSAPP */}
       {copySuccess && (
-        <div className="p-3.5 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 rounded-2xl text-xs font-bold flex items-center justify-between shadow-lg animate-in fade-in">
+        <div className="p-3.5 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 rounded-2xl text-xs font-bold flex items-center justify-between animate-in fade-in">
           <div className="flex items-center gap-2">
             <Check className="h-4 w-4 text-emerald-400" />
             <span>Testo convocazioni copiato negli appunti e apertura WhatsApp in corso!</span>
@@ -777,8 +766,8 @@ function SquadreContent() {
 
       {/* RISULTATO: CAMPO VIRTUALE & CONDIVISIONE */}
       {tab === 'manual' && manualDraft && isClientAdmin && !isCompleted ? (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-4">
-          <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+          <h3 className="text-sm font-bold text-white flex items-center gap-2">
             <Pencil className="h-4 w-4 text-emerald-400" /> Modifica manuale squadre
           </h3>
           <TeamSwapEditor
@@ -799,7 +788,7 @@ function SquadreContent() {
               type="button"
               onClick={handleSaveManual}
               disabled={isSavingManual}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs uppercase tracking-wider disabled:opacity-40"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs disabled:opacity-40"
             >
               {isSavingManual ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
               Salva squadre
@@ -809,17 +798,17 @@ function SquadreContent() {
       ) : balancedResult ? (
         <div className="space-y-6 animate-in fade-in duration-300">
           {/* Card Bilanciamento e Statistiche a Confronto */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2">
                 <Zap className="h-5 w-5 text-amber-400" />
-                <h3 className="text-sm font-black text-white uppercase tracking-wider">
+                <h3 className="text-sm font-bold text-white">
                   Equilibrio Squadre Generato
                 </h3>
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-xs text-slate-400">Indice di Equità:</span>
-                <span className="font-mono text-xs font-black text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-1 rounded-lg">
+                <span className="font-mono text-xs font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-1 rounded-lg">
                   {balancedResult.fairnessScore}% Fair
                 </span>
                 <span className="text-xs text-slate-500 font-mono">
@@ -832,7 +821,7 @@ function SquadreContent() {
               {/* Bianca */}
               <div className="bg-slate-950/70 border border-slate-800 p-4 rounded-2xl space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="font-black text-xs text-white flex items-center gap-1.5">
+                  <span className="font-bold text-xs text-white flex items-center gap-1.5">
                     ⚪ SQUADRA BIANCA
                   </span>
                   <StatBadge score={balancedResult.whiteStats.overallAvg} size="md" />
@@ -861,7 +850,7 @@ function SquadreContent() {
                       <span className="w-11 flex-shrink-0 font-mono text-[10px] font-bold text-emerald-400">{slotLabel(i, fixedKeeper)}</span>
                       <span className="truncate">{p.full_name}</span>
                       {forms.get(p.id) ? (
-                        <span className={`ml-auto flex-shrink-0 text-[10px] font-black ${(forms.get(p.id) || 0) > 0 ? 'text-orange-300' : 'text-sky-300'}`}>
+                        <span className={`ml-auto flex-shrink-0 text-[10px] font-bold ${(forms.get(p.id) || 0) > 0 ? 'text-orange-300' : 'text-sky-300'}`}>
                           {(forms.get(p.id) || 0) > 0 ? '🔥' : '❄️'}
                           {formatForm(forms.get(p.id) || 0)}
                         </span>
@@ -874,7 +863,7 @@ function SquadreContent() {
               {/* Nera */}
               <div className="bg-slate-950/70 border border-slate-800 p-4 rounded-2xl space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="font-black text-xs text-white flex items-center gap-1.5">
+                  <span className="font-bold text-xs text-white flex items-center gap-1.5">
                     ⚫ SQUADRA NERA
                   </span>
                   <StatBadge score={balancedResult.blackStats.overallAvg} size="md" />
@@ -903,7 +892,7 @@ function SquadreContent() {
                       <span className="w-11 flex-shrink-0 font-mono text-[10px] font-bold text-emerald-400">{slotLabel(i, fixedKeeper)}</span>
                       <span className="truncate">{p.full_name}</span>
                       {forms.get(p.id) ? (
-                        <span className={`ml-auto flex-shrink-0 text-[10px] font-black ${(forms.get(p.id) || 0) > 0 ? 'text-orange-300' : 'text-sky-300'}`}>
+                        <span className={`ml-auto flex-shrink-0 text-[10px] font-bold ${(forms.get(p.id) || 0) > 0 ? 'text-orange-300' : 'text-sky-300'}`}>
                           {(forms.get(p.id) || 0) > 0 ? '🔥' : '❄️'}
                           {formatForm(forms.get(p.id) || 0)}
                         </span>
@@ -930,7 +919,7 @@ function SquadreContent() {
                   type="button"
                   onClick={handleGenerateAiAnalysis}
                   disabled={isAiLoading}
-                  className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl text-xs transition-all shadow-md shadow-blue-500/20"
+                  className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl text-xs transition-all"
                 >
                   {isAiLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin text-white" />
@@ -946,7 +935,7 @@ function SquadreContent() {
                   type="button"
                   onClick={handleShareWhatsApp}
                   disabled={isSharing}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-[#25D366] hover:bg-[#20ba59] text-slate-950 font-black rounded-xl text-xs uppercase tracking-wider shadow-lg shadow-[#25D366]/25 transition-all hover:scale-105"
+                  className="flex items-center gap-2 px-5 py-2.5 bg-[#25D366] hover:bg-[#20ba59] text-slate-950 font-bold rounded-xl text-xs transition-all"
                 >
                   {isSharing ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -960,9 +949,9 @@ function SquadreContent() {
 
             {/* SCHEDA ANALISI TATTICA GOOGLE AI STUDIO (GEMINI) */}
             {aiAnalysis && (
-              <div className="mt-4 p-5 rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/40 shadow-2xl space-y-4 animate-in fade-in duration-300">
+              <div className="mt-4 p-5 rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/40 space-y-4 animate-in fade-in duration-300">
                 <div className="flex items-center justify-between border-b border-indigo-500/30 pb-3">
-                  <div className="flex items-center gap-2 text-indigo-400 font-black text-xs uppercase tracking-wider">
+                  <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs">
                     <Sparkles className="h-4 w-4 text-amber-400" />
                     <span>Report Tattico Ufficiale Google Gemini</span>
                   </div>
@@ -972,7 +961,7 @@ function SquadreContent() {
                 </div>
 
                 <div>
-                  <h4 className="text-base font-black text-white leading-snug">
+                  <h4 className="text-base font-bold text-white leading-snug">
                     {aiAnalysis.headline}
                   </h4>
                   <p className="text-xs text-amber-300 font-semibold mt-1">
@@ -1018,7 +1007,7 @@ function SquadreContent() {
           {/* VIRTUAL PITCH RENDERING */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              <h3 className="text-xs font-bold text-slate-400">
                 Campo da Calcetto Virtuale (Formazione 5v5)
               </h3>
               <span className="text-[11px] text-slate-500 font-mono">
@@ -1059,7 +1048,7 @@ function SquadreContent() {
 
       {!balancedResult && !(tab === 'manual' && manualDraft) && (
         /* Placeholder quando non ancora generato */
-        <div className="bg-slate-900/60 border border-dashed border-slate-800 rounded-3xl p-10 text-center space-y-3">
+        <div className="bg-slate-900/60 border border-dashed border-slate-800 rounded-2xl p-10 text-center space-y-3">
           <div className="inline-flex p-3 bg-slate-800 text-emerald-400 rounded-2xl">
             <Trophy className="h-8 w-8" />
           </div>

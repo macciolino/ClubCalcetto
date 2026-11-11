@@ -171,7 +171,7 @@ export function StatParametersCard({ categories, onOpenLegend }: StatParametersC
           <button
             type="submit"
             disabled={busy !== null || !name.trim()}
-            className="flex items-center justify-center gap-1.5 px-5 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs uppercase tracking-wider disabled:bg-slate-800 disabled:text-slate-500"
+            className="flex items-center justify-center gap-1.5 px-5 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs disabled:bg-slate-800 disabled:text-slate-500"
           >
             {busy === 'add' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             Aggiungi

@@ -16,7 +16,7 @@ interface CollapsibleCardProps {
 export function CollapsibleCard({ title, icon, summary, defaultOpen = false, children }: CollapsibleCardProps) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-3xl shadow-xl">
+    <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -24,7 +24,7 @@ export function CollapsibleCard({ title, icon, summary, defaultOpen = false, chi
         className="w-full flex items-center justify-between gap-3 text-left"
       >
         <div className="min-w-0">
-          <h2 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+          <h2 className="text-sm font-bold text-white flex items-center gap-2">
             {icon && <span className="flex-shrink-0">{icon}</span>}
             {title}
           </h2>

@@ -20,7 +20,7 @@ export function DeleteAccountSection({ isSuperAdmin }: { isSuperAdmin: boolean }
 
   if (isSuperAdmin) {
     return (
-      <section className="bg-slate-900 border border-slate-800 rounded-3xl p-5 text-xs text-slate-400">
+      <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5 text-xs text-slate-400">
         L&apos;account del super amministratore non si può eliminare dall&apos;app.
       </section>
     );
@@ -66,10 +66,10 @@ export function DeleteAccountSection({ isSuperAdmin }: { isSuperAdmin: boolean }
   };
 
   return (
-    <section className="bg-slate-900 border border-rose-500/30 rounded-3xl p-5 space-y-4" aria-labelledby="delete-account-title">
+    <section className="bg-slate-900 border border-rose-500/30 rounded-2xl p-5 space-y-4" aria-labelledby="delete-account-title">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 id="delete-account-title" className="text-sm font-black text-rose-300 uppercase tracking-wider flex items-center gap-2">
+          <h2 id="delete-account-title" className="text-sm font-bold text-rose-300 flex items-center gap-2">
             <Trash2 className="h-4 w-4" /> Disattiva o elimina account
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">Metti in pausa il tuo account oppure cancellalo con tutti i dati.</p>
@@ -174,7 +174,7 @@ export function DeleteAccountSection({ isSuperAdmin }: { isSuperAdmin: boolean }
               type="button"
               onClick={handleDelete}
               disabled={busy}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 bg-rose-600 hover:bg-rose-500 text-white font-black rounded-xl text-xs uppercase tracking-wider disabled:opacity-50"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs disabled:opacity-50"
             >
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
               {mode === 'deactivate' ? 'Disattiva account' : 'Elimina definitivamente'}

@@ -105,7 +105,7 @@ export function NotificationSettingsCard({ defaultOpen = false }: { defaultOpen?
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-xl space-y-4">
+    <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-4">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -113,7 +113,7 @@ export function NotificationSettingsCard({ defaultOpen = false }: { defaultOpen?
         className="w-full flex items-center justify-between gap-3 text-left"
       >
         <div className="min-w-0">
-          <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+          <h3 className="text-sm font-bold text-white flex items-center gap-2">
             <Bell className="h-4 w-4 text-emerald-400 flex-shrink-0" />
             Notifiche ai giocatori
           </h3>

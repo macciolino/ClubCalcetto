@@ -43,7 +43,7 @@ export function HistoryCalendar({ matchDates, selected, onSelect, maxYear }: His
   const monthCount = matchDates.filter((d) => d.startsWith(ymd(view.y, view.m, 1).slice(0, 7))).length;
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-3xl p-4 space-y-3 w-full max-w-md mx-auto md:mx-0">
+    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 w-full max-w-md mx-auto md:mx-0">
       <div className="flex items-center justify-between gap-2">
         <button
           type="button"
@@ -54,7 +54,7 @@ export function HistoryCalendar({ matchDates, selected, onSelect, maxYear }: His
           <ChevronLeft className="h-5 w-5" />
         </button>
         <div className="text-center">
-          <div className="text-sm font-black text-white">
+          <div className="text-sm font-bold text-white">
             {MONTHS[view.m]} {view.y}
           </div>
           <div className="text-[11px] text-slate-400">

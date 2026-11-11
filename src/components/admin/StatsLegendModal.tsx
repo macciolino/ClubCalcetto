@@ -25,7 +25,7 @@ export function StatsLegendModal({ isOpen, onClose }: StatsLegendModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center modal-safe bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl">
+      <div className="relative w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl">
         {/* Header Modale */}
         <div className="flex items-center justify-between p-5 border-b border-slate-800 bg-slate-950/60">
           <div className="flex items-center gap-3">
@@ -33,7 +33,7 @@ export function StatsLegendModal({ isOpen, onClose }: StatsLegendModalProps) {
               <Sparkles className="h-6 w-6" />
             </div>
             <div>
-              <h2 className="text-lg font-black text-white tracking-tight flex items-center gap-2">
+              <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
                 Legenda Parametri Ottagono Calcetto 5v5
               </h2>
               <p className="text-xs text-slate-400">
@@ -70,7 +70,7 @@ export function StatsLegendModal({ isOpen, onClose }: StatsLegendModalProps) {
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md">
+                          <span className="font-mono text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md">
                             {detail.code}
                           </span>
                           <span className="font-bold text-white text-sm">{detail.name}</span>

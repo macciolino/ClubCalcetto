@@ -26,7 +26,7 @@ type SortKey = 'played' | 'won' | 'drawn' | 'lost' | 'goals' | 'mvp';
 /** Sortable columns of the leaderboard, in table order */
 const SORT_COLUMNS: { key: SortKey; label: string; title: string; cell: string }[] = [
   { key: 'played', label: 'PG', title: 'Presenze', cell: '' },
-  { key: 'won', label: 'V', title: 'Partite vinte', cell: 'font-black text-emerald-400' },
+  { key: 'won', label: 'V', title: 'Partite vinte', cell: 'font-bold text-emerald-400' },
   { key: 'drawn', label: 'P', title: 'Pareggi', cell: 'text-amber-400' },
   { key: 'lost', label: 'S', title: 'Sconfitte', cell: 'text-rose-400' },
   { key: 'goals', label: 'Gol', title: 'Gol segnati', cell: '' },
@@ -174,16 +174,11 @@ export default function HistoryPage() {
 
   return (
     <div className="space-y-6 pb-12">
-      {/* Intestazione */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-xl">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <History className="h-5 w-5 text-emerald-400" />
-            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">Storico Partite</h1>
-          </div>
-          <p className="text-sm text-slate-400">
-            Risultati, marcatori e MVP di tutte le partite archiviate dall&apos;admin.
-          </p>
+      {/* Titolo della pagina (senza riquadro) */}
+      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div className="space-y-1.5">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Storico</h1>
+          <p className="text-sm text-slate-400 max-w-xl leading-relaxed">Risultati, marcatori e MVP di tutte le partite archiviate.</p>
         </div>
         {seasons.length > 0 && (
           <label className="flex items-center gap-2 text-sm text-slate-300">
@@ -202,20 +197,20 @@ export default function HistoryPage() {
             </select>
           </label>
         )}
-      </div>
+      </header>
 
       {/* Riepilogo */}
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center">
-          <div className="text-2xl font-black text-white">{visibleMatches.length}</div>
+          <div className="text-2xl font-bold text-white">{visibleMatches.length}</div>
           <div className="text-xs text-slate-400 font-semibold">Partite</div>
         </div>
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center">
-          <div className="text-2xl font-black text-white">{totalGoals}</div>
+          <div className="text-2xl font-bold text-white">{totalGoals}</div>
           <div className="text-xs text-slate-400 font-semibold">Gol totali</div>
         </div>
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center">
-          <div className="text-2xl font-black text-white">{leaderboard.length}</div>
+          <div className="text-2xl font-bold text-white">{leaderboard.length}</div>
           <div className="text-xs text-slate-400 font-semibold">Giocatori</div>
         </div>
       </div>
@@ -261,7 +256,7 @@ export default function HistoryPage() {
       {!loaded ? (
         <p className="text-sm text-slate-400">Caricamento…</p>
       ) : visibleMatches.length === 0 ? (
-        <div className="bg-slate-900 border border-dashed border-slate-700 rounded-3xl p-8 text-center space-y-2">
+        <div className="bg-slate-900 border border-dashed border-slate-700 rounded-2xl p-8 text-center space-y-2">
           <Trophy className="h-8 w-8 text-slate-600 mx-auto" />
           <p className="text-sm text-slate-300 font-semibold">Nessuna partita archiviata</p>
           <p className="text-sm text-slate-500">
@@ -270,11 +265,11 @@ export default function HistoryPage() {
         </div>
       ) : view === 'leaderboard' ? (
         <div className="space-y-3">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-xs uppercase tracking-wider text-slate-400 border-b border-slate-800">
+                  <tr className="text-xs text-slate-400 border-b border-slate-800">
                     <th className="text-left px-3 py-3">#</th>
                     <th className="text-left px-2 py-3">Giocatore</th>
                     {SORT_COLUMNS.map((c) => (
@@ -287,7 +282,7 @@ export default function HistoryPage() {
                           type="button"
                           onClick={() => handleSort(c.key)}
                           title={`Ordina per ${c.title}`}
-                          className={`w-full px-2 py-3 uppercase tracking-wider font-bold whitespace-nowrap ${
+                          className={`w-full px-2 py-3 font-bold whitespace-nowrap ${
                             sortBy === c.key ? 'text-emerald-300' : 'hover:text-white'
                           }`}
                         >
@@ -331,7 +326,7 @@ export default function HistoryPage() {
             const b = m.score_black ?? 0;
             const mvpName = m.mvp_player_id ? nameOf(m.mvp_player_id) : null;
             return (
-              <article key={m.id} className="bg-slate-900 border border-slate-800 rounded-3xl p-5 space-y-4">
+              <article key={m.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
                 <header className="flex flex-wrap items-center justify-between gap-2">
                   <h2 className="text-sm font-bold text-white">{formatItalianDate(m.match_date || m.id)}</h2>
                   {isAdmin && (
@@ -368,13 +363,13 @@ export default function HistoryPage() {
 
                 <div className="flex items-center justify-center gap-4">
                   <div className="text-center flex-1">
-                    <div className="text-xs font-bold uppercase text-slate-300">Bianchi</div>
-                    <div className={`text-4xl font-black ${w > b ? 'text-emerald-400' : 'text-white'}`}>{w}</div>
+                    <div className="text-xs font-bold text-slate-300">Bianchi</div>
+                    <div className={`text-4xl font-bold ${w > b ? 'text-emerald-400' : 'text-white'}`}>{w}</div>
                   </div>
-                  <span className="text-slate-600 font-black">-</span>
+                  <span className="text-slate-600 font-bold">-</span>
                   <div className="text-center flex-1">
-                    <div className="text-xs font-bold uppercase text-slate-300">Neri</div>
-                    <div className={`text-4xl font-black ${b > w ? 'text-emerald-400' : 'text-white'}`}>{b}</div>
+                    <div className="text-xs font-bold text-slate-300">Neri</div>
+                    <div className={`text-4xl font-bold ${b > w ? 'text-emerald-400' : 'text-white'}`}>{b}</div>
                   </div>
                 </div>
 

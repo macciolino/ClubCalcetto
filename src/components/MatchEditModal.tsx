@@ -106,7 +106,7 @@ export function MatchEditModal({ match, profiles, closedBy, onClose }: MatchEdit
       >
         <div className="sticky top-0 z-10 bg-slate-900 border-b border-slate-800 px-5 py-4 flex items-center gap-2">
           <Pencil className="h-4 w-4 text-emerald-400" />
-          <h2 id="match-edit-title" className="text-sm font-black text-white uppercase tracking-wider flex-1">
+          <h2 id="match-edit-title" className="text-sm font-bold text-white flex-1">
             Modifica partita del {formatItalianDate(match.match_date || match.id)}
           </h2>
           <button type="button" onClick={onClose} aria-label="Chiudi" className="p-2 -m-2 text-slate-400 hover:text-white">
@@ -116,7 +116,7 @@ export function MatchEditModal({ match, profiles, closedBy, onClose }: MatchEdit
 
         <div className="p-5 space-y-5">
           <section className="space-y-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Squadre</h3>
+            <h3 className="text-xs font-bold text-slate-400">Squadre</h3>
             <TeamSwapEditor white={white} black={black} onChange={handleTeamsChange} bench={bench} />
             {duplicate && (
               <p className="text-xs text-rose-300 flex items-center gap-1.5">
@@ -126,7 +126,7 @@ export function MatchEditModal({ match, profiles, closedBy, onClose }: MatchEdit
           </section>
 
           <section className="space-y-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Risultato, MVP e marcatori</h3>
+            <h3 className="text-xs font-bold text-slate-400">Risultato, MVP e marcatori</h3>
             <MatchResultFields fixedKeeper={fixedKeeper} value={result} onChange={setResult} white={white} black={black} />
           </section>
 
@@ -145,7 +145,7 @@ export function MatchEditModal({ match, profiles, closedBy, onClose }: MatchEdit
             type="button"
             onClick={handleSave}
             disabled={saving || Boolean(validation.error) || duplicate}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs uppercase tracking-wider disabled:opacity-40"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs disabled:opacity-40"
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
             Salva modifiche

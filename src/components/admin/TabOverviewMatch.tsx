@@ -256,12 +256,12 @@ export function TabOverviewMatch({
       {/* 1. KPI CARDS IN EVIDENZA */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Iscritti Totali */}
-        <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-3xl shadow-xl flex items-center justify-between">
+        <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl flex items-center justify-between">
           <div className="space-y-1">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
               Iscritti Rosa
             </span>
-            <div className="text-2xl sm:text-3xl font-black text-white">{players.length}</div>
+            <div className="text-2xl sm:text-3xl font-bold text-white">{players.length}</div>
             <span className="text-[10px] text-slate-500 font-medium">Giocatori censiti</span>
           </div>
           <div className="p-3 bg-blue-500/10 text-blue-400 rounded-2xl ring-1 ring-blue-500/30">
@@ -270,13 +270,13 @@ export function TabOverviewMatch({
         </div>
 
         {/* Titolari Pronti Oggi */}
-        <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-3xl shadow-xl flex items-center justify-between">
+        <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl flex items-center justify-between">
           <div className="space-y-1">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
               Quorum Titolari
             </span>
             <div
-              className={`text-2xl sm:text-3xl font-black ${
+              className={`text-2xl sm:text-3xl font-bold ${
                 starterProfiles.length >= 10 ? 'text-emerald-400' : 'text-amber-400'
               }`}
             >
@@ -298,12 +298,12 @@ export function TabOverviewMatch({
         </div>
 
         {/* Cassa & Incasso Quote */}
-        <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-3xl shadow-xl flex items-center justify-between">
+        <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl flex items-center justify-between">
           <div className="space-y-1">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
               Cassa Campo
             </span>
-            <div className="text-2xl sm:text-3xl font-black text-white font-mono">
+            <div className="text-2xl sm:text-3xl font-bold text-white font-mono">
               €{totalCollected.toFixed(0)} <span className="text-slate-500 text-sm">/ €{totalMatchCost}</span>
             </div>
             <span className="text-[10px] text-emerald-400 font-bold">{paidCount}/10 Pagati</span>
@@ -314,12 +314,12 @@ export function TabOverviewMatch({
         </div>
 
         {/* Partite Archiviate */}
-        <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-3xl shadow-xl flex items-center justify-between">
+        <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl flex items-center justify-between">
           <div className="space-y-1">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
               Partite Concluse
             </span>
-            <div className="text-2xl sm:text-3xl font-black text-white">{archivedMatchesCount}</div>
+            <div className="text-2xl sm:text-3xl font-bold text-white">{archivedMatchesCount}</div>
             <span className="text-[10px] text-slate-500 font-medium">Storico archiviato</span>
           </div>
           <div className="p-3 bg-purple-500/10 text-purple-400 rounded-2xl ring-1 ring-purple-500/30">
@@ -329,7 +329,7 @@ export function TabOverviewMatch({
       </div>
 
       {/* 2. ELEZIONE GIORNO UFFICIALE (a tendina) & CTA GENERATORE SQUADRE */}
-      <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-xl space-y-4">
+      <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <button
             type="button"
@@ -338,7 +338,7 @@ export function TabOverviewMatch({
             className="flex-1 min-w-0 flex items-center justify-between gap-3 text-left"
           >
             <div className="min-w-0">
-              <h2 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+              <h2 className="text-sm font-bold text-white flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-emerald-400 flex-shrink-0" />
                 Elezione Giorno Ufficiale Partita
               </h2>
@@ -359,7 +359,7 @@ export function TabOverviewMatch({
 
           <Link
             href={`/squadre?date=${activeDate}`}
-            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/25 transition-all cursor-pointer"
+            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition-all cursor-pointer"
           >
             <Sparkles className="h-4 w-4" />
             <span>Vai a squadre</span>
@@ -389,7 +389,7 @@ export function TabOverviewMatch({
                 onClick={() => onSelectDate(day.dateString)}
                 className={`flex flex-col items-center justify-between p-3 rounded-2xl border text-center transition-all cursor-pointer ${
                   isOfficial
-                    ? 'bg-emerald-500/15 border-emerald-500 text-white ring-2 ring-emerald-500/60 shadow-lg'
+                    ? 'bg-emerald-500/15 border-emerald-500 text-white ring-2 ring-emerald-500/60'
                     : isFirstToTen
                     ? 'bg-amber-500/10 border-amber-400 text-white ring-2 ring-amber-400/50'
                     : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-white'
@@ -400,25 +400,25 @@ export function TabOverviewMatch({
                     {day.dayName.slice(0, 3)}
                   </span>
                   {isOfficial && (
-                    <span className="text-[10px] text-amber-400 font-black">★</span>
+                    <span className="text-[10px] text-amber-400 font-bold">★</span>
                   )}
                 </div>
 
-                <div className="text-xl font-black my-1 text-white">{day.dayNumber}</div>
+                <div className="text-xl font-bold my-1 text-white">{day.dayNumber}</div>
                 <div className="text-[10px] text-slate-400">{day.monthName}</div>
 
                 <div className="mt-2 w-full pt-1.5 border-t border-slate-800 flex items-center justify-center gap-1 font-mono text-[10px]">
-                  <span className={`font-black ${hasQuorum ? 'text-emerald-400' : 'text-slate-400'}`}>
+                  <span className={`font-bold ${hasQuorum ? 'text-emerald-400' : 'text-slate-400'}`}>
                     {count}/10
                   </span>
                   {hasQuorum && (
-                    <span className="text-[9px] bg-emerald-500 text-slate-950 px-1 rounded font-black">
+                    <span className="text-[9px] bg-emerald-500 text-slate-950 px-1 rounded font-bold">
                       OK
                     </span>
                   )}
                 </div>
                 {isFirstToTen && (
-                  <div className="mt-1 text-[9px] font-black uppercase text-amber-300 leading-tight">🥇 Primo a 10</div>
+                  <div className="mt-1 text-[9px] font-bold uppercase text-amber-300 leading-tight">🥇 Primo a 10</div>
                 )}
               </button>
             );
@@ -429,7 +429,7 @@ export function TabOverviewMatch({
       </div>
 
       {/* 3. TRACCIAMENTO CASSA & PAGAMENTI QUOTA CAMPO (a tendina) */}
-      <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-xl space-y-4">
+      <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-4">
         <button
           type="button"
           onClick={() => setCashOpen((o) => !o)}
@@ -437,7 +437,7 @@ export function TabOverviewMatch({
           className="w-full flex items-center justify-between gap-3 text-left"
         >
           <div className="min-w-0">
-            <h2 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+            <h2 className="text-sm font-bold text-white flex items-center gap-2">
               <Coins className="h-4 w-4 text-emerald-400 flex-shrink-0" />
               Cassa & Pagamenti ({formatItalianDate(activeDate)})
             </h2>
@@ -479,7 +479,7 @@ export function TabOverviewMatch({
           </div>
           <div className="w-full bg-slate-950 h-3 rounded-full overflow-hidden border border-slate-800">
             <div
-              className="h-full bg-gradient-to-r from-emerald-500 to-green-400 transition-all duration-500 shadow-md"
+              className="h-full bg-gradient-to-r from-emerald-500 to-green-400 transition-all duration-500"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
@@ -500,7 +500,7 @@ export function TabOverviewMatch({
                   onClick={() => handleTogglePayment(player.id)}
                   className={`p-3 rounded-2xl border flex flex-col justify-between gap-2 transition-all cursor-pointer select-none ${
                     isPaid
-                      ? 'bg-emerald-950/40 border-emerald-500/50 text-white shadow-emerald-500/10'
+                      ? 'bg-emerald-950/40 border-emerald-500/50 text-white'
                       : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
                   }`}
                 >
@@ -515,7 +515,7 @@ export function TabOverviewMatch({
                   <div className="flex items-center justify-between pt-1 border-t border-slate-800/80">
                     <span className="text-[11px] font-mono text-slate-400">€{costPerPlayer.toFixed(2)}</span>
                     <span
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all ${
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${
                         isPaid
                           ? 'bg-emerald-500 text-slate-950'
                           : 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
@@ -542,11 +542,11 @@ export function TabOverviewMatch({
       </div>
 
       {/* 4. MODULO CHIUSURA MATCH POST-PARTITA */}
-      <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-xl space-y-5">
+      <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-5">
         <div className="border-b border-slate-800 pb-3">
           <div className="flex items-center gap-2">
             <Trophy className="h-5 w-5 text-amber-400" />
-            <h2 className="text-sm font-black text-white uppercase tracking-wider">
+            <h2 className="text-sm font-bold text-white">
               Chiusura Match Post-Partita & Aggiornamento Palmarès
             </h2>
           </div>
@@ -577,7 +577,7 @@ export function TabOverviewMatch({
             <div className="grid grid-cols-2 gap-3 text-sm">
               {([['⚪ Bianchi', teams.white], ['⚫ Neri', teams.black]] as const).map(([title, list]) => (
                 <div key={title} className="bg-slate-950 border border-slate-800 rounded-2xl p-3 space-y-1">
-                  <div className="text-xs font-black uppercase tracking-wider text-slate-300">{title}</div>
+                  <div className="text-xs font-bold text-slate-300">{title}</div>
                   {list.map((p) => (
                     <div key={p.id} className="truncate text-slate-200">{p.name}</div>
                   ))}
@@ -609,7 +609,7 @@ export function TabOverviewMatch({
             type="button"
             onClick={handleArchiveMatch}
             disabled={isArchiving || !canArchive}
-            className="flex items-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/25 transition-all hover:scale-105 disabled:opacity-40 cursor-pointer"
+            className="flex items-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition-all disabled:opacity-40 cursor-pointer"
           >
             {isArchiving ? (
               <Loader2 className="h-4 w-4 animate-spin" />

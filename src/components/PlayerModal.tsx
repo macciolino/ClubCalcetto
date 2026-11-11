@@ -268,7 +268,7 @@ export function PlayerModal({
 
               <div className="flex items-center justify-between bg-slate-950/60 px-3 py-1.5 rounded-lg border border-slate-800">
                 <span className="text-xs text-slate-400">Valutazione Generale (OVR):</span>
-                <span className="font-mono text-sm font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
+                <span className="font-mono text-sm font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
                   {currentOvr}
                 </span>
               </div>
@@ -277,7 +277,7 @@ export function PlayerModal({
 
           {/* Posizione Tattica in Campo (Field Position) */}
           <div className="bg-slate-950/40 p-3.5 rounded-xl border border-slate-800/80 space-y-1.5">
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-300">
+            <label className="block text-xs font-bold text-slate-300">
               Posizione Tattica in Campo
             </label>
             <p className="text-[11px] text-slate-500">
@@ -299,7 +299,7 @@ export function PlayerModal({
           {/* Storico Partite: Vittorie, Pareggi, Sconfitte */}
           <div className="bg-slate-950/40 p-4 rounded-xl border border-slate-800/80 space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              <h3 className="text-xs font-bold text-slate-400">
                 Storico Partite (Vittorie / Pareggi / Sconfitte)
               </h3>
               <span className="text-[11px] text-slate-500">
@@ -349,7 +349,7 @@ export function PlayerModal({
           {/* Griglia Valutazioni Statistiche 1-10 in Ordine Canonico */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              <h3 className="text-xs font-bold text-slate-400">
                 Statistiche Abilità (Scala da 1 a 10)
               </h3>
               <span className="text-[11px] text-slate-500">Trascina lo slider</span>

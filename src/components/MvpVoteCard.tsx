@@ -89,9 +89,9 @@ export function MvpVoteCard({ date, matchTime, white, black, voterUid, isAdmin =
   const opensLabel = `${formatItalianDate(toYmd(opensAt))} alle ${timeLabel(opensAt)}`;
 
   return (
-    <section className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-4" aria-labelledby="mvp-vote-title">
+    <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4" aria-labelledby="mvp-vote-title">
       <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-3">
-        <h3 id="mvp-vote-title" className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+        <h3 id="mvp-vote-title" className="text-sm font-bold text-white flex items-center gap-2">
           <Star className="h-4 w-4 text-amber-400" /> Vota l&apos;MVP della giornata
         </h3>
         <span className="text-xs font-mono text-slate-400">{votes.length} voti</span>
@@ -188,7 +188,7 @@ export function MvpVoteCard({ date, matchTime, white, black, voterUid, isAdmin =
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {([['⚪ Bianchi', white], ['⚫ Neri', black]] as const).map(([title, list]) => (
               <div key={title} className="space-y-1.5">
-                <div className="text-xs font-black uppercase tracking-wider text-slate-300">{title}</div>
+                <div className="text-xs font-bold text-slate-300">{title}</div>
                 {list.map((p) => {
                   const mine = myVote === p.id;
                   return (
@@ -213,7 +213,7 @@ export function MvpVoteCard({ date, matchTime, white, black, voterUid, isAdmin =
                       )}
                       <span className="flex-1 truncate">{p.name}</span>
                       {countOf(p.id) > 0 && (
-                        <span className="text-xs font-mono font-black text-amber-300">{countOf(p.id)}</span>
+                        <span className="text-xs font-mono font-bold text-amber-300">{countOf(p.id)}</span>
                       )}
                     </button>
                   );

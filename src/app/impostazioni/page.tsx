@@ -56,7 +56,7 @@ function SettingsContent() {
     return (
       <div className="min-h-[50vh] flex flex-col items-center justify-center text-center gap-3">
         <p className="text-sm text-slate-400">Accedi per gestire le tue impostazioni.</p>
-        <Link href="/login" className="px-5 py-2.5 bg-emerald-500 text-slate-950 font-black rounded-xl text-xs uppercase">
+        <Link href="/login" className="px-5 py-2.5 bg-emerald-500 text-slate-950 font-bold rounded-xl text-xs">
           Vai al login
         </Link>
       </div>
@@ -77,7 +77,7 @@ function SettingsContent() {
     <nav aria-label="Sezioni delle impostazioni" className="space-y-4">
       {groups.map((g) => (
         <div key={g.title} className="space-y-1">
-          <p className="px-3 text-[11px] font-black uppercase tracking-wider text-slate-500">{g.title}</p>
+          <p className="px-3 text-[11px] font-bold uppercase tracking-wider text-slate-500">{g.title}</p>
           {g.items.map((s) => {
             const Icon = s.icon;
             const active = s.id === current.id;
@@ -106,19 +106,16 @@ function SettingsContent() {
 
   return (
     <div className="space-y-6 pb-16">
-      <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-xl">
-        <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
-          <Settings className="h-6 w-6 text-emerald-400" />
-          Impostazioni
-        </h1>
-        <p className="text-xs text-slate-400 mt-1">
+      <header className="space-y-1.5">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Impostazioni</h1>
+        <p className="text-sm text-slate-400 max-w-xl leading-relaxed">
           {admin ? `Club Soccer - ${profile.full_name}` : 'Le tue preferenze per Club Soccer.'}
         </p>
-      </div>
+      </header>
 
       <div className="md:grid md:grid-cols-[240px_1fr] md:gap-6 md:items-start">
         {/* Elenco sezioni: colonna a sinistra su PC; su telefono solo finché non se ne apre una */}
-        <aside className={`bg-slate-900 border border-slate-800 rounded-3xl p-2 md:sticky md:top-36 ${requested ? 'hidden md:block' : ''}`}>
+        <aside className={`bg-slate-900 border border-slate-800 rounded-2xl p-2 md:sticky md:top-36 ${requested ? 'hidden md:block' : ''}`}>
           {menu}
         </aside>
 
@@ -133,7 +130,7 @@ function SettingsContent() {
             </Link>
           </div>
           <div>
-            <h2 id="settings-section-title" className="text-lg font-black text-white">
+            <h2 id="settings-section-title" className="text-lg font-bold text-white">
               {current.label}
             </h2>
             <p className="text-xs text-slate-400">{current.description}</p>

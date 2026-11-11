@@ -70,10 +70,10 @@ export function NotificationGuide() {
   });
 
   return (
-    <section className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-4" aria-labelledby="notif-guide-title">
+    <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4" aria-labelledby="notif-guide-title">
       <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
         <Bell className="h-5 w-5 text-emerald-400" />
-        <h2 id="notif-guide-title" className="text-base font-black text-white uppercase tracking-wider">
+        <h2 id="notif-guide-title" className="text-base font-bold text-white">
           Notifiche
         </h2>
       </div>
@@ -148,7 +148,7 @@ export function NotificationGuide() {
       <ol className="space-y-2.5">
         {STEPS[platform].map((step, i) => (
           <li key={i} className="flex gap-3 text-sm text-slate-200">
-            <span className="flex-shrink-0 h-6 w-6 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-xs font-black flex items-center justify-center">
+            <span className="flex-shrink-0 h-6 w-6 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center justify-center">
               {i + 1}
             </span>
             <span className="pt-0.5">{step}</span>

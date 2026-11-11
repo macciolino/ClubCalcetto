@@ -77,9 +77,9 @@ export function FormSettingsCard() {
   const anyOn = settings.goals || settings.mvp || settings.results;
 
   return (
-    <div className="bg-slate-900 border border-emerald-500/30 p-4 sm:p-5 rounded-3xl shadow-xl space-y-4">
+    <div className="bg-slate-900 border border-emerald-500/30 p-4 sm:p-5 rounded-2xl space-y-4">
       <div>
-        <h2 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+        <h2 className="text-sm font-bold text-white flex items-center gap-2">
           <Flame className="h-5 w-5 text-orange-400 flex-shrink-0" />
           Stato forma dei giocatori
         </h2>
