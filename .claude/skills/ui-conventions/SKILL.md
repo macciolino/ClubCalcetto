@@ -86,3 +86,6 @@ description: ClubCalcetto UI conventions - theme, shared components (tables, dro
   never on /login; the inline `SPLASH_GUARD` script hides it before paint.
 - `VirtualPitch` stickers enter from their own half one after another (`.sticker-enter`, `--from-y`, delay = order × 70 ms).
 - Every animation has a `prefers-reduced-motion` fallback.
+- Form tracker "Ultime 5" = `components/FormDots.tsx` (Home "Il tuo rendimento" and `PlayerCardFifa`): ALWAYS 5 dots for the
+  club's last 5 archived matches (`lastCompletedMatches`, oldest → newest on the right): green won, amber drawn,
+  red-500 lost, slate-700 absent, empty ring = no match yet; tap/hover → tooltip "Vinta 6-4 · 11 nov". Do not hand-roll dots.

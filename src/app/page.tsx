@@ -22,7 +22,8 @@ import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { getOfficialMatchDate, isTimelockActive } from '@/lib/services/presenceService';
 import { formatItalianDate, isDateOpenForPlayers, toDateString } from '@/lib/utils/dateUtils';
 import { effectiveMatchCost, effectiveMatchLocation, effectiveMatchTime, mvpVotingWindow } from '@/lib/utils/matchUtils';
-import { computeMatchStats, computeRecentResults } from '@/lib/utils/statUtils';
+import { computeMatchStats } from '@/lib/utils/statUtils';
+import { FormDots, lastCompletedMatches } from '@/components/FormDots';
 import { useForms } from '@/lib/hooks/useForms';
 import { formatForm } from '@/lib/utils/formUtils';
 import { reconcileTeams } from '@/lib/utils/teamUtils';
@@ -122,7 +123,7 @@ export default function HomePage() {
 
   // Rendimento personale e ultima partita archiviata
   const myStats = useMemo(() => (profile ? computeMatchStats(completedMatches).get(profile.id) : undefined), [completedMatches, profile]);
-  const myRecent = useMemo(() => (profile ? computeRecentResults(completedMatches).get(profile.id) || [] : []), [completedMatches, profile]);
+  const recentMatches = useMemo(() => lastCompletedMatches(completedMatches), [completedMatches]);
   const lastMatch = useMemo(
     () => [...completedMatches].sort((a, b) => (b.match_date || b.id).localeCompare(a.match_date || a.id))[0],
     [completedMatches]
@@ -385,15 +386,9 @@ export default function HomePage() {
                 ))}
               </div>
               <div className="flex items-center justify-between gap-3 text-sm pt-3 border-t border-slate-800">
-                <span className="flex items-center gap-1.5" aria-label="Ultime partite">
-                  <span className="text-xs text-slate-400 mr-1">Ultime</span>
-                  {myRecent.map((r, i) => (
-                    <span
-                      key={i}
-                      title={r === 'won' ? 'Vinta' : r === 'drawn' ? 'Pareggiata' : 'Persa'}
-                      className={`h-2.5 w-2.5 rounded-full ${r === 'won' ? 'bg-emerald-400' : r === 'drawn' ? 'bg-slate-500' : 'bg-rose-400'}`}
-                    />
-                  ))}
+                <span className="flex items-center gap-2">
+                  <span className="text-xs text-slate-400">Ultime 5</span>
+                  <FormDots playerId={profile.id} matches={recentMatches} />
                 </span>
                 {forms.get(profile.id) ? (
                   <span className={`text-xs font-semibold ${(forms.get(profile.id) || 0) > 0 ? 'text-orange-300' : 'text-sky-300'}`}>

@@ -6,7 +6,8 @@ import { notify, askConfirm } from '@/components/ui/Feedback';
 import { manageAccountAsSuperAdmin } from '@/lib/services/accountService';
 import { useForms } from '@/lib/hooks/useForms';
 import React, { useState, useEffect, useMemo } from 'react';
-import { computeMatchStats, computeRecentResults } from '@/lib/utils/statUtils';
+import { computeMatchStats } from '@/lib/utils/statUtils';
+import { lastCompletedMatches } from '@/components/FormDots';
 import { PlayerCompare } from '@/components/PlayerCompare';
 import { useAuth } from '@/lib/context/AuthContext';
 import { Profile, StatCategory, Match, FIELD_POSITION_ABBR, STAT_CANONICAL_ORDER } from '@/types/database';
@@ -43,7 +44,7 @@ export default function GiocatoriPage() {
     return () => unsub();
   }, []);
   const matchStats = useMemo(() => computeMatchStats(completedMatches), [completedMatches]);
-  const recentResults = useMemo(() => computeRecentResults(completedMatches), [completedMatches]);
+  const recentMatches = useMemo(() => lastCompletedMatches(completedMatches), [completedMatches]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPlayerToEdit, setSelectedPlayerToEdit] = useState<Profile | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -381,7 +382,7 @@ export default function GiocatoriPage() {
                 categories={sortedCategories}
                 form={forms.get(player.id)}
                 matchStats={matchStats.get(player.id)}
-                recentResults={recentResults.get(player.id)}
+                recentMatches={recentMatches}
                 onEdit={handleOpenEditModal}
                 onDelete={player.is_guest || isSuperAdmin ? (p) => handleDeletePlayer(p.id, p.full_name) : undefined}
               />

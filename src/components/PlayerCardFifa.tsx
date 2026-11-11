@@ -4,7 +4,8 @@ import { initialsOf, uploadedPhoto } from '@/lib/utils/playerUtils';
 import { formatForm } from '@/lib/utils/formUtils';
 import { getStatValue, PlayerMatchStats, EMPTY_MATCH_STATS } from '@/lib/utils/statUtils';
 import React, { useState } from 'react';
-import { Profile, StatCategory, sortStatsByCanonicalOrder } from '@/types/database';
+import { Match, Profile, StatCategory, sortStatsByCanonicalOrder } from '@/types/database';
+import { FormDots } from './FormDots';
 import { RadarChart } from './RadarChart';
 import { ChevronDown, Edit3, Trash2 } from 'lucide-react';
 
@@ -19,8 +20,8 @@ interface PlayerCardFifaProps {
   form?: number;
   /** Gol, presenze, vinte/pareggiate/perse e MVP dalle partite archiviate (stessi numeri di Storico e Profilo) */
   matchStats?: PlayerMatchStats;
-  /** Results of the player's last archived matches, newest first (max 5) */
-  recentResults?: ('won' | 'drawn' | 'lost')[];
+  /** The club's last archived matches, oldest first (form tracker with 5 fixed slots) */
+  recentMatches?: Match[];
 }
 
 export function PlayerCardFifa({
@@ -31,7 +32,7 @@ export function PlayerCardFifa({
   categories,
   form = 0,
   matchStats = EMPTY_MATCH_STATS,
-  recentResults = [],
+  recentMatches = [],
 }: PlayerCardFifaProps) {
   const [activeTab, setActiveTab] = useState<'radar' | 'stats'>('radar');
   // Chiusa all'inizio: si apre con un tocco (fisarmonica)
@@ -72,12 +73,19 @@ export function PlayerCardFifa({
       className={`bg-slate-900 border rounded-2xl transition-colors ${open ? 'border-slate-700' : 'border-slate-800'}`}
     >
       {/* Parte compatta, sempre visibile: tocca per aprire l'ottagono */}
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setOpen((o) => !o)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setOpen((o) => !o);
+          }
+        }}
         aria-expanded={open}
         aria-controls={panelId}
-        className="w-full flex items-center gap-3 p-4 text-left"
+        className="w-full flex items-center gap-3 p-4 text-left cursor-pointer rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
       >
         <span className="relative flex-shrink-0">
           {photo ? (
@@ -108,17 +116,7 @@ export function PlayerCardFifa({
               </span>
             )}
           </span>
-          {matchStats.played > 0 && recentResults.length > 0 && (
-            <span className="mt-1.5 flex items-center gap-1" aria-label="Ultime partite">
-              {recentResults.map((r, i) => (
-                <span
-                  key={i}
-                  title={r === 'won' ? 'Vinta' : r === 'drawn' ? 'Pareggiata' : 'Persa'}
-                  className={`h-2 w-2 rounded-full ${r === 'won' ? 'bg-emerald-500' : r === 'drawn' ? 'bg-slate-500' : 'bg-rose-400'}`}
-                />
-              ))}
-            </span>
-          )}
+          <FormDots playerId={player.id} matches={recentMatches} className="mt-1.5" />
         </span>
 
         <span className="flex-shrink-0 text-right">
@@ -126,7 +124,7 @@ export function PlayerCardFifa({
           <span className="block text-[10px] font-semibold text-slate-400 mt-1">OVR</span>
         </span>
         <ChevronDown className={`h-5 w-5 text-slate-500 flex-shrink-0 transition-transform duration-300 ${open ? 'rotate-180' : ''}`} />
-      </button>
+      </div>
 
       {/* Dettaglio a fisarmonica (altezza animata) */}
       <div
