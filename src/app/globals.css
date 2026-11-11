@@ -216,3 +216,18 @@ html.login-lock body {
   overflow: hidden;
   height: 100%;
 }
+
+/* Finestre (components/ui/Sheet): dal basso su telefono e tablet, al centro con una leggera entrata su PC */
+.sheet-panel {
+  animation: cc-sheet 300ms cubic-bezier(0.32, 0.72, 0, 1) backwards;
+}
+@media (min-width: 1024px) {
+  .sheet-panel {
+    animation: cc-enter 200ms ease-out backwards;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sheet-panel {
+    animation: none;
+  }
+}

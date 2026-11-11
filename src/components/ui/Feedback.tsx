@@ -116,16 +116,17 @@ export function FeedbackHost() {
       {/* Conferma */}
       {request && (
         <div
-          className="fixed inset-0 z-[70] bg-black/60 flex items-end sm:items-center justify-center modal-safe animate-in fade-in duration-150"
+          className="fixed inset-0 z-[70] bg-black/60 lg:bg-slate-950/70 lg:backdrop-blur-sm flex items-end lg:items-center justify-center lg:p-6 animate-fade"
           onClick={() => close(false)}
         >
           <div
             role="alertdialog"
             aria-modal="true"
             aria-describedby="confirm-message"
-            className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-5 shadow-2xl"
+            className="w-full lg:max-w-sm bg-slate-900 border border-slate-800 border-b-0 lg:border-b rounded-t-3xl lg:rounded-2xl px-5 pt-2 lg:pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] lg:pb-5 space-y-5 shadow-2xl sheet-panel"
             onClick={(e) => e.stopPropagation()}
           >
+            <div className="lg:hidden mx-auto h-1.5 w-10 rounded-full bg-slate-700" aria-hidden="true" />
             <p id="confirm-message" className="text-sm text-slate-100 leading-relaxed whitespace-pre-line">
               {request.message}
             </p>
@@ -133,7 +134,7 @@ export function FeedbackHost() {
               <button
                 type="button"
                 onClick={() => close(false)}
-                className="px-4 py-2.5 rounded-xl text-sm font-semibold border border-slate-700 text-slate-200 hover:bg-slate-800"
+                className="px-4 py-3 sm:py-2.5 rounded-xl text-sm font-semibold border border-slate-700 text-slate-200 hover:bg-slate-800"
               >
                 Annulla
               </button>
@@ -141,7 +142,7 @@ export function FeedbackHost() {
                 ref={confirmBtn}
                 type="button"
                 onClick={() => close(true)}
-                className={`px-4 py-2.5 rounded-xl text-sm font-semibold ${
+                className={`px-4 py-3 sm:py-2.5 rounded-xl text-sm font-semibold ${
                   request.danger ? 'bg-rose-600 hover:bg-rose-500 text-white' : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
                 }`}
               >

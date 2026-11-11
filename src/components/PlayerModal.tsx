@@ -7,7 +7,8 @@ import { Profile, StatCategory, FieldPosition, FIELD_POSITIONS, STAT_CANONICAL_O
 import { addStoredPlayer, updateStoredPlayer } from '@/lib/services/playerService';
 import { saveProfileDoc } from '@/lib/firebase/firestoreService';
 import { photoToAvatarDataUrl } from '@/lib/utils/imageUtils';
-import { X, Upload, Save, UserPlus, Loader2 } from 'lucide-react';
+import { Upload, Save, Loader2 } from 'lucide-react';
+import { Sheet, sheetBtn } from '@/components/ui/Sheet';
 
 interface PlayerModalProps {
   isOpen: boolean;
@@ -182,55 +183,44 @@ export function PlayerModal({
   const currentOvr = calculateOvr();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center modal-safe bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-        {/* Header Modal */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/60">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl">
-              {playerToEdit ? <Save className="h-5 w-5" /> : <UserPlus className="h-5 w-5" />}
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-white">
-                {playerToEdit ? 'Modifica Scheda Giocatore' : 'Crea Giocatore Manuale / Ospite'}
-              </h2>
-              <p className="text-xs text-slate-400">
-                {playerToEdit ? 'Aggiorna voti, ruolo tattico e parametri da 1 a 10' : 'Aggiungi un compagno di calcetto'}
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
-          >
-            <X className="h-5 w-5" />
+    <Sheet
+      onClose={onClose}
+      locked={isSubmitting}
+      size="lg"
+      height="tall"
+      title={playerToEdit ? 'Modifica giocatore' : 'Nuovo ospite'}
+      subtitle={playerToEdit ? 'Ruolo, partite e parametri da 1 a 10' : 'Aggiungi un compagno di calcetto'}
+      footer={
+        <>
+          <button type="button" onClick={onClose} disabled={isSubmitting} className={sheetBtn.secondary}>
+            Annulla
           </button>
-        </div>
+          <button type="submit" form="player-form" disabled={isSubmitting || uploadingAvatar} className={sheetBtn.primary}>
+            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {playerToEdit ? 'Salva modifiche' : 'Aggiungi giocatore'}
+          </button>
+        </>
+      }
+    >
+      <form id="player-form" onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+        {errorMsg && (
+          <div className="lg:col-span-2 rounded-xl bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{errorMsg}</div>
+        )}
 
-        {/* Form Body (Scrollable) */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
-          {errorMsg && (
-            <div className="p-3 text-xs bg-rose-500/15 border border-rose-500/30 text-rose-300 rounded-xl">
-              {errorMsg}
-            </div>
-          )}
-
-          {/* Dati Base & Avatar */}
-          <div className="flex items-center gap-5">
-            <div className="relative group">
+        {/* Colonna 1: chi è */}
+        <div className="space-y-6">
+          <section className="flex items-center gap-4">
+            <div className="relative group flex-shrink-0">
               <div className="w-20 h-20 rounded-2xl bg-slate-800 border-2 border-dashed border-slate-700 flex items-center justify-center overflow-hidden">
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
-                  <span className="text-2xl font-bold text-emerald-400">
-                    {fullName.charAt(0).toUpperCase() || '⚽'}
-                  </span>
+                  <span className="text-2xl font-bold text-emerald-400">{fullName.charAt(0).toUpperCase() || '⚽'}</span>
                 )}
               </div>
               <label
                 htmlFor="avatar-upload"
-                className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-2xl"
+                className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity cursor-pointer rounded-2xl"
               >
                 {uploadingAvatar ? (
                   <Loader2 className="h-5 w-5 animate-spin text-emerald-400" />
@@ -241,52 +231,35 @@ export function PlayerModal({
                   </>
                 )}
               </label>
-              <input
-                id="avatar-upload"
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarUpload}
-                disabled={uploadingAvatar}
-                className="hidden"
-              />
+              <input id="avatar-upload" type="file" accept="image/*" onChange={handleAvatarUpload} disabled={uploadingAvatar} className="hidden" />
             </div>
-
-            <div className="flex-1 space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Nome e Cognome / Soprannome
-                </label>
+            <div className="flex-1 min-w-0 space-y-2">
+              <label className="block">
+                <span className="block text-xs font-medium text-slate-300 mb-1.5">Nome e cognome</span>
                 <input
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="Es. Mario Rossi"
-                  className="w-full px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500 transition-colors"
+                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500 transition-colors"
                   required
                 />
-              </div>
-
-              <div className="flex items-center justify-between bg-slate-950/60 px-3 py-1.5 rounded-lg border border-slate-800">
-                <span className="text-xs text-slate-400">Valutazione Generale (OVR):</span>
-                <span className="font-mono text-sm font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
-                  {currentOvr}
-                </span>
-              </div>
+              </label>
+              <p className="text-xs text-slate-400">
+                OVR <span className="ml-1 text-base font-bold text-white tabular-nums">{currentOvr}</span>
+              </p>
             </div>
-          </div>
+          </section>
 
-          {/* Posizione Tattica in Campo (Field Position) */}
-          <div className="bg-slate-950/40 p-3.5 rounded-xl border border-slate-800/80 space-y-1.5">
-            <label className="block text-xs font-bold text-slate-300">
-              Posizione Tattica in Campo
+          <section className="space-y-1.5">
+            <label htmlFor="player-position" className="block text-xs font-medium text-slate-300">
+              Ruolo in campo
             </label>
-            <p className="text-[11px] text-slate-500">
-              Serve all&apos;algoritmo di bilanciamento e alla disposizione a rombo (1-1-2-1) sul campetto.
-            </p>
             <select
+              id="player-position"
               value={position}
               onChange={(e) => setPosition(e.target.value as FieldPosition)}
-              className="w-full mt-1 px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white text-xs font-bold focus:outline-none focus:border-emerald-500 transition-colors"
+              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500 transition-colors"
             >
               {FIELD_POSITIONS.map((pos) => (
                 <option key={pos} value={pos}>
@@ -294,118 +267,66 @@ export function PlayerModal({
                 </option>
               ))}
             </select>
-          </div>
+            <p className="text-xs text-slate-500">Serve al bilanciamento e alla posizione sul campo.</p>
+          </section>
 
-          {/* Storico Partite: Vittorie, Pareggi, Sconfitte */}
-          <div className="bg-slate-950/40 p-4 rounded-xl border border-slate-800/80 space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-slate-400">
-                Storico Partite (Vittorie / Pareggi / Sconfitte)
-              </h3>
-              <span className="text-[11px] text-slate-500">
-                Totale: {Number(matchesWon || 0) + Number(matchesDrawn || 0) + Number(matchesLost || 0)} partite
+          <section className="space-y-2">
+            <div className="flex items-baseline justify-between">
+              <h3 className="text-xs font-medium text-slate-300">Partite</h3>
+              <span className="text-xs text-slate-500">
+                Totale {Number(matchesWon || 0) + Number(matchesDrawn || 0) + Number(matchesLost || 0)}
               </span>
             </div>
-
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-emerald-950/20 border border-emerald-500/20 rounded-xl p-2.5 text-center">
-                <label className="block text-[11px] font-bold text-emerald-400 mb-1">
-                  Vittorie (V)
+            <div className="grid grid-cols-3 gap-2">
+              {(
+                [
+                  ['Vinte', matchesWon, setMatchesWon, 'text-emerald-300'],
+                  ['Pari', matchesDrawn, setMatchesDrawn, 'text-amber-300'],
+                  ['Perse', matchesLost, setMatchesLost, 'text-rose-300'],
+                ] as const
+              ).map(([label, value, set, color]) => (
+                <label key={label} className="block rounded-xl bg-slate-950/60 border border-slate-800 p-2.5 text-center">
+                  <span className={`block text-xs font-medium mb-1 ${color}`}>{label}</span>
+                  <NumberInput
+                    min={0}
+                    value={value}
+                    onValueChange={set}
+                    className="w-full text-center bg-slate-900 border border-slate-800 rounded-lg py-1.5 text-white font-semibold text-base tabular-nums focus:outline-none focus:border-emerald-500"
+                  />
                 </label>
-                <NumberInput
-                  min={0}
-                  value={matchesWon}
-                  onValueChange={setMatchesWon}
-                  className="w-full text-center bg-slate-900 border border-emerald-500/30 rounded-lg py-1 text-emerald-300 font-mono font-bold text-base focus:outline-none focus:border-emerald-400"
-                />
-              </div>
+              ))}
+            </div>
+          </section>
+        </div>
 
-              <div className="bg-amber-950/20 border border-amber-500/20 rounded-xl p-2.5 text-center">
-                <label className="block text-[11px] font-bold text-amber-400 mb-1">
-                  Pareggi (P)
+        {/* Colonna 2: parametri */}
+        <section className="space-y-3">
+          <div className="flex items-baseline justify-between">
+            <h3 className="text-xs font-medium text-slate-300">Parametri (1-10)</h3>
+            <span className="text-xs text-slate-500">Trascina il cursore</span>
+          </div>
+          <div className="space-y-4 rounded-xl bg-slate-950/60 border border-slate-800 p-4">
+            {sortedCategories.map((cat) => {
+              const val = stats[cat.name] ?? cat.default_value ?? 6;
+              return (
+                <label key={cat.id || cat.name} className="flex items-center gap-3">
+                  <span className="w-24 text-sm text-slate-300 truncate">{cat.label || cat.name}</span>
+                  <input
+                    type="range"
+                    min="1"
+                    max="10"
+                    step="1"
+                    value={val}
+                    onChange={(e) => handleStatChange(cat.name, parseInt(e.target.value, 10))}
+                    className="flex-1 accent-emerald-500 h-2 cursor-pointer"
+                  />
+                  <span className="w-7 text-right font-semibold text-sm text-white tabular-nums">{val}</span>
                 </label>
-                <NumberInput
-                  min={0}
-                  value={matchesDrawn}
-                  onValueChange={setMatchesDrawn}
-                  className="w-full text-center bg-slate-900 border border-amber-500/30 rounded-lg py-1 text-amber-300 font-mono font-bold text-base focus:outline-none focus:border-amber-400"
-                />
-              </div>
-
-              <div className="bg-rose-950/20 border border-rose-500/20 rounded-xl p-2.5 text-center">
-                <label className="block text-[11px] font-bold text-rose-400 mb-1">
-                  Sconfitte (S)
-                </label>
-                <NumberInput
-                  min={0}
-                  value={matchesLost}
-                  onValueChange={setMatchesLost}
-                  className="w-full text-center bg-slate-900 border border-rose-500/30 rounded-lg py-1 text-rose-300 font-mono font-bold text-base focus:outline-none focus:border-rose-400"
-                />
-              </div>
-            </div>
+              );
+            })}
           </div>
-
-          {/* Griglia Valutazioni Statistiche 1-10 in Ordine Canonico */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-xs font-bold text-slate-400">
-                Statistiche Abilità (Scala da 1 a 10)
-              </h3>
-              <span className="text-[11px] text-slate-500">Trascina lo slider</span>
-            </div>
-
-            <div className="space-y-3 bg-slate-950/40 p-4 rounded-xl border border-slate-800/80">
-              {sortedCategories.map((cat) => {
-                const val = stats[cat.name] ?? cat.default_value ?? 6;
-                return (
-                  <div key={cat.id || cat.name} className="flex items-center gap-3">
-                    <span className="w-24 text-xs font-semibold text-slate-300 truncate">
-                      {cat.label || cat.name}
-                    </span>
-                    <input
-                      type="range"
-                      min="1"
-                      max="10"
-                      step="1"
-                      value={val}
-                      onChange={(e) => handleStatChange(cat.name, parseInt(e.target.value, 10))}
-                      className="flex-1 accent-emerald-500 h-2 bg-slate-800 rounded-lg cursor-pointer"
-                    />
-                    <span className="w-8 text-right font-mono font-bold text-sm text-emerald-400 bg-slate-800 px-1 py-0.5 rounded">
-                      {val}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Footer Actions */}
-          <div className="pt-2 flex items-center justify-end gap-3 border-t border-slate-800">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isSubmitting}
-              className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-            >
-              Annulla
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting || uploadingAvatar}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/25 transition-all disabled:opacity-50 cursor-pointer"
-            >
-              {isSubmitting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4" />
-              )}
-              {playerToEdit ? 'Salva Modifiche' : 'Aggiungi Giocatore'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        </section>
+      </form>
+    </Sheet>
   );
 }

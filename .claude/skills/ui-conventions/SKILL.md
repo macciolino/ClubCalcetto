@@ -89,3 +89,12 @@ description: ClubCalcetto UI conventions - theme, shared components (tables, dro
 - Form tracker "Ultime 5" = `components/FormDots.tsx` (Home "Il tuo rendimento" and `PlayerCardFifa`): ALWAYS 5 dots for the
   club's last 5 archived matches (`lastCompletedMatches`, oldest → newest on the right): green won, amber drawn,
   red-500 lost, slate-700 absent, empty ring = no match yet; tap/hover → tooltip "Vinta 6-4 · 11 nov". Do not hand-roll dots.
+
+## Modals (one component)
+- EVERY modal uses `components/ui/Sheet.tsx` (`<Sheet onClose title subtitle footer size="md|lg" height="auto|tall" locked>`):
+  < 1024px bottom sheet (slide-up `.sheet-panel`, drag bar → drag down to close, body scrolls, sticky footer with
+  `sheetBtn.primary/secondary/danger`), ≥ 1024px centred modal on blurred backdrop, wider inner grid (`lg:grid-cols-2`).
+  Portal on <body>, z-60, locks page scroll, Esc closes. Forms put the submit in the footer with `form="<form id>"`.
+- Users: PlayerModal, FieldModal, StatsLegendModal, MatchEditModal, PlayerCompare, PresenceCard actions.
+  The confirm dialog (`askConfirm`, z-70) follows the same look. Do not write new `fixed inset-0` modals.
+- Breakpoint for desktop vs mobile layouts: `lg` (1024px) (e.g. Giocatori table vs dense list).

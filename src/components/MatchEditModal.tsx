@@ -1,5 +1,6 @@
 'use client';
 
+import { Sheet, sheetBtn } from '@/components/ui/Sheet';
 import { useFormSettings } from '@/lib/hooks/useForms';
 import React, { useEffect, useState } from 'react';
 import { Match, MatchTeamPlayer, Profile } from '@/types/database';
@@ -8,7 +9,7 @@ import { formatItalianDate } from '@/lib/utils/dateUtils';
 import { toTeamPlayer } from '@/lib/utils/teamUtils';
 import { TeamSwapEditor } from '@/components/TeamSwapEditor';
 import { MatchResultFields, MatchResultValue, validateScorers } from '@/components/MatchResultFields';
-import { Loader2, Pencil, X, Check, AlertCircle } from 'lucide-react';
+import { Loader2, Check, AlertCircle } from 'lucide-react';
 
 interface MatchEditModalProps {
   match: Match;
@@ -93,28 +94,29 @@ export function MatchEditModal({ match, profiles, closedBy, onClose }: MatchEdit
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 bg-black/70 flex items-end sm:items-center justify-center sm:p-4 pt-safe px-safe"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="match-edit-title"
-      onClick={onClose}
-    >
-      <div
-        className="w-full sm:max-w-3xl max-h-[92vh] overflow-y-auto bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-3xl shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="sticky top-0 z-10 bg-slate-900 border-b border-slate-800 px-5 py-4 flex items-center gap-2">
-          <Pencil className="h-4 w-4 text-emerald-400" />
-          <h2 id="match-edit-title" className="text-sm font-bold text-white flex-1">
-            Modifica partita del {formatItalianDate(match.match_date || match.id)}
-          </h2>
-          <button type="button" onClick={onClose} aria-label="Chiudi" className="p-2 -m-2 text-slate-400 hover:text-white">
-            <X className="h-5 w-5" />
+    <Sheet
+      onClose={onClose}
+      locked={saving}
+      size="lg"
+      height="tall"
+      title={`Modifica partita del ${formatItalianDate(match.match_date || match.id)}`}
+      footer={
+        <>
+          <button type="button" onClick={onClose} disabled={saving} className={sheetBtn.secondary}>
+            Annulla
           </button>
-        </div>
-
-        <div className="p-5 space-y-5">
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving || Boolean(validation.error) || duplicate}
+            className={sheetBtn.primary}
+          >
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            Salva modifiche
+          </button>
+        </>
+      }
+    >
           <section className="space-y-2">
             <h3 className="text-xs font-bold text-slate-400">Squadre</h3>
             <TeamSwapEditor white={white} black={black} onChange={handleTeamsChange} bench={bench} />
@@ -131,27 +133,6 @@ export function MatchEditModal({ match, profiles, closedBy, onClose }: MatchEdit
           </section>
 
           {error && <p className="text-sm text-rose-300">{error}</p>}
-        </div>
-
-        <div className="sticky bottom-0 bg-slate-900 border-t border-slate-800 px-5 pt-4 sheet-safe-bottom flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-full sm:w-auto px-5 py-3 rounded-xl text-xs font-bold text-slate-300 border border-slate-700 hover:bg-slate-800"
-          >
-            Annulla
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving || Boolean(validation.error) || duplicate}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs disabled:opacity-40"
-          >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-            Salva modifiche
-          </button>
-        </div>
-      </div>
-    </div>
+    </Sheet>
   );
 }

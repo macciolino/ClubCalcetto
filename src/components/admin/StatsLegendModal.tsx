@@ -1,8 +1,9 @@
 'use client';
 
 import React from 'react';
+import { Sheet, sheetBtn } from '@/components/ui/Sheet';
 import { STAT_DETAILS, STAT_CANONICAL_ORDER } from '@/types/database';
-import { X, Sparkles, Zap, Shield, Eye, Flame, Activity, Footprints, Target } from 'lucide-react';
+import { Zap, Shield, Eye, Flame, Activity, Footprints, Target } from 'lucide-react';
 
 interface StatsLegendModalProps {
   isOpen: boolean;
@@ -24,34 +25,18 @@ export function StatsLegendModal({ isOpen, onClose }: StatsLegendModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center modal-safe bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl">
-        {/* Header Modale */}
-        <div className="flex items-center justify-between p-5 border-b border-slate-800 bg-slate-950/60">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-2xl ring-1 ring-emerald-500/30">
-              <Sparkles className="h-6 w-6" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
-                Legenda Parametri Ottagono Calcetto 5v5
-              </h2>
-              <p className="text-xs text-slate-400">
-                Significato tattico degli 8 parametri ottimizzati per le partite di calcetto a 5.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        {/* Griglia delle 8 statistiche con spiegazioni */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+    <Sheet
+      onClose={onClose}
+      size="lg"
+      height="tall"
+      title="Legenda dei parametri"
+      subtitle="Cosa misura ognuno degli 8 parametri dell'ottagono"
+      footer={
+        <button type="button" onClick={onClose} className={sheetBtn.secondary}>
+          Chiudi
+        </button>
+      }
+    >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
             {STAT_CANONICAL_ORDER.filter((k) => k !== 'Tecnica').map((statName) => {
               const detail = STAT_DETAILS[statName];
@@ -99,19 +84,6 @@ export function StatsLegendModal({ isOpen, onClose }: StatsLegendModalProps) {
               fase difensiva che quella offensiva.
             </div>
           </div>
-        </div>
-
-        {/* Footer */}
-        <div className="p-4 border-t border-slate-800 bg-slate-950/60 flex justify-end">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
-          >
-            Chiudi Legenda
-          </button>
-        </div>
-      </div>
-    </div>
+    </Sheet>
   );
 }

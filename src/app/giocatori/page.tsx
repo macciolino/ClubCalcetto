@@ -350,7 +350,7 @@ export default function GiocatoriPage() {
               </select>
             </label>
           ) : (
-            <span className="text-slate-500 hidden md:inline">Tocca le intestazioni per ordinare</span>
+            <span className="text-slate-500 hidden lg:inline">Tocca le intestazioni per ordinare</span>
           )}
           {players.length >= 2 && (
             <button
@@ -393,7 +393,7 @@ export default function GiocatoriPage() {
         /* TABELLA GIOCATORI (PC/tablet) + ELENCO COMPATTO (telefono) */
         <>
         {/* Telefono: elenco denso a righe sottili (avatar piccolo, nome, ruolo, OVR) */}
-        <div className="md:hidden animate-in">
+        <div className="lg:hidden animate-in">
           {filteredPlayers.length === 0 ? (
             <p className="py-8 text-center text-sm text-slate-500">Nessun giocatore trovato con questi filtri.</p>
           ) : (
@@ -445,7 +445,7 @@ export default function GiocatoriPage() {
           )}
         </div>
 
-        <div className="hidden md:block bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden animate-in fade-in duration-200">
+        <div className="hidden lg:block bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden animate-in fade-in duration-200">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>

@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { Sheet, sheetBtn } from '@/components/ui/Sheet';
 import { SportField } from '@/types/database';
-import { X, MapPin, Phone, Building2, Save } from 'lucide-react';
+import { MapPin, Phone, Save } from 'lucide-react';
 
 interface FieldModalProps {
   isOpen: boolean;
@@ -70,29 +71,25 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center modal-safe bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-5">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl">
-              <Building2 className="h-5 w-5" />
-            </div>
-            <h3 className="text-base font-bold text-white">
-              {fieldToEdit ? 'Modifica Campo da Gioco' : 'Aggiungi Nuovo Centro Sportivo'}
-            </h3>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
-          >
-            <X className="h-4 w-4" />
+    <Sheet
+      onClose={onClose}
+      title={fieldToEdit ? 'Modifica campo' : 'Nuovo campo'}
+      subtitle="Centro sportivo dove si gioca"
+      footer={
+        <>
+          <button type="button" onClick={onClose} className={sheetBtn.secondary}>
+            Annulla
           </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+          <button type="submit" form="field-form" className={sheetBtn.primary}>
+            <Save className="h-4 w-4" />
+            {fieldToEdit ? 'Aggiorna campo' : 'Salva campo'}
+          </button>
+        </>
+      }
+    >
+        <form id="field-form" onSubmit={handleSubmit} className="space-y-4 text-sm">
           <div>
-            <label className="block text-slate-400 font-bold mb-1">Nome Centro / Struttura *</label>
+            <label className="block text-xs font-medium text-slate-300 mb-1.5">Nome del centro</label>
             <input
               type="text"
               required
@@ -104,7 +101,7 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
           </div>
 
           <div>
-            <label className="block text-slate-400 font-bold mb-1">Indirizzo Completo *</label>
+            <label className="block text-xs font-medium text-slate-300 mb-1.5">Indirizzo</label>
             <div className="relative">
               <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
               <input
@@ -120,7 +117,7 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-slate-400 font-bold mb-1">Telefono Gestore / Campo</label>
+              <label className="block text-xs font-medium text-slate-300 mb-1.5">Telefono</label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
                 <input
@@ -134,7 +131,7 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
             </div>
 
             <div>
-              <label className="block text-slate-400 font-bold mb-1">Tipologia Fondo / Terreno</label>
+              <label className="block text-xs font-medium text-slate-300 mb-1.5">Fondo</label>
               <select
                 value={courtType}
                 onChange={(e) => setCourtType(e.target.value)}
@@ -150,7 +147,7 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
           </div>
 
           <div>
-            <label className="block text-slate-400 font-bold mb-1">Note & Specifiche Struttura</label>
+            <label className="block text-xs font-medium text-slate-300 mb-1.5">Note</label>
             <textarea
               rows={2}
               placeholder="Es. Campo 3 coperto, spogliatoi con phon a gettone, parcheggio interno."
@@ -160,24 +157,7 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-800">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 font-bold rounded-xl text-xs transition-colors cursor-pointer"
-            >
-              Annulla
-            </button>
-            <button
-              type="submit"
-              className="flex items-center gap-1.5 px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition-all shadow-md shadow-emerald-500/25 cursor-pointer"
-            >
-              <Save className="h-4 w-4" />
-              <span>{fieldToEdit ? 'Aggiorna Campo' : 'Salva Campo'}</span>
-            </button>
-          </div>
         </form>
-      </div>
-    </div>
+    </Sheet>
   );
 }

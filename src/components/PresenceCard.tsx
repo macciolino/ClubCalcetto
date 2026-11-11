@@ -5,7 +5,8 @@ import { Presence, Profile } from '@/types/database';
 import { CalendarDay } from '@/lib/utils/dateUtils';
 import { isTimelockActive } from '@/lib/services/presenceService';
 import { askConfirm } from '@/components/ui/Feedback';
-import { Lock, ArrowUp, ArrowDown, UserX, ChevronDown, ChevronRight, MoreHorizontal, Check, LogOut, X } from 'lucide-react';
+import { Sheet, sheetBtn } from '@/components/ui/Sheet';
+import { Lock, ArrowUp, ArrowDown, UserX, ChevronDown, ChevronRight, MoreHorizontal, Check, LogOut } from 'lucide-react';
 
 interface PresenceCardProps {
   day: CalendarDay;
@@ -100,13 +101,6 @@ export function PresenceCard({
     return () => clearTimeout(t);
   }, [revealedId]);
 
-  // Menu azioni admin: si chiude con Esc
-  useEffect(() => {
-    if (!actionsFor) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setActionsFor(null);
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [actionsFor]);
 
   const showAdminActions = mounted && isAdmin;
   const effectiveUserId = mounted ? currentUserId : undefined;
@@ -388,25 +382,17 @@ export function PresenceCard({
         </div>
       )}
       {showAdminActions && actionTarget && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center modal-safe" onClick={() => setActionsFor(null)}>
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label={`Azioni per ${actionTarget.name}`}
-            className="w-full sm:max-w-sm bg-slate-900 border border-slate-800 rounded-t-2xl sm:rounded-2xl p-4 pb-6 space-y-2 shadow-2xl animate-in"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between gap-3 px-1 pb-2">
-              <div className="min-w-0">
-                <p className="text-base font-semibold text-white truncate">{actionTarget.name}</p>
-                <p className="text-xs text-slate-400 capitalize">
-                  {day.dayName} {day.dayNumber} {day.monthName} · {actionTarget.status === 'confirmed' ? 'titolare' : 'in lista d’attesa'}
-                </p>
-              </div>
-              <button type="button" onClick={() => setActionsFor(null)} aria-label="Chiudi" className="p-2 -m-1 text-slate-400 hover:text-white">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+        <Sheet
+          onClose={() => setActionsFor(null)}
+          title={actionTarget.name}
+          subtitle={`${day.dayName} ${day.dayNumber} ${day.monthName} · ${actionTarget.status === 'confirmed' ? 'titolare' : 'in lista d’attesa'}`}
+          footer={
+            <button type="button" onClick={() => setActionsFor(null)} className={sheetBtn.secondary}>
+              Annulla
+            </button>
+          }
+        >
+          <div className="space-y-2">
             {onSetOverride && (
               <button
                 type="button"
@@ -440,15 +426,8 @@ export function PresenceCard({
                 <UserX className="h-4 w-4" /> Rimuovi dal giorno
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => setActionsFor(null)}
-              className="w-full px-4 py-3 rounded-xl text-sm font-medium text-slate-400 hover:text-white"
-            >
-              Annulla
-            </button>
           </div>
-        </div>
+        </Sheet>
       )}
     </div>
   );
