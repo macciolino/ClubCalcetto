@@ -231,3 +231,16 @@ html.login-lock body {
     animation: none;
   }
 }
+
+/* Campo già disegnato, senza animazione (pannello del login su PC) */
+.pitch-static .pitch-draw > * {
+  animation: none !important;
+  stroke-dashoffset: 0;
+}
+.pitch-static .pitch-dots {
+  animation: none !important;
+  opacity: 1;
+}
+.pitch-static .animate-in {
+  animation: none !important;
+}
