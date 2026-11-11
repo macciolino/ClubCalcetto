@@ -24,7 +24,6 @@ import {
   Trash2, 
   LayoutGrid,
   Table as TableIcon,
-  ChevronDown,
 } from 'lucide-react';
 
 const DEFAULT_CATEGORIES: StatCategory[] = DEFAULT_BASE_CATEGORIES;
@@ -53,7 +52,6 @@ export default function GiocatoriPage() {
   const [roleFilter, setRoleFilter] = useState<'all' | 'Portiere' | 'Difensore' | 'Esterno' | 'Punta'>('all');
   const [compareOpen, setCompareOpen] = useState(false);
   // Vista tabella: si ordina cliccando le intestazioni (primo clic decrescente, secondo crescente; il nome parte da A-Z)
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [tableSort, setTableSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: 'ovr', dir: 'desc' });
   const handleTableSort = (key: string) =>
     setTableSort((cur) =>
@@ -393,76 +391,57 @@ export default function GiocatoriPage() {
       ) : (
         /* TABELLA GIOCATORI (PC/tablet) + ELENCO COMPATTO (telefono) */
         <>
-        {/* Telefono: una riga per giocatore, si apre con un tocco */}
-        <div className="md:hidden space-y-2 animate-in">
-          {filteredPlayers.length === 0 && (
+        {/* Telefono: elenco denso a righe sottili (avatar piccolo, nome, ruolo, OVR) */}
+        <div className="md:hidden animate-in">
+          {filteredPlayers.length === 0 ? (
             <p className="py-8 text-center text-sm text-slate-500">Nessun giocatore trovato con questi filtri.</p>
-          )}
-          {filteredPlayers.map((player) => {
-            const isCurrent = player.id === profile?.id;
-            const open = expandedId === player.id;
-            const photo = uploadedPhoto(player.avatar_url);
-            const f = forms.get(player.id) || 0;
-            const ovr = Math.round(Math.max(1, Math.min(10, (Number(player.overall_rating) || 6) + f)) * 10);
-            return (
-              <div key={player.id} className="bg-slate-900 border border-slate-800 rounded-2xl">
-                <button
-                  type="button"
-                  onClick={() => isClientAdmin && setExpandedId(open ? null : player.id)}
-                  aria-expanded={isClientAdmin ? open : undefined}
-                  className="w-full flex items-center gap-3 p-3 text-left"
-                >
-                  {photo ? (
-                    <img src={photo} alt="" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
-                  ) : (
-                    <span className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center font-bold text-emerald-400 text-xs flex-shrink-0">
-                      {initialsOf(player.full_name)}
-                    </span>
-                  )}
-                  <span className="flex-1 min-w-0">
-                    <span className="block text-sm font-semibold text-white truncate">
-                      {player.full_name}
-                      {isCurrent && <span className="ml-1.5 text-[11px] font-medium text-emerald-400">Tu</span>}
-                    </span>
-                    <span className="block text-xs text-slate-400">
-                      {player.position || 'Esterno'}
-                      {player.is_guest ? ' · ospite' : ''}
-                    </span>
-                  </span>
-                  <span className="flex-shrink-0 text-right">
-                    <span className="block text-xl font-bold text-white tabular-nums leading-none">{ovr}</span>
-                    <span className="block text-[10px] font-semibold text-slate-400 mt-0.5">OVR</span>
-                  </span>
-                  {isClientAdmin && (
-                    <ChevronDown className={`h-4 w-4 text-slate-500 transition-transform ${open ? 'rotate-180' : ''}`} />
-                  )}
-                </button>
-                {isClientAdmin && open && (
-                  <div className="px-3 pb-3 animate-in">
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenEditModal(player)}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-slate-700 text-sm font-semibold text-slate-200"
-                      >
-                        <Edit3 className="h-4 w-4" /> Modifica
-                      </button>
-                      {(player.is_guest || isSuperAdmin) && player.id !== 'p-1' && (
+          ) : (
+            <>
+              <div className="flex items-center justify-between px-3 pb-1.5 text-[11px] font-medium text-slate-500">
+                <span>{filteredPlayers.length} giocatori</span>
+                <span className={isClientAdmin ? 'pr-10' : ''}>OVR</span>
+              </div>
+              <ul className="bg-slate-900 border border-slate-800 rounded-2xl divide-y divide-slate-800 overflow-hidden">
+                {filteredPlayers.map((player) => {
+                  const isCurrent = player.id === profile?.id;
+                  const photo = uploadedPhoto(player.avatar_url);
+                  const f = forms.get(player.id) || 0;
+                  const ovr = Math.round(Math.max(1, Math.min(10, (Number(player.overall_rating) || 6) + f)) * 10);
+                  return (
+                    <li key={player.id} className="flex items-center gap-3 px-3 py-2 min-h-[48px]">
+                      {photo ? (
+                        <img src={photo} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                      ) : (
+                        <span className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center font-bold text-emerald-300 text-[10px] flex-shrink-0">
+                          {initialsOf(player.full_name)}
+                        </span>
+                      )}
+                      <span className="flex-1 min-w-0 flex items-baseline gap-2">
+                        <span className={`truncate text-sm font-medium ${isCurrent ? 'text-emerald-300' : 'text-white'}`}>
+                          {player.full_name}
+                        </span>
+                        <span className="flex-shrink-0 text-[11px] text-slate-500">
+                          {FIELD_POSITION_ABBR[player.position || 'Esterno']}
+                          {player.is_guest ? ' · osp.' : ''}
+                        </span>
+                      </span>
+                      <span className="flex-shrink-0 w-8 text-right text-base font-bold text-white tabular-nums">{ovr}</span>
+                      {isClientAdmin && (
                         <button
                           type="button"
-                          onClick={() => handleDeletePlayer(player.id, player.full_name)}
-                          aria-label={player.is_guest ? 'Elimina ospite' : 'Elimina account'}
-                          className="px-3 py-2 rounded-xl text-rose-300 border border-rose-500/40"
+                          onClick={() => handleOpenEditModal(player)}
+                          aria-label={`Modifica ${player.full_name}`}
+                          className="flex-shrink-0 -mr-1 p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Edit3 className="h-4 w-4" />
                         </button>
                       )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
         </div>
 
         <div className="hidden md:block bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden animate-in fade-in duration-200">
