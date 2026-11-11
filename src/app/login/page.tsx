@@ -9,13 +9,15 @@ import { FIELD_POSITIONS, FieldPosition } from '@/types/database';
 import { 
   Loader2, 
   ArrowRight, 
-  CheckCircle2, 
   LogOut,
   Mail,
   Lock,
   User,
   Send,
-  RefreshCw
+  RefreshCw,
+  CalendarCheck,
+  Shuffle,
+  BarChart3
 } from 'lucide-react';
 
 export default function LoginPage() {
@@ -190,56 +192,94 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-[calc(100vh-2rem)] grid lg:grid-cols-2 gap-10 items-center py-8 sm:py-12 animate-in">
-      {/* Lato sinistro (solo schermi grandi): il club, su un campo stilizzato */}
-      <section className="hidden lg:flex relative h-full min-h-[560px] rounded-3xl overflow-hidden bg-slate-900 border border-slate-800 p-10 flex-col justify-between">
+      {/* Lato sinistro (solo schermi grandi): il club, su un campo visto dall'alto */}
+      <section className="hidden lg:flex relative min-h-[640px] h-full rounded-3xl overflow-hidden border border-slate-800 bg-slate-900 p-10 flex-col">
+        {/* Erba: strisce tenui + campo disegnato, sfumato verso l'alto per lasciare pulito il marchio */}
+        <div
+          className="absolute inset-0 opacity-60"
+          style={{
+            backgroundImage:
+              'repeating-linear-gradient(180deg, rgba(16,185,129,0.06) 0px, rgba(16,185,129,0.06) 56px, transparent 56px, transparent 112px)',
+          }}
+          aria-hidden="true"
+        />
         <svg
-          className="absolute inset-0 h-full w-full text-emerald-500/10"
-          viewBox="0 0 400 600"
-          preserveAspectRatio="xMidYMid slice"
+          className="absolute inset-0 h-full w-full text-emerald-400/20 [mask-image:linear-gradient(to_bottom,transparent_0%,black_35%,black_100%)]"
+          viewBox="0 0 400 640"
+          preserveAspectRatio="xMidYMax slice"
           fill="none"
           stroke="currentColor"
-          strokeWidth="2"
+          strokeWidth="1.5"
           aria-hidden="true"
         >
-          <rect x="30" y="30" width="340" height="540" rx="6" />
-          <line x1="30" y1="300" x2="370" y2="300" />
-          <circle cx="200" cy="300" r="60" />
-          <circle cx="200" cy="300" r="3" fill="currentColor" />
-          <rect x="120" y="30" width="160" height="80" />
-          <rect x="120" y="490" width="160" height="80" />
+          <rect x="40" y="60" width="320" height="560" rx="10" />
+          <line x1="40" y1="340" x2="360" y2="340" />
+          <circle cx="200" cy="340" r="56" />
+          <circle cx="200" cy="340" r="3" fill="currentColor" />
+          <path d="M130 620 v-70 a70 70 0 0 1 140 0 v70" />
+          <rect x="170" y="620" width="60" height="8" rx="2" />
         </svg>
-        <div className="absolute -bottom-32 -left-32 h-80 w-80 rounded-full bg-emerald-500/15 blur-3xl pointer-events-none" />
+        <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-emerald-500/20 blur-3xl pointer-events-none" aria-hidden="true" />
+        <div className="absolute -bottom-32 -left-24 h-80 w-80 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" aria-hidden="true" />
 
+        {/* Marchio */}
         <div className="relative flex items-center gap-3">
           <BrandLogo size="lg" />
-          <span className="text-xl font-bold text-white">
-            Club <span className="text-emerald-400">Soccer</span>
-          </span>
+          <div className="leading-tight">
+            <span className="block text-2xl font-bold tracking-tight text-white">
+              Club <span className="text-emerald-400">Soccer</span>
+            </span>
+            <span className="block text-xs text-slate-400">Calcetto 5 contro 5</span>
+          </div>
         </div>
 
-        <div className="relative space-y-6">
-          <h2 className="text-4xl font-bold tracking-tight text-white leading-tight">
+        {/* Messaggio e punti forti */}
+        <div className="relative mt-auto space-y-8">
+          <h2 className="text-[2.6rem] font-bold tracking-tight text-white leading-[1.1]">
             Il tuo calcetto,
             <br />
-            senza chat infinite.
+            <span className="text-emerald-400">senza chat infinite.</span>
           </h2>
-          <ul className="space-y-3 text-sm text-slate-300">
+
+          <ul className="space-y-3">
             {[
-              ['Presenze', 'Segna i giorni in cui ci sei: i primi 10 giocano.'],
-              ['Squadre equilibrate', 'Bianchi contro Neri, divisi in base ai parametri.'],
-              ['Statistiche', 'Gol, MVP, vittorie e stato di forma di ogni giocatore.'],
-            ].map(([title, text]) => (
-              <li key={title} className="flex items-start gap-3">
-                <CheckCircle2 className="h-5 w-5 text-emerald-400 flex-shrink-0 mt-px" />
-                <span>
-                  <span className="font-semibold text-white">{title}</span> · {text}
+              { icon: CalendarCheck, title: 'Presenze', text: 'Segna i giorni in cui ci sei: i primi 10 giocano.' },
+              { icon: Shuffle, title: 'Squadre equilibrate', text: 'Bianchi contro Neri, divisi in base ai parametri.' },
+              { icon: BarChart3, title: 'Statistiche', text: 'Gol, MVP, vittorie e stato di forma.' },
+            ].map(({ icon: Icon, title, text }) => (
+              <li
+                key={title}
+                className="flex items-center gap-4 rounded-2xl bg-slate-950/50 backdrop-blur-sm border border-slate-800/80 px-4 py-3"
+              >
+                <span className="flex-shrink-0 h-10 w-10 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+                  <Icon className="h-5 w-5" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-white">{title}</span>
+                  <span className="block text-sm text-slate-400">{text}</span>
                 </span>
               </li>
             ))}
           </ul>
-        </div>
 
-        <p className="relative text-xs text-slate-500">5 contro 5 · ogni settimana</p>
+          {/* Piccola anteprima: come appare una partita al completo */}
+          <div className="flex items-center gap-3 text-xs text-slate-400" aria-hidden="true">
+            <span className="flex -space-x-2">
+              {['MB', 'AS', 'SC', 'LR', 'GF'].map((i) => (
+                <span
+                  key={i}
+                  className="h-8 w-8 rounded-full bg-slate-800 ring-2 ring-slate-900 flex items-center justify-center text-[10px] font-bold text-emerald-300"
+                >
+                  {i}
+                </span>
+              ))}
+              <span className="h-8 w-8 rounded-full bg-emerald-500 ring-2 ring-slate-900 flex items-center justify-center text-[10px] font-bold text-slate-950">
+                +5
+              </span>
+            </span>
+            <span>10 su 10 · si gioca</span>
+          </div>
+        </div>
       </section>
 
       {/* Lato destro: accesso */}
