@@ -48,12 +48,12 @@ const DOT: Record<Slot['kind'], string> = {
   drawn: 'bg-amber-500', // #F59E0B
   lost: 'bg-red-500', // #EF4444
   absent: 'bg-slate-700', // #334155
-  empty: 'border border-slate-600 bg-transparent',
+  empty: 'bg-slate-700', // #334155, come le assenze
 };
 
 /**
  * Form tracker: always 5 dots for the club's last 5 archived matches (oldest → newest).
- * Green won, amber drawn, red lost, dark grey absent, empty ring = no match yet.
+ * Green won, amber drawn, red lost, dark grey = absent or no match yet.
  * Tap or hover a dot for a short summary ("Vinta 6-4 · 11 nov").
  */
 export function FormDots({ playerId, matches, className = '' }: { playerId: string; matches: Match[]; className?: string }) {

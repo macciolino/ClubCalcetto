@@ -11,3 +11,14 @@ export function initialsOf(name: string | null | undefined): string {
   const parts = (name || '').trim().split(/\s+/).filter(Boolean);
   return ((parts[0]?.[0] || '?') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
 }
+
+/**
+ * Role badge colours (one legend for the whole app). Deliberately NOT green/amber/red, which mean
+ * won/drawn/lost and starter/waiting: POR sky, DIF indigo, EST teal, PUN orange.
+ */
+export const POSITION_BADGE: Record<string, string> = {
+  Portiere: 'bg-sky-500/15 text-sky-300',
+  Difensore: 'bg-indigo-500/15 text-indigo-300',
+  Esterno: 'bg-teal-500/15 text-teal-300',
+  Punta: 'bg-orange-500/15 text-orange-300',
+};

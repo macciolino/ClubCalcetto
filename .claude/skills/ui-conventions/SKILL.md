@@ -88,7 +88,7 @@ description: ClubCalcetto UI conventions - theme, shared components (tables, dro
 - Every animation has a `prefers-reduced-motion` fallback.
 - Form tracker "Ultime 5" = `components/FormDots.tsx` (Home "Il tuo rendimento" and `PlayerCardFifa`): ALWAYS 5 dots for the
   club's last 5 archived matches (`lastCompletedMatches`, oldest → newest on the right): green won, amber drawn,
-  red-500 lost, slate-700 absent, empty ring = no match yet; tap/hover → tooltip "Vinta 6-4 · 11 nov". Do not hand-roll dots.
+  red-500 lost, slate-700 absent or no match yet; tap/hover → tooltip "Vinta 6-4 · 11 nov". Do not hand-roll dots.
 
 ## Modals (one component)
 - EVERY modal uses `components/ui/Sheet.tsx` (`<Sheet onClose title subtitle footer size="md|lg" height="auto|tall" locked>`):
@@ -98,3 +98,5 @@ description: ClubCalcetto UI conventions - theme, shared components (tables, dro
 - Users: PlayerModal, FieldModal, StatsLegendModal, MatchEditModal, PlayerCompare, PresenceCard actions.
   The confirm dialog (`askConfirm`, z-70) follows the same look. Do not write new `fixed inset-0` modals.
 - Breakpoint for desktop vs mobile layouts: `lg` (1024px) (e.g. Giocatori table vs dense list).
+- Role badges: `POSITION_BADGE` in `lib/utils/playerUtils.ts` (POR sky, DIF indigo, EST teal, PUN orange; never green/amber/red,
+  which are reserved for won/drawn/lost and starter/waiting).

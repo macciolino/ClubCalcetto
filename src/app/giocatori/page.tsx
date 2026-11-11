@@ -1,6 +1,6 @@
 'use client';
 
-import { initialsOf, uploadedPhoto } from '@/lib/utils/playerUtils';
+import { initialsOf, uploadedPhoto, POSITION_BADGE } from '@/lib/utils/playerUtils';
 import { notify, askConfirm } from '@/components/ui/Feedback';
 
 import { manageAccountAsSuperAdmin } from '@/lib/services/accountService';
@@ -21,6 +21,7 @@ import { PlayerCardFifa } from '@/components/PlayerCardFifa';
 import { 
   Search, 
   UserPlus, 
+  GitCompare,
   Edit3, 
   Trash2, 
   LayoutGrid,
@@ -54,10 +55,14 @@ export default function GiocatoriPage() {
   const [compareOpen, setCompareOpen] = useState(false);
   // Vista tabella: si ordina cliccando le intestazioni (primo clic decrescente, secondo crescente; il nome parte da A-Z)
   const [tableSort, setTableSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: 'ovr', dir: 'desc' });
-  const handleTableSort = (key: string) =>
+  // Chi comanda l'ordine: il menu "Ordina per" oppure (tabella su PC) l'ultima intestazione cliccata
+  const [sortSource, setSortSource] = useState<'menu' | 'table'>('menu');
+  const handleTableSort = (key: string) => {
+    setSortSource('table');
     setTableSort((cur) =>
       cur.key === key ? { key, dir: cur.dir === 'desc' ? 'asc' : 'desc' } : { key, dir: key === 'name' ? 'asc' : 'desc' }
     );
+  };
 
   const isStrictAdmin = Boolean(mounted && user && (profile?.role === 'admin' || isAdmin));
   const isClientAdmin = isStrictAdmin;
@@ -161,7 +166,7 @@ export default function GiocatoriPage() {
     .filter((p) => p.full_name.toLowerCase().includes(searchQuery.toLowerCase()))
     .filter((p) => roleFilter === 'all' || (p.position || 'Esterno') === roleFilter)
     .sort((a, b) => {
-      if (viewMode === 'table') {
+      if (viewMode === 'table' && sortSource === 'table') {
         const va = tableValue(a, tableSort.key);
         const vb = tableValue(b, tableSort.key);
         const cmp = typeof va === 'string' ? va.localeCompare(vb as string) : va - (vb as number);
@@ -233,19 +238,29 @@ export default function GiocatoriPage() {
           </p>
         </div>
 
-        {/* Pulsanti Admin */}
-        {isClientAdmin && (
-          <div className="flex flex-wrap items-center gap-2">
+        {/* Azioni: confronto per tutti, nuovo ospite per gli admin */}
+        <div className="flex items-center gap-2">
+          {players.length >= 2 && (
+            <button
+              type="button"
+              onClick={() => setCompareOpen(true)}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold border border-slate-700 text-slate-200 hover:bg-slate-800"
+            >
+              <GitCompare className="h-4 w-4" />
+              Confronta
+            </button>
+          )}
+          {isClientAdmin && (
             <button
               type="button"
               onClick={handleOpenNewGuestModal}
-              className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-bold transition-all cursor-pointer"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-sm font-semibold transition-colors"
             >
               <UserPlus className="h-4 w-4" />
-              Nuovo Ospite
+              Nuovo ospite
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </header>
 
       {/* 1. Leader: tre riquadri su una riga, solo informativi */}
@@ -307,61 +322,40 @@ export default function GiocatoriPage() {
         </div>
       </div>
 
-      {/* Ruoli: barra a scorrimento orizzontale + ordinamento e confronto */}
-      <div className="space-y-2">
-        <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0" role="group" aria-label="Filtra per ruolo">
-          {(
-            [
-              ['all', 'Tutti'],
-              ['Portiere', 'Portieri'],
-              ['Difensore', 'Difensori'],
-              ['Esterno', 'Esterni'],
-              ['Punta', 'Punte'],
-            ] as const
-          ).map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setRoleFilter(value)}
-              aria-pressed={roleFilter === value}
-              className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                roleFilter === value ? 'bg-emerald-500 text-slate-950' : 'text-slate-300 hover:text-white bg-slate-900'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <div className="flex flex-nowrap items-center justify-between gap-2 text-xs">
-          {viewMode === 'cards' ? (
-            <label className="flex items-center gap-2 text-slate-400 min-w-0 whitespace-nowrap">
-              Ordina per
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                className="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-slate-200 min-w-0 focus:outline-none focus:border-emerald-500"
-              >
-                <option value="ovr">OVR</option>
-                <option value="goals">Gol</option>
-                <option value="mvp">MVP</option>
-                <option value="played">Presenze</option>
-                <option value="wins">Vittorie</option>
-                <option value="name">Nome A-Z</option>
-              </select>
-            </label>
-          ) : (
-            <span className="text-slate-500 hidden lg:inline">Tocca le intestazioni per ordinare</span>
-          )}
-          {players.length >= 2 && (
-            <button
-              type="button"
-              onClick={() => setCompareOpen(true)}
-              className="ml-auto flex-shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg font-semibold border border-slate-700 text-slate-200 hover:bg-slate-800"
-            >
-              Confronta<span className="hidden sm:inline"> due giocatori</span>
-            </button>
-          )}
-        </div>
+      {/* Filtro ruolo + ordinamento: due tendine affiancate */}
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
+        <label className="block min-w-0">
+          <span className="block text-xs text-slate-400 mb-1">Ruolo</span>
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value as typeof roleFilter)}
+            className="w-full sm:w-44 min-w-0 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+          >
+            <option value="all">Tutti</option>
+            <option value="Portiere">Portieri</option>
+            <option value="Difensore">Difensori</option>
+            <option value="Esterno">Esterni</option>
+            <option value="Punta">Punte</option>
+          </select>
+        </label>
+        <label className="block min-w-0">
+          <span className="block text-xs text-slate-400 mb-1">Ordina per</span>
+          <select
+            value={sortBy}
+            onChange={(e) => {
+              setSortBy(e.target.value as typeof sortBy);
+              setSortSource('menu');
+            }}
+            className="w-full sm:w-44 min-w-0 bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+          >
+            <option value="ovr">OVR</option>
+            <option value="goals">Gol</option>
+            <option value="mvp">MVP</option>
+            <option value="played">Presenze</option>
+            <option value="wins">Vittorie</option>
+            <option value="name">Nome A-Z</option>
+          </select>
+        </label>
       </div>
       {compareOpen && (
         <PlayerCompare players={players} categories={sortedCategories} initialA={profile?.id} onClose={() => setCompareOpen(false)} />
@@ -392,47 +386,72 @@ export default function GiocatoriPage() {
       ) : (
         /* TABELLA GIOCATORI (PC/tablet) + ELENCO COMPATTO (telefono) */
         <>
-        {/* Telefono: elenco denso a righe sottili (avatar piccolo, nome, ruolo, OVR) */}
+        {/* Telefono e tablet: elenco a colonne (giocatore | ruolo | V·P·S | OVR) */}
         <div className="lg:hidden animate-in">
           {filteredPlayers.length === 0 ? (
             <p className="py-8 text-center text-sm text-slate-500">Nessun giocatore trovato con questi filtri.</p>
           ) : (
-            <>
-              <div className="flex items-center justify-between px-3 pb-1.5 text-[11px] font-medium text-slate-500">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+              <div
+                className={`grid ${
+                  isClientAdmin ? 'grid-cols-[minmax(0,1fr)_3rem_4.5rem_2.25rem_2rem]' : 'grid-cols-[minmax(0,1fr)_3rem_4.5rem_2.25rem]'
+                } items-center gap-2 px-3 py-2 border-b border-slate-800 text-[11px] font-medium text-slate-500`}
+              >
                 <span>{filteredPlayers.length} giocatori</span>
-                <span className={isClientAdmin ? 'pr-10' : ''}>OVR</span>
+                <span className="text-center">Ruolo</span>
+                <span className="text-center">V · P · S</span>
+                <span className="text-right">OVR</span>
+                {isClientAdmin && <span />}
               </div>
-              <ul className="bg-slate-900 border border-slate-800 rounded-2xl divide-y divide-slate-800 overflow-hidden">
+              <ul className="divide-y divide-slate-800">
                 {filteredPlayers.map((player) => {
                   const isCurrent = player.id === profile?.id;
                   const photo = uploadedPhoto(player.avatar_url);
                   const f = forms.get(player.id) || 0;
                   const ovr = Math.round(Math.max(1, Math.min(10, (Number(player.overall_rating) || 6) + f)) * 10);
+                  const ms = matchStats.get(player.id);
+                  const pos = player.position || 'Esterno';
                   return (
-                    <li key={player.id} className="flex items-center gap-3 px-3 py-2 min-h-[48px]">
-                      {photo ? (
-                        <img src={photo} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
-                      ) : (
-                        <span className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center font-bold text-emerald-300 text-[10px] flex-shrink-0">
-                          {initialsOf(player.full_name)}
-                        </span>
-                      )}
-                      <span className="flex-1 min-w-0 flex items-baseline gap-2">
-                        <span className={`truncate text-sm font-medium ${isCurrent ? 'text-emerald-300' : 'text-white'}`}>
-                          {player.full_name}
-                        </span>
-                        <span className="flex-shrink-0 text-[11px] text-slate-500">
-                          {FIELD_POSITION_ABBR[player.position || 'Esterno']}
-                          {player.is_guest ? ' · osp.' : ''}
+                    <li
+                      key={player.id}
+                      className={`grid ${
+                        isClientAdmin ? 'grid-cols-[minmax(0,1fr)_3rem_4.5rem_2.25rem_2rem]' : 'grid-cols-[minmax(0,1fr)_3rem_4.5rem_2.25rem]'
+                      } items-center gap-2 px-3 py-2 min-h-[52px]`}
+                    >
+                      <span className="flex items-center gap-2.5 min-w-0">
+                        {photo ? (
+                          <img src={photo} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                        ) : (
+                          <span className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center font-bold text-emerald-300 text-[10px] flex-shrink-0">
+                            {initialsOf(player.full_name)}
+                          </span>
+                        )}
+                        <span className="min-w-0">
+                          <span className={`block truncate text-sm font-medium ${isCurrent ? 'text-emerald-300' : 'text-white'}`}>
+                            {player.full_name}
+                          </span>
+                          {player.is_guest && <span className="block text-[11px] text-slate-500">ospite</span>}
                         </span>
                       </span>
-                      <span className="flex-shrink-0 w-8 text-right text-base font-bold text-white tabular-nums">{ovr}</span>
+                      <span className="flex justify-center">
+                        <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${POSITION_BADGE[pos] || POSITION_BADGE.Esterno}`}>
+                          {FIELD_POSITION_ABBR[pos as keyof typeof FIELD_POSITION_ABBR]}
+                        </span>
+                      </span>
+                      <span className="text-center text-xs font-semibold tabular-nums" aria-label={`${ms?.won || 0} vinte, ${ms?.drawn || 0} pareggiate, ${ms?.lost || 0} perse`}>
+                        <span className="text-emerald-400">{ms?.won || 0}</span>
+                        <span className="text-slate-600"> · </span>
+                        <span className="text-amber-400">{ms?.drawn || 0}</span>
+                        <span className="text-slate-600"> · </span>
+                        <span className="text-red-400">{ms?.lost || 0}</span>
+                      </span>
+                      <span className="text-right text-base font-bold text-white tabular-nums">{ovr}</span>
                       {isClientAdmin && (
                         <button
                           type="button"
                           onClick={() => handleOpenEditModal(player)}
                           aria-label={`Modifica ${player.full_name}`}
-                          className="flex-shrink-0 -mr-1 p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800"
+                          className="justify-self-end p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800"
                         >
                           <Edit3 className="h-4 w-4" />
                         </button>
@@ -441,7 +460,7 @@ export default function GiocatoriPage() {
                   );
                 })}
               </ul>
-            </>
+            </div>
           )}
         </div>
 
@@ -562,7 +581,7 @@ export default function GiocatoriPage() {
 
                         {/* Ruolo in campo */}
                         <td className="py-3 px-3 text-center">
-                          <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-emerald-400 border border-slate-700">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${POSITION_BADGE[player.position || 'Esterno']}`}>
                             {FIELD_POSITION_ABBR[player.position || 'Esterno']}
                           </span>
                         </td>
