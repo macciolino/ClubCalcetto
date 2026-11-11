@@ -40,6 +40,7 @@ import {
   Crown,
   Lock,
   Unlock,
+  CheckCircle2,
 } from 'lucide-react';
 
 export default function PresenzePage() {
@@ -257,7 +258,7 @@ export default function PresenzePage() {
 
       {/* Admin: più giorni a 10, scegli quello ufficiale */}
       {daysWithQuorum.length > 1 && isStrictAdmin && (
-        <section className="rounded-2xl bg-slate-900 border border-slate-800 border-l-4 border-l-amber-400 p-5 space-y-3">
+        <section className="rounded-2xl bg-slate-900 border border-slate-800 p-5 space-y-3">
           <div className="flex items-start gap-3">
             <Crown className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
             <div>
@@ -291,9 +292,11 @@ export default function PresenzePage() {
 
       {/* Giorno scelto al completo */}
       {isMatchReady && (
-        <section className="rounded-2xl bg-slate-900 border border-slate-800 border-l-4 border-l-emerald-400 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <section className="rounded-2xl bg-slate-900 border border-slate-800 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-base font-semibold text-white">Partita al completo</h2>
+            <h2 className="text-base font-semibold text-white flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-emerald-400" /> Partita al completo
+            </h2>
             <p className="text-sm text-slate-400 mt-0.5">
               {formatItalianDate(selectedDayString)} · 10 titolari su 10
             </p>

@@ -18,8 +18,8 @@ description: ClubCalcetto UI conventions - theme, shared components (tables, dro
 
 - Font Inter (next/font, `--font-inter`, global). Page title on the page, no header card: `h1 text-2xl sm:text-3xl font-bold`,
   subtitle `text-sm text-slate-400`. Section titles `text-sm font-semibold text-slate-300`. Avoid `font-black` + uppercase + tracking.
-- Cards `bg-slate-900 border border-slate-800 rounded-2xl p-5`, no shadow/gradient/glow; callouts use `border-l-4` in the
-  meaning colour (emerald ok, amber attention). Buttons: primary `bg-emerald-500 text-slate-950 font-semibold rounded-xl`,
+- Cards `bg-slate-900 border border-slate-800 rounded-2xl p-5`, no shadow/gradient/glow; callouts are plain cards with a small
+  coloured icon before the title (NO coloured left stripe: the owner does not want it). Buttons: primary `bg-emerald-500 text-slate-950 font-semibold rounded-xl`,
   secondary `border border-slate-700`, quiet text button. Small text at least `text-xs text-slate-400`.
 - Loading: `PageSkeleton` / `Skeleton` from `components/ui/Skeleton.tsx`, never a big spinner. Motion: `.animate-in`
   (fade + rise 180ms, defined in globals.css, off with prefers-reduced-motion). Emoji only when they mean something
