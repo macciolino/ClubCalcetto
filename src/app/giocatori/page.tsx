@@ -1,5 +1,6 @@
 'use client';
 
+import { initialsOf, uploadedPhoto } from '@/lib/utils/playerUtils';
 import { notify, askConfirm } from '@/components/ui/Feedback';
 
 import { manageAccountAsSuperAdmin } from '@/lib/services/accountService';
@@ -53,6 +54,12 @@ export default function GiocatoriPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [sortBy, setSortBy] = useState<'ovr' | 'wins' | 'name'>('ovr');
+  // Vista tabella: si ordina cliccando le intestazioni (primo clic decrescente, secondo crescente; il nome parte da A-Z)
+  const [tableSort, setTableSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: 'ovr', dir: 'desc' });
+  const handleTableSort = (key: string) =>
+    setTableSort((cur) =>
+      cur.key === key ? { key, dir: cur.dir === 'desc' ? 'asc' : 'desc' } : { key, dir: key === 'name' ? 'asc' : 'desc' }
+    );
 
   const isStrictAdmin = Boolean(mounted && user && (profile?.role === 'admin' || isAdmin));
   const isClientAdmin = isStrictAdmin;
@@ -142,10 +149,25 @@ export default function GiocatoriPage() {
     }
   };
 
-  // Filtraggio e ordinamento
+  // Filtraggio e ordinamento (card: pulsanti in alto; tabella: intestazioni cliccabili)
+  const POSITION_ORDER = ['Portiere', 'Difensore', 'Esterno', 'Punta'];
+  const tableValue = (p: Profile, key: string): number | string => {
+    if (key === 'name') return p.full_name.toLowerCase();
+    if (key === 'position') return POSITION_ORDER.indexOf(p.position || 'Esterno');
+    if (key === 'ovr') return p.overall_rating || 0;
+    if (key === 'wins') return p.matches_won || 0;
+    const cat = categories.find((c) => `stat:${c.name}` === key);
+    return cat ? Number(p.stats?.[cat.name] ?? cat.default_value ?? 6) : 0;
+  };
   const filteredPlayers = players
     .filter((p) => p.full_name.toLowerCase().includes(searchQuery.toLowerCase()))
     .sort((a, b) => {
+      if (viewMode === 'table') {
+        const va = tableValue(a, tableSort.key);
+        const vb = tableValue(b, tableSort.key);
+        const cmp = typeof va === 'string' ? va.localeCompare(vb as string) : va - (vb as number);
+        return (tableSort.dir === 'asc' ? cmp : -cmp) || a.full_name.localeCompare(b.full_name);
+      }
       if (sortBy === 'ovr') {
         return (b.overall_rating || 0) - (a.overall_rating || 0);
       }
@@ -154,6 +176,23 @@ export default function GiocatoriPage() {
       }
       return a.full_name.localeCompare(b.full_name);
     });
+  const SortHeader = ({ k, label, title, className = '' }: { k: string; label: string; title?: string; className?: string }) => (
+    <th className={`p-0 ${className}`} aria-sort={tableSort.key === k ? (tableSort.dir === 'desc' ? 'descending' : 'ascending') : 'none'}>
+      <button
+        type="button"
+        onClick={() => handleTableSort(k)}
+        title={`Ordina per ${title || label}`}
+        className={`w-full py-3.5 px-3 font-bold whitespace-nowrap ${k === 'name' ? 'text-left px-4' : 'text-center'} ${
+          tableSort.key === k ? 'text-emerald-300' : 'hover:text-white'
+        }`}
+      >
+        {label}
+        <span className="inline-block w-3 text-[9px]" aria-hidden="true">
+          {tableSort.key === k ? (tableSort.dir === 'desc' ? '▼' : '▲') : ''}
+        </span>
+      </button>
+    </th>
+  );
 
   // Ordinamento canonico fisso per le categorie statistiche
   const sortedCategories = [...categories].sort((a, b) => {
@@ -237,8 +276,8 @@ export default function GiocatoriPage() {
             </button>
           </div>
 
-          {/* Ordinamento */}
-          <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+          {/* Ordinamento (solo vista card: in tabella si ordina dalle intestazioni) */}
+          <div className={`items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs ${viewMode === 'table' ? 'hidden' : 'flex'}`}>
             <button
               type="button"
               onClick={() => setSortBy('ovr')}
@@ -307,22 +346,20 @@ export default function GiocatoriPage() {
               <thead>
                 <tr className="border-b border-slate-800 bg-slate-950/70 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                   <th className="py-3.5 px-4 w-12 text-center">#</th>
-                  <th className="py-3.5 px-4">Giocatore</th>
-                  <th className="py-3.5 px-3 text-center">Ruolo</th>
-                  <th className="py-3.5 px-3 text-center">OVR</th>
-                  {isClientAdmin && <th className="py-3.5 px-3 text-center">V-P-S</th>}
+                  <SortHeader k="name" label="Giocatore" title="nome" />
+                  <SortHeader k="position" label="Ruolo" />
+                  <SortHeader k="ovr" label="OVR" />
+                  {isClientAdmin && <SortHeader k="wins" label="V-P-S" title="vittorie" />}
                   {isClientAdmin && sortedCategories.map((cat) => {
                     const shortName = cat.name.length > 5 ? cat.name.slice(0, 3).toUpperCase() : cat.name;
                     return (
-                      <th
+                      <SortHeader
                         key={cat.id || cat.name}
-                        className="py-3.5 px-2 text-center w-14 min-w-[54px]"
+                        k={`stat:${cat.name}`}
+                        label={shortName}
                         title={cat.label || cat.name}
-                      >
-                        <span className="block text-[10px] font-bold tracking-wider text-slate-300">
-                          {shortName}
-                        </span>
-                      </th>
+                        className="w-14 min-w-[54px]"
+                      />
                     );
                   })}
                   {isClientAdmin && (
@@ -367,15 +404,15 @@ export default function GiocatoriPage() {
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-3">
                             <div className="relative">
-                              {player.avatar_url ? (
+                              {uploadedPhoto(player.avatar_url) ? (
                                 <img
-                                  src={player.avatar_url}
+                                  src={uploadedPhoto(player.avatar_url) as string}
                                   alt={player.full_name}
                                   className="w-9 h-9 rounded-full object-cover ring-1 ring-slate-700"
                                 />
                               ) : (
                                 <div className="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-emerald-400 text-xs">
-                                  {player.full_name.charAt(0).toUpperCase()}
+                                  {initialsOf(player.full_name)}
                                 </div>
                               )}
                               {player.role === 'admin' && (

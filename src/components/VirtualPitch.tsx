@@ -1,5 +1,6 @@
 'use client';
 
+import { initialsOf, uploadedPhoto } from '@/lib/utils/playerUtils';
 import { ROTATION_KEEPER_LABEL } from '@/lib/utils/teamUtils';
 import React, { forwardRef } from 'react';
 import { Profile } from '@/types/database';
@@ -193,13 +194,10 @@ function PlayerSticker({
   const ovr = getPlayerOverallRating(player);
   // Senza foto: iniziali di nome e cognome al posto dell'immagine e, sotto, solo il nome
   const nameParts = (player.full_name || '').trim().split(/\s+/).filter(Boolean);
-  const initials = ((nameParts[0]?.[0] || '?') + (nameParts.length > 1 ? nameParts[nameParts.length - 1][0] : '')).toUpperCase();
+  const initials = initialsOf(player.full_name);
   // "Foto" = solo quella caricata dal giocatore nell'app. L'immagine automatica di Google (una lettera su
   // sfondo colorato per chi non ha una foto) e i vecchi avatar emoji non contano: per loro si vedono le iniziali.
-  const photo =
-    player.avatar_url && player.avatar_url.startsWith('data:image/') && !player.avatar_url.startsWith('data:image/svg')
-      ? player.avatar_url
-      : null;
+  const photo = uploadedPhoto(player.avatar_url);
   const shortName = photo ? getShortPlayerName(player.full_name) : nameParts[0] || '';
   const isWhite = team === 'white';
   return (

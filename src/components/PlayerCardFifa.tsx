@@ -1,5 +1,6 @@
 'use client';
 
+import { initialsOf, uploadedPhoto } from '@/lib/utils/playerUtils';
 import { formatForm } from '@/lib/utils/formUtils';
 import { getStatValue, PlayerMatchStats, EMPTY_MATCH_STATS } from '@/lib/utils/statUtils';
 import React, { useState } from 'react';
@@ -93,15 +94,15 @@ export function PlayerCardFifa({
 
           {/* Avatar Giocatore */}
           <div className="relative">
-            {player.avatar_url ? (
+            {uploadedPhoto(player.avatar_url) ? (
               <img
-                src={player.avatar_url}
+                src={uploadedPhoto(player.avatar_url) as string}
                 alt={player.full_name}
                 className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover ring-2 ring-emerald-500/40 shadow-lg"
               />
             ) : (
               <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-950 border-2 border-emerald-500/40 flex items-center justify-center font-black text-2xl text-emerald-400 shadow-lg">
-                {player.full_name.charAt(0).toUpperCase()}
+                {initialsOf(player.full_name)}
               </div>
             )}
             {isSuperAdmin && (

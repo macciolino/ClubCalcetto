@@ -50,7 +50,8 @@ description: ClubCalcetto UI conventions - theme, shared components (tables, dro
   `border-rose-500` + message under the field (`aria-invalid`, `aria-describedby`). Password rules listed live under the field.
 - Segmented switchers (tabs): `flex gap-1 bg-slate-900 border p-1 rounded-xl`, active = `bg-emerald-500 text-slate-950`, with `aria-pressed`.
 - Tables: wrapper `overflow-x-auto`, header `text-xs uppercase text-slate-400`, numbers `font-mono text-center`.
-  Sortable columns: the header is a button, active column `text-emerald-300` with a small ▼/▲ and `aria-sort` (see Storico).
+  Sortable columns: the header is a button, active column `text-emerald-300` with a small ▼/▲ and `aria-sort` (Storico,
+  Giocatori table via `SortHeader`). Photos: `uploadedPhoto()` / `initialsOf()` from `lib/utils/playerUtils.ts` everywhere.
 
 ## Settings layout (`/impostazioni`)
 
