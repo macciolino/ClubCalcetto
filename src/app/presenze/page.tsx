@@ -201,156 +201,119 @@ export default function PresenzePage() {
     return dayP.filter((p) => p.status === 'confirmed').length >= 10;
   });
 
+  const currentUserId = mounted ? profile?.id || (user as any)?.uid || (user as any)?.id : undefined;
+  const cardProps = (day: (typeof days)[number]) => ({
+    day,
+    presences: presences.filter((p) => p.date === day.dateString),
+    allProfiles: profiles,
+    currentUserId,
+    isAdmin: isStrictAdmin,
+    onTogglePresence: handleTogglePresence,
+    onAddGuestPresence: handleAddGuestPresence,
+    onRemovePresence: handleRemovePresence,
+    onSetOverride: handleSetOverride,
+    onResetDay: handleResetDay,
+    isLocked: isDayLocked(day.dateString),
+    isFirstToTen: firstToTen.has(day.dateString),
+    isToggling: busyDate === day.dateString,
+  });
+  const focusDay = days.find((d) => d.dateString === selectedDayString) || days[0];
+
   return (
-    <div className="space-y-6 pb-12">
-      {/* Intestazione Dashboard */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-xl">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
-            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-              Dashboard Presenze Settimanali
-            </h1>
-          </div>
-          <p className="text-xs sm:text-sm text-slate-400">
-            Iscriviti ai giorni in cui puoi giocare. I primi 10 iscritti sono titolari, dall&apos;11° in waitlist con subentro automatico. La settimana prossima si apre quando l&apos;admin avvia le votazioni.
+    <div className="space-y-8 pb-12">
+      {/* Titolo della pagina (senza riquadro) */}
+      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div className="space-y-1.5">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Presenze</h1>
+          <p className="text-sm text-slate-400 max-w-xl leading-relaxed">
+            Segna i giorni in cui puoi giocare. I primi 10 sono titolari, gli altri vanno in lista d&apos;attesa e
+            subentrano da soli.
           </p>
         </div>
 
         {isStrictAdmin && (
-          <div className="flex flex-col items-stretch sm:items-end gap-1">
+          <div className="flex flex-col items-stretch sm:items-end gap-1.5">
             <button
               type="button"
               onClick={handleToggleNextWeek}
               disabled={isSavingCalendar}
-              className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-colors disabled:opacity-50 ${
+              className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 ${
                 isNextWeekOpen
-                  ? 'bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200'
+                  ? 'border border-slate-700 text-slate-200 hover:bg-slate-800'
                   : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
               }`}
             >
-              {isNextWeekOpen ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
-              {isNextWeekOpen ? 'Chiudi votazioni settimana prossima' : 'Apri votazioni settimana prossima'}
+              {isNextWeekOpen ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+              {isNextWeekOpen ? 'Chiudi la settimana prossima' : 'Apri la settimana prossima'}
             </button>
-            <span className="text-[11px] text-slate-400 text-center sm:text-right">
-              {isNextWeekOpen
-                ? `Aperte fino a ${formatItalianDate(openUntil)}`
-                : 'Settimana prossima bloccata per i giocatori'}
+            <span className="text-xs text-slate-400 text-center sm:text-right">
+              {isNextWeekOpen ? `Iscrizioni aperte fino a ${formatItalianDate(openUntil)}` : 'Settimana prossima chiusa ai giocatori'}
             </span>
           </div>
         )}
-      </div>
+      </header>
 
-      {/* BANNER DECISIONE ADMIN: SE CI SONO PIÙ GIORNI CON 10 GIOCATORI */}
+      {/* Admin: più giorni a 10, scegli quello ufficiale */}
       {daysWithQuorum.length > 1 && isStrictAdmin && (
-        <div className="bg-gradient-to-r from-amber-950/80 via-slate-900 to-amber-950/80 border-2 border-amber-500/70 rounded-3xl p-5 shadow-2xl space-y-3.5 animate-in fade-in duration-300">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-amber-500/20 pb-3">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-amber-500/20 text-amber-400 rounded-2xl ring-1 ring-amber-500/40">
-                <Crown className="h-6 w-6" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-black uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/30">
-                    Decisione Amministratore
-                  </span>
-                  <span className="text-xs text-slate-400 font-bold">
-                    {daysWithQuorum.length} date con Quorum 10/10 raggiunto
-                  </span>
-                </div>
-                <h3 className="text-sm sm:text-base font-black text-white mt-1">
-                  Ci sono più giorni disponibili: decidi tu il giorno ufficiale della partita
-                </h3>
-              </div>
+        <section className="rounded-2xl bg-slate-900 border border-slate-800 border-l-4 border-l-amber-400 p-5 space-y-3">
+          <div className="flex items-start gap-3">
+            <Crown className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <h2 className="text-base font-semibold text-white">Scegli il giorno ufficiale</h2>
+              <p className="text-sm text-slate-400 mt-0.5">
+                {daysWithQuorum.length} giorni hanno 10 titolari. Il giorno scelto vale anche per Squadre e Admin.
+              </p>
             </div>
           </div>
-
-          <p className="text-xs text-slate-300">
-            Seleziona la data definitiva in cui giocare. La tua scelta aggiornerà istantaneamente anche le sezioni <strong className="text-emerald-400">Squadre</strong> e <strong className="text-emerald-400">Admin</strong> su quel giorno:
-          </p>
-
-          <div className="flex flex-wrap gap-2.5 pt-1">
+          <div className="flex flex-wrap gap-2">
             {daysWithQuorum.map((day) => {
               const isOfficial = selectedDayString === day.dateString;
-              const count = presences.filter(
-                (p) => p.date === day.dateString && p.status === 'confirmed'
-              ).length;
-
               return (
                 <button
                   key={day.dateString}
                   type="button"
                   onClick={() => handleSelectDay(day.dateString)}
-                  className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                    isOfficial
-                      ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/25 scale-105 ring-2 ring-emerald-300'
-                      : 'bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white border border-slate-700'
+                  aria-pressed={isOfficial}
+                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors capitalize ${
+                    isOfficial ? 'bg-emerald-500 text-slate-950' : 'border border-slate-700 text-slate-200 hover:bg-slate-800'
                   }`}
                 >
-                  <span>⚽ {day.dayName} {day.dayNumber} {day.monthName}</span>
-                  <span className="font-mono text-[11px] opacity-80">({count} gioc.)</span>
-                  {isOfficial ? (
-                    <span className="text-[10px] bg-slate-950 text-emerald-400 px-2 py-0.5 rounded font-black">
-                      ★ Giorno Ufficiale
-                    </span>
-                  ) : (
-                    <span className="text-[10px] text-amber-300 bg-amber-500/15 px-1.5 py-0.5 rounded font-bold">
-                      Imposta come Ufficiale
-                    </span>
-                  )}
+                  {day.dayName} {day.dayNumber} {day.monthName}
+                  {isOfficial && <span className="ml-1.5 text-xs font-bold">· ufficiale</span>}
                 </button>
               );
             })}
           </div>
-        </div>
+        </section>
       )}
 
-      {/* Banner Se 10 Titolari Raggiunti per il giorno selezionato */}
+      {/* Giorno scelto al completo */}
       {isMatchReady && (
-        <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-950 border-2 border-emerald-500/60 rounded-3xl p-5 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4 animate-in fade-in duration-300">
-          <div className="flex items-center gap-3.5">
-            <div className="p-3 bg-emerald-500/20 text-emerald-300 rounded-2xl ring-1 ring-emerald-500/40">
-              <Trophy className="h-6 w-6" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-black uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
-                  Match Completo! 10/10
-                </span>
-                <span className="text-xs text-slate-400">
-                  {formatItalianDate(selectedDayString)}
-                </span>
-              </div>
-              <p className="text-sm font-bold text-white mt-0.5">
-                La partita ha raggiunto il quorum dei 10 titolari!
-              </p>
-            </div>
+        <section className="rounded-2xl bg-slate-900 border border-slate-800 border-l-4 border-l-emerald-400 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-base font-semibold text-white">Partita al completo</h2>
+            <p className="text-sm text-slate-400 mt-0.5 capitalize">
+              {formatItalianDate(selectedDayString)} · 10 titolari su 10
+            </p>
           </div>
-
           <Link
             href={`/squadre?date=${selectedDayString}`}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-2xl text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/30 transition-all"
+            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-xl text-sm transition-colors"
           >
             Vai alle squadre
             <ArrowRight className="h-4 w-4" />
           </Link>
-        </div>
+        </section>
       )}
 
-      {/* Calendario Orizzontale a Scorrimento della Prossima Settimana */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-            <CalendarDays className="h-4 w-4 text-emerald-400" />
-            Calendario (settimana corrente e prossima)
-          </h2>
-          <span className="text-[11px] text-slate-500">Seleziona un giorno per focalizzare</span>
-        </div>
-
-        <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-none">
+      {/* Calendario: settimana corrente e prossima */}
+      <section className="space-y-3" aria-labelledby="calendar-title">
+        <h2 id="calendar-title" className="text-sm font-semibold text-slate-300">
+          Calendario
+        </h2>
+        <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-none">
           {days.map((day) => {
-            const dayPresences = presences.filter((p) => p.date === day.dateString);
-            const confirmedCount = dayPresences.filter((p) => p.status === 'confirmed').length;
+            const confirmedCount = presences.filter((p) => p.date === day.dateString && p.status === 'confirmed').length;
             const isSelected = selectedDayString === day.dateString;
             const isFull = confirmedCount >= 10;
             const locked = isDayLocked(day.dateString);
@@ -359,142 +322,90 @@ export default function PresenzePage() {
 
             return (
               <React.Fragment key={day.dateString}>
-              {startsNextWeek && (
-                <div className="flex-shrink-0 w-px bg-slate-700 mx-1" aria-hidden="true" />
-              )}
-              <button
-                type="button"
-                onClick={() => handleSelectDay(day.dateString)}
-                aria-pressed={isSelected}
-                title={locked ? 'Votazioni non ancora aperte' : undefined}
-                className={`flex-shrink-0 flex flex-col items-center justify-between w-24 sm:w-28 p-3 rounded-2xl border transition-all ${
-                  isSelected
-                    ? 'bg-emerald-500/15 border-emerald-500 text-white shadow-lg ring-2 ring-emerald-500/60'
-                    : isFirstToTen
-                    ? 'bg-amber-500/10 border-amber-400 text-white ring-2 ring-amber-400/50'
-                    : locked
-                    ? 'bg-slate-950 border-slate-800 text-slate-500 opacity-60'
-                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
-                }`}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <span className="text-[11px] font-bold uppercase tracking-wider">
+                {startsNextWeek && <div className="flex-shrink-0 w-px bg-slate-800 mx-1" aria-hidden="true" />}
+                <button
+                  type="button"
+                  onClick={() => handleSelectDay(day.dateString)}
+                  aria-pressed={isSelected}
+                  title={locked ? 'Iscrizioni non ancora aperte' : undefined}
+                  className={`relative flex-shrink-0 flex flex-col items-center w-[4.5rem] sm:w-20 py-3 rounded-2xl transition-colors ${
+                    isSelected
+                      ? 'bg-emerald-500 text-slate-950'
+                      : locked
+                      ? 'bg-slate-900/60 text-slate-500'
+                      : 'bg-slate-900 text-slate-300 hover:bg-slate-800'
+                  }`}
+                >
+                  {isFirstToTen && (
+                    <span
+                      className={`absolute top-1.5 right-1.5 h-2 w-2 rounded-full ${isSelected ? 'bg-slate-950' : 'bg-amber-400'}`}
+                      title="Primo a 10"
+                      aria-label="Primo a 10"
+                    />
+                  )}
+                  <span className={`text-xs font-medium capitalize ${isSelected ? 'text-slate-900' : 'text-slate-400'}`}>
                     {day.dayName.slice(0, 3)}
                   </span>
-                  {isSelected && (
-                    <span className="text-[11px] text-amber-400 font-black" title="Giorno Selezionato per la Partita">
-                      ★
-                    </span>
-                  )}
-                </div>
-                <span className="text-xl font-black my-1 text-white">{day.dayNumber}</span>
-                <span className="text-[10px] text-slate-400">{day.monthName}</span>
-
-                <div className="mt-2 w-full pt-1.5 border-t border-slate-800/80 flex items-center justify-center gap-1 font-mono text-[10px]">
+                  <span className="text-xl font-bold leading-tight mt-0.5">{day.dayNumber}</span>
                   <span
-                    className={`font-black ${
-                      isFull ? 'text-emerald-400' : 'text-slate-300'
+                    className={`mt-1 flex items-center gap-1 text-xs font-semibold tabular-nums ${
+                      isSelected ? 'text-slate-900' : isFull ? 'text-emerald-400' : 'text-slate-400'
                     }`}
                   >
-                    {confirmedCount}/10
+                    {locked ? <Lock className="h-3 w-3" aria-label="Chiuso" /> : `${confirmedCount}/10`}
                   </span>
-                  {locked && <Lock className="h-3 w-3 text-slate-500" aria-label="Bloccato" />}
-                </div>
-                {isFirstToTen && (
-                  <div className="mt-1 text-[9px] font-black uppercase text-amber-300 leading-tight">🥇 Primo a 10</div>
-                )}
-              </button>
+                </button>
               </React.Fragment>
             );
           })}
         </div>
-      </div>
+        <p className="text-xs text-slate-400 flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-amber-400" aria-hidden="true" /> primo giorno arrivato a 10 nella settimana
+        </p>
+      </section>
 
-      {/* Schede Giornaliere */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-            <Users className="h-4 w-4 text-emerald-400" />
-            {viewMode === 'focus' ? 'Dettaglio Giorno Selezionato' : 'Panoramica Settimanale (Tutti i giorni)'}
+      {/* Schede dei giorni */}
+      <section className="space-y-4" aria-labelledby="days-title">
+        <div className="flex items-center justify-between gap-3">
+          <h2 id="days-title" className="text-sm font-semibold text-slate-300">
+            {viewMode === 'focus' ? 'Giorno scelto' : 'Tutti i giorni'}
           </h2>
-
-          <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl text-xs">
-            <button
-              type="button"
-              onClick={() => setViewMode('focus')}
-              className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                viewMode === 'focus'
-                  ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Giorno Scelto
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('grid')}
-              className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                viewMode === 'grid'
-                  ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Tutti i Giorni
-            </button>
+          <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl text-xs" role="group" aria-label="Vista">
+            {(
+              [
+                ['focus', 'Giorno scelto'],
+                ['grid', 'Tutti i giorni'],
+              ] as const
+            ).map(([mode, label]) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setViewMode(mode)}
+                aria-pressed={viewMode === mode}
+                className={`px-3 py-1.5 rounded-lg font-semibold transition-colors ${
+                  viewMode === mode ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
         </div>
 
         {viewMode === 'focus' ? (
-          (() => {
-            const currentDay = days.find((d) => d.dateString === selectedDayString) || days[0];
-            if (!currentDay) return null;
-            const dayPresences = presences.filter((p) => p.date === currentDay.dateString);
-            return (
-              <div className="max-w-xl mx-auto w-full animate-in fade-in duration-200">
-                <PresenceCard
-                  day={currentDay}
-                  presences={dayPresences}
-                  allProfiles={profiles}
-                  currentUserId={mounted ? (profile?.id || (user as any)?.uid || (user as any)?.id) : undefined}
-                  isAdmin={isStrictAdmin}
-                  onTogglePresence={handleTogglePresence}
-                  onAddGuestPresence={handleAddGuestPresence}
-                  onRemovePresence={handleRemovePresence}
-                  onSetOverride={handleSetOverride}
-                  onResetDay={handleResetDay}
-                  isLocked={isDayLocked(currentDay.dateString)}
-                  isFirstToTen={firstToTen.has(currentDay.dateString)}
-                  isToggling={busyDate === currentDay.dateString}
-                />
-              </div>
-            );
-          })()
+          focusDay ? (
+            <div className="max-w-xl mx-auto w-full animate-in fade-in duration-200">
+              <PresenceCard {...cardProps(focusDay)} />
+            </div>
+          ) : null
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 animate-in fade-in duration-200">
-            {days.map((day) => {
-              const dayPresences = presences.filter((p) => p.date === day.dateString);
-              return (
-                <PresenceCard
-                  key={day.dateString}
-                  day={day}
-                  presences={dayPresences}
-                  allProfiles={profiles}
-                  currentUserId={mounted ? (profile?.id || (user as any)?.uid || (user as any)?.id) : undefined}
-                  isAdmin={isStrictAdmin}
-                  onTogglePresence={handleTogglePresence}
-                  onAddGuestPresence={handleAddGuestPresence}
-                  onRemovePresence={handleRemovePresence}
-                  onSetOverride={handleSetOverride}
-                  onResetDay={handleResetDay}
-                  isLocked={isDayLocked(day.dateString)}
-                  isFirstToTen={firstToTen.has(day.dateString)}
-                  isToggling={busyDate === day.dateString}
-                />
-              );
-            })}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-in fade-in duration-200">
+            {days.map((day) => (
+              <PresenceCard key={day.dateString} {...cardProps(day)} />
+            ))}
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }

@@ -1,5 +1,8 @@
 import type { Metadata, Viewport } from 'next';
+import { Inter } from 'next/font/google';
 import './globals.css';
+
+const inter = Inter({ subsets: ['latin'], display: 'swap', variable: '--font-inter' });
 import { AuthProvider } from '@/lib/context/AuthContext';
 import { Navbar } from '@/components/Navbar';
 
@@ -28,7 +31,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="it" className="dark" suppressHydrationWarning style={{ backgroundColor: '#020617', colorScheme: 'dark' }}>
+    <html lang="it" className={`dark ${inter.variable}`} suppressHydrationWarning style={{ backgroundColor: '#020617', colorScheme: 'dark' }}>
       <body className="min-h-screen bg-slate-950 text-slate-100 flex flex-col antialiased selection:bg-emerald-500 selection:text-slate-950 body-safe-bottom px-safe" suppressHydrationWarning style={{ backgroundColor: '#020617' }}>
         <AuthProvider>
           <Navbar />

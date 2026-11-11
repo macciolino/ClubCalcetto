@@ -115,27 +115,23 @@ export function PresenceCard({
 
   return (
     <div
-      className={`relative flex flex-col bg-slate-900 border rounded-2xl p-5 shadow-xl transition-all ${
-        day.isToday ? 'border-emerald-500/60 ring-1 ring-emerald-500/30' : 'border-slate-800 hover:border-slate-700'
+      className={`relative flex flex-col bg-slate-900 border rounded-2xl p-5 transition-colors ${
+        day.isToday ? 'border-emerald-500/50' : 'border-slate-800'
       }`}
     >
       {/* Giorno */}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-lg font-black text-white capitalize">{day.dayName}</h3>
+            <h3 className="text-lg font-semibold text-white capitalize">{day.dayName}</h3>
             {day.isToday && (
-              <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-emerald-500/30">
-                Oggi
-              </span>
+              <span className="bg-emerald-500/15 text-emerald-300 text-xs font-medium px-2 py-0.5 rounded-full">Oggi</span>
             )}
             {isFirstToTen && (
-              <span className="bg-amber-500/15 text-amber-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-amber-400/40">
-                🥇 Primo a 10
-              </span>
+              <span className="bg-amber-500/15 text-amber-300 text-xs font-medium px-2 py-0.5 rounded-full">🥇 Primo a 10</span>
             )}
           </div>
-          <p className="text-xs text-slate-400 font-medium">
+          <p className="text-sm text-slate-400">
             {day.dayNumber} {day.monthName} {day.dateObj.getFullYear()}
           </p>
         </div>
@@ -144,8 +140,8 @@ export function PresenceCard({
             type="button"
             onClick={() => setShowManage((o) => !o)}
             aria-expanded={showManage}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border ${
-              showManage ? 'border-emerald-500 text-emerald-300' : 'border-slate-700 text-slate-400 hover:text-white'
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              showManage ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
           >
             <MoreHorizontal className="h-4 w-4" /> Gestisci
@@ -161,7 +157,7 @@ export function PresenceCard({
               myStarterIdx >= 0 ? 'bg-emerald-500/10 border-emerald-500/40' : 'bg-amber-500/10 border-amber-500/40'
             }`}
           >
-            <span className={`text-sm font-black flex items-center gap-2 ${myStarterIdx >= 0 ? 'text-emerald-300' : 'text-amber-300'}`}>
+            <span className={`text-sm font-semibold flex items-center gap-2 ${myStarterIdx >= 0 ? 'text-emerald-300' : 'text-amber-300'}`}>
               <Check className="h-4 w-4" />
               {myStarterIdx >= 0 ? `Sei titolare (n° ${myStarterIdx + 1})` : `In attesa (${myWaitIdx + 1}°)`}
             </span>
@@ -182,20 +178,18 @@ export function PresenceCard({
           </div>
         ) : isLocked ? (
           <div className="w-full rounded-xl border border-slate-700 bg-slate-800/60 px-4 py-3 text-center">
-            <span className="text-sm font-black text-slate-300 flex items-center justify-center gap-2">
+            <span className="text-sm font-semibold text-slate-300 flex items-center justify-center gap-2">
               <Lock className="h-4 w-4" /> Iscrizioni chiuse
             </span>
-            <span className="block text-[11px] text-slate-500 mt-0.5">L&apos;admin le apre per la settimana prossima.</span>
+            <span className="block text-xs text-slate-400 mt-0.5">L&apos;admin le apre per la settimana prossima.</span>
           </div>
         ) : (
           <button
             type="button"
             onClick={() => onTogglePresence(day.dateString)}
             disabled={isToggling}
-            className={`w-full py-3.5 px-4 rounded-xl font-black text-sm uppercase tracking-wider transition-all shadow-lg disabled:opacity-50 disabled:cursor-wait ${
-              isFull
-                ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-500/25'
-                : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/25'
+            className={`w-full py-3.5 px-4 rounded-xl font-semibold text-base transition-colors active:scale-[0.99] disabled:opacity-50 disabled:cursor-wait ${
+              isFull ? 'bg-amber-400 hover:bg-amber-300 text-slate-950' : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
             }`}
           >
             {isFull ? 'Mettimi in attesa' : 'Ci sono'}
@@ -239,7 +233,7 @@ export function PresenceCard({
           {revealed ? (
             <p className="mt-1.5 text-xs text-white font-semibold truncate">{revealed.name}</p>
           ) : (
-            <p className="mt-1.5 text-[11px] text-slate-500">
+            <p className="mt-1.5 text-xs text-slate-400">
               {isFull ? 'Completo' : `${MAX - starters.length} ${MAX - starters.length === 1 ? 'posto libero' : 'posti liberi'}`}
             </p>
           )}
@@ -253,18 +247,18 @@ export function PresenceCard({
             type="button"
             onClick={() => setShowNames((o) => !o)}
             aria-expanded={showNames}
-            className="text-xs font-bold text-slate-400 hover:text-white flex items-center gap-1"
+            className="text-sm font-medium text-slate-400 hover:text-white flex items-center gap-1"
           >
             Vedi nomi <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showNames ? 'rotate-180' : ''}`} />
           </button>
           {showNames && (
-            <ol className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs">
+            <ol className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
               {starters.map((p, i) => (
                 <li
                   key={p.id}
                   className={`truncate ${p.player_id === effectiveUserId ? 'text-emerald-300 font-bold' : 'text-slate-300'}`}
                 >
-                  <span className="font-mono text-slate-500 mr-1.5">{i + 1}.</span>
+                  <span className="tabular-nums text-slate-500 mr-1.5">{i + 1}.</span>
                   {p.name}
                   {p.profile?.is_guest && <span className="text-[10px] text-slate-500"> · ospite</span>}
                 </li>
@@ -280,9 +274,9 @@ export function PresenceCard({
           type="button"
           onClick={() => setShowWaitlist((o) => !o)}
           aria-expanded={showWaitlist}
-          className="mt-3 w-full text-left text-xs text-amber-300/90 hover:text-amber-200"
+          className="mt-3 w-full text-left text-sm text-amber-300/90 hover:text-amber-200"
         >
-          <span className="font-bold">In attesa:</span>{' '}
+          <span className="font-semibold">In attesa:</span>{' '}
           {showWaitlist
             ? waitlist.map((p, i) => `${i + 1}. ${p.name}`).join(' · ')
             : `${waitlist
@@ -295,7 +289,7 @@ export function PresenceCard({
       {/* Strumenti admin, solo su richiesta */}
       {showAdminActions && showManage && (
         <div className="mt-4 pt-4 border-t border-slate-800 space-y-3">
-          <p className="text-[11px] font-black uppercase tracking-wider text-slate-500">Gestione admin</p>
+          <p className="text-xs font-semibold text-slate-400">Gestione admin</p>
           {enriched.length === 0 && <p className="text-xs text-slate-500">Nessun iscritto.</p>}
           <ul className="space-y-1">
             {enriched.map((p) => {
