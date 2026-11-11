@@ -19,7 +19,8 @@ description: ClubCalcetto UI conventions - theme, shared components (tables, dro
   amber = first to 10) and a legend.
 - Risky actions ("Ritirati", remove a player) are real buttons with icon + `askConfirm`, never a bare text link.
 - Admin per-row actions on mobile: tap the row → bottom sheet (`fixed inset-0 … items-end sm:items-center`,
-  `rounded-t-2xl sm:rounded-2xl`, big buttons), not rows of tiny icons.
+  `rounded-t-2xl sm:rounded-2xl`, big buttons), not rows of tiny icons. Tall sheets (e.g. Confronta): `h-[80vh] rounded-t-3xl animate-sheet` +
+  drag bar (`h-1.5 w-10 rounded-full bg-slate-700`), title + X; backdrop `animate-fade`.
 - Older cards were `rounded-3xl shadow-xl` with `font-black uppercase` titles: replaced by the style below (keep it that way).
 
 ## Current style (approved 2026-11-11, applied to every page)
