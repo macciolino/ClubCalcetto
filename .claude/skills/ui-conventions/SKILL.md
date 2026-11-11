@@ -31,7 +31,10 @@ description: ClubCalcetto UI conventions - theme, shared components (tables, dro
 
 - `CollapsibleCard` - "a tendina" section with an always-visible summary (closed by default).
 - `NumberInput` - numeric field usable on phones (never plain `type=number`).
-- `PlayerCardFifa` - player card (radar tab + "Statistiche" tab: 6 boxes like the profile); `StatBadge` - OVR pill; `RadarChart`.
+- `PlayerCardFifa` - player card: summary line "N partite · V · P · S" + proportion bar, radar + `StatBars` (parameters
+  as 1-10 bars, form part lighter), "Statistiche" tab with 6 neutral boxes (colour only on V/P/S numbers); `StatBadge`; `RadarChart`.
+- Giocatori table: md+ only (sortable headers, parameter cells = number + mini bar, own row with green left stripe);
+  phones get a compact list (tap to open V-P-S, `StatBars` and admin actions).
 - `VirtualPitch` (with `PlayerSticker` inside) - pitch with upright sticker cards, 1-1-2-1 symmetric on x = 50 and mirrored
   between the teams; coordinates in `lib/utils/formation.ts`. A "photo" on the pitch is only one uploaded in the app (`data:image/` JPEG); Google's automatic
   avatar and old emoji avatars show initials in the photo area with the first name below. Downloads use html-to-image

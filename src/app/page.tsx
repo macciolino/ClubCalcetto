@@ -128,7 +128,7 @@ export default function HomePage() {
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
             <div className="space-y-2 min-w-0">
               <p className="text-xs font-semibold text-emerald-400">Prossima partita</p>
-              <h2 id="next-match" className="text-xl sm:text-2xl font-bold text-white capitalize">
+              <h2 id="next-match" className="text-xl sm:text-2xl font-bold text-white">
                 {formatItalianDate(date)}
               </h2>
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-300">

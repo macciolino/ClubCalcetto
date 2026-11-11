@@ -1,5 +1,6 @@
 'use client';
 
+import { StatBars } from './StatBars';
 import { initialsOf, uploadedPhoto } from '@/lib/utils/playerUtils';
 import { formatForm } from '@/lib/utils/formUtils';
 import { getStatValue, PlayerMatchStats, EMPTY_MATCH_STATS } from '@/lib/utils/statUtils';
@@ -54,6 +55,12 @@ export function PlayerCardFifa({
   } else {
     Object.assign(displayStats, player.stats || {});
   }
+
+  // Valori della scheda (prima della forma), per le barre dei parametri
+  const baseStats = sortStatsByCanonicalOrder(Object.keys(displayStats)).map((name) => ({
+    name,
+    value: Number(displayStats[name] ?? 6),
+  }));
 
   // Stato forma: si aggiunge (o toglie) a ogni parametro e all'OVR, sempre tra 1 e 10
   const clamp = (n: number) => Math.max(1, Math.min(10, Math.round(n * 10) / 10));
@@ -132,7 +139,28 @@ export function PlayerCardFifa({
               {form > 0 ? '🔥 In forma' : '❄️ Fuori forma'} {formatForm(form)}
             </div>
           )}
-          <div className="flex items-center justify-center gap-2 mt-1">
+          {matchStats.played > 0 ? (
+            <div className="mt-2 space-y-1">
+              <p className="text-xs text-slate-400 tabular-nums">
+                {matchStats.played} {matchStats.played === 1 ? 'partita' : 'partite'} ·{' '}
+                <span className="text-emerald-300">{matchStats.won} V</span> ·{' '}
+                <span className="text-amber-300">{matchStats.drawn} P</span> ·{' '}
+                <span className="text-rose-300">{matchStats.lost} S</span>
+              </p>
+              <div
+                className="mx-auto flex h-1 w-28 overflow-hidden rounded-full bg-slate-800"
+                role="img"
+                aria-label={`${matchStats.won} vinte, ${matchStats.drawn} pareggiate, ${matchStats.lost} perse`}
+              >
+                <span className="bg-emerald-400" style={{ width: `${(matchStats.won / matchStats.played) * 100}%` }} />
+                <span className="bg-amber-400" style={{ width: `${(matchStats.drawn / matchStats.played) * 100}%` }} />
+                <span className="bg-rose-400" style={{ width: `${(matchStats.lost / matchStats.played) * 100}%` }} />
+              </div>
+            </div>
+          ) : (
+            <p className="mt-2 text-xs text-slate-500">Nessuna partita archiviata</p>
+          )}
+          <div className="flex items-center justify-center gap-2 mt-2">
             {player.is_guest ? (
               <span className="text-[10px] font-semibold text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded-full">
                 Ospite
@@ -178,64 +206,29 @@ export function PlayerCardFifa({
           <div className="mt-3 py-2 flex flex-col items-center justify-center animate-in fade-in duration-200">
             <RadarChart stats={displayStats} size={180} color="emerald" showLabels={true} />
 
-            {/* Griglia mini pill delle abilità in ordine canonico */}
-            <div className="mt-3 grid grid-cols-4 gap-1.5 w-full text-center">
-              {sortStatsByCanonicalOrder(Object.keys(displayStats)).map((name) => {
-                const val = displayStats[name] ?? 6;
-                const abbr = STAT_DETAILS[name]?.code || name.slice(0, 3).toUpperCase();
-                return (
-                  <div
-                    key={name}
-                    className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-lg"
-                  >
-                    <span className="block text-[8px] text-slate-400 font-bold">{abbr}</span>
-                    <span
-                      className={`text-[11px] font-black font-mono ${
-                        val >= 8
-                          ? 'text-emerald-400'
-                          : val >= 6
-                          ? 'text-white'
-                          : 'text-rose-400'
-                      }`}
-                    >
-                      {val}
-                    </span>
-                  </div>
-                );
-              })}
+            {/* Parametri come barre 1-10 (con la parte dovuta alla forma) */}
+            <div className="mt-4 w-full">
+              <StatBars stats={baseStats} form={form} compact />
             </div>
           </div>
         ) : (
           /* CONTENUTO SCHEDA 2: STATISTICHE DALLE PARTITE ARCHIVIATE (come nel profilo) */
-          <div className="mt-4 space-y-2 animate-in fade-in duration-200">
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="bg-emerald-500/10 border border-emerald-500/30 p-2.5 rounded-2xl">
-                <span className="block text-[10px] font-black text-emerald-400 uppercase tracking-wider">Vinte</span>
-                <span className="text-2xl font-black text-emerald-300 font-mono">{matchStats.won}</span>
+          <div className="mt-4 grid grid-cols-3 gap-2 text-center animate-in">
+            {(
+              [
+                ['Vinte', matchStats.won, 'text-emerald-300'],
+                ['Pareggiate', matchStats.drawn, 'text-amber-300'],
+                ['Perse', matchStats.lost, 'text-rose-300'],
+                ['Presenze', matchStats.played, 'text-white'],
+                ['Gol', matchStats.goals, 'text-white'],
+                ['MVP', matchStats.mvp, 'text-white'],
+              ] as const
+            ).map(([label, value, color]) => (
+              <div key={label} className="bg-slate-950/70 rounded-xl py-2.5">
+                <span className={`block text-2xl font-bold tabular-nums ${color}`}>{value}</span>
+                <span className="block text-[11px] text-slate-400">{label}</span>
               </div>
-              <div className="bg-amber-500/10 border border-amber-500/30 p-2.5 rounded-2xl">
-                <span className="block text-[10px] font-black text-amber-400 uppercase tracking-wider">Pareggiate</span>
-                <span className="text-2xl font-black text-amber-300 font-mono">{matchStats.drawn}</span>
-              </div>
-              <div className="bg-rose-500/10 border border-rose-500/30 p-2.5 rounded-2xl">
-                <span className="block text-[10px] font-black text-rose-400 uppercase tracking-wider">Perse</span>
-                <span className="text-2xl font-black text-rose-300 font-mono">{matchStats.lost}</span>
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="bg-slate-950/80 border border-slate-800 p-2.5 rounded-2xl">
-                <span className="block text-[10px] font-black text-slate-300 uppercase tracking-wider">Presenze</span>
-                <span className="text-2xl font-black text-white font-mono">{matchStats.played}</span>
-              </div>
-              <div className="bg-slate-950/80 border border-slate-800 p-2.5 rounded-2xl">
-                <span className="block text-[10px] font-black text-slate-300 uppercase tracking-wider">⚽ Gol</span>
-                <span className="text-2xl font-black text-white font-mono">{matchStats.goals}</span>
-              </div>
-              <div className="bg-slate-950/80 border border-slate-800 p-2.5 rounded-2xl">
-                <span className="block text-[10px] font-black text-slate-300 uppercase tracking-wider">★ MVP</span>
-                <span className="text-2xl font-black text-amber-300 font-mono">{matchStats.mvp}</span>
-              </div>
-            </div>
+            ))}
           </div>
         )}
       </div>

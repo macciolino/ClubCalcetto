@@ -276,7 +276,7 @@ export default function PresenzePage() {
                   type="button"
                   onClick={() => handleSelectDay(day.dateString)}
                   aria-pressed={isOfficial}
-                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors capitalize ${
+                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
                     isOfficial ? 'bg-emerald-500 text-slate-950' : 'border border-slate-700 text-slate-200 hover:bg-slate-800'
                   }`}
                 >
@@ -294,7 +294,7 @@ export default function PresenzePage() {
         <section className="rounded-2xl bg-slate-900 border border-slate-800 border-l-4 border-l-emerald-400 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-base font-semibold text-white">Partita al completo</h2>
-            <p className="text-sm text-slate-400 mt-0.5 capitalize">
+            <p className="text-sm text-slate-400 mt-0.5">
               {formatItalianDate(selectedDayString)} · 10 titolari su 10
             </p>
           </div>

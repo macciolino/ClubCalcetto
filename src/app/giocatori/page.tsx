@@ -1,5 +1,6 @@
 'use client';
 
+import { StatBars } from '@/components/StatBars';
 import { initialsOf, uploadedPhoto } from '@/lib/utils/playerUtils';
 import { notify, askConfirm } from '@/components/ui/Feedback';
 
@@ -29,7 +30,8 @@ import {
   LayoutGrid,
   Table as TableIcon,
   Trophy,
-  Sparkles
+  Sparkles,
+  ChevronDown,
 } from 'lucide-react';
 
 const DEFAULT_CATEGORIES: StatCategory[] = DEFAULT_BASE_CATEGORIES;
@@ -55,6 +57,7 @@ export default function GiocatoriPage() {
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [sortBy, setSortBy] = useState<'ovr' | 'wins' | 'name'>('ovr');
   // Vista tabella: si ordina cliccando le intestazioni (primo clic decrescente, secondo crescente; il nome parte da A-Z)
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [tableSort, setTableSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: 'ovr', dir: 'desc' });
   const handleTableSort = (key: string) =>
     setTableSort((cur) =>
@@ -339,8 +342,91 @@ export default function GiocatoriPage() {
           )}
         </div>
       ) : (
-        /* TABELLA GIOCATORI CLASSICA */
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden animate-in fade-in duration-200">
+        /* TABELLA GIOCATORI (PC/tablet) + ELENCO COMPATTO (telefono) */
+        <>
+        {/* Telefono: una riga per giocatore, si apre con un tocco */}
+        <div className="md:hidden space-y-2 animate-in">
+          {filteredPlayers.length === 0 && (
+            <p className="py-8 text-center text-sm text-slate-500">Nessun giocatore trovato con questi filtri.</p>
+          )}
+          {filteredPlayers.map((player) => {
+            const isCurrent = player.id === profile?.id;
+            const open = expandedId === player.id;
+            const photo = uploadedPhoto(player.avatar_url);
+            const rec = getPlayerMatchRecord(player);
+            return (
+              <div
+                key={player.id}
+                className={`bg-slate-900 border rounded-2xl ${isCurrent ? 'border-emerald-500/50' : 'border-slate-800'}`}
+              >
+                <button
+                  type="button"
+                  onClick={() => setExpandedId(open ? null : player.id)}
+                  aria-expanded={open}
+                  className="w-full flex items-center gap-3 p-3 text-left"
+                >
+                  {photo ? (
+                    <img src={photo} alt="" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+                  ) : (
+                    <span className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center font-bold text-emerald-400 text-xs flex-shrink-0">
+                      {initialsOf(player.full_name)}
+                    </span>
+                  )}
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-sm font-semibold text-white truncate">
+                      {player.full_name}
+                      {isCurrent && <span className="ml-1.5 text-[10px] text-emerald-300">Tu</span>}
+                    </span>
+                    <span className="block text-xs text-slate-400">
+                      {player.position || 'Esterno'}
+                      {player.is_guest ? ' · ospite' : ''}
+                    </span>
+                  </span>
+                  <StatBadge score={player.overall_rating || 6.0} size="md" />
+                  {isClientAdmin && (
+                    <ChevronDown className={`h-4 w-4 text-slate-500 transition-transform ${open ? 'rotate-180' : ''}`} />
+                  )}
+                </button>
+                {isClientAdmin && open && (
+                  <div className="px-3 pb-3 space-y-3 animate-in">
+                    <p className="text-xs text-slate-400 tabular-nums">
+                      <span className="text-emerald-300">{rec.won} V</span> · <span className="text-amber-300">{rec.drawn} P</span> ·{' '}
+                      <span className="text-rose-300">{rec.lost} S</span>
+                    </p>
+                    <StatBars
+                      compact
+                      stats={sortedCategories.map((cat) => ({
+                        name: cat.name,
+                        value: Number(player.stats?.[cat.name] ?? cat.default_value ?? 6),
+                      }))}
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditModal(player)}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-slate-700 text-sm font-semibold text-slate-200"
+                      >
+                        <Edit3 className="h-4 w-4" /> Modifica
+                      </button>
+                      {(player.is_guest || isSuperAdmin) && player.id !== 'p-1' && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePlayer(player.id, player.full_name)}
+                          aria-label={player.is_guest ? 'Elimina ospite' : 'Elimina account'}
+                          className="px-3 py-2 rounded-xl text-rose-300 border border-rose-500/40"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="hidden md:block bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden animate-in fade-in duration-200">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -392,7 +478,7 @@ export default function GiocatoriPage() {
                       <tr
                         key={player.id}
                         className={`hover:bg-slate-850/50 transition-colors ${
-                          isCurrent ? 'bg-emerald-500/5' : ''
+                          isCurrent ? 'bg-emerald-500/5 shadow-[inset_3px_0_0_0_rgb(52,211,153)]' : ''
                         }`}
                       >
                         {/* Rank */}
@@ -487,16 +573,9 @@ export default function GiocatoriPage() {
                               className="py-3 px-2 text-center font-mono font-semibold w-14 min-w-[54px]"
                               title={`${cat.label || cat.name}: ${val}`}
                             >
-                              <span
-                                className={`inline-block w-7 py-0.5 rounded text-xs ${
-                                  val >= 8
-                                    ? 'text-emerald-400 bg-emerald-500/10 font-bold'
-                                    : val >= 6
-                                    ? 'text-slate-300 bg-slate-800/40'
-                                    : 'text-rose-400 bg-rose-500/10'
-                                }`}
-                              >
-                                {val}
+                              <span className="block text-xs tabular-nums text-slate-200">{val}</span>
+                              <span className="mt-1 mx-auto block h-1 w-8 rounded-full bg-slate-800 overflow-hidden" aria-hidden="true">
+                                <span className="block h-full rounded-full bg-emerald-500/80" style={{ width: `${Number(val) * 10}%` }} />
                               </span>
                             </td>
                           );
@@ -536,6 +615,7 @@ export default function GiocatoriPage() {
             </table>
           </div>
         </div>
+        </>
       )}
 
       {/* Modal Creazione / Modifica Giocatore */}
