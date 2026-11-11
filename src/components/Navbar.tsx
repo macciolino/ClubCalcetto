@@ -159,7 +159,7 @@ export function Navbar() {
                     <User className="h-4 w-4 text-emerald-400" /> Profilo
                   </Link>
                   <Link
-                    href={isStrictAdmin ? '/impostazioni?sezione=partita' : '/impostazioni'}
+                    href="/impostazioni"
                     role="menuitem"
                     onClick={() => setMenuOpen(false)}
                     className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-200 hover:bg-slate-800"

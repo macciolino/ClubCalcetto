@@ -383,7 +383,7 @@ export default function ProfiloPage() {
       </div>
 
       <Link
-        href="/impostazioni"
+        href="/impostazioni?sezione=notifiche"
         className="flex items-center justify-between gap-3 bg-slate-900 border border-slate-800 rounded-2xl p-5 text-sm text-slate-200 hover:border-emerald-500/50"
       >
         <span>

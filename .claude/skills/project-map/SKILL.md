@@ -8,8 +8,9 @@ description: Map of the ClubCalcetto project - folders, routes, where each page 
 Brand shown to users: **Club Soccer** (renamed 2026-11-10). Code, repo, Vercel domain and storage keys still say ClubCalcetto.
 Header (`Navbar.tsx`): logo + "Club Soccer" on the left; on the right icon, name and role open a dropdown menu
 (Profilo, Impostazioni, Logout; closes on outside tap, Esc, page change). Profilo is NOT in the page menu / bottom bar
-(Home, Presenze, Giocatori, Squadre, Storico). Admins reach the admin sections from the user menu → Impostazioni,
-which opens `?sezione=partita` for them (no "Admin" item in the bar). On md+ the page menu is a
+(Home, Presenze, Giocatori, Squadre, Storico). Admins reach the admin sections from the user menu → Impostazioni
+(no "Admin" item in the bar). `/impostazioni` without `?sezione=` = overview of all sections (cards, same on PC and
+phone); a section shows the sidebar (md+) and "← Impostazioni". Profile "Notifiche → Apri" links `?sezione=notifiche`. On md+ the page menu is a
 separate bar BELOW the header, as wide as the cards (same `max-w-6xl px-4 sm:px-6` container); header and menu
 are wrapped in ONE sticky container so both stay at the top while scrolling; phones use the bottom bar.
 After login (and email verified) `/login` redirects to `/` (the Home).

@@ -61,8 +61,8 @@ function SettingsContent() {
   const admin = isAdmin || profile.role === 'admin';
   const visible = SECTIONS.filter((s) => s.access === 'all' || (s.access === 'admin' && admin) || (s.access === 'super' && isSuperAdmin));
   const requested = visible.find((s) => s.id === params.get('sezione'));
-  // Su PC senza sezione scelta si apre la prima (per gli admin: la partita della settimana); su telefono l'elenco
-  const current = requested || (admin ? visible.find((s) => s.id === 'partita') : undefined) || visible[0];
+  // Senza sezione scelta si vede la schermata generale delle impostazioni (su PC e su telefono)
+  const current = requested || visible[0];
   const groups = [
     { title: 'Personali', items: visible.filter((s) => s.access === 'all') },
     { title: 'Amministrazione', items: visible.filter((s) => s.access !== 'all') },
@@ -108,18 +108,49 @@ function SettingsContent() {
         </p>
       </header>
 
+      {!requested ? (
+        /* Schermata generale: tutte le sezioni, raggruppate (uguale su PC e telefono) */
+        <div className="space-y-6">
+          {groups.map((g) => (
+            <section key={g.title} className="space-y-2" aria-label={g.title}>
+              <h2 className="text-sm font-semibold text-slate-300">{g.title}</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {g.items.map((s) => {
+                  const Icon = s.icon;
+                  return (
+                    <Link
+                      key={s.id}
+                      href={`/impostazioni?sezione=${s.id}`}
+                      className="group flex items-start gap-3 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-4 transition-colors"
+                    >
+                      <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-slate-800 text-emerald-400">
+                        <Icon className="h-4 w-4" />
+                      </span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-sm font-semibold text-white">{s.label}</span>
+                        <span className="block text-xs text-slate-400 mt-0.5">{s.description}</span>
+                      </span>
+                      <ChevronRight className="h-4 w-4 text-slate-600 group-hover:text-slate-400 mt-2.5" aria-hidden="true" />
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
+        </div>
+      ) : (
       <div className="md:grid md:grid-cols-[240px_1fr] md:gap-6 md:items-start">
-        {/* Elenco sezioni: colonna a sinistra su PC; su telefono solo finché non se ne apre una */}
-        <aside className={`bg-slate-900 border border-slate-800 rounded-2xl p-2 md:sticky md:top-36 ${requested ? 'hidden md:block' : ''}`}>
+        {/* Elenco sezioni: colonna a sinistra su PC (su telefono si torna alla schermata generale) */}
+        <aside className="hidden md:block bg-slate-900 border border-slate-800 rounded-2xl p-2 md:sticky md:top-36">
           {menu}
         </aside>
 
-        <section className={`space-y-4 min-w-0 ${requested ? '' : 'hidden md:block'}`} aria-labelledby="settings-section-title">
+        <section className="space-y-4 min-w-0" aria-labelledby="settings-section-title">
           <div className="flex items-center gap-3">
             <Link
               href="/impostazioni"
-              className="md:hidden flex items-center gap-1 text-xs font-bold text-emerald-400"
-              aria-label="Torna all'elenco delle impostazioni"
+              className="flex items-center gap-1 text-xs font-bold text-emerald-400"
+              aria-label="Torna alla schermata generale delle impostazioni"
             >
               <ArrowLeft className="h-4 w-4" /> Impostazioni
             </Link>
@@ -134,6 +165,7 @@ function SettingsContent() {
           {current.id === 'notifiche' ? <NotificationGuide /> : <AdminSections section={current.id} />}
         </section>
       </div>
+      )}
     </div>
   );
 }
