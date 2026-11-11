@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { BrandLogo } from '@/components/BrandLogo';
-import { PitchLines } from '@/components/PitchLines';
+import { PitchLines, useScreenPitchHeight } from '@/components/PitchLines';
 
 const KEY = 'cc_splash_seen';
 
@@ -14,6 +14,7 @@ const KEY = 'cc_splash_seen';
  */
 export function SplashScreen() {
   const [phase, setPhase] = useState<'show' | 'leave' | 'gone'>('show');
+  const pitchH = useScreenPitchHeight();
 
   useEffect(() => {
     if (document.documentElement.classList.contains('no-splash')) {
@@ -43,15 +44,16 @@ export function SplashScreen() {
         phase === 'leave' ? 'opacity-0 pointer-events-none' : 'opacity-100'
       }`}
     >
-      <div className="relative pitch-fast w-44 aspect-[2/3]">
-        <PitchLines className="absolute inset-0 h-full w-full" lineClass="text-emerald-400/50" />
-        <div className="absolute inset-0 flex items-center justify-center animate-in">
-          <BrandLogo size="lg" />
-        </div>
+      {/* Campo a tutto schermo, proporzionato al telefono in uso */}
+      <div className="absolute inset-0 pitch-fast">
+        <PitchLines className="absolute inset-0 h-full w-full" lineClass="text-emerald-400/45" height={pitchH} fit="meet" />
       </div>
-      <span className="absolute bottom-[18%] text-lg font-bold tracking-tight text-white animate-in">
-        Club <span className="text-emerald-400">Soccer</span>
-      </span>
+      <div className="relative flex flex-col items-center animate-in">
+        <BrandLogo size="lg" />
+        <span className="mt-[4.5rem] text-xl font-bold tracking-tight text-white">
+          Club <span className="text-emerald-400">Soccer</span>
+        </span>
+      </div>
     </div>
   );
 }

@@ -209,3 +209,10 @@ body {
     animation: none;
   }
 }
+
+/* Login: la pagina non scorre (il login ha il suo contenitore a tutto schermo) */
+html.login-lock,
+html.login-lock body {
+  overflow: hidden;
+  height: 100%;
+}
