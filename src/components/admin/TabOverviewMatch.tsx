@@ -576,34 +576,32 @@ export function TabOverviewMatch({
 
       {/* 4. MODULO CHIUSURA MATCH POST-PARTITA */}
       <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-5">
-        <div className="border-b border-slate-800 pb-3">
-          <div className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-amber-400" />
-            <h2 className="text-sm font-bold text-white">
-              Chiusura Match Post-Partita & Aggiornamento Palmarès
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold text-white flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-amber-400 flex-shrink-0" /> Chiusura partita
             </h2>
+            <p className="text-sm text-slate-400 mt-0.5">
+              Risultato, marcatori e MVP: al salvataggio si aggiornano vittorie, pareggi e sconfitte.
+            </p>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Inserisci risultato, marcatori e MVP. Al salvataggio vittorie, pareggi e sconfitte vengono aggiornati nei profili.
-          </p>
+          <label className="sm:w-64 flex-shrink-0">
+            <span className="sr-only">Partita da chiudere</span>
+            <select
+              value={closingDate}
+              onChange={(e) => setClosingDate(e.target.value)}
+              className="w-full min-w-0 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-slate-500"
+            >
+              {closingOptions.map((d) => (
+                <option key={d} value={d}>
+                  {formatItalianDate(d)}
+                  {d === activeDate ? ' · ufficiale' : ''}
+                </option>
+              ))}
+            </select>
+            <span className="block text-[11px] text-slate-500 mt-1">Anche partite degli ultimi 30 giorni</span>
+          </label>
         </div>
-
-        <label className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm">
-          <span className="text-slate-300 font-semibold">Partita da chiudere</span>
-          <select
-            value={closingDate}
-            onChange={(e) => setClosingDate(e.target.value)}
-            className="w-full sm:w-auto min-w-0 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-slate-500"
-          >
-            {closingOptions.map((d) => (
-              <option key={d} value={d}>
-                {formatItalianDate(d)}
-                {d === activeDate ? ' (giorno ufficiale)' : ''}
-              </option>
-            ))}
-          </select>
-          <span className="text-xs text-slate-400">Anche le partite degli ultimi 30 giorni con squadre salvate.</span>
-        </label>
 
         {isAlreadyClosed && !archiveSuccessMessage && (
           <div className="p-3 bg-slate-800/60 border border-slate-700 text-slate-300 rounded-2xl text-xs font-semibold flex items-center gap-2">
@@ -644,31 +642,38 @@ export function TabOverviewMatch({
             <MatchResultFields fixedKeeper={fixedKeeper} value={result} onChange={setResult} white={teams.white} black={teams.black} mvpVotes={mvpVotes} />
           </>
         ) : (
-          <div className="p-4 bg-amber-500/10 border border-amber-500/30 text-amber-200 rounded-2xl text-sm flex items-start gap-2">
-            <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-            <span>
-              Per salvare il risultato servono le squadre complete (5 contro 5) generate nella sezione{' '}
-              <Link href={`/squadre?date=${closingDate}`} className="underline font-bold">Squadre</Link>.
-            </span>
+          <div className="rounded-2xl bg-slate-950/60 py-8 px-4 text-center space-y-3">
+            <p className="text-sm font-semibold text-slate-200">Squadre non ancora pronte</p>
+            <p className="text-sm text-slate-400 max-w-sm mx-auto">
+              Il risultato si salva sulle squadre: prima generale (5 contro 5) per questa partita.
+            </p>
+            <Link
+              href={`/squadre?date=${closingDate}`}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-xl text-sm"
+            >
+              Vai a squadre
+            </Link>
           </div>
         )}
 
-        {/* CTA Salva & Archivia Partita */}
+        {/* CTA Salva & Archivia Partita (solo quando le squadre ci sono) */}
+        {teams && (
         <div className="pt-2 flex justify-end">
           <button
             type="button"
             onClick={handleArchiveMatch}
             disabled={isArchiving || !canArchive}
-            className="flex items-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition-all disabled:opacity-40 cursor-pointer"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-xl text-sm transition-colors disabled:opacity-40 cursor-pointer"
           >
             {isArchiving ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Trophy className="h-4 w-4" />
             )}
-            <span>{isAlreadyClosed ? 'Aggiorna Risultato' : 'Salva e Archivia Partita'}</span>
+            <span>{isAlreadyClosed ? 'Aggiorna risultato' : 'Salva e archivia partita'}</span>
           </button>
         </div>
+        )}
       </div>
     </div>
   );

@@ -20,6 +20,8 @@ interface RadarChartProps {
    * 'compare' → another player (blue)
    */
   overlay?: { stats: Record<string, number>; kind: 'form' | 'compare' };
+  /** Value under each label (off when the values are shown elsewhere, e.g. bars below the radar) */
+  showValues?: boolean;
 }
 
 const STAT_ABBR_MAP: Record<string, string> = {
@@ -40,6 +42,7 @@ export function RadarChart({
   color = 'emerald',
   showLabels = true,
   overlay,
+  showValues = true,
 }: RadarChartProps) {
   const statKeys = sortStatsByCanonicalOrder(Object.keys(stats));
   const totalAxes = Math.max(statKeys.length, 3);
@@ -180,6 +183,7 @@ export function RadarChart({
                 >
                   {abbr}
                 </text>
+{showValues && (
                 <text
                   y="10"
                   textAnchor="middle"
@@ -188,6 +192,7 @@ export function RadarChart({
                 >
                   {val}
                 </text>
+                )}
               </g>
             );
           })}

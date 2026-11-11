@@ -175,17 +175,11 @@ export function PlayerCardFifa({
           ) : (
             <p className="mt-2 text-xs text-slate-500">Nessuna partita archiviata</p>
           )}
-          <div className="flex items-center justify-center gap-2 mt-2">
-            {player.is_guest ? (
-              <span className="text-[10px] font-semibold text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded-full">
-                Ospite
-              </span>
-            ) : (
-              <span className="text-[10px] font-semibold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full">
-                Google Member
-              </span>
-            )}
-          </div>
+          {player.is_guest && (
+            <div className="flex items-center justify-center mt-2">
+              <span className="text-[11px] font-medium text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded-full">Ospite</span>
+            </div>
+          )}
         </div>
 
         {/* Switcher Tab: Radar Ottagonale vs Record Partite */}
@@ -225,6 +219,7 @@ export function PlayerCardFifa({
               size={180}
               color="emerald"
               showLabels={true}
+              showValues={false}
             />
 
             {/* Parametri come barre 1-10 (con la parte dovuta alla forma) */}
@@ -234,29 +229,55 @@ export function PlayerCardFifa({
           </div>
         ) : (
           /* CONTENUTO SCHEDA 2: STATISTICHE DALLE PARTITE ARCHIVIATE (come nel profilo) */
-          <div className="mt-4 grid grid-cols-3 gap-2 text-center animate-in">
-            {(
-              [
-                ['Vinte', matchStats.won, 'text-emerald-300'],
-                ['Pareggiate', matchStats.drawn, 'text-amber-300'],
-                ['Perse', matchStats.lost, 'text-rose-300'],
-                ['Presenze', matchStats.played, 'text-white'],
-                ['Gol', matchStats.goals, 'text-white'],
-                ['MVP', matchStats.mvp, 'text-white'],
-              ] as const
-            ).map(([label, value, color]) => (
-              <div key={label} className="bg-slate-950/70 rounded-xl py-2.5">
-                <span className={`block text-2xl font-bold tabular-nums ${color}`}>{value}</span>
-                <span className="block text-[11px] text-slate-400">{label}</span>
+          matchStats.played === 0 ? (
+            <div className="mt-6 mb-2 text-center space-y-1 animate-in">
+              <p className="text-sm font-semibold text-slate-300">Ancora nessuna partita</p>
+              <p className="text-xs text-slate-500">Le statistiche compaiono dopo la prima partita archiviata.</p>
+            </div>
+          ) : (
+            <div className="mt-4 space-y-4 animate-in">
+              {/* Bilancio: numeri grandi su una riga + barra in proporzione */}
+              <div className="space-y-2">
+                <div className="grid grid-cols-3 text-center">
+                  {(
+                    [
+                      ['Vinte', matchStats.won, 'text-emerald-300'],
+                      ['Pari', matchStats.drawn, 'text-amber-300'],
+                      ['Perse', matchStats.lost, 'text-rose-300'],
+                    ] as const
+                  ).map(([label, value, color]) => (
+                    <div key={label}>
+                      <span className={`block text-3xl font-bold tabular-nums leading-none ${color}`}>{value}</span>
+                      <span className="block text-xs text-slate-400 mt-1">{label}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex h-1.5 overflow-hidden rounded-full bg-slate-800" aria-hidden="true">
+                  <span className="bg-emerald-400" style={{ width: `${(matchStats.won / matchStats.played) * 100}%` }} />
+                  <span className="bg-amber-400" style={{ width: `${(matchStats.drawn / matchStats.played) * 100}%` }} />
+                  <span className="bg-rose-400" style={{ width: `${(matchStats.lost / matchStats.played) * 100}%` }} />
+                </div>
               </div>
-            ))}
-            {matchStats.played > 0 && (
-              <p className="col-span-3 pt-1 text-xs text-slate-400 tabular-nums">
-                {Math.round((matchStats.won / matchStats.played) * 100)}% vittorie ·{' '}
-                {String((matchStats.goals / matchStats.played).toFixed(1)).replace('.', ',')} gol a partita
-              </p>
-            )}
-          </div>
+
+              {/* Dettagli: righe leggere, valore a destra */}
+              <dl className="divide-y divide-slate-800/80 rounded-xl bg-slate-950/50 px-3 text-sm">
+                {(
+                  [
+                    ['Presenze', String(matchStats.played)],
+                    ['Gol', String(matchStats.goals)],
+                    ['MVP', String(matchStats.mvp)],
+                    ['% vittorie', `${Math.round((matchStats.won / matchStats.played) * 100)}%`],
+                    ['Gol a partita', String((matchStats.goals / matchStats.played).toFixed(1)).replace('.', ',')],
+                  ] as const
+                ).map(([label, value]) => (
+                  <div key={label} className="flex items-center justify-between py-2">
+                    <dt className="text-slate-400">{label}</dt>
+                    <dd className="font-semibold text-white tabular-nums">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          )
         )}
       </div>
 
