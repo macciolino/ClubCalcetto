@@ -155,6 +155,7 @@ export const VirtualPitch = forwardRef<HTMLDivElement, VirtualPitchProps>(
           {teamWhite.map((player, idx) => (
             <PlayerSticker
               key={`white-${player.id || idx}`}
+              order={idx}
               player={player}
               team="white"
               pos={keeperLabel(whitePositions[idx] || { x: 50, y: 20, roleLabel: 'CALC' }, idx)}
@@ -163,6 +164,7 @@ export const VirtualPitch = forwardRef<HTMLDivElement, VirtualPitchProps>(
           {teamBlack.map((player, idx) => (
             <PlayerSticker
               key={`black-${player.id || idx}`}
+              order={idx + 5}
               player={player}
               team="black"
               pos={keeperLabel(blackPositions[idx] || { x: 50, y: 75, roleLabel: 'CALC' }, idx)}
@@ -186,10 +188,13 @@ function PlayerSticker({
   player,
   team,
   pos,
+  order = 0,
 }: {
   player: Profile;
   team: 'white' | 'black';
   pos: PlayerPitchPosition;
+  /** Entry order on the pitch (0-9): each sticker comes in a little after the previous one */
+  order?: number;
 }) {
   const ovr = getPlayerOverallRating(player);
   // Senza foto: iniziali di nome e cognome al posto dell'immagine e, sotto, solo il nome
@@ -206,7 +211,10 @@ function PlayerSticker({
       style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
       title={player.full_name}
     >
-      <div className="w-[48px] sm:w-[62px] rounded-[5px] bg-[#fdfaf0] p-[2px] shadow-[0_3px_6px_rgba(0,0,0,0.55)]">
+      <div
+        className="sticker-enter w-[48px] sm:w-[62px] rounded-[5px] bg-[#fdfaf0] p-[2px] shadow-[0_3px_6px_rgba(0,0,0,0.55)]"
+        style={{ animationDelay: `${order * 70}ms`, ['--from-y' as string]: team === 'white' ? '-48px' : '48px' }}
+      >
         {/* Fascia squadra con ruolo e voto */}
         <div
           className={`flex items-center justify-between px-1 rounded-t-[3px] text-[7px] sm:text-[8px] font-black leading-[11px] sm:leading-[13px] ${

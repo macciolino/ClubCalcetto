@@ -78,3 +78,11 @@ description: ClubCalcetto UI conventions - theme, shared components (tables, dro
 - Safe areas (`globals.css`): `pt-safe`, `pb-safe`, `px-safe`, `body-safe-bottom`, `modal-safe`, `sheet-safe-bottom`,
   with viewport-fit=cover. Fixed bars and dialogs must use them.
 - Icons: lucide-react only. No new dependencies.
+
+## Pitch & motion
+- `components/PitchLines.tsx`: football pitch SVG (2:3, grass stripes, areas, arcs, goals) whose lines draw themselves
+  (`.pitch-draw`, `.pitch-dots` in globals.css; `pitch-fast` parent = quicker). Used by the login panel and the splash.
+- `components/SplashScreen.tsx` (in layout): pitch + logo, ~1.3 s, once per session (sessionStorage `cc_splash_seen`),
+  never on /login; the inline `SPLASH_GUARD` script hides it before paint.
+- `VirtualPitch` stickers enter from their own half one after another (`.sticker-enter`, `--from-y`, delay = order × 70 ms).
+- Every animation has a `prefers-reduced-motion` fallback.
