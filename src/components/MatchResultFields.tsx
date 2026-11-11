@@ -98,11 +98,11 @@ export function MatchResultFields({ value, onChange, white, black, mvpVotes = []
 
   return (
     <div className="space-y-4">
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div className="grid grid-cols-2 gap-3 sm:gap-4">
       {/* Risultato */}
-      <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
+      <div className="min-w-0 bg-slate-950 p-3 sm:p-4 rounded-2xl border border-slate-800 space-y-3">
         <h3 className="text-xs font-bold text-slate-300">Risultato finale</h3>
-        <div className="flex items-center justify-around gap-3">
+        <div className="flex items-center justify-around gap-1.5 sm:gap-3">
           <label className="text-center space-y-1">
             <span className="text-xs font-bold text-white block">⚪ Bianchi</span>
             <NumberInput
@@ -110,7 +110,7 @@ export function MatchResultFields({ value, onChange, white, black, mvpVotes = []
               max={50}
               value={value.scoreWhite}
               onValueChange={(v) => set({ scoreWhite: v })}
-              className="w-16 h-14 bg-slate-900 border-2 border-slate-700 text-center text-2xl font-bold text-white rounded-xl focus:border-emerald-500 focus:outline-none"
+              className="w-12 h-12 sm:w-16 sm:h-14 bg-slate-900 border-2 border-slate-700 text-center text-xl sm:text-2xl font-bold text-white rounded-xl focus:border-emerald-500 focus:outline-none"
             />
           </label>
           <span className="text-xl font-bold text-slate-600">-</span>
@@ -121,7 +121,7 @@ export function MatchResultFields({ value, onChange, white, black, mvpVotes = []
               max={50}
               value={value.scoreBlack}
               onValueChange={(v) => set({ scoreBlack: v })}
-              className="w-16 h-14 bg-slate-900 border-2 border-slate-700 text-center text-2xl font-bold text-white rounded-xl focus:border-emerald-500 focus:outline-none"
+              className="w-12 h-12 sm:w-16 sm:h-14 bg-slate-900 border-2 border-slate-700 text-center text-xl sm:text-2xl font-bold text-white rounded-xl focus:border-emerald-500 focus:outline-none"
             />
           </label>
         </div>
@@ -135,14 +135,14 @@ export function MatchResultFields({ value, onChange, white, black, mvpVotes = []
       </div>
 
       {/* MVP */}
-      <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
+      <div className="min-w-0 bg-slate-950 p-3 sm:p-4 rounded-2xl border border-slate-800 space-y-3">
         <h3 className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
           <Star className="h-4 w-4 text-amber-400" /> MVP
         </h3>
         <select
           value={value.mvpPlayerId}
           onChange={(e) => set({ mvpPlayerId: e.target.value })}
-          className="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white text-sm font-semibold focus:outline-none focus:border-amber-400"
+          className="w-full min-w-0 px-2.5 sm:px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white text-sm font-semibold truncate focus:outline-none focus:border-amber-400"
         >
           <option value="">-- Nessun MVP --</option>
           <optgroup label="⚪ Bianchi">
@@ -175,7 +175,7 @@ export function MatchResultFields({ value, onChange, white, black, mvpVotes = []
       </div>
 
       {/* Marcatori: a tutta larghezza, così i nomi si leggono interi */}
-      <div className="sm:col-span-2 bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
+      <div className="col-span-2 bg-slate-950 p-3 sm:p-4 rounded-2xl border border-slate-800 space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-bold text-slate-300">Marcatori</h3>
           <span className={`text-xs font-mono font-bold ${error ? 'text-rose-400' : 'text-slate-400'}`}>
