@@ -1,8 +1,8 @@
 'use client';
 
+import { markJustSignedIn } from '@/components/SplashScreen';
 import { BrandLogo } from '@/components/BrandLogo';
 import { PitchLines } from '@/components/PitchLines';
-import { SHOW_SPLASH_EVENT } from '@/components/SplashScreen';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -77,9 +77,8 @@ export default function LoginPage() {
   const router = useRouter();
   useEffect(() => {
     if (mounted && user && profile && isEmailVerified) {
+      // L'animazione dopo il login la avvia il caricamento della Home (markJustSignedIn in AuthContext)
       router.replace('/');
-      // Entrando nell'app dopo il login: animazione del campo
-      setTimeout(() => window.dispatchEvent(new Event(SHOW_SPLASH_EVENT)), 0);
     }
   }, [mounted, user, profile, isEmailVerified, router]);
 
@@ -177,7 +176,8 @@ export default function LoginPage() {
     try {
       const verified = await checkEmailVerification();
       if (verified) {
-        window.location.href = '/';
+        markJustSignedIn();
+      window.location.href = '/';
       } else {
         setErrorMessage('L\'email non risulta ancora verificata. Clicca sul link che hai ricevuto via email.');
       }

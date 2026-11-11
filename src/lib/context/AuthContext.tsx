@@ -1,5 +1,6 @@
 'use client';
 
+import { markJustSignedIn } from '@/components/SplashScreen';
 import { notify } from '@/components/ui/Feedback';
 
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
@@ -280,6 +281,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const result = await signInWithPopup(firebaseAuth, googleProvider);
       setUser(result.user);
       await syncProfile(result.user);
+      markJustSignedIn();
       window.location.href = '/';
     } finally {
       setIsLoading(false);
@@ -321,6 +323,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const cred = await signInWithEmailAndPassword(firebaseAuth, email.trim(), pass);
       setUser(cred.user);
       await syncProfile(cred.user);
+      markJustSignedIn();
       window.location.href = '/';
     } finally {
       setIsLoading(false);
