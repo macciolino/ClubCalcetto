@@ -333,9 +333,9 @@ export default function GiocatoriPage() {
             </button>
           ))}
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div className="flex flex-nowrap items-center justify-between gap-2 text-xs">
           {viewMode === 'cards' ? (
-            <label className="flex items-center gap-2 text-slate-400">
+            <label className="flex items-center gap-2 text-slate-400 min-w-0 whitespace-nowrap">
               Ordina per
               <select
                 value={sortBy}
@@ -357,9 +357,9 @@ export default function GiocatoriPage() {
             <button
               type="button"
               onClick={() => setCompareOpen(true)}
-              className="ml-auto px-3 py-1.5 rounded-lg font-semibold border border-slate-700 text-slate-200 hover:bg-slate-800"
+              className="ml-auto flex-shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg font-semibold border border-slate-700 text-slate-200 hover:bg-slate-800"
             >
-              Confronta due giocatori
+              Confronta<span className="hidden sm:inline"> due giocatori</span>
             </button>
           )}
         </div>

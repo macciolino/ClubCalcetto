@@ -137,3 +137,12 @@ body {
     animation: none !important;
   }
 }
+
+/* Righe a scorrimento orizzontale (pillole, filtri): si scorrono col dito, senza barra visibile */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
