@@ -9,12 +9,12 @@ export function proxy(request: NextRequest) {
   // 1. ISOLAMENTO RIGIDO /admin:
   // Se la route richiesta è /admin o qualsiasi sotto-percorso di /admin,
   // controlla il cookie 'user_role'. Se non è presente o non è strettamente 'admin',
-  // blocca immediatamente la richiesta ed esegui un redirect forzato a /presenze.
+  // blocca immediatamente la richiesta ed esegui un redirect forzato alla Home.
   if (pathname.startsWith('/admin')) {
     const userRole = request.cookies.get('user_role')?.value;
     if (userRole !== 'admin') {
       const redirectUrl = request.nextUrl.clone();
-      redirectUrl.pathname = '/presenze';
+      redirectUrl.pathname = '/';
       return NextResponse.redirect(redirectUrl);
     }
     return NextResponse.next();

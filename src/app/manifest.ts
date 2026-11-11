@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'Club Soccer',
     short_name: 'Club Soccer',
     description: 'Presenze, squadre bilanciate e statistiche del calcetto.',
-    start_url: '/presenze',
+    start_url: '/',
     scope: '/',
     display: 'standalone',
     background_color: '#0B0F19',

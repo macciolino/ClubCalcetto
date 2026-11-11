@@ -165,7 +165,7 @@ export default function LoginPage() {
     try {
       const verified = await checkEmailVerification();
       if (verified) {
-        window.location.href = '/presenze';
+        window.location.href = '/';
       } else {
         setErrorMessage('L\'email non risulta ancora verificata. Clicca sul link che hai ricevuto via email.');
       }

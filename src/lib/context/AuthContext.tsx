@@ -280,7 +280,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const result = await signInWithPopup(firebaseAuth, googleProvider);
       setUser(result.user);
       await syncProfile(result.user);
-      window.location.href = '/presenze';
+      window.location.href = '/';
     } finally {
       setIsLoading(false);
     }
@@ -321,7 +321,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const cred = await signInWithEmailAndPassword(firebaseAuth, email.trim(), pass);
       setUser(cred.user);
       await syncProfile(cred.user);
-      window.location.href = '/presenze';
+      window.location.href = '/';
     } finally {
       setIsLoading(false);
     }
