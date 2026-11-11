@@ -23,7 +23,7 @@ Checks: `npx tsc --noEmit -p .`, `npx next build`, `npm run test:rules` (Firesto
 
 | Route | Page | Notes |
 |---|---|---|
-| `/` | Home "Prossima partita" | official match date: when/where/cost, own status with "Ci sono"/"Ritirati", ring + places, own team, shortcuts. After login users land here |
+| `/` | Home "Prossima partita" | dynamic header ("Ciao Nome" + status title + detail + optional action link; `head` in page.tsx, first true condition wins: archived → MVP vote open → played not archived → no match → confirmed → teams ready → 10/10 → closed → open), match card (when/where/cost, "Ci sono"/"Ritirati", ring, own team); right column on lg (below on phone): "Il tuo rendimento" + "Ultima partita". No shortcut boxes (they duplicated the nav) and no admin note. After login users land here |
 | `/presenze` | Sign-ups | day strip + `PresenceCard`; admin: opens next week, adds/removes players, forces starter/waitlist (arrows), "Azzera presenze del giorno"; "Primo a 10" badge |
 | `/giocatori` | Players: leaders row (Capocannoniere, Più MVP, Più presenze, In forma → tap sorts the cards), role filters, "Confronta" (`PlayerCompare`) |
 | `/giocatori` (cont.) | Players | card view (`PlayerCardFifa`, tabs radar / Statistiche) or table view (players see only name, role column and OVR; admins also V-P-S and parameters); admin edit via `PlayerModal` |

@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/context/AuthContext';
-import { GeneratedTeamRecord, Match, Presence, Profile, SportField } from '@/types/database';
+import { GeneratedTeamRecord, Match, MvpVote, Presence, Profile, SportField } from '@/types/database';
 import {
   joinPresence,
   leavePresence,
@@ -11,6 +11,8 @@ import {
   subscribeCalendarSettings,
   subscribeGeneratedTeams,
   subscribeMatch,
+  subscribeMatches,
+  subscribeMvpVotes,
   subscribeOfficialMatchDate,
   subscribePresences,
   subscribeProfiles,
@@ -19,12 +21,31 @@ import { subscribeSportFields } from '@/lib/services/fieldService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { getOfficialMatchDate, isTimelockActive } from '@/lib/services/presenceService';
 import { formatItalianDate, isDateOpenForPlayers, toDateString } from '@/lib/utils/dateUtils';
-import { effectiveMatchCost, effectiveMatchLocation, effectiveMatchTime } from '@/lib/utils/matchUtils';
+import { effectiveMatchCost, effectiveMatchLocation, effectiveMatchTime, mvpVotingWindow } from '@/lib/utils/matchUtils';
+import { computeMatchStats, computeRecentResults } from '@/lib/utils/statUtils';
+import { useForms } from '@/lib/hooks/useForms';
+import { formatForm } from '@/lib/utils/formUtils';
 import { reconcileTeams } from '@/lib/utils/teamUtils';
 import { CountRing } from '@/components/PresenceCard';
 import { PageSkeleton } from '@/components/ui/Skeleton';
 import { notify } from '@/components/ui/Feedback';
-import { ArrowRight, CalendarDays, Check, Clock, History, Lock, MapPin, Trophy, Users } from 'lucide-react';
+import { ArrowRight, Check, Clock, Lock, MapPin } from 'lucide-react';
+
+/** "oggi", "domani", the weekday within a week ("mercoledì"), otherwise "mer 18 nov". */
+function dayLabel(date: string, today: string): string {
+  const [y, m, d] = date.split('-').map(Number);
+  const [ty, tm, td] = today.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  const diff = Math.round((dt.getTime() - new Date(ty, tm - 1, td).getTime()) / 86400000);
+  if (diff === 0) return 'oggi';
+  if (diff === 1) return 'domani';
+  if (diff > 1 && diff < 7) return dt.toLocaleDateString('it-IT', { weekday: 'long' });
+  return shortDate(date);
+}
+function shortDate(date: string): string {
+  const [y, m, d] = date.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '');
+}
 
 /**
  * Home: "Prossima partita". The first thing a player wants to know: when and where, whether they play,
@@ -41,6 +62,14 @@ export default function HomePage() {
   const [standard, setStandard] = useState<{ cost?: number; time?: string; fieldId?: string }>({});
   const [openUntil, setOpenUntil] = useState('');
   const [busy, setBusy] = useState(false);
+  const [completedMatches, setCompletedMatches] = useState<Match[]>([]);
+  const [votes, setVotes] = useState<MvpVote[]>([]);
+  const { forms } = useForms();
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(t);
+  }, []);
 
   useEffect(() => {
     if (!isFirebaseConfigured) return;
@@ -52,6 +81,7 @@ export default function HomePage() {
         setStandard({ cost: s.standard_total_cost, time: s.standard_match_time, fieldId: s.default_field_id })
       ),
       subscribeCalendarSettings((cal) => setOpenUntil(cal.open_until || '')),
+      subscribeMatches((list) => setCompletedMatches(list.filter((m) => m.status === 'completed'))),
     ];
     return () => unsubs.forEach((u) => u());
   }, []);
@@ -63,6 +93,7 @@ export default function HomePage() {
       subscribePresences(date, (list) => setPresences(list)),
       subscribeMatch(date, (m) => setMatch(m)),
       subscribeGeneratedTeams(date, (r) => setTeamRecord(r)),
+      subscribeMvpVotes(date, (v) => setVotes(v)),
     ];
     return () => unsubs.forEach((u) => u());
   }, [date]);
@@ -88,6 +119,14 @@ export default function HomePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamRecord, match, starters, profiles]);
   const myTeam = profile && teams ? (teams.white.some((p) => p.id === profile.id) ? 'white' : teams.black.some((p) => p.id === profile.id) ? 'black' : null) : null;
+
+  // Rendimento personale e ultima partita archiviata
+  const myStats = useMemo(() => (profile ? computeMatchStats(completedMatches).get(profile.id) : undefined), [completedMatches, profile]);
+  const myRecent = useMemo(() => (profile ? computeRecentResults(completedMatches).get(profile.id) || [] : []), [completedMatches, profile]);
+  const lastMatch = useMemo(
+    () => [...completedMatches].sort((a, b) => (b.match_date || b.id).localeCompare(a.match_date || a.id))[0],
+    [completedMatches]
+  );
 
   const handleToggle = async () => {
     if (!profile) return;
@@ -115,13 +154,97 @@ export default function HomePage() {
   const location = effectiveMatchLocation(match, fields, standard.fieldId);
   const cost = effectiveMatchCost(match, standard.cost);
 
+  // Intestazione: stato della partita in una frase (la prima condizione vera vince)
+  const day = dayLabel(date, today);
+  const isArchived = match?.status === 'completed';
+  const { opensAt, closesAt } = mvpVotingWindow(date, time);
+  const voteOpen = !isArchived && now >= opensAt.getTime() && now < closesAt.getTime();
+  const hasVoted = votes.some((v) => v.voter_id === user.uid);
+  const playedRecently = date < today && date >= toDateString(new Date(Date.now() - 7 * 86400000));
+  const closedForPlayers = !isDateOpenForPlayers(date, openUntil);
+  const amStarter = myStarterIdx >= 0;
+  const closesLabel = `${closesAt.toDateString() === new Date(now).toDateString() ? 'oggi' : 'domani'} alle ${closesAt
+    .toTimeString()
+    .slice(0, 5)}`;
+  type Head = { title: string; detail: string; action?: { href: string; label: string } };
+  const head: Head = (() => {
+    const squadre = `/squadre?date=${date}`;
+    if (isArchived)
+      return { title: `Partita del ${shortDate(date)} conclusa`, detail: 'Risultato, marcatori e MVP sono nello Storico.', action: { href: '/history', label: 'Vai allo Storico' } };
+    if (voteOpen)
+      return hasVoted
+        ? { title: 'Votazione MVP aperta', detail: `Hai già votato. Si chiude ${closesLabel}.` }
+        : { title: 'Votazione MVP aperta', detail: `Hai tempo fino a ${closesLabel} per votare.`, action: { href: squadre, label: 'Vota l’MVP' } };
+    if (playedRecently)
+      return {
+        title: `Partita del ${shortDate(date)} giocata`,
+        detail: 'Il risultato sarà pubblicato a breve.',
+        action: admin ? { href: '/impostazioni?sezione=partita', label: 'Chiudi la partita' } : undefined,
+      };
+    if (!hasMatch)
+      return {
+        title: 'Nessuna partita in programma',
+        detail: 'Il calendario delle presenze si apre a breve.',
+        action: admin ? { href: '/presenze', label: 'Apri le iscrizioni' } : undefined,
+      };
+    if (teamRecord?.confirmed)
+      return amStarter
+        ? {
+            title: `Si gioca ${day} alle ${time}`,
+            detail: `Partita confermata${myTeam === 'white' ? ' · Giochi con i Bianchi.' : myTeam === 'black' ? ' · Giochi con i Neri.' : '.'}`,
+          }
+        : {
+            title: `Partita confermata per ${day}`,
+            detail: mine ? `Sei in lista d’attesa (n° ${myWaitIdx + 1}).` : 'Rosa completa: puoi entrare in lista d’attesa.',
+          };
+    if (teamRecord)
+      return {
+        title: `Squadre pronte per ${day}`,
+        detail: admin ? 'Controlla le squadre e conferma la partita.' : 'In attesa della conferma.',
+        action: admin ? { href: squadre, label: 'Conferma la partita' } : undefined,
+      };
+    if (isFull)
+      return amStarter
+        ? {
+            title: `Rosa al completo per ${day}`,
+            detail: 'Le squadre saranno pubblicate a breve.',
+            action: admin ? { href: squadre, label: 'Genera le squadre' } : undefined,
+          }
+        : {
+            title: `Posti esauriti per ${day}`,
+            detail: mine ? `Sei in lista d’attesa (n° ${myWaitIdx + 1}).` : 'Puoi entrare in lista d’attesa.',
+            action: admin ? { href: squadre, label: 'Genera le squadre' } : undefined,
+          };
+    if (closedForPlayers)
+      return {
+        title: 'Iscrizioni non ancora aperte',
+        detail: admin ? 'I giocatori non possono ancora iscriversi.' : `La partita di ${day} sarà disponibile a breve.`,
+        action: admin ? { href: '/presenze', label: 'Apri la settimana' } : undefined,
+      };
+    const missing = 10 - starters.length;
+    return mine
+      ? { title: `Sei iscritto per ${day}`, detail: `Siamo ${starters.length} su 10: ${missing === 1 ? 'manca 1 giocatore' : `mancano ${missing} giocatori`}.` }
+      : { title: `Iscrizioni aperte per ${day}`, detail: `Siamo ${starters.length} su 10. Conferma la tua presenza.` };
+  })();
+
   return (
     <div className="space-y-8 pb-12 animate-in">
       <header className="space-y-1.5">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Ciao {firstName}</h1>
-        <p className="text-sm text-slate-400">{hasMatch ? 'Ecco la prossima partita.' : 'Nessuna partita in programma per ora.'}</p>
+        <p className="text-sm text-slate-400">Ciao {firstName}</p>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white first-letter:uppercase">{presences === null ? '\u00a0' : head.title}</h1>
+        <p className="text-sm text-slate-300">{presences === null ? '\u00a0' : head.detail}</p>
+        {presences !== null && head.action && (
+          <Link
+            href={head.action.href}
+            className="inline-flex items-center gap-1.5 pt-1 text-sm font-semibold text-emerald-300 hover:text-emerald-200"
+          >
+            {head.action.label} <ArrowRight className="h-4 w-4" />
+          </Link>
+        )}
       </header>
 
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+      <div className="lg:col-span-2">
       {hasMatch ? (
         <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 space-y-6" aria-labelledby="next-match">
           {/* Quando e dove */}
@@ -228,32 +351,84 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* Scorciatoie */}
-      <nav aria-label="Scorciatoie" className="grid grid-cols-3 gap-3">
-        {[
-          { href: '/presenze', label: 'Presenze', hint: 'Tutti i giorni', icon: CalendarDays },
-          { href: `/squadre?date=${date}`, label: 'Squadre', hint: 'Campo e voto MVP', icon: Trophy },
-          { href: '/history', label: 'Storico', hint: 'Classifica', icon: History },
-        ].map((l) => {
-          const Icon = l.icon;
-          return (
-            <Link
-              key={l.label}
-              href={l.href}
-              className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-4 flex flex-col gap-2 transition-colors"
-            >
-              <Icon className="h-5 w-5 text-emerald-400" />
-              <span className="text-sm font-semibold text-white">{l.label}</span>
-              <span className="text-xs text-slate-400 hidden sm:block">{l.hint}</span>
+      </div>
+
+      {/* Colonna destra (sotto su telefono): rendimento personale e ultima partita */}
+      <aside className="space-y-4">
+        <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4" aria-labelledby="my-form">
+          <h2 id="my-form" className="text-base font-semibold text-white">Il tuo rendimento</h2>
+          {myStats && myStats.played > 0 ? (
+            <>
+              <div className="grid grid-cols-3 text-center">
+                {(
+                  [
+                    ['Partite', myStats.played],
+                    ['Gol', myStats.goals],
+                    ['MVP', myStats.mvp],
+                  ] as const
+                ).map(([label, v]) => (
+                  <div key={label}>
+                    <span className="block text-2xl font-bold text-white tabular-nums leading-none">{v}</span>
+                    <span className="block text-xs text-slate-400 mt-1">{label}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center justify-between gap-3 text-sm pt-3 border-t border-slate-800">
+                <span className="flex items-center gap-1.5" aria-label="Ultime partite">
+                  <span className="text-xs text-slate-400 mr-1">Ultime</span>
+                  {myRecent.map((r, i) => (
+                    <span
+                      key={i}
+                      title={r === 'won' ? 'Vinta' : r === 'drawn' ? 'Pareggiata' : 'Persa'}
+                      className={`h-2.5 w-2.5 rounded-full ${r === 'won' ? 'bg-emerald-400' : r === 'drawn' ? 'bg-slate-500' : 'bg-rose-400'}`}
+                    />
+                  ))}
+                </span>
+                {forms.get(profile.id) ? (
+                  <span className={`text-xs font-semibold ${(forms.get(profile.id) || 0) > 0 ? 'text-orange-300' : 'text-sky-300'}`}>
+                    Forma {(forms.get(profile.id) || 0) > 0 ? '🔥' : '❄️'} {formatForm(forms.get(profile.id) || 0)}
+                  </span>
+                ) : null}
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-slate-400">Le tue statistiche compaiono dopo la prima partita archiviata.</p>
+          )}
+        </section>
+
+        {lastMatch && (
+          <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3" aria-labelledby="last-match">
+            <div className="flex items-baseline justify-between gap-2">
+              <h2 id="last-match" className="text-base font-semibold text-white">Ultima partita</h2>
+              <span className="text-xs text-slate-400 capitalize">{shortDate(lastMatch.match_date || lastMatch.id)}</span>
+            </div>
+            <div className="flex items-center justify-center gap-4 py-1">
+              <span className="text-sm text-slate-300">Bianchi</span>
+              <span className="text-2xl font-bold text-white tabular-nums">
+                {lastMatch.score_white ?? 0} – {lastMatch.score_black ?? 0}
+              </span>
+              <span className="text-sm text-slate-300">Neri</span>
+            </div>
+            {(() => {
+              const inWhite = lastMatch.team_white?.some((p) => p.id === profile.id);
+              const inBlack = lastMatch.team_black?.some((p) => p.id === profile.id);
+              const w = lastMatch.score_white ?? 0;
+              const b = lastMatch.score_black ?? 0;
+              const mineRes = !inWhite && !inBlack ? null : w === b ? 'Pareggiata' : (inWhite ? w > b : b > w) ? 'Vinta' : 'Persa';
+              return (
+                <p className="text-sm text-slate-400 text-center">
+                  {lastMatch.mvp_player_id ? <>MVP <span className="text-white font-medium">{nameOf(lastMatch.mvp_player_id)}</span></> : 'MVP non assegnato'}
+                  {mineRes && <> · La tua: <span className={mineRes === 'Vinta' ? 'text-emerald-300' : mineRes === 'Persa' ? 'text-rose-300' : 'text-slate-300'}>{mineRes.toLowerCase()}</span></>}
+                </p>
+              );
+            })()}
+            <Link href="/history" className="flex items-center justify-center gap-1.5 text-sm font-semibold text-emerald-300 hover:text-emerald-200 pt-1">
+              Vai allo Storico <ArrowRight className="h-4 w-4" />
             </Link>
-          );
-        })}
-      </nav>
-      {admin && (
-        <p className="text-xs text-slate-400 flex items-center gap-1.5">
-          <Users className="h-3.5 w-3.5" /> Sei admin: il giorno ufficiale si sceglie in Presenze o in Impostazioni → Partita della settimana (menu della tua icona in alto a destra).
-        </p>
-      )}
+          </section>
+        )}
+      </aside>
+      </div>
     </div>
   );
 }
