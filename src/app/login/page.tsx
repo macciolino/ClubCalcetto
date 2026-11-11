@@ -210,12 +210,12 @@ export default function LoginPage() {
   return (
     <div className="fixed inset-0 z-10 overflow-y-auto overscroll-contain bg-slate-950">
       {/* Telefono e tablet: il campo a tutto schermo, molto tenue, dietro al form */}
-      <div className="lg:hidden fixed inset-0 pointer-events-none" aria-hidden="true">
+      <div className="pitch-static lg:hidden fixed inset-0 pointer-events-none" aria-hidden="true">
         <PitchLines className="h-full w-full" lineClass="text-emerald-400/15" grass={false} height={pitchH} fit="slice" />
       </div>
       <div className="relative min-h-full max-w-6xl mx-auto grid lg:grid-cols-2 gap-10 items-center px-4 sm:px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] animate-in">
       {/* Lato sinistro (solo schermi grandi): un campo da calcio visto dall'alto, con le linee che si disegnano */}
-      <section className="pitch-static hidden lg:block relative h-[calc(100dvh-3rem)] max-h-[880px] aspect-[2/3] justify-self-center rounded-3xl overflow-hidden border border-slate-800 bg-slate-900">
+      <section className="hidden lg:block relative h-[calc(100dvh-3rem)] max-h-[880px] aspect-[2/3] justify-self-center rounded-3xl overflow-hidden border border-slate-800 bg-slate-900">
         <PitchLines className="absolute inset-0 h-full w-full" />
         <div className="absolute -top-24 left-1/2 -translate-x-1/2 h-72 w-72 rounded-full bg-emerald-500/15 blur-3xl pointer-events-none" aria-hidden="true" />
 

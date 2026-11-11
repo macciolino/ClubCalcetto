@@ -232,7 +232,7 @@ html.login-lock body {
   }
 }
 
-/* Campo già disegnato, senza animazione (pannello del login su PC) */
+/* Campo già disegnato, senza animazione (sfondo del login su telefono) */
 .pitch-static .pitch-draw > * {
   animation: none !important;
   stroke-dashoffset: 0;
