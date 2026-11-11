@@ -17,7 +17,7 @@ import {
   reload,
   User as FirebaseUser,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 
 /**
  * SECURITY MODEL
@@ -363,7 +363,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!window.location.pathname.startsWith('/login')) window.location.href = '/login?expired=1';
   };
 
+  // Logout: esce da TUTTI i dispositivi (il server revoca le sessioni e lo segnala agli altri, che tornano al login)
   const signOut = async () => {
+    try {
+      const current = isFirebaseConfigured ? firebaseAuth.currentUser : null;
+      if (current) {
+        const token = await current.getIdToken();
+        await Promise.race([
+          fetch('/api/account/signout-all', { method: 'POST', headers: { Authorization: `Bearer ${token}` } }),
+          new Promise((resolve) => setTimeout(resolve, 4000)),
+        ]);
+      }
+    } catch (e) {
+      console.warn('Logout da tutti i dispositivi non riuscito:', e);
+    }
     try {
       if (isFirebaseConfigured) await firebaseSignOut(firebaseAuth);
     } catch (e) {
@@ -372,8 +385,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     setProfile(null);
     setRoutingCookies(null);
-    window.location.href = '/login';
+    window.location.href = '/login?signedout=1';
   };
+
+  // Logout fatto da un altro dispositivo: se è successo dopo il nostro accesso, si esce subito e si torna al login
+  useEffect(() => {
+    if (!isFirebaseConfigured || !user) return;
+    let signedInAt = 0;
+    let stopped = false;
+    user
+      .getIdTokenResult()
+      .then((r) => (signedInAt = Date.parse(r.authTime) || 0))
+      .catch(() => undefined);
+    const unsub = onSnapshot(
+      doc(db, 'profiles', profileDocIdFor(user)),
+      async (snap) => {
+        const revokedAt = Number(snap.data()?.sessions_revoked_at || 0);
+        if (stopped || !revokedAt || !signedInAt || revokedAt <= signedInAt) return;
+        stopped = true;
+        try {
+          await firebaseSignOut(firebaseAuth);
+        } catch {
+          /* già uscito */
+        }
+        setUser(null);
+        setProfile(null);
+        setRoutingCookies(null);
+        if (!window.location.pathname.startsWith('/login')) window.location.href = '/login?signedout=1';
+      },
+      () => undefined
+    );
+    return () => {
+      stopped = true;
+      unsub();
+    };
+  }, [user]);
 
   const refreshProfile = async () => {
     if (firebaseAuth.currentUser) {

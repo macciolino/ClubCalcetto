@@ -58,3 +58,9 @@ Production data is REAL: never rewrite stats, no paid services, never print secr
   a NEW uid, so parameters, W/D/L and the link to old matches are lost.
 - The player chooses between the two in the profile (reason required, saved in `account_feedback`). The super admin's trash
   on an active registered account deactivates it; deleting for good is done from the "Disattivati" list. Guests are simply deleted.
+
+## Logout = every device
+- `signOut()` (AuthContext) calls `POST /api/account/signout-all` (Bearer idToken): the server revokes the Firebase
+  refresh tokens (`revokeRefreshTokens`) and writes `profiles/{id}.sessions_revoked_at` (ms, admin SDK, no rule change).
+- Every open device listens to its own profile: if `sessions_revoked_at` > its sign-in time (`authTime`), it signs out
+  and goes to `/login?signedout=1` ("Sei uscito da tutti i dispositivi."). A new login afterwards is not affected.

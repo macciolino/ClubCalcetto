@@ -123,6 +123,8 @@ export interface Profile {
   is_guest: boolean;
   /** Account deactivated (login blocked, hidden everywhere, data kept): set only by the server. Empty = active. */
   deactivated_at?: string;
+  /** Logout from every device: sessions started before this time (ms) are closed */
+  sessions_revoked_at?: number;
   deactivated_by?: 'self' | 'super_admin';
   stats: Record<string, number>;
   overall_rating: number;

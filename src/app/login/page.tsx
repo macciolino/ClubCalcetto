@@ -63,6 +63,9 @@ export default function LoginPage() {
     if (new URLSearchParams(window.location.search).get('expired') === '1') {
       setErrorMessage('La sessione è scaduta (dura 30 giorni): accedi di nuovo con Google.');
     }
+    if (new URLSearchParams(window.location.search).get('signedout') === '1') {
+      setSuccessMessage('Sei uscito da tutti i dispositivi.');
+    }
   }, []);
   const [successMessage, setSuccessMessage] = useState('');
   const [isCheckingVerification, setIsCheckingVerification] = useState(false);
