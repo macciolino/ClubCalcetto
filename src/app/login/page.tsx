@@ -1,7 +1,7 @@
 'use client';
 
 import { BrandLogo } from '@/components/BrandLogo';
-import { PitchLines, useScreenPitchHeight } from '@/components/PitchLines';
+import { PitchLines } from '@/components/PitchLines';
 import { SHOW_SPLASH_EVENT } from '@/components/SplashScreen';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -53,7 +53,6 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = useState('');
   // Arrivo dal logout automatico (sessione di 30 giorni scaduta)
   // Il login occupa esattamente lo schermo: niente scroll della pagina sotto
-  const pitchH = useScreenPitchHeight();
   useEffect(() => {
     document.documentElement.classList.add('login-lock');
     return () => document.documentElement.classList.remove('login-lock');
@@ -209,10 +208,6 @@ export default function LoginPage() {
 
   return (
     <div className="fixed inset-0 z-10 overflow-y-auto overscroll-contain bg-slate-950">
-      {/* Telefono e tablet: il campo a tutto schermo, molto tenue, dietro al form */}
-      <div className="pitch-static lg:hidden fixed inset-0 pointer-events-none" aria-hidden="true">
-        <PitchLines className="h-full w-full" lineClass="text-emerald-400/15" grass={false} height={pitchH} fit="slice" />
-      </div>
       <div className="relative min-h-full max-w-6xl mx-auto grid lg:grid-cols-2 gap-10 items-center px-4 sm:px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] animate-in">
       {/* Lato sinistro (solo schermi grandi): un campo da calcio visto dall'alto, con le linee che si disegnano */}
       <section className="hidden lg:block relative h-[calc(100dvh-3rem)] max-h-[880px] aspect-[2/3] justify-self-center rounded-3xl overflow-hidden border border-slate-800 bg-slate-900">
