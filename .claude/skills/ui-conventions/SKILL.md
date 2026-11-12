@@ -88,7 +88,8 @@ description: ClubCalcetto UI conventions - theme, shared components (tables, dro
   Never on /login (whose PC panel has its own animated pitch). Inline `SPLASH_GUARD` decides before paint.
 - `VirtualPitch` stickers enter from their own half one after another (`.sticker-enter`, `--from-y`, delay = order × 70 ms).
 - Every animation has a `prefers-reduced-motion` fallback.
-- Form tracker "Ultime 5" = `components/FormDots.tsx` (Home "Il tuo rendimento" and `PlayerCardFifa`): ALWAYS 5 dots for the
+- Form tracker "Ultime 5" = `components/FormDots.tsx` (size `sm` 8px in lists AND Home, `md` 10px in the player detail;
+  `interactive={false}` inside clickable cards) (Home "Il tuo rendimento" and `PlayerCardFifa`): ALWAYS 5 dots for the
   club's last 5 archived matches (`lastCompletedMatches`, oldest → newest on the right): green won, amber drawn,
   red-500 lost, slate-700 absent or no match yet; tap/hover → tooltip "Vinta 6-4 · 11 nov". Do not hand-roll dots.
 
@@ -102,3 +103,7 @@ description: ClubCalcetto UI conventions - theme, shared components (tables, dro
 - Breakpoint for desktop vs mobile layouts: `lg` (1024px) (e.g. Giocatori table vs dense list).
 - Role badges: `POSITION_BADGE` in `lib/utils/playerUtils.ts` (POR sky, DIF indigo, EST teal, PUN orange; never green/amber/red,
   which are reserved for won/drawn/lost and starter/waiting).
+- OVR: always `ovrDisplay(overall, form)` (×10) coloured with `ovrTone()` (80+ emerald-400, 70-79 white, < 70 slate-400),
+  everywhere it appears (cards, lists, table, detail). No "OVR" label repeated on each card.
+- Lists of items (player cards, list rows) have NO border: surface `bg-slate-900` + hover `bg-slate-800/80`.
+  Borders only on inputs/selects. Details open in a `Sheet`, never inline (no grid holes).

@@ -51,12 +51,31 @@ const DOT: Record<Slot['kind'], string> = {
   empty: 'bg-slate-700', // #334155, come le assenze
 };
 
+/** True when the player played at least one of the given matches. */
+export function playedAny(playerId: string, matches: Match[]): boolean {
+  return matches.some((m) => m.team_white?.some((p) => p.id === playerId) || m.team_black?.some((p) => p.id === playerId));
+}
+
 /**
  * Form tracker: always 5 dots for the club's last 5 archived matches (oldest → newest).
  * Green won, amber drawn, red lost, dark grey = absent or no match yet.
- * Tap or hover a dot for a short summary ("Vinta 6-4 · 11 nov").
+ * size 'sm' (8px, lists and Home) or 'md' (10px, player detail).
+ * interactive (default): tap or hover a dot for a short summary ("Vinta 6-4 · 11 nov");
+ * interactive={false}: plain dots, for use inside a clickable card.
  */
-export function FormDots({ playerId, matches, className = '' }: { playerId: string; matches: Match[]; className?: string }) {
+export function FormDots({
+  playerId,
+  matches,
+  className = '',
+  size = 'sm',
+  interactive = true,
+}: {
+  playerId: string;
+  matches: Match[];
+  className?: string;
+  size?: 'sm' | 'md';
+  interactive?: boolean;
+}) {
   const slots = slotsFor(playerId, matches.slice(-FORM_SLOTS));
   const [open, setOpen] = useState<number | null>(null);
 
@@ -66,8 +85,20 @@ export function FormDots({ playerId, matches, className = '' }: { playerId: stri
     return () => clearTimeout(t);
   }, [open]);
 
+  const dot = size === 'md' ? 'h-2.5 w-2.5' : 'h-2 w-2';
+
+  if (!interactive) {
+    return (
+      <span className={`inline-flex items-center gap-1 ${className}`} role="img" aria-label={`Ultime 5: ${slots.map((s) => s.label).join('; ')}`}>
+        {slots.map((s, i) => (
+          <span key={i} className={`block rounded-full ${dot} ${DOT[s.kind]}`} />
+        ))}
+      </span>
+    );
+  }
+
   return (
-    <span className={`inline-flex items-center gap-0.5 ${className}`} role="list" aria-label="Ultime 5 partite">
+    <span className={`inline-flex items-center ${size === 'md' ? 'gap-0.5' : 'gap-0'} ${className}`} role="list" aria-label="Ultime 5 partite">
       {slots.map((s, i) => (
         <span key={i} role="listitem" className="relative">
           <button
@@ -81,7 +112,7 @@ export function FormDots({ playerId, matches, className = '' }: { playerId: stri
             onMouseLeave={() => setOpen((o) => (o === i ? null : o))}
             className="p-1 -m-0.5 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
           >
-            <span className={`block h-2.5 w-2.5 rounded-full ${DOT[s.kind]}`} />
+            <span className={`block rounded-full ${dot} ${DOT[s.kind]}`} />
           </button>
           {open === i && (
             <span

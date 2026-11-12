@@ -388,7 +388,7 @@ export default function HomePage() {
               <div className="flex items-center justify-between gap-3 text-sm pt-3 border-t border-slate-800">
                 <span className="flex items-center gap-2">
                   <span className="text-xs text-slate-400">Ultime 5</span>
-                  <FormDots playerId={profile.id} matches={recentMatches} />
+                  <FormDots playerId={profile.id} matches={recentMatches} size="sm" />
                 </span>
                 {forms.get(profile.id) ? (
                   <span className={`text-xs font-semibold ${(forms.get(profile.id) || 0) > 0 ? 'text-orange-300' : 'text-sky-300'}`}>

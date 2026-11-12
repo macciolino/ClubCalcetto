@@ -22,3 +22,13 @@ export const POSITION_BADGE: Record<string, string> = {
   Esterno: 'bg-teal-500/15 text-teal-300',
   Punta: 'bg-orange-500/15 text-orange-300',
 };
+
+/** OVR shown FIFA-style (7.9 → 79), with the "Stato forma" bonus, between 10 and 100. */
+export function ovrDisplay(overall: number | undefined, form = 0): number {
+  return Math.round(Math.max(1, Math.min(10, (Number(overall) || 6) + form)) * 10);
+}
+
+/** OVR colour by band, the same everywhere: 80+ green, 70-79 white, under 70 grey. */
+export function ovrTone(ovr: number): string {
+  return ovr >= 80 ? 'text-emerald-400' : ovr >= 70 ? 'text-white' : 'text-slate-400';
+}

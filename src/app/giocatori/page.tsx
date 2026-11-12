@@ -1,6 +1,6 @@
 'use client';
 
-import { initialsOf, uploadedPhoto, POSITION_BADGE } from '@/lib/utils/playerUtils';
+import { initialsOf, uploadedPhoto, POSITION_BADGE, ovrDisplay, ovrTone } from '@/lib/utils/playerUtils';
 import { notify, askConfirm } from '@/components/ui/Feedback';
 
 import { manageAccountAsSuperAdmin } from '@/lib/services/accountService';
@@ -15,9 +15,8 @@ import { subscribeProfiles, subscribeStatCategories, subscribeMatches, deletePro
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { getStoredPlayers, removeStoredPlayer, saveStoredPlayers, getPlayerMatchRecord } from '@/lib/services/playerService';
 import { getStoredCategories, saveStoredCategories, DEFAULT_BASE_CATEGORIES } from '@/lib/services/statCategoryService';
-import { StatBadge } from '@/components/StatBadge';
 import { PlayerModal } from '@/components/PlayerModal';
-import { PlayerCardFifa } from '@/components/PlayerCardFifa';
+import { PlayerCardFifa, PlayerDetailSheet } from '@/components/PlayerCardFifa';
 import { 
   Search, 
   UserPlus, 
@@ -54,6 +53,8 @@ export default function GiocatoriPage() {
   const [sortBy, setSortBy] = useState<'ovr' | 'wins' | 'name' | 'goals' | 'mvp' | 'played' | 'form'>('ovr');
   const [roleFilter, setRoleFilter] = useState<'all' | 'Portiere' | 'Difensore' | 'Esterno' | 'Punta'>('all');
   const [compareOpen, setCompareOpen] = useState(false);
+  // Giocatore aperto nel dettaglio (finestra), da card, elenco o tabella
+  const [detailId, setDetailId] = useState<string | null>(null);
   // Vista tabella: si ordina cliccando le intestazioni (primo clic decrescente, secondo crescente; il nome parte da A-Z)
   const [tableSort, setTableSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: 'ovr', dir: 'desc' });
   // Chi comanda l'ordine: il menu "Ordina per" oppure (tabella su PC) l'ultima intestazione cliccata
@@ -193,9 +194,9 @@ export default function GiocatoriPage() {
     const best = (value: (p: Profile) => number) =>
       players.reduce<{ p: Profile | null; v: number }>((acc, p) => (value(p) > acc.v ? { p, v: value(p) } : acc), { p: null, v: 0 });
     return [
-      { key: 'goals', title: 'Capocannoniere', ...best((p) => matchStats.get(p.id)?.goals || 0), unitShort: 'gol' },
-      { key: 'mvp', title: 'Più MVP', ...best((p) => matchStats.get(p.id)?.mvp || 0), unitShort: 'MVP' },
-      { key: 'played', title: 'Più presenze', ...best((p) => matchStats.get(p.id)?.played || 0), unitShort: 'partite' },
+      { key: 'goals', icon: '⚽', title: 'Capocannoniere', ...best((p) => matchStats.get(p.id)?.goals || 0), unitShort: 'gol' },
+      { key: 'mvp', icon: '⭐', title: 'Più MVP', ...best((p) => matchStats.get(p.id)?.mvp || 0), unitShort: 'MVP' },
+      { key: 'played', icon: '📅', title: 'Più presenze', ...best((p) => matchStats.get(p.id)?.played || 0), unitShort: 'partite' },
     ].filter((l) => l.p);
   })();
   const SortHeader = ({ k, label, title, className = '' }: { k: string; label: string; title?: string; className?: string }) => (
@@ -229,15 +230,8 @@ export default function GiocatoriPage() {
   return (
     <div className="space-y-6 pb-12">
       {/* Titolo della pagina (senza riquadro) */}
-      <header className="flex items-end justify-between gap-4">
-        <div className="space-y-1.5">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Giocatori</h1>
-          <p className="text-sm text-slate-400 max-w-xl leading-relaxed">
-            {isClientAdmin
-              ? 'Abilità, statistiche e schede di tutti i giocatori: da qui le modifichi.'
-              : 'Le card di tutti i giocatori, con abilità e statistiche.'}
-          </p>
-        </div>
+      <header className="flex items-center justify-between gap-4 min-h-[2.5rem]">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Giocatori</h1>
 
         {/* PC: "Nuovo ospite" in alto a destra, solo admin (su telefono è il "+" nella ricerca) */}
         {isClientAdmin && (
@@ -252,22 +246,26 @@ export default function GiocatoriPage() {
         )}
       </header>
 
-      {/* 1. Leader: tre riquadri su una riga, solo informativi */}
+      {/* Leader: una striscia sottile (solo informativa) */}
       {leaders.length > 0 && (
-        <section aria-label="I migliori" className="grid grid-cols-3 gap-2 sm:gap-3">
+        <section aria-label="I migliori" className="flex gap-2 overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
           {leaders.map((l) => {
             const [first, ...rest] = (l.p?.full_name || '').trim().split(/\s+/);
+            const short = rest.length ? `${first} ${rest[rest.length - 1][0]}.` : first;
             return (
-              <div key={l.key} className="min-w-0 bg-slate-900 border border-slate-800 rounded-2xl px-3 py-3 sm:p-4">
-                <span className="block text-[11px] sm:text-xs text-slate-400 truncate">{l.title}</span>
-                <span className="block mt-1 text-xl sm:text-2xl font-bold text-white tabular-nums leading-none">
-                  {l.v}
-                  <span className="ml-1 text-xs font-medium text-slate-400">{l.unitShort}</span>
+              <div
+                key={l.key}
+                title={`${l.title}: ${l.p?.full_name} (${l.v} ${l.unitShort})`}
+                className="flex-shrink-0 flex items-center gap-2 rounded-full bg-slate-900 pl-2.5 pr-3.5 py-1.5 text-sm"
+              >
+                <span aria-hidden="true">{l.icon}</span>
+                <span className="sr-only">{l.title}:</span>
+                <span className="text-slate-300 whitespace-nowrap">
+                  <span className="sm:hidden">{short}</span>
+                  <span className="hidden sm:inline">{l.p?.full_name}</span>
                 </span>
-                <span className="block mt-1.5 text-xs sm:text-sm font-medium text-emerald-300 truncate" title={l.p?.full_name}>
-                  {first}
-                  {rest.length > 0 && <span className="hidden sm:inline"> {rest.join(' ')}</span>}
-                  {rest.length > 0 && <span className="sm:hidden"> {rest[rest.length - 1][0]}.</span>}
+                <span className="font-semibold text-white tabular-nums whitespace-nowrap">
+                  {l.v} <span className="text-xs font-normal text-slate-400">{l.unitShort}</span>
                 </span>
               </div>
             );
@@ -275,10 +273,8 @@ export default function GiocatoriPage() {
         </section>
       )}
 
-      {/* Comandi. Telefono: ricerca (+ ospite), Card/Elenco, poi Ruolo · Ordina · Confronta.
-          PC (≥ 1024px): tutto su una riga. */}
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-        {/* Ricerca a tutta larghezza; per gli admin, su telefono, il "+" dentro la barra */}
+      {/* Comandi. Telefono: ricerca, poi Ruolo · Ordina · Confronta · Card/Elenco. Da tablet in su: una riga. */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
         <div className="relative flex-1 min-w-0">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
           <input
@@ -301,37 +297,12 @@ export default function GiocatoriPage() {
           )}
         </div>
 
-        {/* Card / Elenco: a tutta larghezza su telefono */}
-        <div className="flex items-center bg-slate-900 p-1 rounded-full border border-slate-800 lg:flex-shrink-0" role="radiogroup" aria-label="Vista">
-          {(
-            [
-              ['cards', 'Card', LayoutGrid],
-              ['table', 'Elenco', TableIcon],
-            ] as const
-          ).map(([mode, label, Icon]) => (
-            <button
-              key={mode}
-              type="button"
-              role="radio"
-              aria-checked={viewMode === mode}
-              onClick={() => setViewMode(mode)}
-              className={`flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${
-                viewMode === mode ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Icon className="h-4 w-4" />
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* Ruolo · Ordina per · Confronta: tre colonne uguali su telefono, in fila su PC */}
-        <div className="grid grid-cols-3 gap-2 lg:flex lg:flex-shrink-0">
+        <div className="flex items-center gap-2">
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value as typeof roleFilter)}
             aria-label="Filtro ruolo"
-            className="w-full lg:w-36 min-w-0 bg-slate-900 border border-slate-800 rounded-xl px-2.5 lg:px-3 py-2.5 text-[13px] lg:text-sm text-white focus:outline-none focus:border-emerald-500"
+            className="flex-1 sm:flex-none sm:w-32 min-w-0 bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
           >
             <option value="all">Tutti</option>
             <option value="Portiere">Portieri</option>
@@ -346,7 +317,7 @@ export default function GiocatoriPage() {
               setSortSource('menu');
             }}
             aria-label="Ordina per"
-            className="w-full lg:w-36 min-w-0 bg-slate-900 border border-slate-800 rounded-xl px-2.5 lg:px-3 py-2.5 text-[13px] lg:text-sm text-white focus:outline-none focus:border-emerald-500"
+            className="flex-1 sm:flex-none sm:w-36 min-w-0 bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
           >
             <option value="ovr">Per OVR</option>
             <option value="goals">Per gol</option>
@@ -359,11 +330,36 @@ export default function GiocatoriPage() {
             type="button"
             onClick={() => setCompareOpen(true)}
             disabled={players.length < 2}
-            className="w-full lg:w-auto flex items-center justify-center gap-1.5 px-2 lg:px-4 py-2.5 rounded-xl text-[13px] lg:text-sm font-semibold border border-slate-700 text-slate-200 hover:bg-slate-800 disabled:opacity-40"
+            aria-label="Confronta due giocatori"
+            title="Confronta due giocatori"
+            className="flex-shrink-0 h-[42px] flex items-center justify-center gap-1.5 px-3 rounded-xl text-sm font-semibold border border-slate-800 bg-slate-900 text-slate-200 hover:bg-slate-800 disabled:opacity-40"
           >
-            <GitCompare className="hidden sm:block h-4 w-4 flex-shrink-0" />
-            Confronta
+            <GitCompare className="h-4 w-4" />
+            <span className="hidden lg:inline">Confronta</span>
           </button>
+          <div className="flex-shrink-0 flex items-center bg-slate-900 p-1 rounded-xl border border-slate-800" role="radiogroup" aria-label="Vista">
+            {(
+              [
+                ['cards', 'Card', LayoutGrid],
+                ['table', 'Elenco', TableIcon],
+              ] as const
+            ).map(([mode, label, Icon]) => (
+              <button
+                key={mode}
+                type="button"
+                role="radio"
+                aria-checked={viewMode === mode}
+                aria-label={label}
+                title={label}
+                onClick={() => setViewMode(mode)}
+                className={`h-8 w-9 flex items-center justify-center rounded-lg transition-colors ${
+                  viewMode === mode ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -374,7 +370,7 @@ export default function GiocatoriPage() {
       {/* VISTA CONTENUTO: CARD FIFA/PES OPPURE TABELLA */}
       {viewMode === 'cards' ? (
         /* GRIGLIA DI CARD CON OTTAGONO E STATISTICHE V-P-S */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 items-start animate-in">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3 animate-in">
           {filteredPlayers.length === 0 ? (
             <p className="col-span-full py-12 text-center text-sm text-slate-500">Nessun giocatore trovato con questi filtri.</p>
           ) : (
@@ -382,13 +378,10 @@ export default function GiocatoriPage() {
               <PlayerCardFifa
                 key={player.id}
                 player={player}
-                isAdmin={isClientAdmin}
-                categories={sortedCategories}
                 form={forms.get(player.id)}
-                matchStats={matchStats.get(player.id)}
                 recentMatches={recentMatches}
-                onEdit={handleOpenEditModal}
-                onDelete={player.is_guest || isSuperAdmin ? (p) => handleDeletePlayer(p.id, p.full_name) : undefined}
+                isCurrent={player.id === profile?.id}
+                onOpen={(p) => setDetailId(p.id)}
               />
             ))
           )}
@@ -401,33 +394,28 @@ export default function GiocatoriPage() {
           {filteredPlayers.length === 0 ? (
             <p className="py-8 text-center text-sm text-slate-500">Nessun giocatore trovato con questi filtri.</p>
           ) : (
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
-              <div
-                className={`grid ${
-                  isClientAdmin ? 'grid-cols-[minmax(0,1fr)_3rem_4.5rem_2.25rem_2rem]' : 'grid-cols-[minmax(0,1fr)_3rem_4.5rem_2.25rem]'
-                } items-center gap-2 px-3 py-2 border-b border-slate-800 text-[11px] font-medium text-slate-500`}
-              >
+            <div className="bg-slate-900 rounded-2xl overflow-hidden">
+              <div className="grid grid-cols-[minmax(0,1fr)_3rem_4.5rem_2.25rem] items-center gap-2 px-3 py-2 border-b border-slate-800 text-[11px] font-medium text-slate-500">
                 <span>{filteredPlayers.length} giocatori</span>
                 <span className="text-center">Ruolo</span>
                 <span className="text-center">V · P · S</span>
                 <span className="text-right">OVR</span>
-                {isClientAdmin && <span />}
               </div>
               <ul className="divide-y divide-slate-800">
                 {filteredPlayers.map((player) => {
                   const isCurrent = player.id === profile?.id;
                   const photo = uploadedPhoto(player.avatar_url);
                   const f = forms.get(player.id) || 0;
-                  const ovr = Math.round(Math.max(1, Math.min(10, (Number(player.overall_rating) || 6) + f)) * 10);
+                  const ovr = ovrDisplay(player.overall_rating, f);
                   const ms = matchStats.get(player.id);
                   const pos = player.position || 'Esterno';
                   return (
-                    <li
-                      key={player.id}
-                      className={`grid ${
-                        isClientAdmin ? 'grid-cols-[minmax(0,1fr)_3rem_4.5rem_2.25rem_2rem]' : 'grid-cols-[minmax(0,1fr)_3rem_4.5rem_2.25rem]'
-                      } items-center gap-2 px-3 py-2 min-h-[52px]`}
-                    >
+                    <li key={player.id}>
+                      <button
+                        type="button"
+                        onClick={() => setDetailId(player.id)}
+                        className="w-full grid grid-cols-[minmax(0,1fr)_3rem_4.5rem_2.25rem] items-center gap-2 px-3 py-2 min-h-[52px] text-left hover:bg-slate-800/60 focus:outline-none focus-visible:bg-slate-800"
+                      >
                       <span className="flex items-center gap-2.5 min-w-0">
                         {photo ? (
                           <img src={photo} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
@@ -455,17 +443,8 @@ export default function GiocatoriPage() {
                         <span className="text-slate-600"> · </span>
                         <span className="text-red-400">{ms?.lost || 0}</span>
                       </span>
-                      <span className="text-right text-base font-bold text-white tabular-nums">{ovr}</span>
-                      {isClientAdmin && (
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEditModal(player)}
-                          aria-label={`Modifica ${player.full_name}`}
-                          className="justify-self-end p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800"
-                        >
-                          <Edit3 className="h-4 w-4" />
-                        </button>
-                      )}
+                      <span className={`text-right text-base font-bold tabular-nums ${ovrTone(ovr)}`}>{ovr}</span>
+                      </button>
                     </li>
                   );
                 })}
@@ -560,10 +539,14 @@ export default function GiocatoriPage() {
                             </div>
                             <div>
                               <div className="font-bold text-white flex items-center gap-1.5">
-                                <span className="leading-tight">
+                                <button
+                                  type="button"
+                                  onClick={() => setDetailId(player.id)}
+                                  className="leading-tight text-left hover:text-emerald-300"
+                                >
                                   <span className="block">{firstName}</span>
                                   {surname && <span className="block">{surname}</span>}
-                                </span>
+                                </button>
                                 {isClientAdmin && (
                                   <button
                                     type="button"
@@ -598,7 +581,10 @@ export default function GiocatoriPage() {
 
                         {/* Overall Rating (OVR) */}
                         <td className="py-3 px-3 text-center">
-                          <StatBadge score={player.overall_rating || 6.0} size="md" />
+                          {(() => {
+                            const o = ovrDisplay(player.overall_rating, forms.get(player.id) || 0);
+                            return <span className={`text-base font-bold tabular-nums ${ovrTone(o)}`}>{o}</span>;
+                          })()}
                         </td>
 
                         {/* Record Partite V-P-S (solo admin) */}
@@ -667,6 +653,34 @@ export default function GiocatoriPage() {
       )}
 
       {/* Modal Creazione / Modifica Giocatore */}
+      {(() => {
+        const dp = players.find((p) => p.id === detailId);
+        if (!dp) return null;
+        return (
+          <PlayerDetailSheet
+            player={dp}
+            categories={sortedCategories}
+            form={forms.get(dp.id)}
+            matchStats={matchStats.get(dp.id)}
+            recentMatches={recentMatches}
+            isAdmin={isClientAdmin}
+            onClose={() => setDetailId(null)}
+            onEdit={(p) => {
+              setDetailId(null);
+              handleOpenEditModal(p);
+            }}
+            onDelete={
+              dp.is_guest || isSuperAdmin
+                ? (p) => {
+                    setDetailId(null);
+                    handleDeletePlayer(p.id, p.full_name);
+                  }
+                : undefined
+            }
+          />
+        );
+      })()}
+
       <PlayerModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
