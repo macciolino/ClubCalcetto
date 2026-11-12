@@ -43,10 +43,16 @@ const SECTIONS: SectionDef[] = [
 const GROUPS: SectionDef['group'][] = ['Tuo account', 'Gestione partita', 'Club', 'Accessi'];
 
 /** Live values shown on the right of each row of the overview ("how the club is set up" at a glance). */
-function useSummary(admin: boolean, superAdmin: boolean, email?: string | null): Partial<Record<SectionId, string>> {
+function useSummary(
+  admin: boolean,
+  superAdmin: boolean,
+  email?: string | null
+): { values: Partial<Record<SectionId, string>>; alerts: Partial<Record<SectionId, number>> } {
   const [settings, setSettings] = useState<AppSettings>({});
   const [fields, setFields] = useState<SportField[]>([]);
   const [admins, setAdmins] = useState<number | null>(null);
+  // Account chiusi che hanno chiesto di rientrare (pallino su "Admin e account")
+  const [returning, setReturning] = useState(0);
   const [notifyMode, setNotifyMode] = useState<string>('');
   const [permission, setPermission] = useState<string>('');
   const categories = useStatCategories();
@@ -69,6 +75,9 @@ function useSummary(admin: boolean, superAdmin: boolean, email?: string | null):
       ),
     ];
     unsubs.push(subscribeProfiles((list: Profile[]) => setAdmins((list || []).filter((p) => p.role === 'admin').length)));
+    unsubs.push(
+      subscribeProfiles((list: Profile[]) => setReturning((list || []).filter((p) => p.restore_requested_at && !p.archived_at).length), 'deactivated')
+    );
     return () => unsubs.forEach((u) => u());
   }, [admin, superAdmin]);
 
@@ -79,7 +88,7 @@ function useSummary(admin: boolean, superAdmin: boolean, email?: string | null):
   };
   const def = fields.find((f) => f.id === settings.default_field_id) || fields[0];
   const anyForm = form.goals || form.mvp || form.results;
-  return {
+  const values: Partial<Record<SectionId, string>> = {
     notifiche: permission === 'granted' ? 'attive' : permission === 'denied' ? 'bloccate' : permission === 'unsupported' ? '' : 'spente',
     account: email || '',
     partita: short(settings.official_match_date),
@@ -89,8 +98,12 @@ function useSummary(admin: boolean, superAdmin: boolean, email?: string | null):
     }`,
     parametri: `${categories.length} parametri · forma ${anyForm ? 'attiva' : 'spenta'}`,
     'notifiche-club': notifyMode === 'all' ? 'a tutti' : notifyMode === 'off' ? 'spente' : notifyMode ? 'solo admin' : '',
-    accessi: admins === null ? '' : `${admins} admin`,
+    accessi:
+      admins === null
+        ? ''
+        : `${admins} admin${returning ? ` · ${returning} ${returning === 1 ? 'vuole' : 'vogliono'} rientrare` : ''}`,
   };
+  return { values, alerts: { accessi: returning } };
 }
 
 /** Old addresses (before the reorganisation) → new sections */
@@ -100,7 +113,7 @@ function SettingsContent() {
   const { user, profile, isAdmin, isSuperAdmin, isLoading } = useAuth();
   const params = useSearchParams();
   const admin = Boolean(isAdmin || profile?.role === 'admin');
-  const summary = useSummary(admin, Boolean(isSuperAdmin), user?.email);
+  const { values: summary, alerts } = useSummary(admin, Boolean(isSuperAdmin), user?.email);
 
   const raw = params.get('sezione') || '';
 
@@ -135,8 +148,11 @@ function SettingsContent() {
           active ? 'bg-slate-800 text-white' : 'text-slate-200 hover:bg-slate-800/60'
         }`}
       >
-        <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-slate-800 text-emerald-400">
+        <span className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-slate-800 text-emerald-400">
           <Icon className="h-4 w-4" />
+          {Boolean(alerts[s.id]) && (
+            <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-amber-400 ring-2 ring-slate-900" aria-label="Da gestire" />
+          )}
         </span>
         <span className="flex-1 min-w-0">
           <span className="block font-medium truncate">{s.label}</span>

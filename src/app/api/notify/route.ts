@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminAuth, adminDb, isAdminConfigured } from '@/lib/firebase/admin';
-import { Message, adminProfileIds, deliver, italianDate, registeredProfileIds, sendToTokens } from '@/lib/server/push';
+import { Message, adminProfileIds, deliver, italianDate, registeredProfileIds, sendToProfiles, sendToTokens } from '@/lib/server/push';
 import { checkPromotions } from '@/lib/server/presenceWatch';
 import { reconcileTeams } from '@/lib/utils/teamUtils';
 import { GeneratedTeamRecord } from '@/types/database';
@@ -22,7 +22,9 @@ type NotifyRequest =
   /** Admin diagnostics: which admins have a device registered for notifications */
   | { type: 'admin_devices' }
   /** Test notification to every admin's devices */
-  | { type: 'test_admins' };
+  | { type: 'test_admins' }
+  /** Admin archived a match: new players who just played their FIRST match → the admins review their parameters */
+  | { type: 'first_match'; date: string };
 
 
 const isDate = (d: unknown): d is string => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d);
@@ -147,6 +149,38 @@ export async function POST(request: Request) {
         }
       }
       return NextResponse.json({ ok: true, devices, sent });
+    }
+
+    if (body.type === 'first_match') {
+      if (!isDate(body.date)) return NextResponse.json({ ok: false, error: 'bad_request' }, { status: 400 });
+      const match = (await adminDb().doc(`matches/${body.date}`).get()).data();
+      if (!match || match.status !== 'completed') return NextResponse.json({ ok: true, sent: 0 });
+      const ids = Array.from(
+        new Set([...(match.team_white || []), ...(match.team_black || [])].map((p: { id?: string }) => String(p?.id || '')).filter(Boolean))
+      );
+      if (ids.length === 0) return NextResponse.json({ ok: true, sent: 0 });
+      const snaps = await adminDb().getAll(...ids.map((id) => adminDb().doc(`profiles/${id}`)));
+      // Una sola notifica per giocatore (stat_review_notified_at), anche se il risultato viene risalvato
+      const fresh = snaps.filter((s) => {
+        const d = s.data();
+        const played = Number(d?.matches_won || 0) + Number(d?.matches_drawn || 0) + Number(d?.matches_lost || 0);
+        return d && d.needs_stat_review === true && !d.is_guest && played >= 1 && !d.stat_review_notified_at;
+      });
+      if (fresh.length === 0) return NextResponse.json({ ok: true, sent: 0 });
+      const now = new Date().toISOString();
+      const batch = adminDb().batch();
+      fresh.forEach((s) => batch.update(s.ref, { stat_review_notified_at: now }));
+      await batch.commit();
+      const names = fresh.map((s) => String(s.data()?.full_name || 'Giocatore'));
+      const sent = await sendToProfiles(await adminProfileIds(), {
+        title: '📋 Valutazione da rivedere',
+        body:
+          names.length === 1
+            ? `${names[0]} ha giocato la sua prima partita: controlla e conferma i suoi parametri.`
+            : `${names.join(', ')} hanno giocato la loro prima partita: controlla e conferma i loro parametri.`,
+        url: '/?richieste=1',
+      }).catch(() => 0);
+      return NextResponse.json({ ok: true, sent });
     }
 
     if (body.type === 'voting_open') {

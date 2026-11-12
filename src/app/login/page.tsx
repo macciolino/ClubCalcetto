@@ -6,7 +6,8 @@ import { PitchLines } from '@/components/PitchLines';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { GoogleAuthProvider } from 'firebase/auth';
+import { GoogleAuthProvider, sendPasswordResetEmail } from 'firebase/auth';
+import { auth as firebaseAuth } from '@/lib/firebase/config';
 import { useAuth, savePendingInvite, takePendingInvite, afterRegistration, requestReturn } from '@/lib/context/AuthContext';
 import { notify } from '@/components/ui/Feedback';
 import { btn } from '@/components/ui/buttons';
@@ -48,6 +49,7 @@ export default function LoginPage() {
   const [returnEmail, setReturnEmail] = useState('');
   const [returnError, setReturnError] = useState('');
   const [returnBusy, setReturnBusy] = useState(false);
+  const [resetBusy, setResetBusy] = useState(false);
   const checkReturn = async (mail?: string | null) => {
     const r = await requestReturn(mail);
     if (r.pending) setReturning({ name: r.name });
@@ -189,6 +191,32 @@ export default function LoginPage() {
         {fieldErrors[field]}
       </p>
     ) : null;
+
+  // Password dimenticata: Firebase manda una mail con il link per sceglierne una nuova
+  const handleForgotPassword = async () => {
+    setErrorMessage('');
+    setSuccessMessage('');
+    const mail = email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) {
+      touch('email');
+      setErrorMessage('Scrivi la tua email qui sopra, poi tocca "Password dimenticata?".');
+      return;
+    }
+    setResetBusy(true);
+    try {
+      firebaseAuth.languageCode = 'it';
+      await sendPasswordResetEmail(firebaseAuth, mail);
+      setSuccessMessage(`Se ${mail} è registrata, ti abbiamo inviato un link per scegliere una nuova password. Controlla anche lo spam.`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '';
+      if (msg.includes('auth/too-many-requests')) setErrorMessage('Troppi tentativi: riprova tra qualche minuto.');
+      else if (msg.includes('auth/invalid-email')) setErrorMessage("L'email non è valida.");
+      // Utente inesistente: stesso messaggio di successo (non si rivela chi è registrato)
+      else setSuccessMessage(`Se ${mail} è registrata, ti abbiamo inviato un link per scegliere una nuova password. Controlla anche lo spam.`);
+    } finally {
+      setResetBusy(false);
+    }
+  };
 
   const handleEmailPasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -690,9 +718,21 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <label htmlFor="auth-password" className={labelClass}>
-                  Password
-                </label>
+                <div className="flex items-baseline justify-between gap-3">
+                  <label htmlFor="auth-password" className={labelClass}>
+                    Password
+                  </label>
+                  {!isSignup && (
+                    <button
+                      type="button"
+                      onClick={handleForgotPassword}
+                      disabled={resetBusy}
+                      className="mb-1.5 text-xs font-semibold text-emerald-300 hover:text-emerald-200 disabled:opacity-50"
+                    >
+                      {resetBusy ? 'Invio…' : 'Password dimenticata?'}
+                    </button>
+                  )}
+                </div>
                 <div className="relative">
                   <Lock className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                   <input

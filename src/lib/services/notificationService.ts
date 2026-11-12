@@ -18,6 +18,11 @@ export async function notifyMatchPlayers(event: MatchNotification): Promise<void
   }
 }
 
+/** After archiving a match: new players at their first match → push to the admins to review their parameters. */
+export function requestFirstMatchCheck(date: string): void {
+  callNotifyApi({ type: 'first_match', date }).catch(() => undefined);
+}
+
 /** After a sign-up or withdrawal: the server checks if someone takes a place in the saved teams. */
 export function requestTeamsCheck(date: string): void {
   callNotifyApi({ type: 'reconcile', date }).catch(() => undefined);

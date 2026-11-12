@@ -21,7 +21,7 @@ import {
 import { db, isFirebaseConfigured } from './config';
 import { Profile, Presence, StatCategory, Match, GeneratedTeamRecord, AppSettings, CalendarSettings, MatchOutcome, MatchScorer, MatchTeamPlayer, TeamSubstitution, MvpVote, MatchPenaltySave } from '@/types/database';
 import { rankDayPresences, rankPresencesByDate } from '@/lib/services/presenceService';
-import { requestTeamsCheck } from '@/lib/services/notificationService';
+import { requestTeamsCheck, requestFirstMatchCheck } from '@/lib/services/notificationService';
 
 // ==========================================
 // 1. PROFILI & GIOCATORI (Collection: 'profiles')
@@ -542,6 +542,8 @@ export async function saveMatchResult(input: MatchResultInput): Promise<void> {
       { merge: true }
     );
   });
+  // Nuovi giocatori alla prima partita: notifica agli admin per rivedere i parametri
+  requestFirstMatchCheck(date);
 }
 
 /**

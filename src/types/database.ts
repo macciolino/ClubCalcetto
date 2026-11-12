@@ -139,6 +139,8 @@ export interface Profile {
   needs_stat_review?: boolean;
   stat_reviewed_at?: string;
   stat_reviewed_by?: string;
+  /** Server: the admins were told (push) that this new player played the first match */
+  stat_review_notified_at?: string;
   stats: Record<string, number>;
   overall_rating: number;
   matches_won?: number;

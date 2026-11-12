@@ -10,7 +10,8 @@ import {
   saveDeletionFeedback,
 } from '@/lib/server/accountDeletion';
 import { checkPromotions } from '@/lib/server/presenceWatch';
-import { openRequest } from '@/lib/server/adminRequests';
+import { closeRequest, openRequest } from '@/lib/server/adminRequests';
+import { FieldValue } from 'firebase-admin/firestore';
 
 /** After removing sign-ups: who moves up from the waitlist is notified (teams are updated when an admin opens Squadre). */
 async function recheck(dates: string[]) {
@@ -53,6 +54,11 @@ export async function POST(request: Request) {
       if (!exists.exists) return NextResponse.json({ ok: false, error: 'not_found' }, { status: 404 });
       if (mode === 'reactivate') {
         await reactivateAccount(body.targetProfileId);
+        // Se aveva chiesto di rientrare, la richiesta nella campanella si chiude
+        if (exists.data()?.restore_requested_at) {
+          await adminDb().doc(`profiles/${body.targetProfileId}`).update({ restore_requested_at: FieldValue.delete() });
+          await closeRequest(`restore_${body.targetProfileId}`, isSuper ? 'p-1' : caller.uid, 'restored').catch(() => undefined);
+        }
         return NextResponse.json({ ok: true });
       }
       const res = mode === 'deactivate' ? await deactivateAccount(body.targetProfileId, 'super_admin') : await deleteAccount(body.targetProfileId);

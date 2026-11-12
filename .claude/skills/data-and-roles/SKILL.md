@@ -101,3 +101,9 @@ Production data is REAL: never rewrite stats, no paid services, never print secr
   computed live from profiles, counts in the badge). The admin corrects the sliders (self value shown under each) and saves
   → `stats`, `overall_rating`, `needs_stat_review: false`, `stat_reviewed_at/by`; the item disappears.
 - A guest linked through an invite / "Collega" gets both flags false (an admin already rated the guest).
+- Push to admins after a first match: `saveMatchResult` → `requestFirstMatchCheck(date)` → `/api/notify { type: 'first_match' }`
+  (admins only): new players of that match with `needs_stat_review` and ≥1 match, not yet notified → push "📋 Valutazione da rivedere"
+  (url `/?richieste=1` opens the bell), then `stat_review_notified_at` so it is sent once.
+- Coming back: profiles with `restore_requested_at` show an amber dot on Impostazioni → "Admin e account" and are listed first
+  with "Vuole rientrare". Reactivating from that list also closes the `restore_…` request.
+- Login: "Password dimenticata?" (sign-in mode) → `sendPasswordResetEmail` in Italian; same message whether or not the email exists.

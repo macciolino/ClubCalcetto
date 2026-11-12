@@ -11,7 +11,8 @@ interface DeactivatedAccountsListProps {
   onDeleteDeactivatedPlayer: (player: Profile) => void;
 }
 
-/** Super admin (Impostazioni → Admin e account): deactivated accounts, data kept, with reactivate / delete for good. */
+/** Admins (Impostazioni → Admin e account): deactivated accounts, data kept, with reactivate / delete for good.
+ *  Those who asked to come back (`restore_requested_at`) come first, marked "Vuole rientrare". */
 export function DeactivatedAccountsList({
   deactivatedPlayers,
   onReactivatePlayer,
@@ -19,13 +20,22 @@ export function DeactivatedAccountsList({
 }: DeactivatedAccountsListProps) {
   return (
       <ul className="space-y-2">
-        {deactivatedPlayers.map((p) => (
+        {[...deactivatedPlayers]
+          .sort((a, b) => Number(Boolean(b.restore_requested_at)) - Number(Boolean(a.restore_requested_at)))
+          .map((p) => (
           <li
             key={p.id}
             className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900 rounded-2xl p-4"
           >
             <div className="min-w-0">
-              <div className="font-bold text-sm text-white truncate">{p.full_name}</div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-bold text-sm text-white truncate">{p.full_name}</span>
+                {p.restore_requested_at && (
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400" aria-hidden="true" /> Vuole rientrare
+                  </span>
+                )}
+              </div>
               <div className="text-xs text-slate-400 truncate">{p.email || 'Nessuna mail'}</div>
               <div className="text-[11px] text-slate-500 mt-0.5">
                 Disattivato {p.deactivated_by === 'self' ? 'dal giocatore' : 'da un admin'}
