@@ -106,9 +106,9 @@ export function MatchResultFields({ value, onChange, white, black, mvpVotes = []
         <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-end gap-1 sm:gap-2">
           {(
             [
-              ['Bianchi', 'scoreWhite', 'bg-white shadow-[0_0_0_2px_rgba(255,255,255,0.15)]'],
+              ['Bianchi', 'scoreWhite', 'h-[9px] w-[33px] bg-white'],
               null,
-              ['Neri', 'scoreBlack', 'bg-slate-950 border border-slate-500'],
+              ['Neri', 'scoreBlack', 'h-2.5 w-9 bg-slate-950 border border-slate-500'],
             ] as const
           ).map((team) =>
             team === null ? (
@@ -118,7 +118,7 @@ export function MatchResultFields({ value, onChange, white, black, mvpVotes = []
             ) : (
               <label key={team[0]} className="min-w-0 flex flex-col items-center gap-1.5">
                 <span className="text-xs font-semibold text-white">{team[0]}</span>
-                <span className={`block h-2.5 w-9 rounded-full ${team[2]}`} aria-hidden="true" />
+                <span className={`block rounded-full ${team[2]}`} aria-hidden="true" />
                 <NumberInput
                   min={0}
                   max={50}
