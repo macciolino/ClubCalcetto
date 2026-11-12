@@ -107,3 +107,7 @@ description: ClubCalcetto UI conventions - theme, shared components (tables, dro
   everywhere it appears (cards, lists, table, detail). No "OVR" label repeated on each card.
 - Lists of items (player cards, list rows) have NO border: surface `bg-slate-900` + hover `bg-slate-800/80`.
   Borders only on inputs/selects. Details open in a `Sheet`, never inline (no grid holes).
+- Numbers in tables/lists: normal font with `tabular-nums` (no monospace); zero values in `text-slate-600`, colour only
+  for real values (won emerald-400, drawn amber-400, lost red-400). Rare destructive bulk actions live in a "⋯" menu,
+  never as a big red button on the page.
+- Summary numbers = a strip of pills (`rounded-full bg-slate-900 px-3.5 py-1.5`), not big boxes (Giocatori leaders, Storico).

@@ -437,11 +437,11 @@ export default function GiocatoriPage() {
                         </span>
                       </span>
                       <span className="text-center text-xs font-semibold tabular-nums" aria-label={`${ms?.won || 0} vinte, ${ms?.drawn || 0} pareggiate, ${ms?.lost || 0} perse`}>
-                        <span className="text-emerald-400">{ms?.won || 0}</span>
+                        <span className={ms?.won ? 'text-emerald-400' : 'text-slate-600'}>{ms?.won || 0}</span>
                         <span className="text-slate-600"> · </span>
-                        <span className="text-amber-400">{ms?.drawn || 0}</span>
+                        <span className={ms?.drawn ? 'text-amber-400' : 'text-slate-600'}>{ms?.drawn || 0}</span>
                         <span className="text-slate-600"> · </span>
-                        <span className="text-red-400">{ms?.lost || 0}</span>
+                        <span className={ms?.lost ? 'text-red-400' : 'text-slate-600'}>{ms?.lost || 0}</span>
                       </span>
                       <span className={`text-right text-base font-bold tabular-nums ${ovrTone(ovr)}`}>{ovr}</span>
                       </button>
@@ -589,12 +589,12 @@ export default function GiocatoriPage() {
 
                         {/* Record Partite V-P-S (solo admin) */}
                         {isClientAdmin && (
-                        <td className="py-3 px-3 text-center font-mono text-[11px] whitespace-nowrap">
-                          <span className="text-emerald-400 font-bold">{rec.won}V</span>
+                        <td className="py-3 px-3 text-center tabular-nums text-xs whitespace-nowrap">
+                          <span className={rec.won ? 'text-emerald-400 font-semibold' : 'text-slate-600'}>{rec.won}V</span>
                           <span className="text-slate-500 mx-1">-</span>
-                          <span className="text-amber-400 font-bold">{rec.drawn}P</span>
+                          <span className={rec.drawn ? 'text-amber-400 font-semibold' : 'text-slate-600'}>{rec.drawn}P</span>
                           <span className="text-slate-500 mx-1">-</span>
-                          <span className="text-rose-400 font-bold">{rec.lost}S</span>
+                          <span className={rec.lost ? 'text-red-400 font-semibold' : 'text-slate-600'}>{rec.lost}S</span>
                         </td>
                         )}
 

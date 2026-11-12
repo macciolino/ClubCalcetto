@@ -43,7 +43,7 @@ export function HistoryCalendar({ matchDates, selected, onSelect, maxYear }: His
   const monthCount = matchDates.filter((d) => d.startsWith(ymd(view.y, view.m, 1).slice(0, 7))).length;
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 w-full max-w-md mx-auto md:mx-0">
+    <div className="bg-slate-900 rounded-2xl p-3 sm:p-4 space-y-3 w-full max-w-md mx-auto lg:mx-0">
       <div className="flex items-center justify-between gap-2">
         <button
           type="button"

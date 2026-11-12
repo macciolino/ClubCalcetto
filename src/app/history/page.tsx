@@ -9,7 +9,13 @@ import { subscribeMatches, subscribeProfiles, deleteMatchResult } from '@/lib/fi
 import { useAuth } from '@/lib/context/AuthContext';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { formatItalianDate, getVisibleHistoryYear } from '@/lib/utils/dateUtils';
-import { History, Trophy, Star, ListOrdered, CalendarDays, Coins, Trash2, Loader2, Pencil } from 'lucide-react';
+import { Trophy, ListOrdered, CalendarDays, Trash2, Loader2, MoreHorizontal } from 'lucide-react';
+import { MatchDetailSheet } from '@/components/MatchDetailSheet';
+import { PlayerDetailSheet } from '@/components/PlayerCardFifa';
+import { lastCompletedMatches } from '@/components/FormDots';
+import { useStatCategories } from '@/lib/hooks/useStatCategories';
+import { useForms } from '@/lib/hooks/useForms';
+import { computeMatchStats } from '@/lib/utils/statUtils';
 import { MatchEditModal } from '@/components/MatchEditModal';
 import { HistoryCalendar } from '@/components/HistoryCalendar';
 
@@ -29,9 +35,9 @@ type SortKey = 'played' | 'won' | 'drawn' | 'lost' | 'goals' | 'mvp';
 /** Sortable columns of the leaderboard, in table order */
 const SORT_COLUMNS: { key: SortKey; label: string; title: string; cell: string }[] = [
   { key: 'played', label: 'PG', title: 'Presenze', cell: '' },
-  { key: 'won', label: 'V', title: 'Partite vinte', cell: 'font-bold text-emerald-400' },
+  { key: 'won', label: 'V', title: 'Partite vinte', cell: 'text-emerald-400' },
   { key: 'drawn', label: 'P', title: 'Pareggi', cell: 'text-amber-400' },
-  { key: 'lost', label: 'S', title: 'Sconfitte', cell: 'text-rose-400' },
+  { key: 'lost', label: 'S', title: 'Sconfitte', cell: 'text-red-400' },
   { key: 'goals', label: 'Gol', title: 'Gol segnati', cell: '' },
   { key: 'mvp', label: 'MVP', title: 'Premi MVP', cell: '' },
 ];
@@ -97,6 +103,14 @@ export default function HistoryPage() {
   const [editing, setEditing] = useState<Match | null>(null);
   const [pickedDate, setPickedDate] = useState<string | null>(null);
   const [season, setSeason] = useState<string>('all');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [detailPlayerId, setDetailPlayerId] = useState<string | null>(null);
+  const [detailMatchId, setDetailMatchId] = useState<string | null>(null);
+  // Per la scheda del giocatore (la stessa di Giocatori): parametri, forma, statistiche di sempre, ultime 5
+  const categories = useStatCategories();
+  const { forms } = useForms();
+  const allStats = useMemo(() => computeMatchStats(matches), [matches]);
+  const recentMatches = useMemo(() => lastCompletedMatches(matches), [matches]);
 
   useEffect(() => {
     if (!isFirebaseConfigured) {
@@ -175,86 +189,118 @@ export default function HistoryPage() {
 
   const totalGoals = visibleMatches.reduce((acc, m) => acc + (m.score_white ?? 0) + (m.score_black ?? 0), 0);
 
+  // Dettagli in finestra: giocatore (stesso di Giocatori) e partita
+  const detailPlayer = profiles.find((p) => p.id === detailPlayerId) || null;
+  const detailMatch = matches.find((m) => m.id === detailMatchId) || null;
+
+  const MEDALS = ['🥇', '🥈', '🥉'];
+  const UNIT: Record<SortKey, string> = { played: 'partite', won: 'vinte', drawn: 'pari', lost: 'perse', goals: 'gol', mvp: 'MVP' };
+  const zeroTone = (v: number, tone: string) => (v === 0 ? 'text-slate-600' : tone);
+  const shortDate = (d: string) => {
+    const [y, mo, dd] = d.split('-').map(Number);
+    return new Date(y, mo - 1, dd).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '');
+  };
+  const shortName = (full: string) => {
+    const [first, ...rest] = full.trim().split(/\s+/);
+    return rest.length ? `${first} ${rest[rest.length - 1][0]}.` : first;
+  };
+
   return (
-    <div className="space-y-6 pb-12">
-      {/* Titolo della pagina (senza riquadro) */}
-      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div className="space-y-1.5">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Storico</h1>
-          <p className="text-sm text-slate-400 max-w-xl leading-relaxed">Risultati, marcatori e MVP di tutte le partite archiviate.</p>
-        </div>
-        {seasons.length > 0 && (
-          <label className="flex items-center gap-2 text-sm text-slate-300">
-            <span>Stagione</span>
+    <div className="space-y-5 pb-12">
+      {/* Titolo + stagione (e menu admin) sulla stessa riga */}
+      <header className="flex items-center justify-between gap-3 min-h-[2.5rem]">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Storico</h1>
+        <div className="flex items-center gap-2">
+          {seasons.length > 0 && (
             <select
               value={season}
-              onChange={(e) => { setSeason(e.target.value); setPickedDate(null); }}
-              className="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-slate-500"
+              onChange={(e) => {
+                setSeason(e.target.value);
+                setPickedDate(null);
+              }}
+              aria-label="Stagione"
+              className="bg-slate-900 border border-slate-800 rounded-full pl-3.5 pr-8 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
             >
-              <option value="all">Tutte</option>
+              <option value="all">Tutte le stagioni</option>
               {seasons.map((y) => (
                 <option key={y} value={y}>
-                  {y}
+                  Stagione {y}
                 </option>
               ))}
             </select>
-          </label>
-        )}
+          )}
+          {isAdmin && visibleMatches.length > 0 && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setMenuOpen((o) => !o)}
+                aria-label="Altre azioni"
+                aria-expanded={menuOpen}
+                className="h-9 w-9 flex items-center justify-center rounded-full text-slate-400 hover:text-white hover:bg-slate-800"
+              >
+                <MoreHorizontal className="h-5 w-5" />
+              </button>
+              {menuOpen && (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} aria-hidden="true" />
+                  <div className="absolute right-0 top-full mt-1 z-40 w-64 rounded-xl bg-slate-900 border border-slate-800 shadow-2xl p-1 animate-in">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        handleDeleteAll();
+                      }}
+                      disabled={deleting !== null}
+                      className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-rose-300 hover:bg-rose-500/10 disabled:opacity-50"
+                    >
+                      {deleting === 'all' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                      {season === 'all' ? 'Cancella tutto lo storico' : `Cancella storico ${season}`}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </header>
 
-      {/* Riepilogo */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center">
-          <div className="text-2xl font-bold text-white">{visibleMatches.length}</div>
-          <div className="text-xs text-slate-400 font-semibold">Partite</div>
+      {/* Numeri in una striscia + selettore Classifica / Partite */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex gap-2 overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
+          {(
+            [
+              [visibleMatches.length, 'partite'],
+              [totalGoals, 'gol'],
+              [leaderboard.length, 'giocatori'],
+            ] as const
+          ).map(([v, label]) => (
+            <span key={label} className="flex-shrink-0 rounded-full bg-slate-900 px-3.5 py-1.5 text-sm text-slate-400 whitespace-nowrap">
+              <span className="font-semibold text-white tabular-nums">{v}</span> {label}
+            </span>
+          ))}
         </div>
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center">
-          <div className="text-2xl font-bold text-white">{totalGoals}</div>
-          <div className="text-xs text-slate-400 font-semibold">Gol totali</div>
-        </div>
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center">
-          <div className="text-2xl font-bold text-white">{leaderboard.length}</div>
-          <div className="text-xs text-slate-400 font-semibold">Giocatori</div>
+        <div className="flex items-center bg-slate-900 p-1 rounded-full border border-slate-800 text-sm self-stretch sm:self-auto" role="radiogroup" aria-label="Vista">
+          {(
+            [
+              ['leaderboard', 'Classifica', ListOrdered],
+              ['matches', 'Partite', CalendarDays],
+            ] as const
+          ).map(([key, label, Icon]) => (
+            <button
+              key={key}
+              type="button"
+              role="radio"
+              aria-checked={view === key}
+              onClick={() => setView(key)}
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-full font-semibold transition-colors ${
+                view === key ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Icon className="h-4 w-4" /> {label}
+            </button>
+          ))}
         </div>
       </div>
-
-      {/* Selettore vista */}
-      <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl text-sm w-full sm:w-auto sm:inline-flex">
-        <button
-          type="button"
-          onClick={() => setView('leaderboard')}
-          aria-pressed={view === 'leaderboard'}
-          className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg font-bold transition-all ${
-            view === 'leaderboard' ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <ListOrdered className="h-4 w-4" /> Classifica
-        </button>
-        <button
-          type="button"
-          onClick={() => setView('matches')}
-          aria-pressed={view === 'matches'}
-          className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg font-bold transition-all ${
-            view === 'matches' ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <CalendarDays className="h-4 w-4" /> Partite
-        </button>
-      </div>
-
-      {isAdmin && visibleMatches.length > 0 && (
-        <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={handleDeleteAll}
-            disabled={deleting !== null}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold border border-rose-500/40 text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 disabled:opacity-50"
-          >
-            {deleting === 'all' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-            {season === 'all' ? 'Cancella tutto lo storico' : `Cancella storico ${season}`}
-          </button>
-        </div>
-      )}
 
       {!loaded ? (
         <div className="space-y-3" role="status" aria-label="Caricamento in corso">
@@ -262,163 +308,188 @@ export default function HistoryPage() {
           <Skeleton className="h-64 w-full rounded-2xl" />
         </div>
       ) : visibleMatches.length === 0 ? (
-        <div className="bg-slate-900 border border-dashed border-slate-700 rounded-2xl p-8 text-center space-y-2">
+        <div className="rounded-2xl bg-slate-900/60 p-8 text-center space-y-2">
           <Trophy className="h-8 w-8 text-slate-600 mx-auto" />
           <p className="text-sm text-slate-300 font-semibold">Nessuna partita archiviata</p>
-          <p className="text-sm text-slate-500">
-            Dopo ogni partita l&apos;admin inserisce risultato, marcatori e MVP in Admin → Match & Cassa.
-          </p>
+          <p className="text-sm text-slate-500">Dopo ogni partita un admin inserisce risultato, marcatori e MVP.</p>
         </div>
       ) : view === 'leaderboard' ? (
-        <div className="space-y-3">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-xs text-slate-400 border-b border-slate-800">
-                    <th className="text-left px-3 py-3">#</th>
-                    <th className="text-left px-2 py-3">Giocatore</th>
-                    {SORT_COLUMNS.map((c) => (
-                      <th
-                        key={c.key}
-                        className="p-0"
-                        aria-sort={sortBy === c.key ? (sortDir === 'desc' ? 'descending' : 'ascending') : 'none'}
+        <>
+          {/* Telefono e tablet: righe, ordinamento dalla tendina */}
+          <div className="lg:hidden space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs text-slate-500">Tocca un giocatore per la sua scheda</span>
+              <select
+                value={sortBy}
+                onChange={(e) => {
+                  setSortBy(e.target.value as SortKey);
+                  setSortDir('desc');
+                }}
+                aria-label="Ordina per"
+                className="bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+              >
+                <option value="won">Per vittorie</option>
+                <option value="goals">Per gol</option>
+                <option value="mvp">Per MVP</option>
+                <option value="played">Per presenze</option>
+                <option value="drawn">Per pareggi</option>
+                <option value="lost">Per sconfitte</option>
+              </select>
+            </div>
+            <ul className="bg-slate-900 rounded-2xl divide-y divide-slate-800 overflow-hidden">
+              {leaderboard.map((l, idx) => (
+                <li key={l.id}>
+                  <button
+                    type="button"
+                    onClick={() => profiles.some((p) => p.id === l.id) && setDetailPlayerId(l.id)}
+                    className="w-full flex items-center gap-3 px-3.5 py-2.5 text-left hover:bg-slate-800/60"
+                  >
+                    <span className="w-6 flex-shrink-0 text-center text-sm tabular-nums text-slate-500">{MEDALS[idx] || idx + 1}</span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block truncate text-sm font-semibold text-white">{l.name}</span>
+                      <span className="block text-xs text-slate-400 tabular-nums">
+                        {l.played} {l.played === 1 ? 'partita' : 'partite'} ·{' '}
+                        <span className={zeroTone(l.won, 'text-emerald-400')}>{l.won}V</span>{' '}
+                        <span className={zeroTone(l.drawn, 'text-amber-400')}>{l.drawn}P</span>{' '}
+                        <span className={zeroTone(l.lost, 'text-red-400')}>{l.lost}S</span>
+                      </span>
+                    </span>
+                    <span className="flex-shrink-0 text-right">
+                      <span className={`block text-lg font-bold tabular-nums leading-none ${l[sortBy] === 0 ? 'text-slate-600' : 'text-white'}`}>
+                        {l[sortBy]}
+                      </span>
+                      <span className="block text-[11px] text-slate-500 mt-0.5">{UNIT[sortBy]}</span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* PC: tabella pulita, intestazioni ordinabili */}
+          <div className="hidden lg:block bg-slate-900 rounded-2xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs text-slate-400 border-b border-slate-800">
+                  <th className="text-left pl-5 pr-2 py-3 w-14">#</th>
+                  <th className="text-left px-2 py-3">Giocatore</th>
+                  {SORT_COLUMNS.map((c) => (
+                    <th
+                      key={c.key}
+                      className={`p-0 w-20 ${sortBy === c.key ? 'bg-slate-800/40' : ''}`}
+                      aria-sort={sortBy === c.key ? (sortDir === 'desc' ? 'descending' : 'ascending') : 'none'}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => handleSort(c.key)}
+                        title={`Ordina per ${c.title}`}
+                        className={`w-full px-2 py-3 font-semibold whitespace-nowrap ${sortBy === c.key ? 'text-white' : 'hover:text-white'}`}
                       >
-                        <button
-                          type="button"
-                          onClick={() => handleSort(c.key)}
-                          title={`Ordina per ${c.title}`}
-                          className={`w-full px-2 py-3 font-bold whitespace-nowrap ${
-                            sortBy === c.key ? 'text-emerald-300' : 'hover:text-white'
-                          }`}
-                        >
-                          {c.label}
-                          <span className="inline-block w-3 text-[9px]" aria-hidden="true">
-                            {sortBy === c.key ? (sortDir === 'desc' ? '▼' : '▲') : ''}
-                          </span>
-                        </button>
-                      </th>
+                        {c.label}
+                        <span className="inline-block w-3 text-[9px]" aria-hidden="true">
+                          {sortBy === c.key ? (sortDir === 'desc' ? '▼' : '▲') : ''}
+                        </span>
+                      </button>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {leaderboard.map((l, idx) => (
+                  <tr key={l.id} className="border-b border-slate-800/60 last:border-0 hover:bg-slate-800/30">
+                    <td className="pl-5 pr-2 py-2.5 tabular-nums text-slate-500">{MEDALS[idx] || idx + 1}</td>
+                    <td className="px-2 py-2.5">
+                      <button
+                        type="button"
+                        onClick={() => profiles.some((p) => p.id === l.id) && setDetailPlayerId(l.id)}
+                        className="font-semibold text-white hover:text-emerald-300 text-left"
+                      >
+                        {l.name}
+                      </button>
+                    </td>
+                    {SORT_COLUMNS.map((c) => (
+                      <td
+                        key={c.key}
+                        className={`px-2 py-2.5 text-center tabular-nums ${sortBy === c.key ? 'bg-slate-800/40 font-semibold' : ''} ${zeroTone(l[c.key], c.cell || 'text-slate-200')}`}
+                      >
+                        {l[c.key]}
+                      </td>
                     ))}
                   </tr>
-                </thead>
-                <tbody>
-                  {leaderboard.map((l, idx) => (
-                    <tr key={l.id} className="border-b border-slate-800/60 last:border-0 text-slate-200">
-                      <td className="px-3 py-2.5 font-mono text-slate-500">{idx + 1}</td>
-                      <td className="px-2 py-2.5 font-semibold whitespace-nowrap">{l.name}</td>
-                      {SORT_COLUMNS.map((c) => (
-                        <td key={c.key} className={`px-2 py-2.5 text-center font-mono ${c.cell}`}>
-                          {l[c.key]}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
+        </>
       ) : (
-        <div className="space-y-4">
-        <HistoryCalendar
-          matchDates={visibleMatches.map((m) => m.match_date || m.id)}
-          selected={pickedDate}
-          onSelect={setPickedDate}
-          maxYear={visibleYear}
+        <div className="space-y-4 lg:grid lg:grid-cols-[22rem_1fr] lg:gap-6 lg:space-y-0 lg:items-start">
+          <HistoryCalendar
+            matchDates={visibleMatches.map((m) => m.match_date || m.id)}
+            selected={pickedDate}
+            onSelect={setPickedDate}
+            maxYear={visibleYear}
+          />
+          <ul className="bg-slate-900 rounded-2xl divide-y divide-slate-800 overflow-hidden">
+            {visibleMatches
+              .filter((m) => !pickedDate || (m.match_date || m.id) === pickedDate)
+              .sort((a, b) => (b.match_date || b.id).localeCompare(a.match_date || a.id))
+              .map((m) => {
+                const w = m.score_white ?? 0;
+                const b = m.score_black ?? 0;
+                return (
+                  <li key={m.id}>
+                    <button
+                      type="button"
+                      onClick={() => setDetailMatchId(m.id)}
+                      className="w-full grid grid-cols-[5.5rem_1fr_minmax(0,7rem)] sm:grid-cols-[7rem_1fr_minmax(0,10rem)] items-center gap-2 px-3.5 py-3 text-left hover:bg-slate-800/60"
+                    >
+                      <span className="text-sm text-slate-400 capitalize">{shortDate(m.match_date || m.id)}</span>
+                      <span className="flex items-center justify-center gap-2 text-sm">
+                        <span className="hidden sm:inline text-slate-400">Bianchi</span>
+                        <span className={`text-lg font-bold tabular-nums ${w > b ? 'text-emerald-400' : 'text-white'}`}>{w}</span>
+                        <span className="text-slate-600">–</span>
+                        <span className={`text-lg font-bold tabular-nums ${b > w ? 'text-emerald-400' : 'text-white'}`}>{b}</span>
+                        <span className="hidden sm:inline text-slate-400">Neri</span>
+                      </span>
+                      <span className="truncate text-right text-xs text-amber-300">
+                        {m.mvp_player_id ? `⭐ ${shortName(nameOf(m.mvp_player_id))}` : ''}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+          </ul>
+        </div>
+      )}
+
+      {detailPlayer && (
+        <PlayerDetailSheet
+          player={detailPlayer}
+          categories={categories}
+          form={forms.get(detailPlayer.id)}
+          matchStats={allStats.get(detailPlayer.id)}
+          recentMatches={recentMatches}
+          isAdmin={false}
+          onClose={() => setDetailPlayerId(null)}
         />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {visibleMatches.filter((m) => !pickedDate || (m.match_date || m.id) === pickedDate).map((m) => {
-            const w = m.score_white ?? 0;
-            const b = m.score_black ?? 0;
-            const mvpName = m.mvp_player_id ? nameOf(m.mvp_player_id) : null;
-            return (
-              <article key={m.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
-                <header className="flex flex-wrap items-center justify-between gap-2">
-                  <h2 className="text-sm font-bold text-white">{formatItalianDate(m.match_date || m.id)}</h2>
-                  {isAdmin && (
-                    <button
-                      type="button"
-                      onClick={() => setEditing(m)}
-                      disabled={deleting !== null}
-                      aria-label="Modifica partita"
-                      className="ml-auto flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-emerald-300 hover:bg-emerald-500/15 disabled:opacity-50"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                      Modifica
-                    </button>
-                  )}
-                  {isAdmin && (
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteMatch(m)}
-                      disabled={deleting !== null}
-                      aria-label="Cancella partita dallo storico"
-                      className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-rose-300 hover:bg-rose-500/15 disabled:opacity-50"
-                    >
-                      {deleting === m.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                      Cancella
-                    </button>
-                  )}
-                  {m.total_cost ? (
-                    <span className="flex items-center gap-1 text-xs text-slate-400">
-                      <Coins className="h-3.5 w-3.5" />€{Number(m.total_cost).toFixed(0)} · €
-                      {(Number(m.total_cost) / 10).toFixed(2)} a testa
-                    </span>
-                  ) : null}
-                </header>
+      )}
 
-                <div className="flex items-center justify-center gap-4">
-                  <div className="text-center flex-1">
-                    <div className="text-xs font-bold text-slate-300">Bianchi</div>
-                    <div className={`text-4xl font-bold ${w > b ? 'text-emerald-400' : 'text-white'}`}>{w}</div>
-                  </div>
-                  <span className="text-slate-600 font-bold">-</span>
-                  <div className="text-center flex-1">
-                    <div className="text-xs font-bold text-slate-300">Neri</div>
-                    <div className={`text-4xl font-bold ${b > w ? 'text-emerald-400' : 'text-white'}`}>{b}</div>
-                  </div>
-                </div>
-
-                {(m.team_white?.length || m.team_black?.length) ? (
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <ul className="space-y-0.5 text-slate-300">
-                      {(m.team_white || []).map((p) => (
-                        <li key={p.id} className="truncate">{nameOf(p.id, p.name)}</li>
-                      ))}
-                    </ul>
-                    <ul className="space-y-0.5 text-slate-300 text-right">
-                      {(m.team_black || []).map((p) => (
-                        <li key={p.id} className="truncate">{nameOf(p.id, p.name)}</li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-
-                <div className="space-y-1.5 text-sm border-t border-slate-800 pt-3">
-                  {mvpName && (
-                    <p className="flex items-center gap-1.5 text-amber-300 font-semibold">
-                      <Star className="h-4 w-4" /> MVP: {mvpName}
-                    </p>
-                  )}
-                  {(m.scorers || []).length > 0 && (
-                    <p className="text-slate-300">
-                      ⚽ {(m.scorers || []).map((s) => `${nameOf(s.player_id, s.player_name)} (${s.goals})`).join(', ')}
-                    </p>
-                  )}
-                  {(m.penalty_saves || []).length > 0 && (
-                    <p className="text-slate-300">
-                      🧤 Rigori parati: {(m.penalty_saves || []).map((p) => `${nameOf(p.player_id, p.player_name)} (${p.count})`).join(', ')}
-                    </p>
-                  )}
-                  {!mvpName && !(m.scorers || []).length && (
-                    <p className="text-slate-500">Nessun marcatore o MVP inserito.</p>
-                  )}
-                </div>
-              </article>
-            );
-          })}
-        </div>
-        </div>
+      {detailMatch && (
+        <MatchDetailSheet
+          match={detailMatch}
+          nameOf={nameOf}
+          isAdmin={isAdmin}
+          busy={deleting !== null}
+          onClose={() => setDetailMatchId(null)}
+          onEdit={(m) => {
+            setDetailMatchId(null);
+            setEditing(m);
+          }}
+          onDelete={async (m) => {
+            setDetailMatchId(null);
+            await handleDeleteMatch(m);
+          }}
+        />
       )}
 
       {editing && (
