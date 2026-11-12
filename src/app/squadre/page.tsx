@@ -15,7 +15,7 @@ import { notifyMatchPlayers } from '@/lib/services/notificationService';
 import { TeamSwapEditor } from '@/components/TeamSwapEditor';
 import { MvpVoteCard } from '@/components/MvpVoteCard';
 import { getStoredFields, subscribeSportFields } from '@/lib/services/fieldService';
-import { effectiveMatchCost, effectiveMatchTime, effectiveMatchLocation, fieldLabel } from '@/lib/utils/matchUtils';
+import { effectiveMatchCost, effectiveMatchTime, effectiveMatchLocation, fieldLabel, fieldCostFor } from '@/lib/utils/matchUtils';
 import { 
   subscribeMatch, 
   saveMatchFields,
@@ -207,10 +207,12 @@ function SquadreContent() {
   // Valori mostrati: personalizzati per questa partita dall'admin, altrimenti gli standard
   useEffect(() => {
     const dirty = dirtyFields.current;
-    if (!dirty.has('cost')) setTotalCost(effectiveMatchCost(savedMatch, standardCost));
+    const loc = dirty.has('location') ? matchLocation : effectiveMatchLocation(savedMatch, fields, defaultFieldId);
+    if (!dirty.has('cost')) setTotalCost(effectiveMatchCost(savedMatch, standardCost, fieldCostFor(savedMatch, fields, defaultFieldId, loc)));
     if (!dirty.has('time')) setMatchTime(effectiveMatchTime(savedMatch, standardTime));
-    if (!dirty.has('location')) setMatchLocation(effectiveMatchLocation(savedMatch, fields, defaultFieldId));
-  }, [savedMatch, standardCost, standardTime, fields, defaultFieldId]);
+    if (!dirty.has('location')) setMatchLocation(loc);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedMatch, standardCost, standardTime, fields, defaultFieldId, matchLocation]);
 
   // Salvataggio automatico (solo admin) dei valori personalizzati per questa partita
   useEffect(() => {
@@ -784,7 +786,7 @@ function SquadreContent() {
                 </button>
               </>
             ) : (
-              'Seguono i valori standard (Impostazioni → Partita). Se li cambi qui valgono solo per questa partita; si salvano da soli.'
+              'Seguono il campo scelto e i valori del club (Impostazioni → Campi e costi). Se li cambi qui valgono solo per questa partita; si salvano da soli.'
             )}
           </p>
         </CollapsibleCard>

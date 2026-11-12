@@ -16,7 +16,6 @@ import { formatForm } from '@/lib/utils/formUtils';
 import { subscribeMatches } from '@/lib/firebase/firestoreService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { Match } from '@/types/database';
-import { DeleteAccountSection } from '@/components/DeleteAccountSection';
 import { photoToAvatarDataUrl } from '@/lib/utils/imageUtils';
 import { 
   User, 
@@ -382,19 +381,28 @@ export default function ProfiloPage() {
         </div>
       </div>
 
-      <Link
-        href="/impostazioni?sezione=notifiche"
-        className="flex items-center justify-between gap-3 bg-slate-900 border border-slate-800 rounded-2xl p-5 text-sm text-slate-200 hover:border-emerald-500/50"
-      >
-        <span>
-          <strong className="block text-white">Notifiche</strong>
-          <span className="text-xs text-slate-400">Attivale o disattivale su questo telefono in Impostazioni.</span>
-        </span>
-        <span className="text-emerald-400 font-bold text-xs">Apri →</span>
-      </Link>
-
-      {/* In fondo: eliminazione dell'account (con motivo e conferma) */}
-      <DeleteAccountSection isSuperAdmin={Boolean(user?.emailVerified && user?.email?.toLowerCase() === 'macciolino84@gmail.com')} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Link
+          href="/impostazioni?sezione=notifiche"
+          className="flex items-center justify-between gap-3 bg-slate-900 hover:bg-slate-800/80 rounded-2xl p-4 text-sm"
+        >
+          <span>
+            <span className="block font-semibold text-white">Notifiche</span>
+            <span className="text-xs text-slate-400">Attivale su questo dispositivo</span>
+          </span>
+          <span className="text-slate-500" aria-hidden="true">›</span>
+        </Link>
+        <Link
+          href="/impostazioni?sezione=account"
+          className="flex items-center justify-between gap-3 bg-slate-900 hover:bg-slate-800/80 rounded-2xl p-4 text-sm"
+        >
+          <span>
+            <span className="block font-semibold text-white">Account</span>
+            <span className="text-xs text-slate-400">Esci da tutti i dispositivi, disattiva o elimina</span>
+          </span>
+          <span className="text-slate-500" aria-hidden="true">›</span>
+        </Link>
+      </div>
     </div>
   );
 }

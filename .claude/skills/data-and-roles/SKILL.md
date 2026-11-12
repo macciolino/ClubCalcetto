@@ -64,3 +64,10 @@ Production data is REAL: never rewrite stats, no paid services, never print secr
   refresh tokens (`revokeRefreshTokens`) and writes `profiles/{id}.sessions_revoked_at` (ms, admin SDK, no rule change).
 - Every open device listens to its own profile: if `sessions_revoked_at` > its sign-in time (`authTime`), it signs out
   and goes to `/login?signedout=1` ("Sei uscito da tutti i dispositivi."). A new login afterwards is not affected.
+
+## Match cost
+- `sport_fields/{id}.cost` (optional, € total) = cost of a match on that field. Effective cost of a match:
+  match override (`cost_override` / archived `total_cost`) → cost of the match's field (`location`, else default field)
+  → club standard `settings.standard_total_cost` → 80. Helpers: `fieldCostFor()` + `effectiveMatchCost(match, std, fieldCost)`
+  in `lib/utils/matchUtils.ts` (used by Home, Squadre, Partita della settimana). Archived matches keep their own total_cost.
+- `fieldService` strips `undefined` before writing (Firestore refuses it) and removes emptied optional fields (`deleteField`).

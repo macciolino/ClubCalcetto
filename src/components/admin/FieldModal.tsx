@@ -19,6 +19,7 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
   const [phone, setPhone] = useState('');
   const [courtType, setCourtType] = useState('Erba Sintetica 4G Outdoor');
   const [notes, setNotes] = useState('');
+  const [cost, setCost] = useState('');
 
   useEffect(() => {
     if (fieldToEdit) {
@@ -28,6 +29,7 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
       setPhone(fieldToEdit.phone || '');
       setCourtType(fieldToEdit.court_type || 'Erba Sintetica 4G Outdoor');
       setNotes(fieldToEdit.notes || '');
+      setCost(fieldToEdit.cost ? String(fieldToEdit.cost) : '');
     } else {
       setName('');
       setAddress('');
@@ -35,6 +37,7 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
       setPhone('');
       setCourtType('Erba Sintetica 4G Outdoor');
       setNotes('');
+      setCost('');
     }
   }, [fieldToEdit, isOpen]);
 
@@ -56,6 +59,7 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
         phone: phone.trim() || undefined,
         court_type: courtType.trim() || undefined,
         notes: notes.trim() || undefined,
+        cost: Number(cost.replace(',', '.')) > 0 ? Number(cost.replace(',', '.')) : undefined,
       });
     } else {
       onSave({
@@ -65,6 +69,7 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
         phone: phone.trim() || undefined,
         court_type: courtType.trim() || undefined,
         notes: notes.trim() || undefined,
+        cost: Number(cost.replace(',', '.')) > 0 ? Number(cost.replace(',', '.')) : undefined,
       });
     }
     onClose();
@@ -144,6 +149,24 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
                 <option value="Erba Naturale">Erba Naturale</option>
               </select>
             </div>
+          </div>
+
+          <div>
+            <label htmlFor="field-cost" className="block text-xs font-medium text-slate-300 mb-1.5">Costo della partita su questo campo (€)</label>
+            <input
+              id="field-cost"
+              type="text"
+              inputMode="decimal"
+              placeholder="Vuoto = costo standard del club"
+              value={cost}
+              onChange={(e) => setCost(e.target.value.replace(/[^0-9.,]/g, ''))}
+              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white font-medium focus:outline-none focus:border-emerald-500"
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              {Number(cost.replace(',', '.')) > 0
+                ? `€${(Number(cost.replace(',', '.')) / 10).toFixed(2).replace('.', ',')} a testa (10 giocatori).`
+                : 'Il totale del campo: la quota a testa è questo diviso 10.'}
+            </p>
           </div>
 
           <div>

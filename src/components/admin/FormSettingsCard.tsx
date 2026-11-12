@@ -22,10 +22,10 @@ import { ChevronDown, Flame, Star, Info } from 'lucide-react';
 const num = (n: number) => String(Math.abs(n)).replace('.', ',');
 
 /**
- * Admin → Campi & Parametri: what raises the players' "Stato forma". Always open; the legend is collapsible.
+ * Impostazioni → Parametri e forma: what raises the players' "Stato forma". Always open; the legend is collapsible.
  * Everything off = only the values in the player's card count.
  */
-export function FormSettingsCard() {
+export function FormSettingsCard({ show = 'form' }: { show?: 'form' | 'keeper' }) {
   const settings = useFormSettings();
   const [saving, setSaving] = useState(false);
   const [legendOpen, setLegendOpen] = useState(false);
@@ -76,8 +76,48 @@ export function FormSettingsCard() {
   ];
   const anyOn = settings.goals || settings.mvp || settings.results;
 
+  if (show === 'keeper') {
+    return (
+      <>
+      {/* Come gioca il club in porta */}
+      <section className="bg-slate-900 rounded-2xl p-4 sm:p-5 space-y-3">
+        <div>
+          <h3 className="text-base font-semibold text-white">Portiere</h3>
+          <p className="text-sm text-slate-400 mt-0.5">Come gioca il club in porta: cambia il bilanciamento delle squadre e il campo.</p>
+        </div>
+        <div className="grid grid-cols-2 gap-1 bg-slate-950 p-1 rounded-xl text-sm" role="radiogroup" aria-label="Portiere">
+          {([
+            ['rotation', 'A rotazione'],
+            ['fixed', 'Fisso'],
+          ] as const).map(([value, label]) => {
+            const active = (value === 'fixed') === Boolean(settings.fixedKeeper);
+            return (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                disabled={saving}
+                onClick={() => setKeeperMode(value)}
+                className={`py-2.5 rounded-lg font-bold transition-all ${active ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-xs text-slate-400">
+          {settings.fixedKeeper
+            ? 'Fisso: due portieri tra i 10 vanno uno per squadra; il portiere prende il bonus dal primo gol e i rigori parati contano.'
+            : 'A rotazione (es. ogni 5 minuti): nessun portiere fisso, sul campo il posto in porta è "PORTA ↻" e le squadre si bilanciano senza cercare un portiere.'}
+        </p>
+      </section>
+      </>
+    );
+  }
+
   return (
-    <div className="bg-slate-900 border border-emerald-500/30 p-4 sm:p-5 rounded-2xl space-y-4">
+    <div className="bg-slate-900 p-4 sm:p-5 rounded-2xl space-y-4">
       <div>
         <h2 className="text-sm font-bold text-white flex items-center gap-2">
           <Flame className="h-5 w-5 text-orange-400 flex-shrink-0" />
@@ -118,37 +158,6 @@ export function FormSettingsCard() {
             </button>
           </div>
         ))}
-      </div>
-
-      {/* Come gioca il club in porta */}
-      <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
-        <div className="text-sm font-bold text-white">Portiere</div>
-        <div className="grid grid-cols-2 gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl text-xs" role="radiogroup" aria-label="Portiere">
-          {([
-            ['rotation', 'A rotazione'],
-            ['fixed', 'Fisso'],
-          ] as const).map(([value, label]) => {
-            const active = (value === 'fixed') === Boolean(settings.fixedKeeper);
-            return (
-              <button
-                key={value}
-                type="button"
-                role="radio"
-                aria-checked={active}
-                disabled={saving}
-                onClick={() => setKeeperMode(value)}
-                className={`py-2.5 rounded-lg font-bold transition-all ${active ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
-        <p className="text-xs text-slate-400">
-          {settings.fixedKeeper
-            ? 'Fisso: due portieri tra i 10 vanno uno per squadra; il portiere prende il bonus dal primo gol e i rigori parati contano.'
-            : 'A rotazione (es. ogni 5 minuti): nessun portiere fisso, sul campo il posto in porta è "PORTA ↻" e le squadre si bilanciano senza cercare un portiere.'}
-        </p>
       </div>
 
       {/* Legenda di quanto deciso (a tendina) */}

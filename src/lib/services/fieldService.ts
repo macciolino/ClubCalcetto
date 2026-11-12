@@ -7,6 +7,7 @@ import {
   doc,
   setDoc,
   deleteDoc,
+  deleteField,
   onSnapshot,
   Unsubscribe,
 } from 'firebase/firestore';
@@ -73,6 +74,20 @@ export function saveStoredFields(fields: SportField[]) {
   }
 }
 
+/** Firestore refuses `undefined`: empty values are left out; on update an emptied value is removed from the document. */
+function toFirestore(field: SportField, removeEmpty: boolean): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  (Object.keys(field) as (keyof SportField)[]).forEach((k) => {
+    if (field[k] !== undefined) out[k] = field[k];
+  });
+  if (removeEmpty) {
+    (['maps_url', 'phone', 'court_type', 'notes', 'cost'] as const).forEach((k) => {
+      if (field[k] === undefined) out[k] = deleteField();
+    });
+  }
+  return out;
+}
+
 export async function addStoredField(field: Omit<SportField, 'id'>): Promise<SportField> {
   const newField: SportField = {
     ...field,
@@ -86,7 +101,7 @@ export async function addStoredField(field: Omit<SportField, 'id'>): Promise<Spo
 
   if (isFirebaseConfigured) {
     try {
-      await setDoc(doc(db, 'sport_fields', newField.id), newField, { merge: true });
+      await setDoc(doc(db, 'sport_fields', newField.id), toFirestore(newField, false), { merge: true });
     } catch (e) {
       console.warn('[Firestore] Error saving field:', e);
     }
@@ -102,7 +117,7 @@ export async function updateStoredField(field: SportField): Promise<SportField> 
 
   if (isFirebaseConfigured) {
     try {
-      await setDoc(doc(db, 'sport_fields', field.id), field, { merge: true });
+      await setDoc(doc(db, 'sport_fields', field.id), toFirestore(field, true), { merge: true });
     } catch (e) {
       console.warn('[Firestore] Error updating field:', e);
     }

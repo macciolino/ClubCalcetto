@@ -16,7 +16,7 @@ interface CollapsibleCardProps {
 export function CollapsibleCard({ title, icon, summary, defaultOpen = false, children }: CollapsibleCardProps) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl">
+    <div className="bg-slate-900 p-4 sm:p-5 rounded-2xl">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}

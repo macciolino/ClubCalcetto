@@ -10,9 +10,8 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/context/AuthContext';
 import { StatCategory, Profile, Presence, SportField, GeneratedTeamRecord } from '@/types/database';
-import { PlayerModal } from '@/components/PlayerModal';
 import { TabOverviewMatch } from '@/components/admin/TabOverviewMatch';
-import { TabUsersRoles } from '@/components/admin/TabUsersRoles';
+import { AdminsCard } from '@/components/admin/AdminsCard';
 import { TabClubConfigFields } from '@/components/admin/TabClubConfigFields';
 import { NotificationSettingsCard } from '@/components/admin/NotificationSettingsCard';
 import { 
@@ -66,7 +65,7 @@ import {
 
 
 /** Admin sections shown in Impostazioni (each one was a part of the old /admin page). */
-export type AdminSection = 'partita' | 'rosa' | 'notifiche-club' | 'regole' | 'parametri' | 'account';
+export type AdminSection = 'partita' | 'campi' | 'regole' | 'parametri' | 'notifiche-club' | 'accessi';
 
 export function AdminSections({ section }: { section: AdminSection }) {
   const { user, profile, isAdmin, isSuperAdmin, isLoading } = useAuth();
@@ -83,9 +82,6 @@ export function AdminSections({ section }: { section: AdminSection }) {
   const [appSettings, setAppSettingsState] = useState(() => getAppSettings());
   const [generatedTeams, setGeneratedTeams] = useState<GeneratedTeamRecord | null>(null);
 
-  // Modale Giocatore (Aggiunta / Modifica)
-  const [isPlayerModalOpen, setIsPlayerModalOpen] = useState(false);
-  const [playerToEdit, setPlayerToEdit] = useState<Profile | null>(null);
 
   // Email Test State
 
@@ -188,7 +184,7 @@ export function AdminSections({ section }: { section: AdminSection }) {
   // (gli hook devono stare PRIMA del return qui sotto)
   const [deactivatedPlayers, setDeactivatedPlayers] = useState<Profile[]>([]);
   useEffect(() => {
-    if (!isSuperAdmin || section !== 'account') return;
+    if (!isSuperAdmin || section !== 'accessi') return;
     setDeactivatedPlayers([]);
     const unsub = subscribeProfiles((list) => setDeactivatedPlayers(list), 'deactivated');
     return () => unsub();
@@ -245,33 +241,6 @@ export function AdminSections({ section }: { section: AdminSection }) {
     updateStoredPlayer(updated);
     setPlayers(getStoredPlayers());
     await saveProfileDoc(updated);
-  };
-
-  // Ospiti: si cancella la scheda. Account registrati: solo il super admin, eliminazione completa dal server
-  // (accesso Google, scheda, telefoni per le notifiche e iscrizioni; nello storico resta il nome).
-  const handleDeletePlayer = async (playerId: string, name: string) => {
-    const target = players.find((p) => p.id === playerId);
-    if (playerId === 'p-1') return;
-    if (target?.is_guest) {
-      if (!(await askConfirm(`Eliminare l'ospite "${name}"? Nelle partite già giocate resta il nome.`))) return;
-      removeStoredPlayer(playerId);
-      setPlayers(getStoredPlayers());
-      await deleteProfileDoc(playerId);
-      return;
-    }
-    if (!isSuperAdmin) {
-      notify('Solo il super admin può disattivare un account registrato.');
-      return;
-    }
-    if (!(await askConfirm(`Disattivare l'account di "${name}"? Non potrà più entrare e sparirà dalle pagine; scheda, parametri e statistiche restano salvati. Potrai riattivarlo o eliminarlo del tutto da Impostazioni → Account chiusi.`))) return;
-    const res = await manageAccountAsSuperAdmin(playerId, 'deactivate');
-    if (res.ok) {
-      removeStoredPlayer(playerId);
-      setPlayers(getStoredPlayers());
-      notify(`Account di "${name}" disattivato.`);
-    } else {
-      notify(res.error === 'not_configured' ? 'Operazione non disponibile: server non configurato.' : 'Operazione non riuscita. Riprova.');
-    }
   };
 
   const handleReactivatePlayer = async (player: Profile) => {
@@ -358,35 +327,23 @@ export function AdminSections({ section }: { section: AdminSection }) {
             presences={presences}
             generatedTeamRecord={generatedTeams}
             totalMatchCost={appSettings.standard_total_cost || 80}
+            fields={fields}
+            defaultFieldId={appSettings.default_field_id}
           />
         </>
       )}
 
-      {section === 'rosa' && (
-        <TabUsersRoles
-          players={players}
-          onOpenAddModal={() => {
-            setPlayerToEdit(null);
-            setIsPlayerModalOpen(true);
-          }}
-          onOpenEditModal={(p) => {
-            setPlayerToEdit(p);
-            setIsPlayerModalOpen(true);
-          }}
-          onTogglePlayerRole={handleTogglePlayerRole}
-          onDeletePlayer={handleDeletePlayer}
-          canManageRoles={isSuperAdmin}
-        />
-      )}
-
       {section === 'notifiche-club' && <NotificationSettingsCard defaultOpen />}
 
-      {section === 'regole' && <TabClubConfigFields {...configProps} part="rules" />}
+      {section === 'campi' && <TabClubConfigFields {...configProps} part="campi" />}
+
+      {section === 'regole' && <TabClubConfigFields {...configProps} part="regole" />}
 
       {section === 'parametri' && <TabClubConfigFields {...configProps} part="params" />}
 
-      {section === 'account' && isSuperAdmin && (
+      {section === 'accessi' && isSuperAdmin && (
         <>
+          <AdminsCard players={players} onToggleRole={handleTogglePlayerRole} />
           <DeactivatedAccountsList
             deactivatedPlayers={deactivatedPlayers}
             onReactivatePlayer={handleReactivatePlayer}
@@ -396,16 +353,6 @@ export function AdminSections({ section }: { section: AdminSection }) {
         </>
       )}
 
-      {/* MODALE CREAZIONE / MODIFICA GIOCATORE */}
-      <PlayerModal
-        isOpen={isPlayerModalOpen}
-        onClose={() => setIsPlayerModalOpen(false)}
-        playerToEdit={playerToEdit}
-        statCategories={categories}
-        onSaved={() => {
-          setPlayers(getStoredPlayers());
-        }}
-      />
     </div>
   );
 }

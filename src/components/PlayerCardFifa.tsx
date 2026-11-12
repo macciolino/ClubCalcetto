@@ -8,7 +8,7 @@ import { Match, Profile, StatCategory, sortStatsByCanonicalOrder } from '@/types
 import { FormDots, playedAny } from './FormDots';
 import { RadarChart } from './RadarChart';
 import { Sheet, sheetBtn } from './ui/Sheet';
-import { Edit3, Trash2 } from 'lucide-react';
+import { Edit3, Trash2, ShieldCheck, ShieldOff } from 'lucide-react';
 
 const isSuperAdminProfile = (p: Profile) => Boolean(p.email?.toLowerCase().includes('macciolino84'));
 
@@ -97,6 +97,8 @@ export function PlayerDetailSheet({
   onEdit,
   onDelete,
   onClose,
+  showEmail = false,
+  onToggleAdmin,
 }: {
   player: Profile;
   categories?: StatCategory[];
@@ -107,6 +109,10 @@ export function PlayerDetailSheet({
   onEdit?: (player: Profile) => void;
   onDelete?: (player: Profile) => void;
   onClose: () => void;
+  /** Admins see the player's email */
+  showEmail?: boolean;
+  /** Super admin: make / remove admin */
+  onToggleAdmin?: (player: Profile) => void;
 }) {
   const [tab, setTab] = useState<'radar' | 'stats'>('radar');
 
@@ -206,12 +212,19 @@ export function PlayerDetailSheet({
                 </span>
               )}
             </span>
+            {showEmail && player.email && <span className="block text-xs font-normal text-slate-500 mt-0.5 break-all">{player.email}</span>}
           </span>
         </span>
       }
       footer={
-        isAdmin && (onEdit || canDelete) ? (
+        isAdmin && (onEdit || canDelete || onToggleAdmin) ? (
           <>
+            {onToggleAdmin && !player.is_guest && !isSuperAdminProfile(player) && (
+              <button type="button" onClick={() => onToggleAdmin(player)} className={sheetBtn.secondary}>
+                {player.role === 'admin' ? <ShieldOff className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
+                {player.role === 'admin' ? 'Togli admin' : 'Rendi admin'}
+              </button>
+            )}
             {canDelete && (
               <button type="button" onClick={() => onDelete?.(player)} className={`${sheetBtn.danger} sm:mr-auto`}>
                 <Trash2 className="h-4 w-4" /> Elimina

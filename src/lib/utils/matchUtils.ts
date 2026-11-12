@@ -5,11 +5,12 @@ export const DEFAULT_MATCH_TIME = '20:30';
 
 /**
  * Total cost of a match: the cost saved at closing (completed matches) or a custom cost set by an admin
- * for that match; otherwise the standard cost from Admin > Campi & Parametri.
+ * for that match; otherwise the cost of the chosen field, otherwise the standard cost (Impostazioni → Campi e costi).
  * Old match docs that only stored the default 80 do NOT override the standard anymore.
  */
-export function effectiveMatchCost(match: Match | null | undefined, standardCost?: number): number {
-  const standard = Number(standardCost) || DEFAULT_MATCH_COST;
+export function effectiveMatchCost(match: Match | null | undefined, standardCost?: number, fieldCost?: number): number {
+  // Senza un costo deciso per la partita: il costo del campo scelto, altrimenti quello standard del club
+  const standard = Number(fieldCost) || Number(standardCost) || DEFAULT_MATCH_COST;
   if (match && (match.status === 'completed' || match.cost_override) && Number(match.total_cost) > 0) {
     return Number(match.total_cost);
   }
@@ -24,6 +25,22 @@ export function effectiveMatchTime(match: Match | null | undefined, standardTime
 /** Label used for a field in the match location (same format everywhere) */
 export function fieldLabel(field: SportField): string {
   return field.address ? `${field.name} (${field.address})` : field.name;
+}
+
+/**
+ * Cost of the field where the match is played: the field of `location` (or of the match), otherwise the default
+ * field. undefined when that field has no cost of its own (then the club's standard cost applies).
+ */
+export function fieldCostFor(
+  match: Match | null | undefined,
+  fields: SportField[],
+  defaultFieldId?: string,
+  location?: string
+): number | undefined {
+  const loc = location ?? match?.location;
+  const byLocation = loc ? fields.find((f) => fieldLabel(f) === loc || f.name === loc) : undefined;
+  const field = byLocation || (loc ? undefined : fields.find((f) => f.id === defaultFieldId) || fields[0]);
+  return field && Number(field.cost) > 0 ? Number(field.cost) : undefined;
 }
 
 /** Location of a match: the one saved on the match, otherwise the admin's default field. */

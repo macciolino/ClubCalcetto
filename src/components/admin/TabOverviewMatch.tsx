@@ -8,11 +8,11 @@ import { reconcileTeams, toTeamPlayer } from '@/lib/utils/teamUtils';
 import { firstToTenByWeek as computeFirstToTen } from '@/lib/utils/presenceRanking';
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { Profile, Presence, Match, GeneratedTeamRecord } from '@/types/database';
+import { Profile, Presence, Match, GeneratedTeamRecord, SportField } from '@/types/database';
 
 const EMPTY_RESULT: MatchResultValue = { scoreWhite: 0, scoreBlack: 0, mvpPlayerId: '', scorers: [] };
 import { useAuth } from '@/lib/context/AuthContext';
-import { effectiveMatchCost } from '@/lib/utils/matchUtils';
+import { effectiveMatchCost, fieldCostFor } from '@/lib/utils/matchUtils';
 import { subscribeMatch, subscribeMatches, saveMatchResult, subscribeMvpVotes, countMvpVotes, subscribeGeneratedTeams, subscribeTeamDatesSince } from '@/lib/firebase/firestoreService';
 import { CalendarDay, formatItalianDate, toDateString } from '@/lib/utils/dateUtils';
 import { 
@@ -51,6 +51,9 @@ interface TabOverviewMatchProps {
   presences: Presence[];
   generatedTeamRecord?: GeneratedTeamRecord | null;
   totalMatchCost?: number;
+  /** Fields of the club and the default one: a field can have its own cost */
+  fields?: SportField[];
+  defaultFieldId?: string;
 }
 
 export function TabOverviewMatch({
@@ -61,6 +64,8 @@ export function TabOverviewMatch({
   presences,
   generatedTeamRecord,
   totalMatchCost: standardMatchCost = 80,
+  fields = [],
+  defaultFieldId,
 }: TabOverviewMatchProps) {
   const { profile } = useAuth();
   const fixedKeeper = Boolean(useFormSettings().fixedKeeper);
@@ -100,7 +105,7 @@ export function TabOverviewMatch({
   const closingOptions = Array.from(new Set([activeDate, ...recentDates])).sort().reverse();
 
   // Quota: quella della partita se impostata, altrimenti il costo standard dell'admin
-  const totalMatchCost = effectiveMatchCost(savedMatch, standardMatchCost);
+  const totalMatchCost = effectiveMatchCost(savedMatch, standardMatchCost, fieldCostFor(savedMatch, fields, defaultFieldId));
 
   // Titolari confermati per la data attiva
   const dayPresences = presences.filter((p) => p.date === activeDate);
@@ -152,8 +157,8 @@ export function TabOverviewMatch({
   const [result, setResult] = useState<MatchResultValue>(EMPTY_RESULT);
   const [isArchiving, setIsArchiving] = useState(false);
   const [archiveSuccessMessage, setArchiveSuccessMessage] = useState('');
-  const [cashOpen, setCashOpen] = useState(false);
-  const [daysOpen, setDaysOpen] = useState(false);
+  const [cashOpen, setCashOpen] = useState(true);
+  const [daysOpen, setDaysOpen] = useState(true);
 
   // Partite archiviate totali
   const [archivedMatchesCount, setArchivedMatchesCount] = useState(0);
@@ -274,7 +279,7 @@ export function TabOverviewMatch({
         mvpPlayerId: result.mvpPlayerId || null,
         scorers: result.scorers,
         penaltySaves: result.penaltySaves || [],
-        totalCost: effectiveMatchCost(closingMatch, standardMatchCost),
+        totalCost: effectiveMatchCost(closingMatch, standardMatchCost, fieldCostFor(closingMatch, fields, defaultFieldId)),
         closedBy: profile?.id || '',
       });
       setArchiveSuccessMessage(
@@ -291,83 +296,8 @@ export function TabOverviewMatch({
 
   return (
     <div className="space-y-6">
-      {/* 1. KPI CARDS IN EVIDENZA */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Iscritti Totali */}
-        <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl flex items-center justify-between">
-          <div className="space-y-1">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-              Iscritti Rosa
-            </span>
-            <div className="text-2xl sm:text-3xl font-bold text-white">{players.length}</div>
-            <span className="text-[10px] text-slate-500 font-medium">Giocatori censiti</span>
-          </div>
-          <div className="p-3 bg-blue-500/10 text-blue-400 rounded-2xl ring-1 ring-blue-500/30">
-            <Users className="h-6 w-6" />
-          </div>
-        </div>
-
-        {/* Titolari Pronti Oggi */}
-        <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl flex items-center justify-between">
-          <div className="space-y-1">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-              Quorum Titolari
-            </span>
-            <div
-              className={`text-2xl sm:text-3xl font-bold ${
-                starterProfiles.length >= 10 ? 'text-emerald-400' : 'text-amber-400'
-              }`}
-            >
-              {starterProfiles.length}/10
-            </div>
-            <span className="text-[10px] text-slate-500 font-medium">
-              {starterProfiles.length >= 10 ? 'Quorum Raggiunto!' : 'In attesa convocati'}
-            </span>
-          </div>
-          <div
-            className={`p-3 rounded-2xl ring-1 ${
-              starterProfiles.length >= 10
-                ? 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/30'
-                : 'bg-amber-500/10 text-amber-400 ring-amber-500/30'
-            }`}
-          >
-            <CheckCircle2 className="h-6 w-6" />
-          </div>
-        </div>
-
-        {/* Cassa & Incasso Quote */}
-        <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl flex items-center justify-between">
-          <div className="space-y-1">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-              Cassa Campo
-            </span>
-            <div className="text-2xl sm:text-3xl font-bold text-white font-mono">
-              €{totalCollected.toFixed(0)} <span className="text-slate-500 text-sm">/ €{totalMatchCost}</span>
-            </div>
-            <span className="text-[10px] text-emerald-400 font-bold">{paidCount}/10 Pagati</span>
-          </div>
-          <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-2xl ring-1 ring-emerald-500/30">
-            <Coins className="h-6 w-6" />
-          </div>
-        </div>
-
-        {/* Partite Archiviate */}
-        <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl flex items-center justify-between">
-          <div className="space-y-1">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-              Partite Concluse
-            </span>
-            <div className="text-2xl sm:text-3xl font-bold text-white">{archivedMatchesCount}</div>
-            <span className="text-[10px] text-slate-500 font-medium">Storico archiviato</span>
-          </div>
-          <div className="p-3 bg-purple-500/10 text-purple-400 rounded-2xl ring-1 ring-purple-500/30">
-            <Trophy className="h-6 w-6" />
-          </div>
-        </div>
-      </div>
-
       {/* 2. ELEZIONE GIORNO UFFICIALE (a tendina) & CTA GENERATORE SQUADRE */}
-      <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-4">
+      <div className="bg-slate-900 p-4 sm:p-5 rounded-2xl space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <button
             type="button"
@@ -376,9 +306,9 @@ export function TabOverviewMatch({
             className="flex-1 min-w-0 flex items-center justify-between gap-3 text-left"
           >
             <div className="min-w-0">
-              <h2 className="text-sm font-bold text-white flex items-center gap-2">
+              <h2 className="text-base font-semibold text-white flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-emerald-400 flex-shrink-0" />
-                Elezione Giorno Ufficiale Partita
+                Giorno ufficiale
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
                 Ufficiale: <strong className="text-emerald-300">{formatItalianDate(activeDate)}</strong>
@@ -467,7 +397,7 @@ export function TabOverviewMatch({
       </div>
 
       {/* 3. TRACCIAMENTO CASSA & PAGAMENTI QUOTA CAMPO (a tendina) */}
-      <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-4">
+      <div className="bg-slate-900 p-4 sm:p-5 rounded-2xl space-y-4">
         <button
           type="button"
           onClick={() => setCashOpen((o) => !o)}
@@ -475,9 +405,9 @@ export function TabOverviewMatch({
           className="w-full flex items-center justify-between gap-3 text-left"
         >
           <div className="min-w-0">
-            <h2 className="text-sm font-bold text-white flex items-center gap-2">
+            <h2 className="text-base font-semibold text-white flex items-center gap-2">
               <Coins className="h-4 w-4 text-emerald-400 flex-shrink-0" />
-              Cassa & Pagamenti ({formatItalianDate(activeDate)})
+              Cassa
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">
               €{totalCollected.toFixed(2)} di €{totalMatchCost} · {paidCount}/10 pagati · €{costPerPlayer.toFixed(2)} a testa
@@ -580,7 +510,7 @@ export function TabOverviewMatch({
       </div>
 
       {/* 4. MODULO CHIUSURA MATCH POST-PARTITA */}
-      <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-5">
+      <div className="bg-slate-900 p-4 sm:p-5 rounded-2xl space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="text-base font-semibold text-white flex items-center gap-2">

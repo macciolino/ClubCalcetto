@@ -21,7 +21,7 @@ const MODES: { value: Mode; label: string; help: string }[] = [
   { value: 'all', label: 'Tutti i giocatori', help: 'Le notifiche arrivano ai giocatori interessati.' },
 ];
 
-/** Admin → Campi & Parametri: who receives notifications + test notification to yourself. */
+/** Impostazioni → Notifiche del club: who receives notifications + test notification to yourself. */
 export function NotificationSettingsCard({ defaultOpen = false }: { defaultOpen?: boolean } = {}) {
   const { profile } = useAuth();
   const [mode, setMode] = useState<Mode>('admins');
@@ -107,7 +107,7 @@ export function NotificationSettingsCard({ defaultOpen = false }: { defaultOpen?
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-4">
+    <div className="bg-slate-900 p-4 sm:p-5 rounded-2xl space-y-4">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}

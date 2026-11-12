@@ -10,7 +10,7 @@ interface DeactivatedAccountsListProps {
   onDeleteDeactivatedPlayer: (player: Profile) => void;
 }
 
-/** Super admin (Impostazioni → Account chiusi): deactivated accounts, data kept, with reactivate / delete for good. */
+/** Super admin (Impostazioni → Admin e account): deactivated accounts, data kept, with reactivate / delete for good. */
 export function DeactivatedAccountsList({
   deactivatedPlayers,
   onReactivatePlayer,
@@ -21,7 +21,7 @@ export function DeactivatedAccountsList({
         {deactivatedPlayers.map((p) => (
           <li
             key={p.id}
-            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900 border border-slate-800 rounded-2xl p-4"
+            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900 rounded-2xl p-4"
           >
             <div className="min-w-0">
               <div className="font-bold text-sm text-white truncate">{p.full_name}</div>

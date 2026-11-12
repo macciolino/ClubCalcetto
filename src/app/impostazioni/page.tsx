@@ -1,27 +1,23 @@
 'use client';
 
 import { PageSkeleton } from '@/components/ui/Skeleton';
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '@/lib/context/AuthContext';
 import { NotificationGuide } from '@/components/NotificationGuide';
+import { AccountSettings } from '@/components/AccountSettings';
 import { AdminSection, AdminSections } from '@/components/admin/AdminSections';
-import {
-  Settings,
-  Bell,
-  Trophy,
-  Users,
-  Megaphone,
-  Ruler,
-  BarChart3,
-  Lock,
-  ChevronRight,
-  ArrowLeft,
-  Loader2,
-} from 'lucide-react';
+import { AppSettings, Profile, SportField } from '@/types/database';
+import { subscribeAppSettings, subscribeProfiles } from '@/lib/firebase/firestoreService';
+import { subscribeSportFields } from '@/lib/services/fieldService';
+import { db, isFirebaseConfigured } from '@/lib/firebase/config';
+import { useStatCategories } from '@/lib/hooks/useStatCategories';
+import { useFormSettings } from '@/lib/hooks/useForms';
+import { Bell, UserCog, Trophy, MapPin, Ruler, BarChart3, Megaphone, ShieldCheck, ChevronRight, ArrowLeft } from 'lucide-react';
 
-type SectionId = 'notifiche' | AdminSection;
+type SectionId = 'notifiche' | 'account' | AdminSection;
 
 interface SectionDef {
   id: SectionId;
@@ -29,142 +25,188 @@ interface SectionDef {
   description: string;
   icon: React.ElementType;
   access: 'all' | 'admin' | 'super';
+  group: 'Tuo account' | 'Gestione partita' | 'Club' | 'Accessi';
 }
 
-/** Sections of Impostazioni, in menu order. The admin ones contain what used to be the /admin page. */
+/** Sections of Impostazioni, in menu order, grouped. */
 const SECTIONS: SectionDef[] = [
-  { id: 'notifiche', label: 'Notifiche', description: 'Attiva o disattiva le notifiche su questo dispositivo', icon: Bell, access: 'all' },
-  { id: 'partita', label: 'Partita della settimana', description: 'Giorno ufficiale, cassa e pagamenti, chiusura partita', icon: Trophy, access: 'admin' },
-  { id: 'rosa', label: 'Rosa giocatori', description: 'Elenco, ruoli, ospiti e schede dei giocatori', icon: Users, access: 'admin' },
-  { id: 'notifiche-club', label: 'Notifiche del club', description: 'Chi riceve le notifiche, prova, telefoni degli admin', icon: Megaphone, access: 'admin' },
-  { id: 'regole', label: 'Valori della partita', description: 'Valori di ogni partita: campo, orario, costo e blocco ritiri', icon: Ruler, access: 'admin' },
-  { id: 'parametri', label: 'Parametri e forma', description: 'Parametri dei giocatori, Stato forma e portiere', icon: BarChart3, access: 'admin' },
-  { id: 'account', label: 'Account chiusi', description: 'Account disattivati e motivi di chi lascia', icon: Lock, access: 'super' },
+  { id: 'notifiche', label: 'Notifiche', description: 'Le notifiche su questo dispositivo', icon: Bell, access: 'all', group: 'Tuo account' },
+  { id: 'account', label: 'Account', description: 'Esci da tutti i dispositivi, disattiva o elimina l’account', icon: UserCog, access: 'all', group: 'Tuo account' },
+  { id: 'partita', label: 'Partita della settimana', description: 'Giorno ufficiale, cassa, chiusura partita', icon: Trophy, access: 'admin', group: 'Gestione partita' },
+  { id: 'campi', label: 'Campi e costi', description: 'Campi, costo di ogni campo, orario e costo standard', icon: MapPin, access: 'admin', group: 'Club' },
+  { id: 'regole', label: 'Regole di gioco', description: 'Blocco ritiri e portiere', icon: Ruler, access: 'admin', group: 'Club' },
+  { id: 'parametri', label: 'Parametri e forma', description: 'Parametri dell’ottagono e stato forma', icon: BarChart3, access: 'admin', group: 'Club' },
+  { id: 'notifiche-club', label: 'Notifiche del club', description: 'Chi riceve le notifiche, prova, telefoni degli admin', icon: Megaphone, access: 'admin', group: 'Club' },
+  { id: 'accessi', label: 'Admin e account', description: 'Chi è admin, account disattivati, motivi di chi lascia', icon: ShieldCheck, access: 'super', group: 'Accessi' },
 ];
+const GROUPS: SectionDef['group'][] = ['Tuo account', 'Gestione partita', 'Club', 'Accessi'];
+
+/** Live values shown on the right of each row of the overview ("how the club is set up" at a glance). */
+function useSummary(admin: boolean, superAdmin: boolean, email?: string | null): Partial<Record<SectionId, string>> {
+  const [settings, setSettings] = useState<AppSettings>({});
+  const [fields, setFields] = useState<SportField[]>([]);
+  const [admins, setAdmins] = useState<number | null>(null);
+  const [notifyMode, setNotifyMode] = useState<string>('');
+  const [permission, setPermission] = useState<string>('');
+  const categories = useStatCategories();
+  const form = useFormSettings();
+
+  useEffect(() => {
+    try {
+      setPermission(typeof Notification !== 'undefined' ? Notification.permission : 'unsupported');
+    } catch {
+      setPermission('unsupported');
+    }
+    if (!isFirebaseConfigured || !admin) return;
+    const unsubs = [
+      subscribeAppSettings((s) => setSettings(s || {})),
+      subscribeSportFields((list) => setFields(list || [])),
+      onSnapshot(
+        doc(db, 'settings', 'notifications'),
+        (snap) => setNotifyMode(String(snap.data()?.mode || 'admins')),
+        () => undefined
+      ),
+    ];
+    if (superAdmin) unsubs.push(subscribeProfiles((list: Profile[]) => setAdmins((list || []).filter((p) => p.role === 'admin').length)));
+    return () => unsubs.forEach((u) => u());
+  }, [admin, superAdmin]);
+
+  const short = (d?: string) => {
+    if (!d) return '';
+    const [y, m, dd] = d.split('-').map(Number);
+    return new Date(y, m - 1, dd).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '');
+  };
+  const def = fields.find((f) => f.id === settings.default_field_id) || fields[0];
+  const anyForm = form.goals || form.mvp || form.results;
+  return {
+    notifiche: permission === 'granted' ? 'attive' : permission === 'denied' ? 'bloccate' : permission === 'unsupported' ? '' : 'spente',
+    account: email || '',
+    partita: short(settings.official_match_date),
+    campi: def ? `${def.name} · €${Number(def.cost || settings.standard_total_cost || 80)}` : '',
+    regole: `${settings.timelock_enabled ? `ritiri bloccati ${settings.timelock_hours_before || 4}h prima` : 'ritiri liberi'} · portiere ${
+      form.fixedKeeper ? 'fisso' : 'a rotazione'
+    }`,
+    parametri: `${categories.length} parametri · forma ${anyForm ? 'attiva' : 'spenta'}`,
+    'notifiche-club': notifyMode === 'all' ? 'a tutti' : notifyMode === 'off' ? 'spente' : notifyMode ? 'solo admin' : '',
+    accessi: admins === null ? '' : `${admins} admin`,
+  };
+}
+
+/** Old addresses (before the reorganisation) → new sections */
+const ALIASES: Record<string, string> = { rosa: 'accessi', 'account-chiusi': 'accessi' };
 
 function SettingsContent() {
   const { user, profile, isAdmin, isSuperAdmin, isLoading } = useAuth();
   const params = useSearchParams();
+  const router = useRouter();
+  const admin = Boolean(isAdmin || profile?.role === 'admin');
+  const summary = useSummary(admin, Boolean(isSuperAdmin), user?.email);
+
+  // "Rosa giocatori" non c'è più: gli admin (non super) finiscono nella pagina Giocatori
+  const raw = params.get('sezione') || '';
+  useEffect(() => {
+    if (raw === 'rosa' && admin && !isSuperAdmin) router.replace('/giocatori');
+  }, [raw, admin, isSuperAdmin, router]);
 
   if (isLoading) return <PageSkeleton />;
   if (!user || !profile) {
     return (
       <div className="min-h-[50vh] flex flex-col items-center justify-center text-center gap-3">
         <p className="text-sm text-slate-400">Accedi per gestire le tue impostazioni.</p>
-        <Link href="/login" className="px-5 py-2.5 bg-emerald-500 text-slate-950 font-bold rounded-xl text-xs">
+        <Link href="/login" className="px-5 py-2.5 bg-emerald-500 text-slate-950 font-semibold rounded-xl text-sm">
           Vai al login
         </Link>
       </div>
     );
   }
 
-  const admin = isAdmin || profile.role === 'admin';
   const visible = SECTIONS.filter((s) => s.access === 'all' || (s.access === 'admin' && admin) || (s.access === 'super' && isSuperAdmin));
-  const requested = visible.find((s) => s.id === params.get('sezione'));
-  // Senza sezione scelta si vede la schermata generale delle impostazioni (su PC e su telefono)
+  const wanted = ALIASES[raw] || raw;
+  const requested = visible.find((s) => s.id === wanted);
   const current = requested || visible[0];
-  const groups = [
-    { title: 'Personali', items: visible.filter((s) => s.access === 'all') },
-    { title: 'Amministrazione', items: visible.filter((s) => s.access !== 'all') },
-  ].filter((g) => g.items.length > 0);
+  const groups = GROUPS.map((g) => ({ title: g, items: visible.filter((s) => s.group === g) })).filter((g) => g.items.length > 0);
 
-  const menu = (
-    <nav aria-label="Sezioni delle impostazioni" className="space-y-4">
+  // Riga del menu: icona, nome, (schermata generale) valore attuale a destra
+  const row = (s: SectionDef, withValue: boolean) => {
+    const Icon = s.icon;
+    const active = Boolean(requested) && s.id === current.id;
+    return (
+      <Link
+        key={s.id}
+        href={`/impostazioni?sezione=${s.id}`}
+        aria-current={active ? 'page' : undefined}
+        className={`flex items-center gap-3 px-3.5 py-3 text-sm transition-colors ${
+          active ? 'bg-slate-800 text-white' : 'text-slate-200 hover:bg-slate-800/60'
+        }`}
+      >
+        <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-slate-800 text-emerald-400">
+          <Icon className="h-4 w-4" />
+        </span>
+        <span className="flex-1 min-w-0">
+          <span className="block font-medium truncate">{s.label}</span>
+          {withValue && summary[s.id] && <span className="sm:hidden block text-xs text-slate-400 truncate">{summary[s.id]}</span>}
+        </span>
+        {withValue && summary[s.id] && (
+          <span className="hidden sm:block max-w-[45%] truncate text-xs text-slate-400 text-right">{summary[s.id]}</span>
+        )}
+        <ChevronRight className="h-4 w-4 flex-shrink-0 text-slate-600" aria-hidden="true" />
+      </Link>
+    );
+  };
+
+  const groupList = (withValue: boolean) => (
+    <div className="space-y-5">
       {groups.map((g) => (
-        <div key={g.title} className="space-y-1">
-          <p className="px-3 text-[11px] font-bold uppercase tracking-wider text-slate-500">{g.title}</p>
-          {g.items.map((s) => {
-            const Icon = s.icon;
-            const active = s.id === current.id;
-            return (
-              <Link
-                key={s.id}
-                href={`/impostazioni?sezione=${s.id}`}
-                aria-current={active ? 'page' : undefined}
-                className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold transition-colors ${
-                  active ? 'md:bg-emerald-500 md:text-slate-950 text-slate-200' : 'text-slate-300 hover:bg-slate-800'
-                }`}
-              >
-                <Icon className={`h-4 w-4 flex-shrink-0 ${active ? 'md:text-slate-950 text-emerald-400' : 'text-emerald-400'}`} />
-                <span className="flex-1 min-w-0">
-                  <span className="block truncate">{s.label}</span>
-                  <span className="block md:hidden text-[11px] font-normal text-slate-500 truncate">{s.description}</span>
-                </span>
-                <ChevronRight className="h-4 w-4 text-slate-600 md:hidden" aria-hidden="true" />
-              </Link>
-            );
-          })}
-        </div>
+        <section key={g.title} className="space-y-1.5" aria-label={g.title}>
+          <h2 className="px-1 text-xs font-semibold text-slate-500">{g.title}</h2>
+          <div className="bg-slate-900 rounded-2xl overflow-hidden divide-y divide-slate-800">
+            {g.items.map((s) => (
+              <div key={s.id}>{row(s, withValue)}</div>
+            ))}
+          </div>
+        </section>
       ))}
-    </nav>
+    </div>
   );
 
   return (
     <div className="space-y-6 pb-16">
-      <header className="space-y-1.5">
+      <header className="min-h-[2.5rem] flex items-center">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Impostazioni</h1>
-        <p className="text-sm text-slate-400 max-w-xl leading-relaxed">
-          {admin ? `Club Soccer - ${profile.full_name}` : 'Le tue preferenze per Club Soccer.'}
-        </p>
       </header>
 
       {!requested ? (
-        /* Schermata generale: tutte le sezioni, raggruppate (uguale su PC e telefono) */
-        <div className="space-y-6">
-          {groups.map((g) => (
-            <section key={g.title} className="space-y-2" aria-label={g.title}>
-              <h2 className="text-sm font-semibold text-slate-300">{g.title}</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {g.items.map((s) => {
-                  const Icon = s.icon;
-                  return (
-                    <Link
-                      key={s.id}
-                      href={`/impostazioni?sezione=${s.id}`}
-                      className="group flex items-start gap-3 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-4 transition-colors"
-                    >
-                      <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-slate-800 text-emerald-400">
-                        <Icon className="h-4 w-4" />
-                      </span>
-                      <span className="flex-1 min-w-0">
-                        <span className="block text-sm font-semibold text-white">{s.label}</span>
-                        <span className="block text-xs text-slate-400 mt-0.5">{s.description}</span>
-                      </span>
-                      <ChevronRight className="h-4 w-4 text-slate-600 group-hover:text-slate-400 mt-2.5" aria-hidden="true" />
-                    </Link>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
-        </div>
+        /* Schermata generale: gruppi di righe con il valore attuale (telefono, tablet e PC) */
+        <div className="max-w-2xl">{groupList(true)}</div>
       ) : (
-      <div className="md:grid md:grid-cols-[240px_1fr] md:gap-6 md:items-start">
-        {/* Elenco sezioni: colonna a sinistra su PC (su telefono si torna alla schermata generale) */}
-        <aside className="hidden md:block bg-slate-900 border border-slate-800 rounded-2xl p-2 md:sticky md:top-36">
-          {menu}
-        </aside>
+        <div className="lg:grid lg:grid-cols-[260px_1fr] lg:gap-8 lg:items-start">
+          {/* PC: elenco delle sezioni a sinistra, fisso */}
+          <aside className="hidden lg:block lg:sticky lg:top-36">{groupList(false)}</aside>
 
-        <section className="space-y-4 min-w-0" aria-labelledby="settings-section-title">
-          <div className="flex items-center gap-3">
+          <section className="space-y-4 min-w-0" aria-labelledby="settings-section-title">
             <Link
               href="/impostazioni"
-              className="flex items-center gap-1 text-xs font-bold text-emerald-400"
+              className="inline-flex items-center gap-1 text-sm font-medium text-emerald-400 hover:text-emerald-300"
               aria-label="Torna alla schermata generale delle impostazioni"
             >
               <ArrowLeft className="h-4 w-4" /> Impostazioni
             </Link>
-          </div>
-          <div>
-            <h2 id="settings-section-title" className="text-lg font-bold text-white">
-              {current.label}
-            </h2>
-            <p className="text-xs text-slate-400">{current.description}</p>
-          </div>
+            <div>
+              <h2 id="settings-section-title" className="text-xl font-semibold text-white">
+                {current.label}
+              </h2>
+              <p className="text-sm text-slate-400 mt-0.5">{current.description}</p>
+            </div>
 
-          {current.id === 'notifiche' ? <NotificationGuide /> : <AdminSections section={current.id} />}
-        </section>
-      </div>
+            {current.id === 'notifiche' ? (
+              <NotificationGuide />
+            ) : current.id === 'account' ? (
+              <AccountSettings />
+            ) : (
+              <AdminSections section={current.id} />
+            )}
+          </section>
+        </div>
       )}
     </div>
   );
@@ -172,9 +214,7 @@ function SettingsContent() {
 
 export default function ImpostazioniPage() {
   return (
-    <Suspense
-      fallback={<PageSkeleton />}
-    >
+    <Suspense fallback={<PageSkeleton />}>
       <SettingsContent />
     </Suspense>
   );

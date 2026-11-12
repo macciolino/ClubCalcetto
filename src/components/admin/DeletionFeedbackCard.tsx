@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { DeletionFeedback, fetchDeletionFeedback } from '@/lib/services/accountService';
 import { MessageSquareWarning, Loader2 } from 'lucide-react';
 
-/** Super admin only (Admin → Anagrafica Rosa): why players deleted their account. Collapsible. */
+/** Super admin only (Impostazioni → Admin e account): why players deleted their account. Collapsible. */
 export function DeletionFeedbackCard() {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<DeletionFeedback[] | null>(null);
@@ -21,7 +21,7 @@ export function DeletionFeedbackCard() {
   }, [open, items]);
 
   return (
-    <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl">
+    <div className="bg-slate-900 p-4 sm:p-5 rounded-2xl">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}

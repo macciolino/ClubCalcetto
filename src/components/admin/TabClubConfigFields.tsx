@@ -1,39 +1,14 @@
 'use client';
 
 import { askConfirm } from '@/components/ui/Feedback';
-
 import { StatParametersCard } from '@/components/admin/StatParametersCard';
 import { FormSettingsCard } from '@/components/admin/FormSettingsCard';
-import { CollapsibleCard } from '@/components/CollapsibleCard';
-
-
 import { NumberInput } from '@/components/NumberInput';
 import React, { useState, useEffect } from 'react';
-import { SportField, StatCategory, STAT_DETAILS, STAT_CANONICAL_ORDER } from '@/types/database';
+import { SportField, StatCategory } from '@/types/database';
 import { FieldModal } from './FieldModal';
 import { StatsLegendModal } from './StatsLegendModal';
-import { 
-  Building2, 
-  MapPin, 
-  Phone, 
-  Plus, 
-  ExternalLink, 
-  Edit3, 
-  Trash2, 
-  Sliders, 
-  Settings, 
-  Mail, 
-  Check, 
-  Clock, 
-  Coins, 
-  Loader2, 
-  Sparkles, 
-  Info, 
-  RotateCcw,
-  ShieldCheck,
-  Server,
-  Lock
-} from 'lucide-react';
+import { MapPin, Phone, Plus, ExternalLink, Edit3, Trash2, Check, Star } from 'lucide-react';
 
 interface TabClubConfigFieldsProps {
   fields: SportField[];
@@ -50,9 +25,37 @@ interface TabClubConfigFieldsProps {
   timelockEnabled: boolean;
   timelockHours: number;
   onUpdateTimelock: (enabled: boolean, hours: number) => void;
-  /** Impostazioni: 'rules' = campi, blocco ritiri, costo/orario · 'params' = Stato forma e parametri dei giocatori */
-  part: 'rules' | 'params';
+  /** Impostazioni: 'campi' = campi, costi, orario · 'regole' = blocco ritiri, portiere · 'params' = parametri e stato forma */
+  part: 'campi' | 'regole' | 'params';
 }
+
+/** A block of a settings section: title, short help, content. No border (surface only). */
+export function SettingsBlock({
+  title,
+  help,
+  action,
+  children,
+}: {
+  title: string;
+  help?: React.ReactNode;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="bg-slate-900 rounded-2xl p-4 sm:p-5 space-y-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="text-base font-semibold text-white">{title}</h3>
+          {help && <p className="text-sm text-slate-400 mt-0.5">{help}</p>}
+        </div>
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+const euro = (n: number) => `€${Number(n).toFixed(Number(n) % 1 ? 2 : 0).replace('.', ',')}`;
 
 export function TabClubConfigFields({
   fields,
@@ -62,7 +65,6 @@ export function TabClubConfigFields({
   defaultFieldId,
   onSetDefaultFieldId,
   categories,
-  onReset8Categories,
   standardCost,
   standardTime,
   onSaveEconomicConfig,
@@ -71,338 +73,210 @@ export function TabClubConfigFields({
   onUpdateTimelock,
   part,
 }: TabClubConfigFieldsProps) {
-  // Modal Campo
   const [isFieldModalOpen, setIsFieldModalOpen] = useState(false);
   const [editingField, setEditingField] = useState<SportField | null>(null);
-
-  // Modal Legenda Statistiche
   const [isLegendOpen, setIsLegendOpen] = useState(false);
 
-  // Form Economico & Logistico
   const [costInput, setCostInput] = useState<number>(standardCost || 80);
   const [timeInput, setTimeInput] = useState<string>(standardTime || '20:30');
-  const [saveSuccessMsg, setSaveSuccessMsg] = useState(false);
-
-  // Allinea il modulo quando arrivano i valori salvati (es. caricamento da Firestore)
-  useEffect(() => {
-    setCostInput(standardCost || 80);
-  }, [standardCost]);
-  useEffect(() => {
-    setTimeInput(standardTime || '20:30');
-  }, [standardTime]);
-
-  const costPerPerson = (Number(costInput || 80) / 10).toFixed(2);
-
-  const handleOpenAddField = () => {
-    setEditingField(null);
-    setIsFieldModalOpen(true);
-  };
-
-  const handleOpenEditField = (field: SportField) => {
-    setEditingField(field);
-    setIsFieldModalOpen(true);
-  };
+  const [saved, setSaved] = useState(false);
+  useEffect(() => setCostInput(standardCost || 80), [standardCost]);
+  useEffect(() => setTimeInput(standardTime || '20:30'), [standardTime]);
 
   const handleSaveField = (fieldData: Omit<SportField, 'id'> | SportField) => {
-    if ('id' in fieldData) {
-      onUpdateField(fieldData);
-    } else {
-      onAddField(fieldData);
-    }
+    if ('id' in fieldData) onUpdateField(fieldData);
+    else onAddField(fieldData);
   };
 
-  const handleSaveEconomics = (e: React.FormEvent) => {
+  const handleSaveDefaults = (e: React.FormEvent) => {
     e.preventDefault();
     onSaveEconomicConfig(costInput, timeInput);
-    setSaveSuccessMsg(true);
-    setTimeout(() => setSaveSuccessMsg(false), 4000);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
   };
 
+  const inputCls =
+    'w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500';
+
   return (
-    <div className="space-y-6">
-      {part === 'params' && (
-      <>
-      {/* 0. STATO FORMA: cosa fa salire i parametri (sempre aperto, legenda a tendina) */}
-      <FormSettingsCard />
-      </>
-      )}
-
-      {part === 'rules' && (
-        <p className="text-sm text-slate-400 leading-relaxed">
-          Sono i valori usati per <strong className="text-slate-200">ogni partita</strong>: campo predefinito, orario, costo
-          (la quota a testa è il costo diviso 10) e blocco ritiri. Per cambiarli in una <strong className="text-slate-200">sola
-          partita</strong> usa la pagina Squadre: lì valgono solo per quel giorno.
-        </p>
-      )}
-
-      {part === 'rules' && (
-      <>
-      {/* 1. ANAGRAFICA CENTRI SPORTIVI & CAMPI DA CALCIO (a tendina) */}
-      <CollapsibleCard
-        title="Centri sportivi & campi"
-        icon={<Building2 className="h-5 w-5 text-emerald-400" />}
-        summary={`${fields.length} ${fields.length === 1 ? 'campo' : 'campi'}${
-          fields.find((f) => f.id === defaultFieldId) ? ` · predefinito: ${fields.find((f) => f.id === defaultFieldId)?.name}` : ''
-        }`}
-      >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <p className="text-xs text-slate-400">
-            Censisci i centri dove giochi abitualmente, con recapiti, tipo di erba e link navigatore.
-          </p>
-
-          <button
-            type="button"
-            onClick={handleOpenAddField}
-            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition-all cursor-pointer"
-          >
-            <Plus className="h-4 w-4" />
-            <span>+ Aggiungi Campo</span>
-          </button>
-        </div>
-
-        {/* Griglia Campi Censiti */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {fields.map((field) => {
-            const isDefault = defaultFieldId === field.id;
-            return (
-              <div
-                key={field.id}
-                className={`bg-slate-950/80 p-4 rounded-2xl border transition-all flex flex-col justify-between space-y-3 ${
-                  isDefault
-                    ? 'border-emerald-500/60 ring-1 ring-emerald-500/30'
-                    : 'border-slate-800 hover:border-slate-700'
-                }`}
+    <div className="space-y-4">
+      {part === 'campi' && (
+        <>
+          <SettingsBlock
+            title="Campi"
+            help="Dove gioca il club. Ogni campo può avere il suo costo; il predefinito si usa quando la partita non ne ha uno."
+            action={
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingField(null);
+                  setIsFieldModalOpen(true);
+                }}
+                className="flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-xl text-sm"
               >
-                <div>
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-bold text-sm text-white">{field.name}</h3>
-                    {isDefault ? (
-                      <span className="text-[10px] bg-emerald-500 text-slate-950 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                        ★ Predefinito
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => onSetDefaultFieldId(field.id)}
-                        className="text-[10px] text-slate-400 hover:text-emerald-400 bg-slate-900 px-2 py-0.5 rounded-md font-semibold transition-colors"
-                      >
-                        Imposta Predefinito
-                      </button>
-                    )}
-                  </div>
-
-                  <span className="inline-block mt-1 text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md">
-                    {field.court_type || 'Erba Sintetica'}
-                  </span>
-
-                  <div className="mt-3 space-y-1.5 text-xs text-slate-300">
-                    <div className="flex items-center gap-1.5">
-                      <MapPin className="h-3.5 w-3.5 text-slate-500 flex-shrink-0" />
-                      <span className="truncate">{field.address}</span>
-                      {field.maps_url && (
-                        <a
-                          href={field.maps_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-emerald-400 hover:text-emerald-300 ml-1 p-0.5"
-                          title="Apri su Google Maps"
-                        >
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-                      )}
-                    </div>
-
-                    {field.phone && (
-                      <div className="flex items-center gap-1.5">
-                        <Phone className="h-3.5 w-3.5 text-slate-500 flex-shrink-0" />
-                        <a
-                          href={`tel:${field.phone.replace(/\s+/g, '')}`}
-                          className="text-slate-300 hover:text-white font-mono hover:underline"
-                        >
-                          {field.phone}
-                        </a>
+                <Plus className="h-4 w-4" /> Campo
+              </button>
+            }
+          >
+            {fields.length === 0 ? (
+              <p className="text-sm text-slate-500">Nessun campo: aggiungine uno.</p>
+            ) : (
+              <ul className="divide-y divide-slate-800 rounded-xl bg-slate-950/50">
+                {fields.map((field) => {
+                  const isDefault = defaultFieldId === field.id;
+                  return (
+                    <li key={field.id} className="px-3.5 py-3 flex items-start gap-3">
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-semibold text-white">{field.name}</span>
+                          {isDefault && (
+                            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300">Predefinito</span>
+                          )}
+                        </div>
+                        <p className="text-sm text-slate-300 tabular-nums">
+                          {field.cost ? (
+                            <>
+                              {euro(field.cost)} a partita · <span className="text-slate-400">{euro(field.cost / 10)} a testa</span>
+                            </>
+                          ) : (
+                            <span className="text-slate-400">Costo standard del club ({euro(standardCost)})</span>
+                          )}
+                        </p>
+                        <p className="flex items-center gap-1.5 text-xs text-slate-400 min-w-0">
+                          <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
+                          <span className="truncate">{field.address}</span>
+                          {field.maps_url && (
+                            <a href={field.maps_url} target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300" title="Apri su Google Maps">
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                          )}
+                        </p>
+                        {(field.phone || field.court_type) && (
+                          <p className="flex flex-wrap items-center gap-x-3 text-xs text-slate-500">
+                            {field.court_type && <span>{field.court_type}</span>}
+                            {field.phone && (
+                              <a href={`tel:${field.phone.replace(/\s+/g, '')}`} className="flex items-center gap-1 hover:text-white">
+                                <Phone className="h-3 w-3" /> {field.phone}
+                              </a>
+                            )}
+                          </p>
+                        )}
                       </div>
-                    )}
+                      <div className="flex-shrink-0 flex items-center gap-0.5">
+                        {!isDefault && (
+                          <button
+                            type="button"
+                            onClick={() => onSetDefaultFieldId(field.id)}
+                            className="p-2 rounded-lg text-slate-500 hover:text-emerald-300 hover:bg-slate-800"
+                            title="Imposta come predefinito"
+                            aria-label={`Imposta ${field.name} come predefinito`}
+                          >
+                            <Star className="h-4 w-4" />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingField(field);
+                            setIsFieldModalOpen(true);
+                          }}
+                          className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800"
+                          title="Modifica campo"
+                          aria-label={`Modifica ${field.name}`}
+                        >
+                          <Edit3 className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (await askConfirm(`Eliminare il campo "${field.name}"?`)) onDeleteField(field.id);
+                          }}
+                          className="p-2 rounded-lg text-slate-500 hover:text-rose-300 hover:bg-slate-800"
+                          title="Elimina campo"
+                          aria-label={`Elimina ${field.name}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </SettingsBlock>
 
-                    {field.notes && (
-                      <p className="text-[11px] text-slate-400 italic pt-1 border-t border-slate-800/80">
-                        {field.notes}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-slate-800">
-                  <button
-                    type="button"
-                    onClick={() => handleOpenEditField(field)}
-                    className="p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-slate-900 rounded-lg transition-colors cursor-pointer"
-                    title="Modifica campo"
-                  >
-                    <Edit3 className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      if ((await askConfirm(`Eliminare il campo "${field.name}"?`))) {
-                        onDeleteField(field.id);
-                      }
-                    }}
-                    className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-900 rounded-lg transition-colors cursor-pointer"
-                    title="Elimina campo"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
+          <SettingsBlock
+            title="Orario e costo standard"
+            help="L'orario di ogni partita e il costo usato quando il campo non ne ha uno suo. Per una sola partita si cambiano in Squadre."
+          >
+            <form onSubmit={handleSaveDefaults} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block">
+                  <span className="block text-xs font-medium text-slate-300 mb-1.5">Orario</span>
+                  <input type="time" value={timeInput} onChange={(e) => setTimeInput(e.target.value)} className={inputCls} />
+                </label>
+                <label className="block">
+                  <span className="block text-xs font-medium text-slate-300 mb-1.5">Costo standard (€)</span>
+                  <NumberInput min={30} max={300} value={costInput} onValueChange={setCostInput} decimal className={`${inputCls} tabular-nums`} />
+                </label>
               </div>
-            );
-          })}
-        </div>
-      </CollapsibleCard>
-      </>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-slate-400 tabular-nums">{euro(Number(costInput || 80) / 10)} a testa</span>
+                <button type="submit" className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-xl text-sm">
+                  <Check className="h-4 w-4" /> {saved ? 'Salvato' : 'Salva'}
+                </button>
+              </div>
+            </form>
+          </SettingsBlock>
+        </>
+      )}
+
+      {part === 'regole' && (
+        <>
+          <SettingsBlock
+            title="Blocco ritiri"
+            help="Se attivo, i giocatori non possono ritirarsi a ridosso della partita. Gli admin possono sempre modificare le presenze."
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <label className="flex items-center gap-2 text-sm text-slate-300">
+                Blocca
+                <select
+                  value={timelockHours}
+                  onChange={(e) => onUpdateTimelock(timelockEnabled, parseInt(e.target.value) || 4)}
+                  disabled={!timelockEnabled}
+                  className="bg-slate-950 border border-slate-800 text-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 disabled:opacity-50"
+                >
+                  <option value="2">2 ore prima</option>
+                  <option value="4">4 ore prima</option>
+                  <option value="12">12 ore prima</option>
+                  <option value="24">24 ore prima</option>
+                </select>
+              </label>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={timelockEnabled}
+                onClick={() => onUpdateTimelock(!timelockEnabled, timelockHours)}
+                className={`relative h-7 w-12 flex-shrink-0 rounded-full transition-colors ${timelockEnabled ? 'bg-emerald-500' : 'bg-slate-700'}`}
+                aria-label="Blocco ritiri"
+              >
+                <span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-all ${timelockEnabled ? 'left-6' : 'left-1'}`} />
+              </button>
+            </div>
+          </SettingsBlock>
+          <FormSettingsCard show="keeper" />
+        </>
       )}
 
       {part === 'params' && (
-      <>
-      {/* 2. PARAMETRI DEI GIOCATORI (aggiunta / rimozione solo qui) */}
-      <StatParametersCard categories={categories} onOpenLegend={() => setIsLegendOpen(true)} />
-      </>
+        <>
+          <FormSettingsCard show="form" />
+          <StatParametersCard categories={categories} onOpenLegend={() => setIsLegendOpen(true)} />
+        </>
       )}
 
-      {part === 'rules' && (
-      <>
-      {/* BLOCCO RITIRI (spostato qui dal vecchio tab "Presenze & Blocco") */}
-      <CollapsibleCard
-        title="Blocco ritiri"
-        icon={<Lock className="h-5 w-5 text-amber-400" />}
-        summary={timelockEnabled ? `Attivo: niente ritiri nelle ${timelockHours} ore prima della partita` : 'Spento: ritiri sempre liberi'}
-      >
-        <p className="text-xs text-slate-400">
-          Se attivo, i giocatori non possono annullare la propria presenza a ridosso della partita. Gli admin possono sempre
-          modificare le presenze.
-        </p>
-        <div className="flex flex-wrap items-center gap-3">
-          <label className="flex items-center gap-2 bg-slate-950 p-2 rounded-2xl border border-slate-800 text-xs">
-            <span className="text-slate-400 font-medium pl-1">Blocca a:</span>
-            <select
-              value={timelockHours}
-              onChange={(e) => onUpdateTimelock(timelockEnabled, parseInt(e.target.value) || 4)}
-              disabled={!timelockEnabled}
-              className="bg-slate-900 border border-slate-700 text-white rounded-lg px-2 py-1 font-semibold focus:outline-none disabled:opacity-50"
-            >
-              <option value="2">2 ore prima</option>
-              <option value="4">4 ore prima</option>
-              <option value="12">12 ore prima</option>
-              <option value="24">24 ore prima</option>
-            </select>
-          </label>
-          <button
-            type="button"
-            onClick={() => onUpdateTimelock(!timelockEnabled, timelockHours)}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              timelockEnabled
-                ? 'bg-amber-500 text-slate-950 hover:bg-amber-400'
-                : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
-            }`}
-          >
-            {timelockEnabled ? 'Disattiva blocco' : 'Attiva blocco'}
-          </button>
-        </div>
-      </CollapsibleCard>
-      </>
-      )}
-
-      {part === 'rules' && (
-      <>
-      {/* 3. PARAMETRI ECONOMICI E LOGISTICI + 4. NOTIFICHE & SYSTEM STATUS (2 COLONNE) */}
-      <div className="grid grid-cols-1 gap-5">
-        {/* Parametri Economici e Logistici (a tendina) */}
-        <CollapsibleCard
-          title="Costo campo & orario"
-          icon={<Coins className="h-5 w-5 text-emerald-400" />}
-          summary={`€${standardCost} a partita (€${(Number(standardCost) / 10).toFixed(2)} a testa) · ore ${standardTime}`}
-        >
-          <p className="text-xs text-slate-400">
-            Definisci il costo del campo e l&apos;orario predefinito della partita.
-          </p>
-
-          {saveSuccessMsg && (
-            <div className="p-3 bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 rounded-xl text-xs font-bold flex items-center gap-2">
-              <Check className="h-4 w-4 text-emerald-400" />
-              <span>Parametri economici aggiornati!</span>
-            </div>
-          )}
-
-          <form onSubmit={handleSaveEconomics} className="space-y-4 text-xs">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-slate-400 font-bold mb-1">Costo Totale Campo (€)</label>
-                <NumberInput
-                  min={30}
-                  max={300}
-                  value={costInput}
-                  onValueChange={setCostInput}
-                  decimal
-                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono font-bold focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-400 font-bold mb-1">Quota Calcolata a Testa (€)</label>
-                <div className="px-3.5 py-2.5 bg-slate-950/70 border border-slate-800 rounded-xl text-emerald-400 font-mono font-bold text-sm">
-                  €{costPerPerson} a giocatore (10 titolari)
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-slate-400 font-bold mb-1">Orario Partita Standard</label>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
-                  <input
-                    type="time"
-                    value={timeInput}
-                    onChange={(e) => setTimeInput(e.target.value)}
-                    className="w-full pl-9 pr-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-mono font-semibold focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-slate-400 font-bold mb-1">Campo Predefinito Attuale</label>
-                <div className="px-3 py-2 bg-slate-950/70 border border-slate-800 rounded-xl text-slate-300 font-medium truncate">
-                  {fields.find((f) => f.id === defaultFieldId)?.name || fields[0]?.name || 'Nessun campo'}
-                </div>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition-all cursor-pointer"
-            >
-              <Check className="h-4 w-4" />
-              <span>Salva Impostazioni Economiche</span>
-            </button>
-          </form>
-        </CollapsibleCard>
-
-      </div>
-      </>
-      )}
-
-      {/* MODALI: CAMPO SPORTIVO & LEGENDA STATISTICHE */}
-      <FieldModal
-        isOpen={isFieldModalOpen}
-        onClose={() => setIsFieldModalOpen(false)}
-        fieldToEdit={editingField}
-        onSave={handleSaveField}
-      />
-
-      <StatsLegendModal
-        isOpen={isLegendOpen}
-        onClose={() => setIsLegendOpen(false)}
-      />
+      <FieldModal isOpen={isFieldModalOpen} onClose={() => setIsFieldModalOpen(false)} fieldToEdit={editingField} onSave={handleSaveField} />
+      <StatsLegendModal isOpen={isLegendOpen} onClose={() => setIsLegendOpen(false)} />
     </div>
   );
 }

@@ -21,7 +21,7 @@ import { subscribeSportFields } from '@/lib/services/fieldService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { getOfficialMatchDate, isTimelockActive } from '@/lib/services/presenceService';
 import { formatItalianDate, isDateOpenForPlayers, toDateString } from '@/lib/utils/dateUtils';
-import { effectiveMatchCost, effectiveMatchLocation, effectiveMatchTime, mvpVotingWindow } from '@/lib/utils/matchUtils';
+import { effectiveMatchCost, effectiveMatchLocation, effectiveMatchTime, fieldCostFor, mvpVotingWindow } from '@/lib/utils/matchUtils';
 import { computeMatchStats } from '@/lib/utils/statUtils';
 import { FormDots, lastCompletedMatches } from '@/components/FormDots';
 import { useForms } from '@/lib/hooks/useForms';
@@ -153,7 +153,7 @@ export default function HomePage() {
   const hasMatch = date >= today;
   const time = effectiveMatchTime(match, standard.time);
   const location = effectiveMatchLocation(match, fields, standard.fieldId);
-  const cost = effectiveMatchCost(match, standard.cost);
+  const cost = effectiveMatchCost(match, standard.cost, fieldCostFor(match, fields, standard.fieldId));
 
   // Intestazione: stato della partita in una frase (la prima condizione vera vince)
   const day = dayLabel(date, today);

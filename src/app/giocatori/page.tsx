@@ -11,9 +11,9 @@ import { lastCompletedMatches } from '@/components/FormDots';
 import { PlayerCompare } from '@/components/PlayerCompare';
 import { useAuth } from '@/lib/context/AuthContext';
 import { Profile, StatCategory, Match, FIELD_POSITION_ABBR, STAT_CANONICAL_ORDER } from '@/types/database';
-import { subscribeProfiles, subscribeStatCategories, subscribeMatches, deleteProfileDoc } from '@/lib/firebase/firestoreService';
+import { subscribeProfiles, subscribeStatCategories, subscribeMatches, deleteProfileDoc, saveProfileDoc } from '@/lib/firebase/firestoreService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
-import { getStoredPlayers, removeStoredPlayer, saveStoredPlayers, getPlayerMatchRecord } from '@/lib/services/playerService';
+import { getStoredPlayers, removeStoredPlayer, updateStoredPlayer, saveStoredPlayers, getPlayerMatchRecord } from '@/lib/services/playerService';
 import { getStoredCategories, saveStoredCategories, DEFAULT_BASE_CATEGORIES } from '@/lib/services/statCategoryService';
 import { PlayerModal } from '@/components/PlayerModal';
 import { PlayerCardFifa, PlayerDetailSheet } from '@/components/PlayerCardFifa';
@@ -141,7 +141,7 @@ export default function GiocatoriPage() {
         notify('Solo il super admin può disattivare un account registrato.');
         return;
       }
-      if (!(await askConfirm(`Disattivare l'account di "${name}"? Non potrà più entrare e sparirà dalle pagine; scheda, parametri e statistiche restano salvati. Potrai riattivarlo o eliminarlo del tutto da Admin → Anagrafica Rosa → Disattivati.`))) return;
+      if (!(await askConfirm(`Disattivare l'account di "${name}"? Non potrà più entrare e sparirà dalle pagine; scheda, parametri e statistiche restano salvati. Potrai riattivarlo o eliminarlo del tutto da Impostazioni → Admin e account.`))) return;
       const res = await manageAccountAsSuperAdmin(playerId, 'deactivate');
       if (!res.ok) {
         notify('Operazione non riuscita. Riprova.');
@@ -151,6 +151,26 @@ export default function GiocatoriPage() {
       setPlayers(getStoredPlayers());
     } catch (err) {
       console.error('Delete player error:', err);
+    }
+  };
+
+  // Super admin: rende admin un giocatore registrato o gli toglie i permessi
+  const handleToggleAdmin = async (p: Profile) => {
+    if (!isSuperAdmin || p.is_guest || p.id === 'p-1') return;
+    const next: 'admin' | 'player' = p.role === 'admin' ? 'player' : 'admin';
+    const msg =
+      next === 'admin'
+        ? `Rendere admin "${p.full_name}"? Potrà gestire presenze, squadre, partite e impostazioni del club.`
+        : `Togliere i permessi di admin a "${p.full_name}"? Resterà un giocatore normale.`;
+    if (!(await askConfirm(msg))) return;
+    const updated: Profile = { ...p, role: next, updated_at: new Date().toISOString() };
+    try {
+      await saveProfileDoc(updated);
+      updateStoredPlayer(updated);
+      setPlayers(getStoredPlayers());
+      notify(next === 'admin' ? `${p.full_name} ora è admin.` : `${p.full_name} non è più admin.`);
+    } catch {
+      notify('Operazione non riuscita. Riprova.');
     }
   };
 
@@ -546,6 +566,9 @@ export default function GiocatoriPage() {
                                 >
                                   <span className="block">{firstName}</span>
                                   {surname && <span className="block">{surname}</span>}
+                                  {isClientAdmin && player.email && (
+                                    <span className="block text-[11px] font-normal text-slate-500 mt-0.5">{player.email}</span>
+                                  )}
                                 </button>
                                 {isClientAdmin && (
                                   <button
@@ -664,6 +687,8 @@ export default function GiocatoriPage() {
             matchStats={matchStats.get(dp.id)}
             recentMatches={recentMatches}
             isAdmin={isClientAdmin}
+            showEmail={isClientAdmin}
+            onToggleAdmin={isSuperAdmin ? handleToggleAdmin : undefined}
             onClose={() => setDetailId(null)}
             onEdit={(p) => {
               setDetailId(null);

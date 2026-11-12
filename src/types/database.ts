@@ -152,6 +152,8 @@ export interface SportField {
   phone?: string;
   court_type?: string; // es. 'Sintetico 4G Outdoor', 'Indoor Parquet', ecc.
   notes?: string;
+  /** Total cost of a match on this field (€). Empty = the club's standard cost. */
+  cost?: number;
   created_at?: string;
 }
 

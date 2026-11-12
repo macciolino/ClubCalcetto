@@ -109,6 +109,6 @@ export async function saveDeletionFeedback(entry: {
   await sendToProfiles([SUPER_ADMIN_PROFILE_ID], {
     title: entry.mode === 'deactivate' ? '⏸️ Account disattivato' : '🗑️ Account eliminato',
     body: `${who}. Motivo: ${entry.reason}${entry.details ? ` — "${entry.details.slice(0, 120)}"` : ''}`,
-    url: '/impostazioni?sezione=account',
+    url: '/impostazioni?sezione=accessi',
   }).catch(() => 0);
 }

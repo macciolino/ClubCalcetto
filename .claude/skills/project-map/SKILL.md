@@ -9,8 +9,9 @@ Brand shown to users: **Club Soccer** (renamed 2026-11-10). Code, repo, Vercel d
 Header (`Navbar.tsx`): logo + "Club Soccer" on the left; on the right icon, name and role open a dropdown menu
 (Profilo, Impostazioni, Logout; closes on outside tap, Esc, page change). Profilo is NOT in the page menu / bottom bar
 (Home, Presenze, Giocatori, Squadre, Storico). Admins reach the admin sections from the user menu → Impostazioni
-(no "Admin" item in the bar). `/impostazioni` without `?sezione=` = overview of all sections (cards, same on PC and
-phone); a section shows the sidebar (md+) and "← Impostazioni". Profile "Notifiche → Apri" links `?sezione=notifiche`. On md+ the page menu is a
+(no "Admin" item in the bar). `/impostazioni` without `?sezione=` = overview: grouped borderless rows with the CURRENT
+VALUE on the right (e.g. "mer 11 nov", "ritiri bloccati 4h prima"); a section shows the grouped list as sidebar (lg+) and
+"← Impostazioni". Profilo links `?sezione=notifiche` and `?sezione=account`. On md+ the page menu is a
 separate bar BELOW the header, as wide as the cards (same `max-w-6xl px-4 sm:px-6` container); header and menu
 are wrapped in ONE sticky container so both stay at the top while scrolling; phones use the bottom bar.
 After login (and email verified) `/login` redirects to `/` (the Home).
@@ -29,15 +30,18 @@ Checks: `npx tsc --noEmit -p .`, `npx next build`, `npm run test:rules` (Firesto
 | `/giocatori` (cont.) | Players | card view (`PlayerCardFifa`, tabs radar / Statistiche) or table view (players see only name, role column and OVR; admins also V-P-S and parameters); admin edit via `PlayerModal` |
 | `/squadre` | Teams. Top to bottom: summary line (date · time · field · €/person), date pills (calendar days + "Altra data"), status bar with ONE primary admin button (Genera → Conferma partita; Ribilancia secondary), admin-only collapsible "Modifica dettagli partita" (time/field/cost), tab Campo / "Modifica manuale" (`TeamSwapEditor`), `VirtualPitch` + share row (WhatsApp, Scarica immagine, Analisi AI), "Equilibrio" card (Bianchi/Neri bars + lists), `MvpVoteCard`, AI report (if asked), empty state with Genera (admin) or link to Presenze |
 | `/history` | Storico (minimal): title + season pill select + admin "⋯" menu (Cancella tutto lo storico); number strip (partite · gol · giocatori) + Classifica/Partite pill. Classifica: < lg rows (index, top 3 bold, name, partite + V P S, value of the "Ordina per" select) ; ≥ lg borderless table with sortable headers, sorted column highlighted, zeros grey, top 3 numbers bold white (no medals). Tap player → `PlayerDetailSheet`. Partite: `HistoryCalendar` (left on lg) + thin rows (date · score · ⭐ MVP) → `MatchDetailSheet` (score, line-ups with ⚽/⭐/🧤, cost; admin Modifica → `MatchEditModal`, Cancella) |
-| `/profilo` | Own profile | photo, name, position, radar, global stats, link to Impostazioni, `DeleteAccountSection` (bottom: deactivate or delete) |
-| `/impostazioni` | Settings (+ admin panel) | `?sezione=` notifiche (everyone: `NotificationGuide`) · admin: partita, rosa, notifiche-club, regole, parametri · super admin: account. Sidebar on md+, list → section with back link on phones. Admin sections rendered by `components/admin/AdminSections.tsx` |
+| `/profilo` | Own profile | photo, name, position, radar, global stats, two links: Notifiche and Account (both in Impostazioni) |
+| `/impostazioni` | Settings (+ admin panel) | groups: Tuo account = notifiche (`NotificationGuide`), account (`AccountSettings`: logout everywhere + `DeleteAccountSection`) · Gestione partita = partita · Club = campi, regole, parametri, notifiche-club · Accessi (super admin) = accessi. Old `?sezione=rosa` → accessi (super) or /giocatori (admin). Admin sections rendered by `components/admin/AdminSections.tsx` |
 | `/admin` | old admin panel | now only redirects to `/impostazioni?sezione=partita` (old links keep working) |
 | `/login` | Google login | |
 
-Admin sections (`src/components/admin/AdminSections.tsx`, shown in Impostazioni): partita = `TabOverviewMatch` (day election,
-cash, match closing); rosa = `TabUsersRoles`; notifiche-club = `NotificationSettingsCard`; regole / parametri =
-`TabClubConfigFields` with `part="rules"` (fields, Blocco ritiri, cost/time) or `part="params"` (`FormSettingsCard` incl.
-goalkeeper mode, `StatParametersCard`); account (super admin) = `DeactivatedAccountsList` + `DeletionFeedbackCard`.
+Admin sections (`src/components/admin/AdminSections.tsx`, shown in Impostazioni): partita = `TabOverviewMatch` (Giorno
+ufficiale, Cassa, Chiusura partita; no KPI boxes); campi / regole / parametri = `TabClubConfigFields` with `part="campi"`
+(fields list with each field's cost + "Orario e costo standard"), `part="regole"` (Blocco ritiri switch +
+`FormSettingsCard show="keeper"`), `part="params"` (`FormSettingsCard show="form"` + `StatParametersCard`); blocks use
+`SettingsBlock` (borderless); notifiche-club = `NotificationSettingsCard`; accessi (super admin) = `AdminsCard` (admins with
+email, Togli admin, Rendi admin) + `DeactivatedAccountsList` + `DeletionFeedbackCard`. "Rosa giocatori" was removed:
+players are managed in /giocatori (super admin: "Rendi admin" in the player detail; admins see emails).
 The menu item "Admin" points to `/impostazioni?sezione=partita`.
 
 ## API routes (`src/app/api/`, Node runtime, firebase-admin)
