@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { initialsOf, uploadedPhoto, ovrDisplay, ovrTone } from '@/lib/utils/playerUtils';
 import { formatForm } from '@/lib/utils/formUtils';
 import { getStatValue, PlayerMatchStats, EMPTY_MATCH_STATS } from '@/lib/utils/statUtils';
-import { Match, Profile, StatCategory, sortStatsByCanonicalOrder } from '@/types/database';
+import { Match, Profile, StatCategory, STAT_DETAILS, sortStatsByCanonicalOrder } from '@/types/database';
 import { FormDots, playedAny } from './FormDots';
 import { RadarChart } from './RadarChart';
 import { Sheet } from './ui/Sheet';
@@ -146,6 +146,28 @@ export function PlayerDetailSheet({
           <span className="inline-block w-4 border-t-2 border-dashed border-emerald-300" aria-hidden="true" /> con lo stato forma
         </p>
       )}
+
+      {/* Valori dei parametri: piccole tessere con sigla, numero e barra sottile */}
+      <ul className="mt-4 w-full grid grid-cols-4 gap-2" aria-label="Parametri">
+        {baseStats.map((b) => {
+          const value = form !== 0 ? Number(displayStats[b.name] ?? b.value) : b.value;
+          const code = STAT_DETAILS[b.name]?.code || b.name.slice(0, 3).toUpperCase();
+          return (
+            <li key={b.name} className="rounded-xl bg-slate-950/60 px-2 pt-2 pb-2.5 text-center" title={b.name}>
+              <span className="block text-[10px] font-semibold tracking-wider text-slate-500">{code}</span>
+              <span className="block mt-0.5 text-lg font-semibold text-white tabular-nums leading-tight">
+                {String(Math.round(value * 10) / 10).replace('.', ',')}
+              </span>
+              <span className="mt-1.5 mx-auto block h-1 w-full max-w-[3rem] rounded-full bg-slate-800 overflow-hidden" aria-hidden="true">
+                <span
+                  className={`block h-full rounded-full ${value >= 8 ? 'bg-emerald-400' : value >= 6 ? 'bg-emerald-600' : 'bg-slate-500'}`}
+                  style={{ width: `${Math.max(0, Math.min(10, value)) * 10}%` }}
+                />
+              </span>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 
