@@ -214,9 +214,9 @@ export default function GiocatoriPage() {
     const best = (value: (p: Profile) => number) =>
       players.reduce<{ p: Profile | null; v: number }>((acc, p) => (value(p) > acc.v ? { p, v: value(p) } : acc), { p: null, v: 0 });
     return [
-      { key: 'goals', icon: '⚽', title: 'Capocannoniere', ...best((p) => matchStats.get(p.id)?.goals || 0), unitShort: 'gol' },
-      { key: 'mvp', icon: '⭐', title: 'Più MVP', ...best((p) => matchStats.get(p.id)?.mvp || 0), unitShort: 'MVP' },
-      { key: 'played', icon: '📅', title: 'Più presenze', ...best((p) => matchStats.get(p.id)?.played || 0), unitShort: 'partite' },
+      { key: 'goals', icon: '⚽', title: 'Capocannoniere', titleShort: 'Gol', ...best((p) => matchStats.get(p.id)?.goals || 0), unitShort: 'gol' },
+      { key: 'mvp', icon: '⭐', title: 'Più MVP', titleShort: 'MVP', ...best((p) => matchStats.get(p.id)?.mvp || 0), unitShort: 'MVP' },
+      { key: 'played', icon: '📅', title: 'Più presenze', titleShort: 'Presenze', ...best((p) => matchStats.get(p.id)?.played || 0), unitShort: 'partite' },
     ].filter((l) => l.p);
   })();
   const SortHeader = ({ k, label, title, className = '' }: { k: string; label: string; title?: string; className?: string }) => (
@@ -266,26 +266,26 @@ export default function GiocatoriPage() {
         )}
       </header>
 
-      {/* Leader: una striscia sottile (solo informativa) */}
+      {/* Leader: tre card su una riga, stesso stile delle card dei giocatori (solo informative) */}
       {leaders.length > 0 && (
-        <section aria-label="I migliori" className="flex gap-2 overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
+        <section aria-label="I migliori" className="grid grid-cols-3 gap-2 sm:gap-3">
           {leaders.map((l) => {
             const [first, ...rest] = (l.p?.full_name || '').trim().split(/\s+/);
             const short = rest.length ? `${first} ${rest[rest.length - 1][0]}.` : first;
             return (
-              <div
-                key={l.key}
-                title={`${l.title}: ${l.p?.full_name} (${l.v} ${l.unitShort})`}
-                className="flex-shrink-0 flex items-center gap-2 rounded-full bg-slate-900 pl-2.5 pr-3.5 py-1.5 text-sm"
-              >
-                <span aria-hidden="true">{l.icon}</span>
-                <span className="sr-only">{l.title}:</span>
-                <span className="text-slate-300 whitespace-nowrap">
+              <div key={l.key} className="min-w-0 rounded-2xl bg-slate-900 px-3 py-3 sm:px-4">
+                <span className="flex items-center gap-1.5 text-xs text-slate-400 min-w-0">
+                  <span aria-hidden="true">{l.icon}</span>
+                  <span className="truncate sm:hidden">{l.titleShort}</span>
+                  <span className="truncate hidden sm:inline">{l.title}</span>
+                </span>
+                <span className="block mt-1.5 text-2xl font-bold text-white tabular-nums leading-none">
+                  {l.v}
+                  <span className="ml-1 text-xs font-normal text-slate-400">{l.unitShort}</span>
+                </span>
+                <span className="block mt-1.5 text-sm text-slate-300 truncate" title={l.p?.full_name}>
                   <span className="sm:hidden">{short}</span>
                   <span className="hidden sm:inline">{l.p?.full_name}</span>
-                </span>
-                <span className="font-semibold text-white tabular-nums whitespace-nowrap">
-                  {l.v} <span className="text-xs font-normal text-slate-400">{l.unitShort}</span>
                 </span>
               </div>
             );
