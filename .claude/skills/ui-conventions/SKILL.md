@@ -65,6 +65,13 @@ description: ClubCalcetto UI conventions - theme, shared components (tables, dro
   Sortable columns: the header is a button, active column `text-emerald-300` with a small ▼/▲ and `aria-sort` (Storico,
   Giocatori table via `SortHeader`). Photos: `uploadedPhoto()` / `initialsOf()` from `lib/utils/playerUtils.ts` everywhere.
 
+## Buttons / CTA (`src/components/ui/buttons.ts`)
+- Every main action uses `btn.primary` (green #10B981, dark text, rounded-xl, py-3 on phone / py-2.5 from sm, full width on phone). Secondary: `btn.secondary`, destructive: `btn.danger`. `sheetBtn` is the same object.
+- Navigation buttons ("Vai alle presenze", "Vai allo Storico", "Vai alle squadre"): label + `ArrowRight` on the right, no left icon. Inline text links use the same pattern (emerald-300 + ArrowRight).
+- Action/state buttons ("Apri la settimana prossima", "Genera squadre", "Salva"): descriptive icon on the left, no arrow.
+- "Ci sono / Mettimi in attesa" (Home and Presenze): `presenceBtn(isFull)`.
+- Never hand-write a new green CTA class string.
+
 ## Settings layout (`/impostazioni`)
 
 - md+: sticky sidebar (`grid-cols-[240px_1fr]`) grouped Personali / Amministrazione, active item emerald; content on the right.

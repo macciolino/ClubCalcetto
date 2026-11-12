@@ -42,6 +42,7 @@ import {
   Unlock,
   CheckCircle2,
 } from 'lucide-react';
+import { btn } from '@/components/ui/buttons';
 
 export default function PresenzePage() {
   const { user, profile, isAdmin } = useAuth();
@@ -239,11 +240,7 @@ export default function PresenzePage() {
               type="button"
               onClick={handleToggleNextWeek}
               disabled={isSavingCalendar}
-              className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 ${
-                isNextWeekOpen
-                  ? 'border border-slate-700 text-slate-200 hover:bg-slate-800'
-                  : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
-              }`}
+              className={isNextWeekOpen ? btn.secondary : btn.primary}
             >
               {isNextWeekOpen ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
               {isNextWeekOpen ? 'Chiudi la settimana prossima' : 'Apri la settimana prossima'}
@@ -302,7 +299,7 @@ export default function PresenzePage() {
           </div>
           <Link
             href={`/squadre?date=${selectedDayString}`}
-            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-xl text-sm transition-colors"
+            className={btn.primary}
           >
             Vai alle squadre
             <ArrowRight className="h-4 w-4" />

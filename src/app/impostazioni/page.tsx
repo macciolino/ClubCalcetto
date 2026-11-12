@@ -15,7 +15,8 @@ import { subscribeSportFields } from '@/lib/services/fieldService';
 import { db, isFirebaseConfigured } from '@/lib/firebase/config';
 import { useStatCategories } from '@/lib/hooks/useStatCategories';
 import { useFormSettings } from '@/lib/hooks/useForms';
-import { Bell, UserCog, Trophy, MapPin, Ruler, BarChart3, Megaphone, ShieldCheck, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Bell, UserCog, Trophy, MapPin, Ruler, BarChart3, Megaphone, ShieldCheck, ChevronRight, ArrowLeft, ArrowRight } from 'lucide-react';
+import { btn } from '@/components/ui/buttons';
 
 type SectionId = 'notifiche' | 'account' | AdminSection;
 
@@ -113,8 +114,8 @@ function SettingsContent() {
     return (
       <div className="min-h-[50vh] flex flex-col items-center justify-center text-center gap-3">
         <p className="text-sm text-slate-400">Accedi per gestire le tue impostazioni.</p>
-        <Link href="/login" className="px-5 py-2.5 bg-emerald-500 text-slate-950 font-semibold rounded-xl text-sm">
-          Vai al login
+        <Link href="/login" className={btn.primary}>
+          Vai al login <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
     );

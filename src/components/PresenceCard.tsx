@@ -7,6 +7,7 @@ import { isTimelockActive } from '@/lib/services/presenceService';
 import { askConfirm } from '@/components/ui/Feedback';
 import { Sheet, sheetBtn } from '@/components/ui/Sheet';
 import { Lock, ArrowUp, ArrowDown, UserX, ChevronDown, ChevronRight, MoreHorizontal, Check, LogOut } from 'lucide-react';
+import { presenceBtn } from '@/components/ui/buttons';
 
 interface PresenceCardProps {
   day: CalendarDay;
@@ -208,9 +209,7 @@ export function PresenceCard({
             type="button"
             onClick={() => onTogglePresence(day.dateString)}
             disabled={isToggling}
-            className={`w-full py-3.5 px-4 rounded-xl font-semibold text-base transition-colors active:scale-[0.99] disabled:opacity-50 disabled:cursor-wait ${
-              isFull ? 'bg-amber-400 hover:bg-amber-300 text-slate-950' : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
-            }`}
+            className={`${presenceBtn(isFull)} disabled:cursor-wait`}
           >
             {isFull ? 'Mettimi in attesa' : 'Ci sono'}
           </button>

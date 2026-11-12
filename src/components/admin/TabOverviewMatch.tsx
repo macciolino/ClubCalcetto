@@ -26,7 +26,6 @@ import {
   Trophy, 
   Users, 
   CheckCircle2, 
-  Sparkles, 
   Coins, 
   Clock, 
   Check, 
@@ -42,6 +41,7 @@ import {
   DollarSign,
   ChevronDown
 } from 'lucide-react';
+import { btn } from '@/components/ui/buttons';
 
 interface TabOverviewMatchProps {
   days: CalendarDay[];
@@ -327,10 +327,9 @@ export function TabOverviewMatch({
 
           <Link
             href={`/squadre?date=${activeDate}`}
-            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition-all cursor-pointer"
+            className={btn.primary}
           >
-            <Sparkles className="h-4 w-4" />
-            <span>Vai a squadre</span>
+            <span>Vai alle squadre</span>
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
@@ -616,9 +615,9 @@ export function TabOverviewMatch({
             </p>
             <Link
               href={`/squadre?date=${closingDate}`}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-xl text-sm"
+              className={btn.primary}
             >
-              Vai a squadre
+              Vai alle squadre <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         )}
@@ -630,7 +629,7 @@ export function TabOverviewMatch({
             type="button"
             onClick={handleArchiveMatch}
             disabled={isArchiving || !canArchive}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-xl text-sm transition-colors disabled:opacity-40 cursor-pointer"
+            className={btn.primary}
           >
             {isArchiving ? (
               <Loader2 className="h-4 w-4 animate-spin" />

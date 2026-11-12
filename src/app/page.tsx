@@ -31,6 +31,7 @@ import { CountRing } from '@/components/PresenceCard';
 import { PageSkeleton } from '@/components/ui/Skeleton';
 import { notify, askConfirm } from '@/components/ui/Feedback';
 import { ArrowRight, Check, Clock, Lock, LogOut, MapPin } from 'lucide-react';
+import { btn, presenceBtn } from '@/components/ui/buttons';
 
 /** "oggi", "domani", the weekday within a week ("mercoledì"), otherwise "mer 18 nov". */
 function dayLabel(date: string, today: string): string {
@@ -318,9 +319,7 @@ export default function HomePage() {
               type="button"
               onClick={handleToggle}
               disabled={busy}
-              className={`w-full py-4 rounded-xl font-semibold text-base transition-colors active:scale-[0.99] disabled:opacity-50 ${
-                isFull ? 'bg-amber-400 hover:bg-amber-300 text-slate-950' : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
-              }`}
+              className={presenceBtn(isFull)}
             >
               {isFull ? 'Mettimi in attesa' : 'Ci sono'}
             </button>
@@ -357,7 +356,7 @@ export default function HomePage() {
       ) : (
         <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center space-y-3">
           <p className="text-sm text-slate-300">Segna i giorni in cui puoi giocare: la partita si decide quando si arriva a 10.</p>
-          <Link href="/presenze" className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-xl text-sm">
+          <Link href="/presenze" className={btn.primary}>
             Vai alle presenze <ArrowRight className="h-4 w-4" />
           </Link>
         </section>

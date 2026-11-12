@@ -28,11 +28,13 @@ import {
   ShieldCheck, 
   Mail, 
   ArrowLeft,
+  ArrowRight,
   Camera,
   Percent,
   Flame,
   Loader2
 } from 'lucide-react';
+import { btn } from '@/components/ui/buttons';
 
 export default function ProfiloPage() {
   const { user, profile, isAdmin, updateProfile } = useAuth();
@@ -83,9 +85,9 @@ export default function ProfiloPage() {
         </p>
         <Link
           href="/login"
-          className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition-all"
+          className={btn.primary}
         >
-          Vai al Login
+          Vai al login <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
     );
@@ -264,10 +266,10 @@ export default function ProfiloPage() {
               <button
                 type="submit"
                 disabled={isSaving}
-                className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition-all cursor-pointer"
+                className={btn.primary}
               >
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                Salva Modifiche
+                Salva modifiche
               </button>
             </div>
 

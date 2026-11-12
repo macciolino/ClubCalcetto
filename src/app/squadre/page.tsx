@@ -56,6 +56,7 @@ import {
   ArrowLeftRight,
   ArrowRight
 } from 'lucide-react';
+import { btn } from '@/components/ui/buttons';
 
 
 function SquadreContent() {
@@ -533,10 +534,8 @@ function SquadreContent() {
     );
 
   const generateLabel = teamRecord ? 'Ribilancia' : 'Genera squadre';
-  const primaryBtn =
-    'w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-xl text-sm transition-colors disabled:opacity-40';
-  const secondaryBtn =
-    'w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 border border-slate-700 text-slate-200 hover:bg-slate-800 font-semibold rounded-xl text-sm transition-colors disabled:opacity-40';
+  const primaryBtn = btn.primary;
+  const secondaryBtn = btn.secondary;
 
   // Barre di confronto Bianchi / Neri
   const compareRows = balancedResult

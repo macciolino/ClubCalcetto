@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
+import { btn } from '@/components/ui/buttons';
 
 interface SheetProps {
   onClose: () => void;
@@ -117,12 +118,5 @@ export function Sheet({ onClose, title, subtitle, headerActions, footer, size = 
   );
 }
 
-/** Standard footer buttons (full width on phone, side by side on larger screens) */
-export const sheetBtn = {
-  primary:
-    'w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 sm:py-2.5 rounded-xl text-sm font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition-colors disabled:opacity-50',
-  secondary:
-    'w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 sm:py-2.5 rounded-xl text-sm font-semibold border border-slate-700 text-slate-200 hover:bg-slate-800 transition-colors disabled:opacity-50',
-  danger:
-    'w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 sm:py-2.5 rounded-xl text-sm font-semibold border border-rose-500/40 text-rose-300 hover:bg-rose-500/10 transition-colors disabled:opacity-50',
-};
+/** Standard footer buttons: the design-system buttons (see ui/buttons.ts) */
+export const sheetBtn = btn;

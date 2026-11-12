@@ -36,7 +36,7 @@ export function DeactivatedAccountsList({
               <button
                 type="button"
                 onClick={() => onReactivatePlayer(p)}
-                className="flex-1 sm:flex-none px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs"
+                className="flex-1 sm:flex-none px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-xl text-sm"
               >
                 Riattiva
               </button>
