@@ -8,6 +8,8 @@ interface SheetProps {
   onClose: () => void;
   title: React.ReactNode;
   subtitle?: React.ReactNode;
+  /** Small icon buttons in the header, before the X (e.g. edit, "⋯" menu) */
+  headerActions?: React.ReactNode;
   /** Action buttons: always visible at the bottom (sticky footer) */
   footer?: React.ReactNode;
   /** Desktop width: md ≈ 512px, lg ≈ 672px */
@@ -25,7 +27,7 @@ interface SheetProps {
  * and a sticky footer for the actions. Desktop (≥ 1024px): classic centred modal box on a blurred backdrop.
  * Rendered in a portal on <body>, so no parent can clip it or shift it.
  */
-export function Sheet({ onClose, title, subtitle, footer, size = 'md', height = 'auto', locked = false, children }: SheetProps) {
+export function Sheet({ onClose, title, subtitle, headerActions, footer, size = 'md', height = 'auto', locked = false, children }: SheetProps) {
   const [mounted, setMounted] = useState(false);
   const [dragY, setDragY] = useState(0);
   const startY = useRef<number | null>(null);
@@ -84,15 +86,18 @@ export function Sheet({ onClose, title, subtitle, footer, size = 'md', height = 
               </h2>
               {subtitle && <p className="text-sm text-slate-400 mt-0.5">{subtitle}</p>}
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={locked}
-              aria-label="Chiudi"
-              className="flex-shrink-0 p-2 -m-1 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 disabled:opacity-40"
-            >
-              <X className="h-5 w-5" />
-            </button>
+            <div className="flex-shrink-0 flex items-center gap-1 -m-1">
+              {headerActions}
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={locked}
+                aria-label="Chiudi"
+                className="p-2 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 disabled:opacity-40"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
           </div>
         </div>
 

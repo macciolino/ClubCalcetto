@@ -7,8 +7,8 @@ import { getStatValue, PlayerMatchStats, EMPTY_MATCH_STATS } from '@/lib/utils/s
 import { Match, Profile, StatCategory, sortStatsByCanonicalOrder } from '@/types/database';
 import { FormDots, playedAny } from './FormDots';
 import { RadarChart } from './RadarChart';
-import { Sheet, sheetBtn } from './ui/Sheet';
-import { Edit3, Trash2, ShieldCheck, ShieldOff } from 'lucide-react';
+import { Sheet } from './ui/Sheet';
+import { Edit3, Trash2, ShieldCheck, ShieldOff, MoreHorizontal } from 'lucide-react';
 
 const isSuperAdminProfile = (p: Profile) => Boolean(p.email?.toLowerCase().includes('macciolino84'));
 
@@ -128,6 +128,8 @@ export function PlayerDetailSheet({
   if (form !== 0) Object.keys(displayStats).forEach((k) => (displayStats[k] = clamp(Number(displayStats[k]) + form)));
   const ovr = ovrDisplay(player.overall_rating, form);
   const canDelete = Boolean(onDelete) && !isSuperAdminProfile(player);
+  const canToggleAdmin = Boolean(onToggleAdmin) && !player.is_guest && !isSuperAdminProfile(player);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const radar = (
     <div className="flex flex-col items-center">
@@ -216,24 +218,66 @@ export function PlayerDetailSheet({
           </span>
         </span>
       }
-      footer={
-        isAdmin && (onEdit || canDelete || onToggleAdmin) ? (
+      headerActions={
+        isAdmin && (onEdit || canDelete || canToggleAdmin) ? (
           <>
-            {onToggleAdmin && !player.is_guest && !isSuperAdminProfile(player) && (
-              <button type="button" onClick={() => onToggleAdmin(player)} className={sheetBtn.secondary}>
-                {player.role === 'admin' ? <ShieldOff className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
-                {player.role === 'admin' ? 'Togli admin' : 'Rendi admin'}
-              </button>
-            )}
-            {canDelete && (
-              <button type="button" onClick={() => onDelete?.(player)} className={`${sheetBtn.danger} sm:mr-auto`}>
-                <Trash2 className="h-4 w-4" /> Elimina
-              </button>
-            )}
             {onEdit && (
-              <button type="button" onClick={() => onEdit(player)} className={sheetBtn.primary}>
-                <Edit3 className="h-4 w-4" /> Modifica
+              <button
+                type="button"
+                onClick={() => onEdit(player)}
+                aria-label="Modifica giocatore"
+                title="Modifica"
+                className="p-2 rounded-full text-slate-300 hover:text-white hover:bg-slate-800"
+              >
+                <Edit3 className="h-5 w-5" />
               </button>
+            )}
+            {(canDelete || canToggleAdmin) && (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen((o) => !o)}
+                  aria-label="Altre azioni"
+                  aria-expanded={menuOpen}
+                  className="p-2 rounded-full text-slate-300 hover:text-white hover:bg-slate-800"
+                >
+                  <MoreHorizontal className="h-5 w-5" />
+                </button>
+                {menuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} aria-hidden="true" />
+                    <div className="absolute right-0 top-full mt-1 z-20 w-52 rounded-xl bg-slate-800 border border-slate-700 shadow-2xl p-1 animate-in" role="menu">
+                      {canToggleAdmin && (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            setMenuOpen(false);
+                            onToggleAdmin?.(player);
+                          }}
+                          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-slate-100 hover:bg-slate-700"
+                        >
+                          {player.role === 'admin' ? <ShieldOff className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
+                          {player.role === 'admin' ? 'Togli admin' : 'Rendi admin'}
+                        </button>
+                      )}
+                      {canDelete && (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            setMenuOpen(false);
+                            onDelete?.(player);
+                          }}
+                          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-rose-300 hover:bg-rose-500/10"
+                        >
+                          <Trash2 className="h-4 w-4" /> Elimina
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
             )}
           </>
         ) : undefined
