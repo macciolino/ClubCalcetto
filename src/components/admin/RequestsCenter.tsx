@@ -95,16 +95,24 @@ export function RequestsBell() {
   const [players, setPlayers] = useState<Profile[]>([]);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  // Lettura negata: di solito le regole Firestore aggiornate non sono ancora pubblicate
+  const [denied, setDenied] = useState(false);
 
   useEffect(() => {
     if (!admin || !isFirebaseConfigured) return;
     const unsub = onSnapshot(
       query(collection(db, 'admin_requests'), where('status', '==', 'open')),
-      (snap) =>
+      (snap) => {
+        setDenied(false);
         setRequests(
           snap.docs.map((d) => ({ ...(d.data() as AdminRequest), id: d.id })).sort((a, b) => b.created_at.localeCompare(a.created_at))
-        ),
-      () => setRequests([])
+        );
+      },
+      (err) => {
+        console.warn('admin_requests:', err?.code || err);
+        setDenied(true);
+        setRequests([]);
+      }
     );
     return () => unsub();
   }, [admin]);
@@ -279,6 +287,9 @@ export function RequestsBell() {
         title="Richieste e avvisi"
       >
         <Bell className="h-5 w-5" />
+        {denied && count === 0 && (
+          <span className="absolute top-1 right-1 h-2.5 w-2.5 rounded-full bg-amber-400 ring-2 ring-slate-950" aria-hidden="true" />
+        )}
         {count > 0 && (
           <span className="absolute top-0.5 right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-slate-950 tabular-nums">
             {count > 9 ? '9+' : count}
@@ -294,7 +305,12 @@ export function RequestsBell() {
           size="lg"
           locked={busy !== null}
         >
-          {sorted.length === 0 ? (
+          {denied ? (
+            <div className="rounded-2xl bg-amber-500/10 border border-amber-500/25 p-4 text-sm text-amber-200 leading-relaxed">
+              Non riesco a leggere le richieste: le regole Firestore aggiornate non risultano pubblicate. Pubblica il file firestore.rules
+              dalla console Firebase (Firestore → Regole) e riapri questa finestra.
+            </div>
+          ) : sorted.length === 0 ? (
             <div className="py-10 text-center space-y-2">
               <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-800 text-emerald-400">
                 <Check className="h-6 w-6" />

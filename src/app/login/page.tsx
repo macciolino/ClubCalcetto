@@ -6,6 +6,7 @@ import { PitchLines } from '@/components/PitchLines';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { GoogleAuthProvider } from 'firebase/auth';
 import { useAuth, savePendingInvite, takePendingInvite, afterRegistration, requestReturn } from '@/lib/context/AuthContext';
 import { notify } from '@/components/ui/Feedback';
 import { btn } from '@/components/ui/buttons';
@@ -43,7 +44,10 @@ export default function LoginPage() {
   // Link di invito per un ospite (/login?invite=…): nome dell'ospite per il banner
   const [inviteName, setInviteName] = useState('');
   // Account chiuso che prova a tornare: schermata "Bentornato", decide l'admin
-  const [returning, setReturning] = useState<{ name?: string } | null>(null);
+  const [returning, setReturning] = useState<{ name?: string; askEmail?: boolean } | null>(null);
+  const [returnEmail, setReturnEmail] = useState('');
+  const [returnError, setReturnError] = useState('');
+  const [returnBusy, setReturnBusy] = useState(false);
   const checkReturn = async (mail?: string | null) => {
     const r = await requestReturn(mail);
     if (r.pending) setReturning({ name: r.name });
@@ -135,10 +139,17 @@ export default function LoginPage() {
       console.error('Google login error:', err);
       const msg = err instanceof Error ? err.message : 'Errore durante il login con Google';
       if (msg.includes('auth/user-disabled')) {
-        const mail = (err as { customData?: { email?: string } }).customData?.email;
-        if (!(await checkReturn(mail))) {
-          setErrorMessage('Questo account è stato disattivato. Per riattivarlo contatta l’amministratore del club.');
+        // Account chiuso: Google spesso non restituisce l'email; si prova dall'errore, altrimenti la si chiede
+        let mail = (err as { customData?: { email?: string } }).customData?.email;
+        if (!mail) {
+          try {
+            const idToken = GoogleAuthProvider.credentialFromError(err as Parameters<typeof GoogleAuthProvider.credentialFromError>[0])?.idToken;
+            if (idToken) mail = JSON.parse(atob(idToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).email;
+          } catch {
+            /* ignore */
+          }
         }
+        if (!(await checkReturn(mail))) setReturning({ askEmail: true });
       } else if (msg.includes('auth/unauthorized-domain')) {
         setErrorMessage('Dominio non autorizzato su Firebase Console. Aggiungi localhost nelle impostazioni Auth.');
       } else if (!msg.includes('popup-closed-by-user')) {
@@ -322,7 +333,9 @@ export default function LoginPage() {
                 : 'Entra nel club'}
             </h1>
             <p className="text-sm text-slate-400">
-              {returning
+              {returning?.askEmail
+                ? 'Il tuo account era stato chiuso.'
+                : returning
                 ? 'Abbiamo rilevato un tuo profilo precedente.'
                 : user && !isEmailVerified
                 ? 'Manca solo un passaggio.'
@@ -353,6 +366,53 @@ export default function LoginPage() {
             <Loader2 className="h-7 w-7 text-emerald-400 animate-spin" />
             <p className="text-sm text-slate-400">Caricamento…</p>
           </div>
+        ) : returning?.askEmail ? (
+          /* Account chiuso con Google, email sconosciuta: la chiediamo per avvisare l'admin */
+          <form
+            className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 animate-in"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setReturnError('');
+              setReturnBusy(true);
+              const ok = await checkReturn(returnEmail);
+              setReturnBusy(false);
+              if (!ok) setReturnError('Non troviamo un account chiuso con questa email. Controllala o contatta l’amministratore del club.');
+            }}
+          >
+            <p className="text-sm text-slate-300 leading-relaxed">
+              Scrivi l&apos;email con cui accedevi: avvisiamo l&apos;amministratore, che configura il tuo rientro.
+            </p>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+              <input
+                type="email"
+                required
+                autoComplete="email"
+                value={returnEmail}
+                onChange={(e) => setReturnEmail(e.target.value)}
+                placeholder="nome@gmail.com"
+                aria-label="Email dell'account"
+                className="w-full pl-9 pr-3 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+            {returnError && <p className="text-xs text-rose-400">{returnError}</p>}
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button type="submit" disabled={returnBusy || !returnEmail.trim()} className={`${btn.primary} sm:flex-1`}>
+                {returnBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                Chiedi il rientro
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setReturning(null);
+                  setReturnError('');
+                }}
+                className={btn.secondary}
+              >
+                Annulla
+              </button>
+            </div>
+          </form>
         ) : returning ? (
           /* Account chiuso che torna: attesa ripristino, decide l'admin */
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5 animate-in" role="status">
