@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { menu } from '@/components/ui/buttons';
 import { RequestsBell } from '@/components/admin/RequestsCenter';
+import { SelfRatingPrompt } from '@/components/SelfRatingPrompt';
 
 export function Navbar() {
   const pathname = usePathname();
@@ -101,6 +102,8 @@ export function Navbar() {
           <div className="flex items-center justify-end gap-3 min-w-0">
             {/* Solo admin: campanella con le richieste da gestire */}
             <RequestsBell />
+            {/* Nuovo giocatore: autovalutazione dei parametri (una volta) */}
+            <SelfRatingPrompt />
             {/* Icona, nome e ruolo: aprono il menu dell'utente */}
             <div className="relative" ref={menuRef}>
               <button

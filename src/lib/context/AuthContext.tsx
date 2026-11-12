@@ -254,10 +254,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const invite = takePendingInvite();
       if (isNew || invite) {
         const res = await afterRegistration(fbUser, invite);
-        if (res?.claimed) {
+        // Il server può aver cambiato il profilo (ospite collegato, autovalutazione da fare): si rilegge
+        if (res?.claimed || isNew) {
           const fresh = await getDoc(docRef);
           if (fresh.exists()) resolved = { ...(fresh.data() as Profile), id: docId, role: normalizeRole(fresh.data()?.role, fbUser.email) };
           updateStoredPlayer(resolved);
+        }
+        if (res?.claimed) {
           notify(`Profilo di ${res.guestName} collegato: partite e statistiche sono tue.`);
         } else if (invite && res && !res.ok) {
           notify('Il link di invito non è più valido: chiedi un nuovo link all’amministratore.');

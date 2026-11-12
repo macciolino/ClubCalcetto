@@ -105,7 +105,14 @@ export async function claimGuest(guestId: string, toId: string): Promise<{ guest
 
   await moveReferences(guestId, toId);
 
-  const patch: Record<string, unknown> = { is_guest: false, updated_at: new Date().toISOString(), linked_guest_id: guestId };
+  // I parametri dell'ospite li aveva già messi un admin: niente autovalutazione né revisione
+  const patch: Record<string, unknown> = {
+    is_guest: false,
+    updated_at: new Date().toISOString(),
+    linked_guest_id: guestId,
+    needs_stat_review: false,
+    self_rating_pending: false,
+  };
   if (g.stats) patch.stats = g.stats;
   if (typeof g.overall_rating === 'number') patch.overall_rating = g.overall_rating;
   if (g.position) patch.position = g.position;

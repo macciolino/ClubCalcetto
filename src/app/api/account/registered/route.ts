@@ -43,6 +43,12 @@ export async function POST(request: Request) {
     // Solo per profili appena creati (non si riapre la richiesta a ogni accesso)
     const createdMs = Date.parse(String(profile.created_at || ''));
     if (!createdMs || Date.now() - createdMs > 30 * 60 * 1000) return NextResponse.json({ ok: true, claimed: false });
+
+    // Nuovo giocatore: si autovaluta (una volta) e dopo la prima partita un admin rivede i valori
+    const played = Number(profile.matches_won || 0) + Number(profile.matches_drawn || 0) + Number(profile.matches_lost || 0);
+    if (profile.needs_stat_review === undefined && played === 0 && !profile.is_guest) {
+      await db.doc(`profiles/${caller.profileId}`).update({ needs_stat_review: true, self_rating_pending: true });
+    }
     if ((await db.doc(`admin_requests/signup_${caller.profileId}`).get()).exists) return NextResponse.json({ ok: true, claimed: false });
 
     const guests = await db.collection('profiles').where('is_guest', '==', true).get();

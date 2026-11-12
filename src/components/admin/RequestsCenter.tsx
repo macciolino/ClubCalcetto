@@ -1,16 +1,18 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, doc, onSnapshot, query, updateDoc, where } from 'firebase/firestore';
 import { db, auth as firebaseAuth, isFirebaseConfigured } from '@/lib/firebase/config';
 import { subscribeProfiles } from '@/lib/firebase/firestoreService';
 import { useAuth } from '@/lib/context/AuthContext';
-import { AdminRequest, Profile } from '@/types/database';
+import { AdminRequest, Profile, StatCategory } from '@/types/database';
 import { Sheet } from '@/components/ui/Sheet';
 import { askConfirm, notify } from '@/components/ui/Feedback';
 import { btn, btnInline } from '@/components/ui/buttons';
 import { initialsOf, uploadedPhoto } from '@/lib/utils/playerUtils';
-import { Bell, Check, Link2, Loader2, RotateCcw, UserPlus, UserX, Eraser } from 'lucide-react';
+import { Bell, Check, Link2, Loader2, RotateCcw, UserPlus, UserX, Eraser, ClipboardCheck, ChevronDown } from 'lucide-react';
+import { useStatCategories } from '@/lib/hooks/useStatCategories';
+import { StatRatingFields, ovrOf, orderedCategories } from '@/components/StatRatingFields';
 
 /** Lowercase, no accents, single spaces. */
 const norm = (s: string) =>
@@ -83,6 +85,77 @@ function Avatar({ name, photo }: { name: string; photo?: string | null }) {
 const when = (iso: string) =>
   new Date(iso).toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).replace(/\./g, '');
 
+/** New player after the first match: the admin corrects the self-assessment and saves (needs_stat_review → false). */
+function StatReviewCard({ player, categories, reviewerId }: { player: Profile; categories: StatCategory[]; reviewerId: string }) {
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [values, setValues] = useState<Record<string, number>>(() => {
+    const v: Record<string, number> = {};
+    categories.forEach((c) => (v[c.name] = Number(player.stats?.[c.name] ?? c.default_value ?? 6)));
+    return v;
+  });
+  const played = (player.matches_won || 0) + (player.matches_drawn || 0) + (player.matches_lost || 0);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const stats: Record<string, number> = { ...(player.stats || {}) };
+      orderedCategories(categories).forEach((c) => (stats[c.name] = Number(values[c.name])));
+      const now = new Date().toISOString();
+      await updateDoc(doc(db, 'profiles', player.id), {
+        stats,
+        overall_rating: ovrOf(values),
+        needs_stat_review: false,
+        stat_reviewed_at: now,
+        stat_reviewed_by: reviewerId,
+        updated_at: now,
+      });
+      notify(`Valutazione di ${player.full_name} salvata`);
+    } catch {
+      notify('Salvataggio non riuscito, riprova.');
+      setSaving(false);
+    }
+  };
+
+  return (
+    <li className="rounded-2xl bg-slate-950/50 p-4 space-y-3">
+      <button type="button" onClick={() => setOpen((o) => !o)} className="w-full flex items-center gap-3 text-left" aria-expanded={open}>
+        <Avatar name={player.full_name} photo={player.avatar_url} />
+        <span className="flex-1 min-w-0">
+          <span className="block text-sm font-semibold text-white truncate">{player.full_name}</span>
+          <span className="block text-xs text-slate-500">
+            {played === 1 ? 'Prima partita giocata' : `${played} partite giocate`} ·{' '}
+            {player.self_stats ? 'si è autovalutato' : 'autovalutazione non compilata'}
+          </span>
+        </span>
+        <span className="text-right flex-shrink-0">
+          <span className="block text-[10px] font-semibold tracking-wider text-slate-500">OVR</span>
+          <span className="block text-lg font-semibold text-white tabular-nums leading-tight">{Math.round(ovrOf(values) * 10)}</span>
+        </span>
+        <ChevronDown className={`h-4 w-4 text-slate-500 flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
+      </button>
+      {open && (
+        <div className="space-y-4 pt-1">
+          <p className="text-sm text-slate-400">
+            Correggi i voti in base a quello che hai visto in campo. Sotto ogni parametro c&apos;è il voto che si è dato.
+          </p>
+          <StatRatingFields
+            categories={categories}
+            values={values}
+            onChange={setValues}
+            reference={player.self_stats}
+            disabled={saving}
+          />
+          <button type="button" onClick={save} disabled={saving} className={btn.primary}>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardCheck className="h-4 w-4" />}
+            Salva valutazione
+          </button>
+        </div>
+      )}
+    </li>
+  );
+}
+
 /**
  * Admins only: bell in the header with the number of pending requests, and the sheet to handle them
  * (new sign-up to link to a guest, closed account that wants to come back, account closed by a player).
@@ -97,6 +170,7 @@ export function RequestsBell() {
   const [busy, setBusy] = useState<string | null>(null);
   // Lettura negata: di solito le regole Firestore aggiornate non sono ancora pubblicate
   const [denied, setDenied] = useState(false);
+  const categories = useStatCategories();
 
   useEffect(() => {
     if (!admin || !isFirebaseConfigured) return;
@@ -117,11 +191,12 @@ export function RequestsBell() {
     return () => unsub();
   }, [admin]);
 
+  // Giocatori sempre in ascolto (servono anche per il contatore: valutazioni da rivedere)
   useEffect(() => {
-    if (!open) return;
+    if (!admin) return;
     const unsub = subscribeProfiles((list) => setPlayers(list || []));
     return () => unsub();
-  }, [open]);
+  }, [admin]);
 
   useEffect(() => {
     if (!admin) return;
@@ -138,9 +213,17 @@ export function RequestsBell() {
   }, [admin]);
 
   const guests = useMemo(() => players.filter((p) => p.is_guest && !p.archived_at), [players]);
+  // Nuovi giocatori che hanno giocato la prima partita: i parametri li rivede un admin
+  const reviews = useMemo(
+    () =>
+      players.filter(
+        (p) => p.needs_stat_review && !p.is_guest && (p.matches_won || 0) + (p.matches_drawn || 0) + (p.matches_lost || 0) >= 1
+      ),
+    [players]
+  );
 
   if (!admin) return null;
-  const count = requests.length;
+  const count = requests.length + reviews.length;
 
   const run = async (key: string, fn: () => Promise<boolean>, done: string) => {
     setBusy(key);
@@ -305,18 +388,28 @@ export function RequestsBell() {
           size="lg"
           locked={busy !== null}
         >
+          {reviews.length > 0 && (
+            <section className="space-y-2" aria-label="Valutazioni da rivedere">
+              <h3 className="px-1 text-xs font-semibold text-slate-500">Valutazioni da rivedere · dopo la prima partita</h3>
+              <ul className="space-y-3">
+                {reviews.map((p) => (
+                  <StatReviewCard key={p.id} player={p} categories={categories} reviewerId={profile?.id || ''} />
+                ))}
+              </ul>
+            </section>
+          )}
           {denied ? (
             <div className="rounded-2xl bg-amber-500/10 border border-amber-500/25 p-4 text-sm text-amber-200 leading-relaxed">
               Non riesco a leggere le richieste: le regole Firestore aggiornate non risultano pubblicate. Pubblica il file firestore.rules
               dalla console Firebase (Firestore → Regole) e riapri questa finestra.
             </div>
-          ) : sorted.length === 0 ? (
+          ) : sorted.length === 0 && reviews.length > 0 ? null : sorted.length === 0 ? (
             <div className="py-10 text-center space-y-2">
               <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-800 text-emerald-400">
                 <Check className="h-6 w-6" />
               </span>
               <p className="text-sm font-semibold text-white">Nessuna richiesta in sospeso</p>
-              <p className="text-sm text-slate-400">Qui arrivano nuovi iscritti da collegare, richieste di rientro e account chiusi.</p>
+              <p className="text-sm text-slate-400">Qui arrivano nuovi iscritti da collegare, valutazioni da rivedere, richieste di rientro e account chiusi.</p>
             </div>
           ) : (
             <ul className="space-y-3">

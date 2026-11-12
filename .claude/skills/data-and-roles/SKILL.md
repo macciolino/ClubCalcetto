@@ -89,3 +89,15 @@ Production data is REAL: never rewrite stats, no paid services, never print secr
   Admin: "Ripristina profilo e storico" (reactivate) or "Riparti da zero" (`archiveAndReset`: old record copied to `ex-<ts>`,
   anonymised + hidden, references moved there; fresh profile with default stats, Auth re-enabled). Hard-deleted accounts come back as new sign-ups.
 - Any admin can resolve requests (`POST /api/admin/requests`); deleting for good stays super admin only.
+
+## New player self-assessment and admin review (2026-11-12)
+- At sign-up (`/api/account/registered`, new profile, 0 matches, not a claimed guest) the server sets
+  `self_rating_pending: true` and `needs_stat_review: true`. Older profiles have neither field → never asked.
+- `SelfRatingPrompt` (mounted in the Navbar) shows a sheet with one slider 1–10 per parameter; "Più tardi" = this session only.
+  Saved by `POST /api/account/self-rating` (validates 1–10 for every club parameter) → `stats`, copy in `self_stats`,
+  `overall_rating`, `self_rating_pending: false`. Players still cannot write their stats directly (rules unchanged).
+- "Matches played" = matches_won + drawn + lost (the counters `saveMatchResult` increments); no separate field.
+  When it reaches 1 and `needs_stat_review` is true the player appears in the bell (RequestsCenter, "Valutazioni da rivedere",
+  computed live from profiles, counts in the badge). The admin corrects the sliders (self value shown under each) and saves
+  → `stats`, `overall_rating`, `needs_stat_review: false`, `stat_reviewed_at/by`; the item disappears.
+- A guest linked through an invite / "Collega" gets both flags false (an admin already rated the guest).

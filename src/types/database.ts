@@ -130,6 +130,15 @@ export interface Profile {
   restore_requested_at?: string;
   /** Old record of an account that restarted from zero (id `ex-…`): kept only for the match history. Server only. */
   archived_at?: string;
+  /** New player: rate yourself once after signing up (set by the server, cleared by /api/account/self-rating) */
+  self_rating_pending?: boolean;
+  /** What the player gave themselves (kept so the admin can compare) */
+  self_stats?: Record<string, number>;
+  self_rated_at?: string;
+  /** New player: an admin reviews the parameters after the FIRST match played; false once reviewed */
+  needs_stat_review?: boolean;
+  stat_reviewed_at?: string;
+  stat_reviewed_by?: string;
   stats: Record<string, number>;
   overall_rating: number;
   matches_won?: number;
