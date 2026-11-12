@@ -925,61 +925,6 @@ function SquadreContent() {
             </div>
           </section>
 
-          {/* Report AI: stesso stile delle altre schede */}
-          {aiAnalysis && (
-            <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 animate-in">
-              <div>
-                <p className="text-xs text-slate-500 flex items-center gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5" /> Analisi AI
-                </p>
-                <h3 className="text-base font-semibold text-white mt-1 leading-snug">{aiAnalysis.headline}</h3>
-                <p className="text-sm text-amber-200 mt-1">{aiAnalysis.prediction}</p>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                <div className="rounded-xl bg-slate-950/60 p-3">
-                  <span className="font-semibold text-white block mb-1">Bianchi</span>
-                  <p className="text-slate-300 leading-relaxed">{aiAnalysis.whiteTactics}</p>
-                </div>
-                <div className="rounded-xl bg-slate-950/60 p-3">
-                  <span className="font-semibold text-white block mb-1">Neri</span>
-                  <p className="text-slate-300 leading-relaxed">{aiAnalysis.blackTactics}</p>
-                </div>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm">
-                <div>
-                  <span className="font-semibold text-emerald-300 block">{aiAnalysis.keyDuel}</span>
-                  <p className="text-slate-400 italic text-xs mt-0.5">{aiAnalysis.funnyLockerRoomQuote}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    await copyToClipboard(aiAnalysis.epicWhatsAppText);
-                    setCopySuccess(true);
-                    setTimeout(() => setCopySuccess(false), 3000);
-                    window.open(getWhatsAppShareUrl(aiAnalysis.epicWhatsAppText), '_blank');
-                  }}
-                  className={secondaryBtn}
-                >
-                  <Share2 className="h-4 w-4" />
-                  Manda su WhatsApp
-                </button>
-              </div>
-            </section>
-          )}
-
-          {/* Voto MVP aperto a tutti, 45 minuti dopo la fine della partita */}
-          {teams && teamsComplete && (
-            <MvpVoteCard
-              date={selectedDate}
-              matchTime={matchTime}
-              white={teams.white}
-              black={teams.black}
-              voterUid={user?.uid || null}
-              isAdmin={isClientAdmin}
-              testMode={teamRecord?.mvp_vote_test === 'all' ? 'all' : teamRecord?.mvp_vote_test ? 'admins' : false}
-            />
-          )}
-
           {/* 5. Confronto Bianchi / Neri */}
           <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-5">
             <div className="flex flex-wrap items-end justify-between gap-3">
@@ -1023,6 +968,61 @@ function SquadreContent() {
               {teamList(balancedResult.teamBlack, 'Neri', 'bg-slate-950 border border-slate-500')}
             </div>
           </section>
+
+          {/* Voto MVP aperto a tutti, 45 minuti dopo la fine della partita */}
+          {teams && teamsComplete && (
+            <MvpVoteCard
+              date={selectedDate}
+              matchTime={matchTime}
+              white={teams.white}
+              black={teams.black}
+              voterUid={user?.uid || null}
+              isAdmin={isClientAdmin}
+              testMode={teamRecord?.mvp_vote_test === 'all' ? 'all' : teamRecord?.mvp_vote_test ? 'admins' : false}
+            />
+          )}
+
+          {/* Report AI: stesso stile delle altre schede */}
+          {aiAnalysis && (
+            <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 animate-in">
+              <div>
+                <p className="text-xs text-slate-500 flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5" /> Analisi AI
+                </p>
+                <h3 className="text-base font-semibold text-white mt-1 leading-snug">{aiAnalysis.headline}</h3>
+                <p className="text-sm text-amber-200 mt-1">{aiAnalysis.prediction}</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                <div className="rounded-xl bg-slate-950/60 p-3">
+                  <span className="font-semibold text-white block mb-1">Bianchi</span>
+                  <p className="text-slate-300 leading-relaxed">{aiAnalysis.whiteTactics}</p>
+                </div>
+                <div className="rounded-xl bg-slate-950/60 p-3">
+                  <span className="font-semibold text-white block mb-1">Neri</span>
+                  <p className="text-slate-300 leading-relaxed">{aiAnalysis.blackTactics}</p>
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm">
+                <div>
+                  <span className="font-semibold text-emerald-300 block">{aiAnalysis.keyDuel}</span>
+                  <p className="text-slate-400 italic text-xs mt-0.5">{aiAnalysis.funnyLockerRoomQuote}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await copyToClipboard(aiAnalysis.epicWhatsAppText);
+                    setCopySuccess(true);
+                    setTimeout(() => setCopySuccess(false), 3000);
+                    window.open(getWhatsAppShareUrl(aiAnalysis.epicWhatsAppText), '_blank');
+                  }}
+                  className={secondaryBtn}
+                >
+                  <Share2 className="h-4 w-4" />
+                  Manda su WhatsApp
+                </button>
+              </div>
+            </section>
+          )}
         </div>
       ) : (
         /* 8. Nessuna squadra: cosa succede adesso */

@@ -193,7 +193,6 @@ export default function HistoryPage() {
   const detailPlayer = profiles.find((p) => p.id === detailPlayerId) || null;
   const detailMatch = matches.find((m) => m.id === detailMatchId) || null;
 
-  const MEDALS = ['🥇', '🥈', '🥉'];
   const UNIT: Record<SortKey, string> = { played: 'partite', won: 'vinte', drawn: 'pari', lost: 'perse', goals: 'gol', mvp: 'MVP' };
   const zeroTone = (v: number, tone: string) => (v === 0 ? 'text-slate-600' : tone);
   const shortDate = (d: string) => {
@@ -344,7 +343,7 @@ export default function HistoryPage() {
                     onClick={() => profiles.some((p) => p.id === l.id) && setDetailPlayerId(l.id)}
                     className="w-full flex items-center gap-3 px-3.5 py-2.5 text-left hover:bg-slate-800/60"
                   >
-                    <span className="w-6 flex-shrink-0 text-center text-sm tabular-nums text-slate-500">{MEDALS[idx] || idx + 1}</span>
+                    <span className={`w-6 flex-shrink-0 text-center text-sm tabular-nums ${idx < 3 ? 'font-bold text-white' : 'text-slate-500'}`}>{idx + 1}</span>
                     <span className="flex-1 min-w-0">
                       <span className="block truncate text-sm font-semibold text-white">{l.name}</span>
                       <span className="block text-xs text-slate-400 tabular-nums">
@@ -397,7 +396,7 @@ export default function HistoryPage() {
               <tbody>
                 {leaderboard.map((l, idx) => (
                   <tr key={l.id} className="border-b border-slate-800/60 last:border-0 hover:bg-slate-800/30">
-                    <td className="pl-5 pr-2 py-2.5 tabular-nums text-slate-500">{MEDALS[idx] || idx + 1}</td>
+                    <td className={`pl-5 pr-2 py-2.5 tabular-nums ${idx < 3 ? 'font-bold text-white' : 'text-slate-500'}`}>{idx + 1}</td>
                     <td className="px-2 py-2.5">
                       <button
                         type="button"
