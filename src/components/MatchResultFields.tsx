@@ -102,30 +102,36 @@ export function MatchResultFields({ value, onChange, white, black, mvpVotes = []
       {/* Risultato */}
       <div className="min-w-0 bg-slate-950 p-3 sm:p-4 rounded-2xl border border-slate-800 space-y-3">
         <h3 className="text-xs font-bold text-slate-300">Risultato finale</h3>
-        <div className="flex items-center justify-around gap-1.5 sm:gap-3">
-          <label className="text-center space-y-1">
-            <span className="text-xs font-bold text-white block">⚪ Bianchi</span>
-            <NumberInput
-              min={0}
-              max={50}
-              value={value.scoreWhite}
-              onValueChange={(v) => set({ scoreWhite: v })}
-              className="w-12 h-12 sm:w-16 sm:h-14 bg-slate-900 border-2 border-slate-700 text-center text-xl sm:text-2xl font-bold text-white rounded-xl focus:border-emerald-500 focus:outline-none"
-            />
-          </label>
-          <span className="text-xl font-bold text-slate-600">-</span>
-          <label className="text-center space-y-1">
-            <span className="text-xs font-bold text-white block">⚫ Neri</span>
-            <NumberInput
-              min={0}
-              max={50}
-              value={value.scoreBlack}
-              onValueChange={(v) => set({ scoreBlack: v })}
-              className="w-12 h-12 sm:w-16 sm:h-14 bg-slate-900 border-2 border-slate-700 text-center text-xl sm:text-2xl font-bold text-white rounded-xl focus:border-emerald-500 focus:outline-none"
-            />
-          </label>
+        {/* Per ogni squadra: nome, ovale del colore della maglia, casella del punteggio (in colonna, allineati) */}
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-end gap-1 sm:gap-2">
+          {(
+            [
+              ['Bianchi', 'scoreWhite', 'bg-white shadow-[0_0_0_2px_rgba(255,255,255,0.15)]'],
+              null,
+              ['Neri', 'scoreBlack', 'bg-slate-950 border border-slate-500'],
+            ] as const
+          ).map((team) =>
+            team === null ? (
+              <span key="sep" className="h-12 sm:h-14 flex items-center text-xl font-bold text-slate-600" aria-hidden="true">
+                –
+              </span>
+            ) : (
+              <label key={team[0]} className="min-w-0 flex flex-col items-center gap-1.5">
+                <span className="text-xs font-semibold text-white">{team[0]}</span>
+                <span className={`block h-2.5 w-9 rounded-full ${team[2]}`} aria-hidden="true" />
+                <NumberInput
+                  min={0}
+                  max={50}
+                  value={value[team[1]]}
+                  onValueChange={(v) => set({ [team[1]]: v } as Partial<typeof value>)}
+                  aria-label={`Gol ${team[0]}`}
+                  className="w-12 h-12 sm:w-16 sm:h-14 bg-slate-900 border-2 border-slate-700 text-center text-xl sm:text-2xl font-bold text-white tabular-nums rounded-xl focus:border-emerald-500 focus:outline-none"
+                />
+              </label>
+            )
+          )}
         </div>
-        <p className="text-center text-[11px] font-mono text-emerald-400 font-bold uppercase">
+        <p className="text-center text-xs font-semibold text-emerald-400">
           {value.scoreWhite > value.scoreBlack
             ? 'Vittoria Bianchi'
             : value.scoreBlack > value.scoreWhite
