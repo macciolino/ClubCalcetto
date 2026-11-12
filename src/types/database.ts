@@ -126,6 +126,10 @@ export interface Profile {
   /** Logout from every device: sessions started before this time (ms) are closed */
   sessions_revoked_at?: number;
   deactivated_by?: 'self' | 'super_admin';
+  /** Closed account that tried to come back: waiting for an admin (restore or start from zero). Server only. */
+  restore_requested_at?: string;
+  /** Old record of an account that restarted from zero (id `ex-…`): kept only for the match history. Server only. */
+  archived_at?: string;
   stats: Record<string, number>;
   overall_rating: number;
   matches_won?: number;
@@ -329,4 +333,17 @@ export function sortStatsByCanonicalOrder(statKeys: string[]): string[] {
 
   known.sort((a, b) => canonicalList.indexOf(a as any) - canonicalList.indexOf(b as any));
   return [...known, ...unknown];
+}
+
+/** Notification centre of the admins (collection admin_requests, written only by the server). */
+export interface AdminRequest {
+  id: string;
+  type: 'new_signup' | 'restore' | 'account_closed';
+  status: 'open' | 'done';
+  profile_id: string;
+  name: string;
+  email?: string | null;
+  mode?: 'deactivate' | 'delete';
+  reason?: string;
+  created_at: string;
 }

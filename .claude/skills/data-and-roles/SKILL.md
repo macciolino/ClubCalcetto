@@ -22,7 +22,9 @@ Production data is REAL: never rewrite stats, no paid services, never print secr
 - `mvp_votes/{date}_{uid}`, `push_tokens/{fcmToken}`, `match_payments/{date}`, `sport_fields`, `stat_categories` (player parameters).
 - `settings/app_config` (standard cost/time, default field, timelock_*, form_* switches, goalkeeper_mode),
   `settings/calendar` (open_until), `settings/official_match`, `settings/notifications` (mode off|admins|all).
-- Server only (denied by the rules): `notify_state/{date}`, `account_feedback`.
+- Server only (denied by the rules): `notify_state/{date}`, `account_feedback`, `invites/{token}`.
+- `admin_requests/{id}` - admins' notification centre (bell in the header, `RequestsCenter.tsx`). Written only by the server,
+  read by admins. Types: `new_signup` (id `signup_<uid>`), `restore` (`restore_<profileId>`), `account_closed` (`closed_<uid>`); status open|done.
 
 ## Statistics and history
 
@@ -71,3 +73,18 @@ Production data is REAL: never rewrite stats, no paid services, never print secr
   → club standard `settings.standard_total_cost` → 80. Helpers: `fieldCostFor()` + `effectiveMatchCost(match, std, fieldCost)`
   in `lib/utils/matchUtils.ts` (used by Home, Squadre, Partita della settimana). Archived matches keep their own total_cost.
 - `fieldService` strips `undefined` before writing (Firestore refuses it) and removes emptied optional fields (`deleteField`).
+
+## User lifecycle (guests, invites, coming back) — server code in `lib/server/profileMerge.ts`, `adminRequests.ts`
+- Profile id = account uid, so moving a player's history = `moveReferences(fromId, toId)`: rewrites every reference
+  (matches teams/scorers/MVP/penalty saves/profile_effects, generated_teams, match_payments, mvp_votes incl. doc id, presences doc id).
+- Invite (admin, guest detail "⋯" → "Invita su WhatsApp"): `POST /api/invite` → token in `invites` (30 days, single use) →
+  link `/login?invite=TOKEN` (banner with the guest's name). After sign-in the app calls `POST /api/account/registered { invite }`:
+  `claimGuest(guestId, uid)` moves history, copies stats/OVR/role, sums W/D/L, deletes the guest. Works also for an already signed-in account.
+- Sign-up without invite: `/api/account/registered` opens a `new_signup` request if unlinked guests exist; admin links
+  ("Collega", same `claimGuest`) or "Nuovo giocatore".
+- Closing an account: unchanged choice (deactivate = data kept / delete = hard). The self-close also opens `account_closed`.
+- Coming back: a DEACTIVATED account that signs in / signs up again (`auth/user-disabled`, `auth/email-already-in-use`) →
+  `POST /api/account/return-request { email }` → profile `restore_requested_at`, `restore` request, "Bentornato" screen on /login.
+  Admin: "Ripristina profilo e storico" (reactivate) or "Riparti da zero" (`archiveAndReset`: old record copied to `ex-<ts>`,
+  anonymised + hidden, references moved there; fresh profile with default stats, Auth re-enabled). Hard-deleted accounts come back as new sign-ups.
+- Any admin can resolve requests (`POST /api/admin/requests`); deleting for good stays super admin only.

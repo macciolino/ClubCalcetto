@@ -186,7 +186,7 @@ export function AdminSections({ section }: { section: AdminSection }) {
   useEffect(() => {
     if (!isSuperAdmin || section !== 'accessi') return;
     setDeactivatedPlayers([]);
-    const unsub = subscribeProfiles((list) => setDeactivatedPlayers(list), 'deactivated');
+    const unsub = subscribeProfiles((list) => setDeactivatedPlayers(list.filter((p) => !p.archived_at)), 'deactivated');
     return () => unsub();
   }, [isSuperAdmin, section]);
 

@@ -12,7 +12,7 @@ import { PlayerCompare } from '@/components/PlayerCompare';
 import { useAuth } from '@/lib/context/AuthContext';
 import { Profile, StatCategory, Match, FIELD_POSITION_ABBR, STAT_CANONICAL_ORDER } from '@/types/database';
 import { subscribeProfiles, subscribeStatCategories, subscribeMatches, deleteProfileDoc, saveProfileDoc } from '@/lib/firebase/firestoreService';
-import { isFirebaseConfigured } from '@/lib/firebase/config';
+import { isFirebaseConfigured, auth as firebaseAuth } from '@/lib/firebase/config';
 import { getStoredPlayers, removeStoredPlayer, updateStoredPlayer, saveStoredPlayers, getPlayerMatchRecord } from '@/lib/services/playerService';
 import { getStoredCategories, saveStoredCategories, DEFAULT_BASE_CATEGORIES } from '@/lib/services/statCategoryService';
 import { PlayerModal } from '@/components/PlayerModal';
@@ -156,6 +156,31 @@ export default function GiocatoriPage() {
   };
 
   // Super admin: rende admin un giocatore registrato o gli toglie i permessi
+  // Ospite: link di invito su WhatsApp (si registra e tiene partite e statistiche)
+  const handleInviteGuest = async (p: Profile) => {
+    // La finestra si apre subito (dopo un'attesa i telefoni la bloccano), poi si riempie con WhatsApp
+    const win = window.open('', '_blank');
+    try {
+      const res = await fetch('/api/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await firebaseAuth.currentUser?.getIdToken()}` },
+        body: JSON.stringify({ guestId: p.id }),
+      });
+      const data = await res.json();
+      if (!data?.ok || !data.token) throw new Error(data?.error || 'invite');
+      const link = `${window.location.origin}/login?invite=${data.token}`;
+      const first = p.full_name.split(' ')[0];
+      const text = `Ciao ${first}! Ti ho aggiunto a Club Soccer, l'app del nostro calcetto. Registrati da questo link: le tue partite e statistiche saranno già tue.
+${link}`;
+      const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+      if (win) win.location.href = url;
+      else window.location.href = url;
+    } catch {
+      win?.close();
+      notify('Non sono riuscito a creare il link di invito, riprova.');
+    }
+  };
+
   const handleToggleAdmin = async (p: Profile) => {
     if (!isSuperAdmin || p.is_guest || p.id === 'p-1') return;
     const next: 'admin' | 'player' = p.role === 'admin' ? 'player' : 'admin';
@@ -690,6 +715,7 @@ export default function GiocatoriPage() {
             isAdmin={isClientAdmin}
             showEmail={isClientAdmin}
             onToggleAdmin={isSuperAdmin ? handleToggleAdmin : undefined}
+            onInvite={isClientAdmin ? handleInviteGuest : undefined}
             onClose={() => setDetailId(null)}
             onEdit={(p) => {
               setDetailId(null);

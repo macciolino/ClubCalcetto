@@ -10,6 +10,7 @@ import {
   saveDeletionFeedback,
 } from '@/lib/server/accountDeletion';
 import { checkPromotions } from '@/lib/server/presenceWatch';
+import { openRequest } from '@/lib/server/adminRequests';
 
 /** After removing sign-ups: who moves up from the waitlist is notified (teams are updated when an admin opens Squadre). */
 async function recheck(dates: string[]) {
@@ -75,6 +76,15 @@ export async function POST(request: Request) {
     const res = mode === 'deactivate' ? await deactivateAccount(caller.uid, 'self') : await deleteAccount(caller.uid);
     await recheck(res.dates);
     await saveDeletionFeedback({ name: res.name, reason, details, deletedBy: 'self', mode });
+    // Avviso nel centro notifiche degli admin
+    await openRequest(
+      `closed_${caller.uid}`,
+      { type: 'account_closed', profile_id: caller.uid, name: res.name, email: caller.email || null, mode, reason },
+      {
+        title: mode === 'deactivate' ? '⏸️ Account disattivato' : '🗑️ Account eliminato',
+        body: `${res.name} ha ${mode === 'deactivate' ? 'disattivato' : 'eliminato'} il proprio account.`,
+      }
+    ).catch(() => undefined);
     return NextResponse.json({ ok: true, dates: res.dates });
   } catch (err) {
     console.error('[account/delete] errore:', err instanceof Error ? err.message : err);

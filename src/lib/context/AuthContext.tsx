@@ -55,6 +55,59 @@ export function isSuperAdminEmail(email?: string | null): boolean {
   return (email || '').toLowerCase().trim() === SUPER_ADMIN_EMAIL;
 }
 
+const INVITE_KEY = 'cc_invite';
+
+/** Invite link opened on this device (/login?invite=…): kept until the account is ready, then used once. */
+export function savePendingInvite(token: string) {
+  try {
+    sessionStorage.setItem(INVITE_KEY, token);
+  } catch {
+    /* ignore */
+  }
+}
+export function takePendingInvite(): string | null {
+  try {
+    const t = sessionStorage.getItem(INVITE_KEY);
+    if (t) sessionStorage.removeItem(INVITE_KEY);
+    return t;
+  } catch {
+    return null;
+  }
+}
+
+/** Server: link the guest of the invite, or tell the admins about a new sign-up. */
+export async function afterRegistration(
+  fbUser: FirebaseUser,
+  invite: string | null
+): Promise<{ ok: boolean; claimed?: boolean; guestName?: string } | null> {
+  try {
+    const res = await fetch('/api/account/registered', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await fbUser.getIdToken()}` },
+      body: JSON.stringify(invite ? { invite } : {}),
+    });
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+/** A closed account tries to come back: the admins get a request (restore or start from zero). */
+export async function requestReturn(email?: string | null): Promise<{ pending: boolean; name?: string }> {
+  if (!email) return { pending: false };
+  try {
+    const res = await fetch('/api/account/return-request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+    return { pending: Boolean(data?.pending), name: data?.name };
+  } catch {
+    return { pending: false };
+  }
+}
+
 function profileDocIdFor(fbUser: FirebaseUser): string {
   return isSuperAdminEmail(fbUser.email) ? SUPER_ADMIN_PROFILE_ID : fbUser.uid;
 }
@@ -173,11 +226,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const snap = await getDoc(docRef);
       let resolved: Profile;
+      let isNew = false;
       if (snap.exists()) {
         const data = snap.data() as Profile;
         if (data.deactivated_at) {
+          // Account chiuso che torna: decide l'admin (richiesta di rientro), qui solo la schermata "Bentornato"
+          await requestReturn(fbUser.email);
           await firebaseSignOut(firebaseAuth);
-          notify('Questo account è stato disattivato. Per riattivarlo contatta l’amministratore del club.');
+          if (typeof window !== 'undefined') window.location.replace('/login?bentornato=1');
           return null;
         }
         resolved = {
@@ -192,6 +248,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         resolved = buildNewProfile(fbUser, pending?.fullName, pending?.position, pending?.names);
         await setDoc(docRef, resolved);
         addStoredPlayer(resolved);
+        isNew = true;
+      }
+      // Nuovo account (o link di invito aperto): collega l'ospite o avvisa gli admin
+      const invite = takePendingInvite();
+      if (isNew || invite) {
+        const res = await afterRegistration(fbUser, invite);
+        if (res?.claimed) {
+          const fresh = await getDoc(docRef);
+          if (fresh.exists()) resolved = { ...(fresh.data() as Profile), id: docId, role: normalizeRole(fresh.data()?.role, fbUser.email) };
+          updateStoredPlayer(resolved);
+          notify(`Profilo di ${res.guestName} collegato: partite e statistiche sono tue.`);
+        } else if (invite && res && !res.ok) {
+          notify('Il link di invito non è più valido: chiedi un nuovo link all’amministratore.');
+        }
       }
       pendingSignUp.current = null;
       setProfile(resolved);

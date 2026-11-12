@@ -252,6 +252,13 @@ await expectDenied('player A sets a preset SVG avatar', () =>
 await expectDenied('player A uploads a huge image', () =>
   updateDoc(doc(playerA.db, 'profiles', playerA.uid), { avatar_url: 'data:image/jpeg;base64,' + 'A'.repeat(200000), updated_at: 'x' }));
 
+console.log('\nAdmin requests and invites (server only)');
+await expectAllowed('admin C reads the admin requests', () => getDoc(doc(adminC.db, 'admin_requests', 'signup_x')));
+await expectDenied('player B reads the admin requests', () => getDoc(doc(playerB.db, 'admin_requests', 'signup_x')));
+await expectDenied('admin C writes an admin request', () => setDoc(doc(adminC.db, 'admin_requests', 'x'), { status: 'done' }));
+await expectDenied('player B reads an invite', () => getDoc(doc(playerB.db, 'invites', 'tok')));
+await expectDenied('admin C writes an invite', () => setDoc(doc(adminC.db, 'invites', 'tok'), { guest_id: 'g' }));
+
 console.log('\nImpostor (email/password account using the super admin address, NOT verified)');
 await expectDenied('writes settings', () => setDoc(doc(impostor.db, 'settings', 'official_match'), { date: 'x' }));
 await expectDenied('edits p-1', () => setDoc(doc(impostor.db, 'profiles', 'p-1'), { full_name: 'x' }, { merge: true }));

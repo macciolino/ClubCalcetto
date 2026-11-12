@@ -209,6 +209,13 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Admins' notification centre: written only by the server (Admin SDK); admins read it.
+    // Invite links (`invites`) are server only: no rule, so denied.
+    match /admin_requests/{id} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     // Anything else is denied by default.
   }
 }

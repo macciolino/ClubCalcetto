@@ -8,7 +8,7 @@ import { Match, Profile, StatCategory, STAT_DETAILS, sortStatsByCanonicalOrder }
 import { FormDots, playedAny } from './FormDots';
 import { RadarChart } from './RadarChart';
 import { Sheet } from './ui/Sheet';
-import { Edit3, Trash2, ShieldCheck, ShieldOff, MoreHorizontal } from 'lucide-react';
+import { Edit3, Trash2, ShieldCheck, ShieldOff, MoreHorizontal, MessageCircle } from 'lucide-react';
 import { menu } from '@/components/ui/buttons';
 
 const isSuperAdminProfile = (p: Profile) => Boolean(p.email?.toLowerCase().includes('macciolino84'));
@@ -100,6 +100,7 @@ export function PlayerDetailSheet({
   onClose,
   showEmail = false,
   onToggleAdmin,
+  onInvite,
 }: {
   player: Profile;
   categories?: StatCategory[];
@@ -114,6 +115,8 @@ export function PlayerDetailSheet({
   showEmail?: boolean;
   /** Super admin: make / remove admin */
   onToggleAdmin?: (player: Profile) => void;
+  /** Admins, guests only: invite link on WhatsApp (the guest registers and keeps matches and stats) */
+  onInvite?: (player: Profile) => void;
 }) {
   const [tab, setTab] = useState<'radar' | 'stats'>('radar');
 
@@ -130,6 +133,7 @@ export function PlayerDetailSheet({
   const ovr = ovrDisplay(player.overall_rating, form);
   const canDelete = Boolean(onDelete) && !isSuperAdminProfile(player);
   const canToggleAdmin = Boolean(onToggleAdmin) && !player.is_guest && !isSuperAdminProfile(player);
+  const canInvite = Boolean(onInvite) && player.is_guest;
   const [menuOpen, setMenuOpen] = useState(false);
 
   const radar = (
@@ -242,7 +246,7 @@ export function PlayerDetailSheet({
         </span>
       }
       headerActions={
-        isAdmin && (onEdit || canDelete || canToggleAdmin) ? (
+        isAdmin && (onEdit || canDelete || canToggleAdmin || canInvite) ? (
           <>
             {onEdit && (
               <button
@@ -255,7 +259,7 @@ export function PlayerDetailSheet({
                 <Edit3 className="h-5 w-5" />
               </button>
             )}
-            {(canDelete || canToggleAdmin) && (
+            {(canDelete || canToggleAdmin || canInvite) && (
               <div className="relative">
                 <button
                   type="button"
@@ -269,7 +273,20 @@ export function PlayerDetailSheet({
                 {menuOpen && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} aria-hidden="true" />
-                    <div className={`absolute right-0 top-full mt-1 z-20 w-52 ${menu.panel}`} role="menu">
+                    <div className={`absolute right-0 top-full mt-1 z-20 w-56 ${menu.panel}`} role="menu">
+                      {canInvite && (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            setMenuOpen(false);
+                            onInvite?.(player);
+                          }}
+                          className={menu.item}
+                        >
+                          <MessageCircle className="h-4 w-4 text-emerald-400" /> Invita su WhatsApp
+                        </button>
+                      )}
                       {canToggleAdmin && (
                         <button
                           type="button"

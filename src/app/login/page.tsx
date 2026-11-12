@@ -6,7 +6,9 @@ import { PitchLines } from '@/components/PitchLines';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/context/AuthContext';
+import { useAuth, savePendingInvite, takePendingInvite, afterRegistration, requestReturn } from '@/lib/context/AuthContext';
+import { notify } from '@/components/ui/Feedback';
+import { btn } from '@/components/ui/buttons';
 import { FIELD_POSITIONS, FieldPosition } from '@/types/database';
 import { 
   Loader2, 
@@ -19,7 +21,9 @@ import {
   RefreshCw,
   CalendarCheck,
   Shuffle,
-  BarChart3
+  BarChart3,
+  Link2,
+  Hourglass
 } from 'lucide-react';
 
 export default function LoginPage() {
@@ -34,7 +38,17 @@ export default function LoginPage() {
     isAdmin,
     isEmailVerified,
     signOut,
+    refreshProfile,
   } = useAuth();
+  // Link di invito per un ospite (/login?invite=…): nome dell'ospite per il banner
+  const [inviteName, setInviteName] = useState('');
+  // Account chiuso che prova a tornare: schermata "Bentornato", decide l'admin
+  const [returning, setReturning] = useState<{ name?: string } | null>(null);
+  const checkReturn = async (mail?: string | null) => {
+    const r = await requestReturn(mail);
+    if (r.pending) setReturning({ name: r.name });
+    return r.pending;
+  };
 
   const [mounted, setMounted] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
@@ -65,6 +79,22 @@ export default function LoginPage() {
     if (new URLSearchParams(window.location.search).get('signedout') === '1') {
       setSuccessMessage('Sei uscito da tutti i dispositivi.');
     }
+    if (new URLSearchParams(window.location.search).get('bentornato') === '1') setReturning({});
+    const invite = new URLSearchParams(window.location.search).get('invite');
+    if (invite) {
+      fetch(`/api/invite?token=${encodeURIComponent(invite)}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (d?.ok) {
+            setInviteName(String(d.name || ''));
+            savePendingInvite(invite);
+            setAuthMode('signup');
+          } else {
+            setErrorMessage('Questo link di invito non è più valido: chiedi un nuovo link all’amministratore.');
+          }
+        })
+        .catch(() => undefined);
+    }
   }, []);
   const [successMessage, setSuccessMessage] = useState('');
   const [isCheckingVerification, setIsCheckingVerification] = useState(false);
@@ -77,10 +107,22 @@ export default function LoginPage() {
   const router = useRouter();
   useEffect(() => {
     if (mounted && user && profile && isEmailVerified) {
+      // Già collegato e apre un link di invito: collega l'ospite a questo account
+      const invite = takePendingInvite();
+      if (invite) {
+        afterRegistration(user, invite).then(async (res) => {
+          if (res?.claimed) {
+            await refreshProfile();
+            notify(`Profilo di ${res.guestName} collegato: partite e statistiche sono tue.`);
+          } else if (res && !res.ok) notify('Il link di invito non è più valido: chiedi un nuovo link all’amministratore.');
+          router.replace('/');
+        });
+        return;
+      }
       // L'animazione dopo il login la avvia il caricamento della Home (markJustSignedIn in AuthContext)
       router.replace('/');
     }
-  }, [mounted, user, profile, isEmailVerified, router]);
+  }, [mounted, user, profile, isEmailVerified, router, refreshProfile]);
 
   const isStrictAdmin = Boolean(mounted && user && (profile?.role === 'admin' || isAdmin));
 
@@ -93,7 +135,10 @@ export default function LoginPage() {
       console.error('Google login error:', err);
       const msg = err instanceof Error ? err.message : 'Errore durante il login con Google';
       if (msg.includes('auth/user-disabled')) {
-        setErrorMessage('Questo account è stato disattivato. Per riattivarlo contatta l’amministratore del club.');
+        const mail = (err as { customData?: { email?: string } }).customData?.email;
+        if (!(await checkReturn(mail))) {
+          setErrorMessage('Questo account è stato disattivato. Per riattivarlo contatta l’amministratore del club.');
+        }
       } else if (msg.includes('auth/unauthorized-domain')) {
         setErrorMessage('Dominio non autorizzato su Firebase Console. Aggiungi localhost nelle impostazioni Auth.');
       } else if (!msg.includes('popup-closed-by-user')) {
@@ -152,7 +197,11 @@ export default function LoginPage() {
     } catch (err: unknown) {
       console.error('Auth error:', err);
       const msg = err instanceof Error ? err.message : 'Errore durante l\'autenticazione';
-      if (msg.includes('auth/email-already-in-use')) {
+      if ((msg.includes('auth/email-already-in-use') || msg.includes('auth/user-disabled')) && (await checkReturn(email))) {
+        // account chiuso che torna: schermata "Bentornato"
+      } else if (msg.includes('auth/user-disabled')) {
+        setErrorMessage('Questo account è stato disattivato. Per riattivarlo contatta l’amministratore del club.');
+      } else if (msg.includes('auth/email-already-in-use')) {
         setErrorMessage('Questa email è già registrata. Effettua l\'accesso.');
       } else if (msg.includes('auth/wrong-password') || msg.includes('auth/user-not-found') || msg.includes('auth/invalid-credential')) {
         setErrorMessage('Email o password non corretti.');
@@ -262,7 +311,9 @@ export default function LoginPage() {
           </div>
           <div className="space-y-1">
             <h1 className="text-3xl font-bold tracking-tight text-white">
-              {user && !isEmailVerified
+              {returning
+                ? `Bentornato${returning.name ? ` ${returning.name}` : ''}!`
+                : user && !isEmailVerified
                 ? 'Verifica la tua email'
                 : profile
                 ? 'Bentornato'
@@ -271,7 +322,9 @@ export default function LoginPage() {
                 : 'Entra nel club'}
             </h1>
             <p className="text-sm text-slate-400">
-              {user && !isEmailVerified
+              {returning
+                ? 'Abbiamo rilevato un tuo profilo precedente.'
+                : user && !isEmailVerified
                 ? 'Manca solo un passaggio.'
                 : profile
                 ? 'Sei già collegato.'
@@ -282,10 +335,49 @@ export default function LoginPage() {
           </div>
         </div>
 
+        {/* Link di invito valido: di chi è il profilo che si collega */}
+        {mounted && inviteName && !returning && !profile && (
+          <div className="flex items-start gap-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 p-4 animate-in" role="status">
+            <span className="flex-shrink-0 h-9 w-9 rounded-xl bg-emerald-500/15 text-emerald-300 flex items-center justify-center">
+              <Link2 className="h-[18px] w-[18px]" />
+            </span>
+            <p className="text-sm text-slate-200 leading-relaxed">
+              Stai collegando il tuo account al profilo di <span className="font-semibold text-white">{inviteName}</span>: le tue partite e
+              statistiche verranno mantenute.
+            </p>
+          </div>
+        )}
+
         {!mounted ? (
           <div className="py-12 flex flex-col items-center justify-center gap-3">
             <Loader2 className="h-7 w-7 text-emerald-400 animate-spin" />
             <p className="text-sm text-slate-400">Caricamento…</p>
+          </div>
+        ) : returning ? (
+          /* Account chiuso che torna: attesa ripristino, decide l'admin */
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5 animate-in" role="status">
+            <div className="flex items-start gap-3">
+              <span className="flex-shrink-0 h-10 w-10 rounded-full bg-emerald-500/15 flex items-center justify-center">
+                <Hourglass className="h-5 w-5 text-emerald-400" />
+              </span>
+              <div className="space-y-2 text-sm leading-relaxed">
+                <p className="text-slate-200">L&apos;amministratore del gruppo sta configurando il tuo rientro.</p>
+                <p className="text-slate-400">
+                  Non devi fare altro: appena conferma, entri con il tuo solito account (Google o email e password).
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setReturning(null);
+                setErrorMessage('');
+                router.replace('/login');
+              }}
+              className={`${btn.secondary} sm:w-full`}
+            >
+              Torna all&apos;accesso
+            </button>
           </div>
         ) : user && !isEmailVerified ? (
           /* STATO 1: EMAIL DA VERIFICARE */

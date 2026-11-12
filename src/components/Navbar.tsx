@@ -20,6 +20,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { menu } from '@/components/ui/buttons';
+import { RequestsBell } from '@/components/admin/RequestsCenter';
 
 export function Navbar() {
   const pathname = usePathname();
@@ -98,6 +99,8 @@ export function Navbar() {
           </Link>
           {/* User Info & Actions */}
           <div className="flex items-center justify-end gap-3 min-w-0">
+            {/* Solo admin: campanella con le richieste da gestire */}
+            <RequestsBell />
             {/* Icona, nome e ruolo: aprono il menu dell'utente */}
             <div className="relative" ref={menuRef}>
               <button
