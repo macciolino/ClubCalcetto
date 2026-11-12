@@ -31,7 +31,7 @@ import { CountRing } from '@/components/PresenceCard';
 import { PageSkeleton } from '@/components/ui/Skeleton';
 import { notify, askConfirm } from '@/components/ui/Feedback';
 import { ArrowRight, Check, Clock, Lock, LogOut, MapPin } from 'lucide-react';
-import { btn, presenceBtn } from '@/components/ui/buttons';
+import { btn, presenceBtn, textLink } from '@/components/ui/buttons';
 
 /** "oggi", "domani", the weekday within a week ("mercoledì"), otherwise "mer 18 nov". */
 function dayLabel(date: string, today: string): string {
@@ -238,7 +238,7 @@ export default function HomePage() {
         {presences !== null && head.action && (
           <Link
             href={head.action.href}
-            className="inline-flex items-center gap-1.5 pt-1 text-sm font-semibold text-emerald-300 hover:text-emerald-200"
+            className={`${textLink} pt-1`}
           >
             {head.action.label} <ArrowRight className="h-4 w-4" />
           </Link>
@@ -340,7 +340,7 @@ export default function HomePage() {
                   <p className="font-semibold text-white">
                     {myTeam === 'white' ? 'Giochi con i Bianchi ⚪' : myTeam === 'black' ? 'Giochi con i Neri ⚫' : 'Squadre pronte'}
                   </p>
-                  <Link href={`/squadre?date=${date}`} className="text-emerald-400 hover:text-emerald-300 flex items-center gap-1">
+                  <Link href={`/squadre?date=${date}`} className={textLink}>
                     Vedi le squadre <ArrowRight className="h-4 w-4" />
                   </Link>
                 </>
@@ -427,7 +427,7 @@ export default function HomePage() {
                 </p>
               );
             })()}
-            <Link href="/history" className="flex items-center justify-center gap-1.5 text-sm font-semibold text-emerald-300 hover:text-emerald-200 pt-1">
+            <Link href="/history" className={`${textLink} w-full justify-center pt-1`}>
               Vai allo Storico <ArrowRight className="h-4 w-4" />
             </Link>
           </section>

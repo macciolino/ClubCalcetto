@@ -70,6 +70,9 @@ description: ClubCalcetto UI conventions - theme, shared components (tables, dro
 - Navigation buttons ("Vai alle presenze", "Vai allo Storico", "Vai alle squadre"): label + `ArrowRight` on the right, no left icon. Inline text links use the same pattern (emerald-300 + ArrowRight).
 - Action/state buttons ("Apri la settimana prossima", "Genera squadre", "Salva"): descriptive icon on the left, no arrow.
 - "Ci sono / Mettimi in attesa" (Home and Presenze): `presenceBtn(isFull)`.
+- `btnInline.*`: same look, natural width (header actions, next to inputs, dialog buttons); `btnInline.dangerSolid` only for the last step of a destructive confirm.
+- Text links: `textLink` + `ArrowRight` (in-sentence words like "nello Storico" may stay underlined).
+- Dropdown menus ("⋯", account menu): `menu.panel`, `menu.item`, `menu.danger`, `menu.divider`.
 - Never hand-write a new green CTA class string.
 
 ## Settings layout (`/impostazioni`)

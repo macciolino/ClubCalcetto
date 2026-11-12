@@ -41,7 +41,7 @@ import {
   DollarSign,
   ChevronDown
 } from 'lucide-react';
-import { btn } from '@/components/ui/buttons';
+import { btn, textLink } from '@/components/ui/buttons';
 
 interface TabOverviewMatchProps {
   days: CalendarDay[];
@@ -574,7 +574,7 @@ export function TabOverviewMatch({
             <Check className="h-4 w-4 text-emerald-400" />
             <span>
               Partita già archiviata ({closingMatch?.score_white ?? 0} - {closingMatch?.score_black ?? 0}). Puoi correggere i dati e risalvare.{' '}
-              <Link href="/history" className="text-emerald-400 underline">Vai allo Storico</Link>
+              <Link href="/history" className={textLink}>Vai allo Storico <ArrowRight className="h-4 w-4" /></Link>
             </span>
           </div>
         )}

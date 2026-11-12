@@ -5,6 +5,7 @@ import { Profile } from '@/types/database';
 import { askConfirm } from '@/components/ui/Feedback';
 import { initialsOf, uploadedPhoto } from '@/lib/utils/playerUtils';
 import { ShieldCheck, ShieldOff } from 'lucide-react';
+import { btn } from '@/components/ui/buttons';
 
 const isSuper = (p: Profile) => Boolean(p.email?.toLowerCase().includes('macciolino84'));
 
@@ -85,7 +86,7 @@ export function AdminsCard({ players, onToggleRole }: { players: Profile[]; onTo
           type="button"
           onClick={promote}
           disabled={!pick}
-          className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 disabled:opacity-40"
+          className={btn.primary}
         >
           <ShieldCheck className="h-4 w-4" /> Rendi admin
         </button>

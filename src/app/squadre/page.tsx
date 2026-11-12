@@ -56,7 +56,7 @@ import {
   ArrowLeftRight,
   ArrowRight
 } from 'lucide-react';
-import { btn } from '@/components/ui/buttons';
+import { btn, textLink } from '@/components/ui/buttons';
 
 
 function SquadreContent() {
@@ -1054,7 +1054,7 @@ function SquadreContent() {
               </p>
               <Link
                 href="/presenze"
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-300 hover:text-emerald-200"
+                className={textLink}
               >
                 Vai alle presenze <ArrowRight className="h-4 w-4" />
               </Link>

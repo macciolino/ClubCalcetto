@@ -3,6 +3,7 @@
 import React from 'react';
 import { Profile } from '@/types/database';
 import { Trash2 } from 'lucide-react';
+import { btnInline } from '@/components/ui/buttons';
 
 interface DeactivatedAccountsListProps {
   deactivatedPlayers: Profile[];
@@ -36,7 +37,7 @@ export function DeactivatedAccountsList({
               <button
                 type="button"
                 onClick={() => onReactivatePlayer(p)}
-                className="flex-1 sm:flex-none px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-xl text-sm"
+                className={`${btnInline.primary} flex-1 sm:flex-none`}
               >
                 Riattiva
               </button>

@@ -9,6 +9,7 @@ import { FormDots, playedAny } from './FormDots';
 import { RadarChart } from './RadarChart';
 import { Sheet } from './ui/Sheet';
 import { Edit3, Trash2, ShieldCheck, ShieldOff, MoreHorizontal } from 'lucide-react';
+import { menu } from '@/components/ui/buttons';
 
 const isSuperAdminProfile = (p: Profile) => Boolean(p.email?.toLowerCase().includes('macciolino84'));
 
@@ -268,7 +269,7 @@ export function PlayerDetailSheet({
                 {menuOpen && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} aria-hidden="true" />
-                    <div className="absolute right-0 top-full mt-1 z-20 w-52 rounded-xl bg-slate-800 border border-slate-700 shadow-2xl p-1 animate-in" role="menu">
+                    <div className={`absolute right-0 top-full mt-1 z-20 w-52 ${menu.panel}`} role="menu">
                       {canToggleAdmin && (
                         <button
                           type="button"
@@ -277,7 +278,7 @@ export function PlayerDetailSheet({
                             setMenuOpen(false);
                             onToggleAdmin?.(player);
                           }}
-                          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-slate-100 hover:bg-slate-700"
+                          className={menu.item}
                         >
                           {player.role === 'admin' ? <ShieldOff className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
                           {player.role === 'admin' ? 'Togli admin' : 'Rendi admin'}
@@ -291,7 +292,7 @@ export function PlayerDetailSheet({
                             setMenuOpen(false);
                             onDelete?.(player);
                           }}
-                          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-rose-300 hover:bg-rose-500/10"
+                          className={menu.danger}
                         >
                           <Trash2 className="h-4 w-4" /> Elimina
                         </button>

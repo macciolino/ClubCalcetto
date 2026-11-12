@@ -17,7 +17,7 @@ You are an expert UI/UX designer and full-stack developer collaborating on "Club
 
 ## Where these rules live in the code
 - Modals: `src/components/ui/Sheet.tsx` (the only modal component; bottom sheet < 1024px, centred modal ≥ 1024px).
-- Buttons / CTAs: `src/components/ui/buttons.ts` (`btn.primary`, `btn.secondary`, `btn.danger`, `presenceBtn`). Navigation = label + `ArrowRight` on the right; action = icon on the left.
+- Buttons / CTAs: `src/components/ui/buttons.ts` (`btn.*` full width on phone, `btnInline.*` natural width, `textLink`, `menu.*` for dropdowns, `presenceBtn`). Navigation = label + `ArrowRight` on the right; action = icon on the left.
 - Form tracker: `src/components/FormDots.tsx` (always 5 dots).
 - Roles: `useAuth()` (`isAdmin`, `isSuperAdmin`) from `src/lib/context/AuthContext`.
 - More detail: skills `ui-conventions`, `data-and-roles`, `project-map`.

@@ -27,6 +27,7 @@ import {
   LayoutGrid,
   Table as TableIcon,
 } from 'lucide-react';
+import { btnInline } from '@/components/ui/buttons';
 
 const DEFAULT_CATEGORIES: StatCategory[] = DEFAULT_BASE_CATEGORIES;
 
@@ -258,7 +259,7 @@ export default function GiocatoriPage() {
           <button
             type="button"
             onClick={handleOpenNewGuestModal}
-            className="hidden lg:flex items-center gap-1.5 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-sm font-semibold transition-colors"
+            className={`${btnInline.primary} hidden lg:inline-flex`}
           >
             <UserPlus className="h-4 w-4" />
             Nuovo ospite

@@ -34,7 +34,7 @@ import {
   Flame,
   Loader2
 } from 'lucide-react';
-import { btn } from '@/components/ui/buttons';
+import { btn, textLink } from '@/components/ui/buttons';
 
 export default function ProfiloPage() {
   const { user, profile, isAdmin, updateProfile } = useAuth();
@@ -377,8 +377,8 @@ export default function ProfiloPage() {
             </div>
           </div>
 
-          <Link href="/history" className="block text-center text-xs text-emerald-400 underline">
-            Vedi la classifica completa nello Storico
+          <Link href="/history" className={`${textLink} w-full justify-center`}>
+            Vedi la classifica completa nello Storico <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       </div>

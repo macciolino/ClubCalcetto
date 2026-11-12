@@ -19,6 +19,7 @@ import {
   Settings,
   ChevronDown
 } from 'lucide-react';
+import { menu } from '@/components/ui/buttons';
 
 export function Navbar() {
   const pathname = usePathname();
@@ -148,13 +149,13 @@ export function Navbar() {
                 <div
                   id="user-menu"
                   role="menu"
-                  className="absolute right-0 top-full mt-2 w-52 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-1.5 z-50"
+                  className={`absolute right-0 top-full mt-2 w-52 z-50 ${menu.panel}`}
                 >
                   <Link
                     href="/profilo"
                     role="menuitem"
                     onClick={() => setMenuOpen(false)}
-                    className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-200 hover:bg-slate-800"
+                    className={menu.item}
                   >
                     <User className="h-4 w-4 text-emerald-400" /> Profilo
                   </Link>
@@ -162,11 +163,11 @@ export function Navbar() {
                     href="/impostazioni"
                     role="menuitem"
                     onClick={() => setMenuOpen(false)}
-                    className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-200 hover:bg-slate-800"
+                    className={menu.item}
                   >
                     <Settings className="h-4 w-4 text-emerald-400" /> Impostazioni
                   </Link>
-                  <div className="my-1 border-t border-slate-800" />
+                  <div className={menu.divider} />
                   <button
                     type="button"
                     role="menuitem"
@@ -174,7 +175,7 @@ export function Navbar() {
                       setMenuOpen(false);
                       signOut();
                     }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-rose-300 hover:bg-rose-500/10 cursor-pointer"
+                    className={menu.danger}
                   >
                     <LogOut className="h-4 w-4" /> Logout
                   </button>

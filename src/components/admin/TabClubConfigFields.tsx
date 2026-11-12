@@ -9,6 +9,7 @@ import { SportField, StatCategory } from '@/types/database';
 import { FieldModal } from './FieldModal';
 import { StatsLegendModal } from './StatsLegendModal';
 import { MapPin, Phone, Plus, ExternalLink, Edit3, Trash2, Check, Star } from 'lucide-react';
+import { btnInline } from '@/components/ui/buttons';
 
 interface TabClubConfigFieldsProps {
   fields: SportField[];
@@ -112,7 +113,7 @@ export function TabClubConfigFields({
                   setEditingField(null);
                   setIsFieldModalOpen(true);
                 }}
-                className="flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-xl text-sm"
+                className={`${btnInline.primary} flex-shrink-0`}
               >
                 <Plus className="h-4 w-4" /> Campo
               </button>
@@ -222,7 +223,7 @@ export function TabClubConfigFields({
               </div>
               <div className="flex items-center justify-between gap-3">
                 <span className="text-sm text-slate-400 tabular-nums">{euro(Number(costInput || 80) / 10)} a testa</span>
-                <button type="submit" className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-xl text-sm">
+                <button type="submit" className={btnInline.primary}>
                   <Check className="h-4 w-4" /> {saved ? 'Salvato' : 'Salva'}
                 </button>
               </div>

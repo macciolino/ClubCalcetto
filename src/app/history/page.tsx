@@ -18,6 +18,7 @@ import { useForms } from '@/lib/hooks/useForms';
 import { computeMatchStats } from '@/lib/utils/statUtils';
 import { MatchEditModal } from '@/components/MatchEditModal';
 import { HistoryCalendar } from '@/components/HistoryCalendar';
+import { menu } from '@/components/ui/buttons';
 
 interface PlayerLine {
   id: string;
@@ -242,7 +243,7 @@ export default function HistoryPage() {
               {menuOpen && (
                 <>
                   <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} aria-hidden="true" />
-                  <div className="absolute right-0 top-full mt-1 z-40 w-64 rounded-xl bg-slate-900 border border-slate-800 shadow-2xl p-1 animate-in">
+                  <div role="menu" className={`absolute right-0 top-full mt-1 z-40 w-64 ${menu.panel}`}>
                     <button
                       type="button"
                       onClick={() => {
@@ -250,7 +251,7 @@ export default function HistoryPage() {
                         handleDeleteAll();
                       }}
                       disabled={deleting !== null}
-                      className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-rose-300 hover:bg-rose-500/10 disabled:opacity-50"
+                      className={menu.danger}
                     >
                       {deleting === 'all' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                       {season === 'all' ? 'Cancella tutto lo storico' : `Cancella storico ${season}`}

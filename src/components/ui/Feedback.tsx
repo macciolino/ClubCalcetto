@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
+import { btnInline } from '@/components/ui/buttons';
 
 /**
  * App-styled replacements for the browser's alert() and confirm().
@@ -134,7 +135,7 @@ export function FeedbackHost() {
               <button
                 type="button"
                 onClick={() => close(false)}
-                className="px-4 py-3 sm:py-2.5 rounded-xl text-sm font-semibold border border-slate-700 text-slate-200 hover:bg-slate-800"
+                className={btnInline.secondary}
               >
                 Annulla
               </button>
@@ -142,9 +143,7 @@ export function FeedbackHost() {
                 ref={confirmBtn}
                 type="button"
                 onClick={() => close(true)}
-                className={`px-4 py-3 sm:py-2.5 rounded-xl text-sm font-semibold ${
-                  request.danger ? 'bg-rose-600 hover:bg-rose-500 text-white' : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
-                }`}
+                className={request.danger ? btnInline.dangerSolid : btnInline.primary}
               >
                 Conferma
               </button>
