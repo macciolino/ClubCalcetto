@@ -22,7 +22,7 @@ export const runtime = 'nodejs';
 /**
  * mode: 'deactivate' (data kept, can be reactivated) | 'delete' (everything removed) | 'reactivate' (super admin only)
  * POST { mode, reason, details? }      → the signed-in player deactivates or deletes their OWN account (reason required)
- * POST { mode, targetProfileId }       → the super admin deactivates, deletes or reactivates someone else's account
+ * POST { mode, targetProfileId }       → an admin deactivates, deletes or reactivates someone else's account (never p-1)
  * The super admin account (p-1) can never be deleted.
  */
 export async function POST(request: Request) {
@@ -41,9 +41,11 @@ export async function POST(request: Request) {
     const mode = body.mode === 'deactivate' || body.mode === 'reactivate' ? body.mode : 'delete';
     const details = String(body.details || '').trim().slice(0, 500);
 
-    // Eliminazione di un altro account: solo il super admin
+    // Account di un altro: tutti gli admin (mai il super admin)
     if (body.targetProfileId && body.targetProfileId !== caller.uid) {
-      if (!isSuper) return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
+      const callerProfile = isSuper ? null : (await adminDb().doc(`profiles/${caller.uid}`).get()).data();
+      const isAdmin = isSuper || (callerProfile?.role === 'admin' && !callerProfile?.deactivated_at);
+      if (!isAdmin) return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
       if (body.targetProfileId === SUPER_ADMIN_PROFILE_ID) {
         return NextResponse.json({ ok: false, error: 'super_admin' }, { status: 400 });
       }
@@ -59,7 +61,7 @@ export async function POST(request: Request) {
       if (!exists.data()?.is_guest && !exists.data()?.deactivated_at) {
         await saveDeletionFeedback({
           name: res.name,
-          reason: body.reason || (mode === 'deactivate' ? 'Disattivato dal super admin' : 'Eliminato dal super admin'),
+          reason: body.reason || (mode === 'deactivate' ? (isSuper ? 'Disattivato dal super admin' : 'Disattivato da un admin') : isSuper ? 'Eliminato dal super admin' : 'Eliminato da un admin'),
           details,
           deletedBy: 'super_admin',
           mode,

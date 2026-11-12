@@ -28,7 +28,7 @@ export function DeactivatedAccountsList({
               <div className="font-bold text-sm text-white truncate">{p.full_name}</div>
               <div className="text-xs text-slate-400 truncate">{p.email || 'Nessuna mail'}</div>
               <div className="text-[11px] text-slate-500 mt-0.5">
-                Disattivato {p.deactivated_by === 'self' ? 'dal giocatore' : 'dal super admin'}
+                Disattivato {p.deactivated_by === 'self' ? 'dal giocatore' : 'da un admin'}
                 {p.deactivated_at ? ` il ${new Date(p.deactivated_at).toLocaleDateString('it-IT')}` : ''} · OVR {p.overall_rating} ·{' '}
                 {p.matches_won ?? 0}V-{p.matches_drawn ?? 0}P-{p.matches_lost ?? 0}S
               </div>

@@ -46,6 +46,13 @@ service cloud.firestore {
         || (resource.data.role == 'user' && request.resource.data.role == 'player');
     }
 
+    // Admins promote / demote other admins: never the super admin profile, and guests (no account) never become admin.
+    function adminRoleChange(profileId) {
+      return profileId != 'p-1'
+        && request.resource.data.role in ['admin', 'player']
+        && (request.resource.data.role != 'admin' || resource.data.get('is_guest', false) == false);
+    }
+
     // Profile photo: only a real photo chosen by the player (small JPEG made by the app) or the Google photo.
     // Preset images (SVG emoji avatars) and huge images are refused.
     function isValidAvatar(v) {
@@ -71,7 +78,7 @@ service cloud.firestore {
 
       // Super admin: everything. Admin: stats, records, data (not roles). Player: only cosmetic fields of their own profile.
       allow update: if isSuperAdmin()
-        || (isAdmin() && roleUntouchedOrLegacyFix())
+        || (isAdmin() && (roleUntouchedOrLegacyFix() || adminRoleChange(profileId)))
         || (signedIn()
             && profileId == request.auth.uid
             && onlyChanges(['full_name', 'avatar_url', 'position', 'updated_at'])

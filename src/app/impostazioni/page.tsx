@@ -3,7 +3,7 @@
 import { PageSkeleton } from '@/components/ui/Skeleton';
 import React, { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '@/lib/context/AuthContext';
 import { NotificationGuide } from '@/components/NotificationGuide';
@@ -38,7 +38,7 @@ const SECTIONS: SectionDef[] = [
   { id: 'regole', label: 'Regole di gioco', description: 'Blocco ritiri e portiere', icon: Ruler, access: 'admin', group: 'Club' },
   { id: 'parametri', label: 'Parametri e forma', description: 'Parametri dell’ottagono e stato forma', icon: BarChart3, access: 'admin', group: 'Club' },
   { id: 'notifiche-club', label: 'Notifiche del club', description: 'Chi riceve le notifiche, prova, telefoni degli admin', icon: Megaphone, access: 'admin', group: 'Club' },
-  { id: 'accessi', label: 'Admin e account', description: 'Chi è admin, account disattivati, motivi di chi lascia', icon: ShieldCheck, access: 'super', group: 'Accessi' },
+  { id: 'accessi', label: 'Admin e account', description: 'Chi è admin, account disattivati, motivi di chi lascia', icon: ShieldCheck, access: 'admin', group: 'Accessi' },
 ];
 const GROUPS: SectionDef['group'][] = ['Tuo account', 'Gestione partita', 'Club', 'Accessi'];
 
@@ -68,7 +68,7 @@ function useSummary(admin: boolean, superAdmin: boolean, email?: string | null):
         () => undefined
       ),
     ];
-    if (superAdmin) unsubs.push(subscribeProfiles((list: Profile[]) => setAdmins((list || []).filter((p) => p.role === 'admin').length)));
+    unsubs.push(subscribeProfiles((list: Profile[]) => setAdmins((list || []).filter((p) => p.role === 'admin').length)));
     return () => unsubs.forEach((u) => u());
   }, [admin, superAdmin]);
 
@@ -99,15 +99,10 @@ const ALIASES: Record<string, string> = { rosa: 'accessi', 'account-chiusi': 'ac
 function SettingsContent() {
   const { user, profile, isAdmin, isSuperAdmin, isLoading } = useAuth();
   const params = useSearchParams();
-  const router = useRouter();
   const admin = Boolean(isAdmin || profile?.role === 'admin');
   const summary = useSummary(admin, Boolean(isSuperAdmin), user?.email);
 
-  // "Rosa giocatori" non c'è più: gli admin (non super) finiscono nella pagina Giocatori
   const raw = params.get('sezione') || '';
-  useEffect(() => {
-    if (raw === 'rosa' && admin && !isSuperAdmin) router.replace('/giocatori');
-  }, [raw, admin, isSuperAdmin, router]);
 
   if (isLoading) return <PageSkeleton />;
   if (!user || !profile) {

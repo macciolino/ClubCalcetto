@@ -182,7 +182,7 @@ ${link}`;
   };
 
   const handleToggleAdmin = async (p: Profile) => {
-    if (!isSuperAdmin || p.is_guest || p.id === 'p-1') return;
+    if (!isClientAdmin || p.is_guest || p.id === 'p-1') return;
     const next: 'admin' | 'player' = p.role === 'admin' ? 'player' : 'admin';
     const msg =
       next === 'admin'
@@ -714,7 +714,7 @@ ${link}`;
             recentMatches={recentMatches}
             isAdmin={isClientAdmin}
             showEmail={isClientAdmin}
-            onToggleAdmin={isSuperAdmin ? handleToggleAdmin : undefined}
+            onToggleAdmin={isClientAdmin ? handleToggleAdmin : undefined}
             onInvite={isClientAdmin ? handleInviteGuest : undefined}
             onClose={() => setDetailId(null)}
             onEdit={(p) => {

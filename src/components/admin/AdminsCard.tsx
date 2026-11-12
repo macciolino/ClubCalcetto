@@ -10,7 +10,7 @@ import { btn } from '@/components/ui/buttons';
 const isSuper = (p: Profile) => Boolean(p.email?.toLowerCase().includes('macciolino84'));
 
 /**
- * Super admin (Impostazioni → Admin e account): who is admin (name + email), remove an admin,
+ * Admins (Impostazioni → Admin e account): who is admin (name + email), remove an admin,
  * make a registered player admin. Guests have no account, so they cannot become admins.
  */
 export function AdminsCard({ players, onToggleRole }: { players: Profile[]; onToggleRole: (p: Profile) => Promise<void> | void }) {
@@ -30,7 +30,7 @@ export function AdminsCard({ players, onToggleRole }: { players: Profile[]; onTo
     <section className="bg-slate-900 rounded-2xl p-4 sm:p-5 space-y-4">
       <div>
         <h3 className="text-base font-semibold text-white">Admin</h3>
-        <p className="text-sm text-slate-400 mt-0.5">Chi gestisce il club. Solo tu puoi aggiungere o togliere admin.</p>
+        <p className="text-sm text-slate-400 mt-0.5">Chi gestisce il club. Ogni admin può aggiungere o togliere admin; il super admin non si può togliere.</p>
       </div>
 
       <ul className="divide-y divide-slate-800 rounded-xl bg-slate-950/50">

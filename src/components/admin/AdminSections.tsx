@@ -180,15 +180,15 @@ export function AdminSections({ section }: { section: AdminSection }) {
   }, [activeDate]);
 
   // Se non admin o in caricamento, mostra esclusivamente spinner
-  // Account disattivati (solo super admin): elenco per Anagrafica → Disattivati.
+  // Account disattivati (tutti gli admin): elenco in Impostazioni → Admin e account.
   // (gli hook devono stare PRIMA del return qui sotto)
   const [deactivatedPlayers, setDeactivatedPlayers] = useState<Profile[]>([]);
   useEffect(() => {
-    if (!isSuperAdmin || section !== 'accessi') return;
+    if (!(isSuperAdmin || isAdmin) || section !== 'accessi') return;
     setDeactivatedPlayers([]);
     const unsub = subscribeProfiles((list) => setDeactivatedPlayers(list.filter((p) => !p.archived_at)), 'deactivated');
     return () => unsub();
-  }, [isSuperAdmin, section]);
+  }, [isSuperAdmin, isAdmin, section]);
 
   if (!isStrictAdmin) {
     return (
@@ -221,8 +221,8 @@ export function AdminSections({ section }: { section: AdminSection }) {
 
   // Handlers Tab 3: Anagrafica & Ruoli
   const handleTogglePlayerRole = async (targetPlayer: Profile) => {
-    if (!isSuperAdmin) {
-      notify('Solo il super admin può promuovere o retrocedere gli amministratori.');
+    if (!isSuperAdmin && !isAdmin) {
+      notify('Solo gli admin possono promuovere o retrocedere gli amministratori.');
       return;
     }
     const isMarco = targetPlayer.email?.toLowerCase().includes('macciolino84');
@@ -341,7 +341,7 @@ export function AdminSections({ section }: { section: AdminSection }) {
 
       {section === 'parametri' && <TabClubConfigFields {...configProps} part="params" />}
 
-      {section === 'accessi' && isSuperAdmin && (
+      {section === 'accessi' && (isSuperAdmin || isAdmin) && (
         <>
           <AdminsCard players={players} onToggleRole={handleTogglePlayerRole} />
           <DeactivatedAccountsList
@@ -349,7 +349,8 @@ export function AdminSections({ section }: { section: AdminSection }) {
             onReactivatePlayer={handleReactivatePlayer}
             onDeleteDeactivatedPlayer={handleDeleteDeactivatedPlayer}
           />
-          <DeletionFeedbackCard />
+          {/* I motivi di chi lascia: solo il super admin */}
+          {isSuperAdmin && <DeletionFeedbackCard />}
         </>
       )}
 

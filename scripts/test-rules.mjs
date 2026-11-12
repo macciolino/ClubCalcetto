@@ -173,13 +173,17 @@ await expectAllowed('edits player A\'s stats', () =>
   setDoc(doc(adminC.db, 'profiles', playerA.uid), { stats: { Tiro: 9, Difesa: 7 }, overall_rating: 8 }, { merge: true }));
 await expectAllowed('normalises legacy role user -> player on B', () =>
   setDoc(doc(adminC.db, 'profiles', playerB.uid), { role: 'player' }, { merge: true }));
-await expectDenied('promotes player A to admin', () =>
+await expectAllowed('promotes player A to admin', () =>
   setDoc(doc(adminC.db, 'profiles', playerA.uid), { role: 'admin' }, { merge: true }));
+await expectAllowed('demotes player A back to player', () =>
+  setDoc(doc(adminC.db, 'profiles', playerA.uid), { role: 'player' }, { merge: true }));
 await expectDenied('demotes the super admin', () =>
   setDoc(doc(adminC.db, 'profiles', 'p-1'), { role: 'player' }, { merge: true }));
 await expectDenied('deletes the super admin profile', () => deleteDoc(doc(adminC.db, 'profiles', 'p-1')));
 await expectAllowed('creates a guest player', () =>
   setDoc(doc(adminC.db, 'profiles', 'guest-1'), baseProfile('guest-1', { is_guest: true, user_id: null })));
+await expectDenied('makes a guest admin', () =>
+  setDoc(doc(adminC.db, 'profiles', 'guest-1'), { role: 'admin' }, { merge: true }));
 await expectDenied('creates a guest as admin', () =>
   setDoc(doc(adminC.db, 'profiles', 'guest-2'), baseProfile('guest-2', { role: 'admin' })));
 await expectAllowed('writes settings', () =>

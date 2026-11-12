@@ -39,9 +39,10 @@ Production data is REAL: never rewrite stats, no paid services, never print secr
 
 - Player: any signed-in user. Edits only own full_name, avatar_url, position; own presence on open days; own MVP vote; own devices.
 - Admin: `profiles.role == 'admin'`. Everything in /admin (matches, teams, settings, stats, anyone's presences, guests).
-  Cannot change roles; cannot delete registered accounts (guests only).
-- Super admin: verified email macciolino84@gmail.com (profile `p-1`). Promotes/demotes admins, deactivates / reactivates /
-  deletes accounts (through `/api/account/delete`), reads the feedback. Cannot be deactivated or deleted.
+  Since 2026-11-12: also promotes/demotes admins (never p-1, never guests) and manages closed accounts
+  (Impostazioni → Admin e account: reactivate / delete for good, via `/api/account/delete`). Not the feedback.
+- Super admin: verified email macciolino84@gmail.com (profile `p-1`). Everything admins do, plus reads the feedback
+  (`account_feedback`). Cannot be deactivated or deleted.
 - Enforcement is in `firestore.rules` (UI checks are only convenience). After changing rules: `npm run test:rules`, then the
   owner publishes them by hand in the Firebase console (code first, rules second).
 
