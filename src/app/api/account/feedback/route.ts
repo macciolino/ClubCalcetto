@@ -10,7 +10,11 @@ export async function GET(request: Request) {
   if (!isAdminConfigured()) return NextResponse.json({ ok: false, error: 'not_configured' }, { status: 503 });
   try {
     const idToken = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
-    const caller = await adminAuth().verifyIdToken(idToken);
+    // Token scaduto o falso: non autorizzato (non "errore del server")
+    const caller = await adminAuth()
+      .verifyIdToken(idToken)
+      .catch(() => null);
+    if (!caller) return NextResponse.json({ ok: false, error: 'unauthenticated' }, { status: 401 });
     if (!(caller.email === SUPER_ADMIN_EMAIL && caller.email_verified === true)) {
       return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
     }

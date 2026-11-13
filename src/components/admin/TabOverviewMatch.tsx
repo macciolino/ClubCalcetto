@@ -9,6 +9,7 @@ import { useMatchFormats } from '@/lib/hooks/useMatchFormats';
 import { MatchResultFields, MatchResultValue, validateScorers } from '@/components/MatchResultFields';
 import { MatchFormatPicker } from '@/components/MatchFormatPicker';
 import { reconcileTeams, toTeamPlayer } from '@/lib/utils/teamUtils';
+import { cashHeadCount, cashPayers, cashSummary } from '@/lib/utils/cashUtils';
 import { FORMAT_INFO, dayFormat, maxPlayersFor, perHead } from '@/lib/utils/matchFormat';
 import {
   effectiveMatchCost,
@@ -219,25 +220,17 @@ export function TabOverviewMatch({
   // 2. Squadre salvate in Squadre → i giocatori assegnati alle squadre (prima della partita con le sostituzioni;
   //    dopo la data così come sono state salvate), anche se una squadra è incompleta.
   // 3. Nessuna squadra → i titolari iscritti a quel giorno (quanti ne chiede il formato).
-  const cash = (() => {
-    const arch = archived.get(date);
-    if (arch?.team_white?.length || arch?.team_black?.length) {
-      return { source: 'archive' as const, list: [...(arch.team_white || []), ...(arch.team_black || [])] };
-    }
-    if (teamRecord?.team_white?.length || teamRecord?.team_black?.length) {
-      if (date < today) {
-        return { source: 'teams' as const, list: [...(teamRecord.team_white || []), ...(teamRecord.team_black || [])].map(toTeamPlayer) };
-      }
-      const r = reconcileTeams(teamRecord, starterProfiles.map(toTeamPlayer));
-      return { source: 'teams' as const, list: [...r.white, ...r.black] };
-    }
-    return { source: 'starters' as const, list: starterProfiles.map(toTeamPlayer) };
-  })();
-  const payers: { id: string; name: string }[] = Array.from(new Map(cash.list.map((p) => [p.id, { id: p.id, name: p.name }])).values());
+  const cash = cashPayers({
+    date,
+    today,
+    archivedMatch: archived.get(date),
+    teamRecord,
+    starters: starterProfiles.map(toTeamPlayer),
+  });
+  const payers = cash.payers;
   const payerIds = payers.map((p) => p.id);
   // Quota: con le squadre fatte si divide per chi gioca davvero, altrimenti per i posti del formato
-  const headCount = cash.source === 'starters' ? info.players : Math.max(1, payers.length);
-  const quota = totalCost / Math.max(1, headCount);
+  const headCount = cashHeadCount(cash.source, payers.length, info.players);
   // Stato pagamenti: in tempo reale da Firestore (la copia locale serve solo per il primo istante; leggerla non scrive mai)
   const [payments, setPayments] = useState<MatchPaymentRecord>(() => getCachedMatchPayments(date));
   useEffect(() => {
@@ -247,10 +240,7 @@ export function TabOverviewMatch({
   }, [date]);
   const markPaid = (ids: string[], paid: boolean) =>
     setPayments(setPlayersPaid(payments.date === date ? payments : getCachedMatchPayments(date), ids, paid, { totalCost, players: headCount }));
-  const paidCount = payers.filter((p) => payments.payments[p.id] === true).length;
-  const unpaid = payers.filter((p) => !payments.payments[p.id]);
-  const collected = paidCount * quota;
-  const progress = payers.length ? Math.round((paidCount / Math.max(headCount, payers.length)) * 100) : 0;
+  const { paidCount, unpaid, collected, progress } = cashSummary(payers, payments, totalCost, headCount);
   const [onlyUnpaid, setOnlyUnpaid] = useState(false);
 
   // ---------- risultato ----------

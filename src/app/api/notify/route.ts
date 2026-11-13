@@ -96,7 +96,11 @@ export async function POST(request: Request) {
   try {
     const idToken = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
     if (!idToken) return NextResponse.json({ ok: false, error: 'unauthenticated' }, { status: 401 });
-    const caller = await adminAuth().verifyIdToken(idToken);
+    // Token scaduto o falso: non autorizzato (non "errore del server")
+    const caller = await adminAuth()
+      .verifyIdToken(idToken)
+      .catch(() => null);
+    if (!caller) return NextResponse.json({ ok: false, error: 'unauthenticated' }, { status: 401 });
     const body = (await request.json()) as NotifyRequest;
 
     // Chiunque abbia fatto l'accesso può chiedere il controllo sostituzioni (il server decide da solo)

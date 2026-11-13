@@ -57,7 +57,11 @@ export async function closeRequest(id: string, by: string, resolution: string): 
 export async function callerFrom(request: Request) {
   const idToken = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
   if (!idToken) return null;
-  const decoded = await adminAuth().verifyIdToken(idToken);
+  // Token scaduto, falso o di un account disattivato: non autorizzato (non "errore del server")
+  const decoded = await adminAuth()
+    .verifyIdToken(idToken)
+    .catch(() => null);
+  if (!decoded) return null;
   const isSuper = decoded.email === SUPER_ADMIN_EMAIL && decoded.email_verified === true;
   const profileId = isSuper ? 'p-1' : decoded.uid;
   return { uid: decoded.uid, email: decoded.email || null, isSuper, profileId };

@@ -71,3 +71,16 @@ The menu item "Admin" points to `/impostazioni?sezione=partita`.
 - `npx tsc --noEmit`, `npm run lint` (ESLint 9 flat config `eslint.config.mjs` = Next core-web-vitals + TypeScript;
   must stay at 0 errors — set-state-in-effect and `any` are warnings on purpose), `npm run build`,
   `npm run test:rules` (Firestore emulator).
+
+## Tests (2026-11-13)
+- `npm run test:unit` — Vitest, `tests/unit`: cash (quota, who pays, summary, cost per format), result/scorers validation
+  (`lib/utils/resultValidation.ts`), formats, starters ranking, team balancer, formations, reconcile. No network.
+- `npm run test:integration` — Vitest inside `firebase emulators:exec --config firebase.test.json` (ports 8180/9199),
+  `tests/integration`: real API route handlers + server logic (invite claiming, sign-up requests, deactivation → return →
+  restore / start from zero, format proposals). `src/lib/firebase/admin.ts` uses the emulators only when
+  FIRESTORE_EMULATOR_HOST is set and NODE_ENV ≠ production.
+- `npm run test:rules` — Firestore rules (+ cassa merge) on the emulators.
+- `npm run test:e2e` — Playwright (Chromium, Pixel 7), `tests/e2e`: starts emulators (8080/9099, so stop `dev:emulators`)
+  + `next dev -p 3100`, seeds fake data (`tests/e2e/seed.ts`), logs in with email/password as the fake super admin.
+- `npm run test:all` — all of them. Vitest is started through `scripts/vitest.mjs` (Windows drive-letter fix).
+- Pure logic used by the UI lives in `lib/utils/cashUtils.ts` and `lib/utils/resultValidation.ts` (tested), not in components.
