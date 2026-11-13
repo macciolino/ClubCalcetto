@@ -199,5 +199,193 @@
     "formatSaved": "{label} format for {date}",
     "saveFailed": "Saving failed, try again.",
     "fieldWarning": "The pitch \"{name}\" has no cost for {label}: the club standard cost is used. Add it in Settings → Pitches and costs."
+  },
+  "positions": {
+    "Portiere": {
+      "name": "Goalkeeper",
+      "plural": "Goalkeepers",
+      "abbr": "GK"
+    },
+    "Difensore": {
+      "name": "Defender",
+      "plural": "Defenders",
+      "abbr": "DEF"
+    },
+    "Centrocampista": {
+      "name": "Midfielder",
+      "plural": "Midfielders",
+      "abbr": "MID"
+    },
+    "Esterno": {
+      "name": "Winger",
+      "plural": "Wingers",
+      "abbr": "WNG"
+    },
+    "Punta": {
+      "name": "Striker",
+      "plural": "Strikers",
+      "abbr": "STR"
+    }
+  },
+  "statNames": {
+    "velocita": {
+      "name": "Pace",
+      "code": "PAC"
+    },
+    "fisico": {
+      "name": "Physical",
+      "code": "PHY"
+    },
+    "resistenza": {
+      "name": "Stamina",
+      "code": "STA"
+    },
+    "tiro": {
+      "name": "Shooting",
+      "code": "SHO"
+    },
+    "passaggio": {
+      "name": "Passing",
+      "code": "PAS"
+    },
+    "dribbling": {
+      "name": "Dribbling",
+      "code": "DRI"
+    },
+    "difesa": {
+      "name": "Defending",
+      "code": "DEF"
+    },
+    "visione": {
+      "name": "Vision",
+      "code": "VIS"
+    },
+    "tecnica": {
+      "name": "Technique",
+      "code": "TEC"
+    }
+  },
+  "players": {
+    "title": "Players",
+    "newGuest": "New guest",
+    "leadersAria": "The best",
+    "topScorer": "Top scorer",
+    "topScorerShort": "Goals",
+    "goalsUnit": "goals",
+    "mostMvp": "Most MVPs",
+    "mostMvpShort": "MVP",
+    "mvpUnit": "MVP",
+    "mostPlayed": "Most matches",
+    "mostPlayedShort": "Matches",
+    "playedUnit": "matches",
+    "search": "Search player",
+    "roleFilter": "Role filter",
+    "allRoles": "All",
+    "sortBy": "Sort by",
+    "sortOvr": "By OVR",
+    "sortGoals": "By goals",
+    "sortMvp": "By MVP",
+    "sortPlayed": "By matches",
+    "sortWins": "By wins",
+    "sortName": "Name A-Z",
+    "compareTwo": "Compare two players",
+    "compare": "Compare",
+    "view": "View",
+    "viewCards": "Cards",
+    "viewList": "List",
+    "noneFound": "No players match these filters.",
+    "count": "{count, plural, one {# player} other {# players}}",
+    "role": "Role",
+    "wdl": "W · D · L",
+    "wdlAria": "{won} won, {drawn} drawn, {lost} lost",
+    "guestLower": "guest",
+    "colPlayer": "Player",
+    "colPlayerTitle": "name",
+    "colWdl": "W-D-L",
+    "colWdlTitle": "wins",
+    "sortByTitle": "Sort by {what}",
+    "actions": "Actions",
+    "admin": "Admin",
+    "guest": "Guest",
+    "you": "You",
+    "quickEdit": "Quick edit player",
+    "editRatings": "Edit ratings and details",
+    "deleteGuest": "Delete guest",
+    "deleteAccount": "Delete account",
+    "wonShort": "{n}W",
+    "drawnShort": "{n}D",
+    "lostShort": "{n}L",
+    "confirmDeleteGuest": "Delete the guest \"{name}\"? Their name stays in matches already played.",
+    "onlySuperAdmin": "Only the super admin can deactivate a registered account.",
+    "confirmDeactivate": "Deactivate the account of \"{name}\"? They won't be able to sign in and will disappear from the pages; profile, ratings and stats stay saved. You can reactivate or fully delete it from Settings → Admins and accounts.",
+    "failed": "Something went wrong. Try again.",
+    "inviteText": "Hi {first}! I added you to Club Soccer, our five-a-side app. Sign up with this link: your matches and stats will already be yours.",
+    "inviteFailed": "Couldn't create the invite link, try again.",
+    "confirmMakeAdmin": "Make \"{name}\" an admin? They will manage attendance, teams, matches and club settings.",
+    "confirmRemoveAdmin": "Remove admin rights from \"{name}\"? They will be a regular player.",
+    "nowAdmin": "{name} is now an admin.",
+    "noLongerAdmin": "{name} is no longer an admin."
+  },
+  "playerCard": {
+    "superAdmin": "Super Admin",
+    "guestSuffix": " · guest",
+    "noRecent": "no recent matches",
+    "withForm": "with current form",
+    "parameters": "Ratings",
+    "statsAfterFirst": "Stats appear after the first archived match.",
+    "won": "Won",
+    "drawn": "Drawn",
+    "lost": "Lost",
+    "played": "Matches",
+    "goals": "Goals",
+    "mvp": "MVP",
+    "winPct": "Win %",
+    "goalsPerMatch": "Goals per match",
+    "inForm": "🔥 in form",
+    "outOfForm": "❄️ out of form",
+    "editPlayer": "Edit player",
+    "edit": "Edit",
+    "moreActions": "More actions",
+    "inviteWhatsapp": "Invite on WhatsApp",
+    "removeAdmin": "Remove admin",
+    "makeAdmin": "Make admin",
+    "delete": "Delete",
+    "last5": "Last 5",
+    "tabSkills": "Skills",
+    "tabStats": "Stats"
+  },
+  "playerModal": {
+    "editTitle": "Edit player",
+    "newTitle": "New guest",
+    "editSubtitle": "Role, matches and ratings from 1 to 10",
+    "newSubtitle": "Add a five-a-side teammate",
+    "saveChanges": "Save changes",
+    "addPlayer": "Add player",
+    "photoFailed": "Couldn't upload the photo.",
+    "nameRequired": "The player's name is required.",
+    "saveFailed": "Error while saving",
+    "upload": "Upload",
+    "fullName": "Full name",
+    "namePlaceholder": "e.g. John Smith",
+    "position": "Field position",
+    "positionHint": "Used for team balancing and the position on the pitch.",
+    "matches": "Matches",
+    "total": "Total {n}",
+    "parameters": "Ratings (1-10)",
+    "dragHint": "Drag the slider"
+  },
+  "compare": {
+    "title": "Compare players",
+    "first": "First player",
+    "second": "Second player"
+  },
+  "formDots": {
+    "absent": "Absent · {date}",
+    "won": "Won {score} · {date}",
+    "drawn": "Drawn {score} · {date}",
+    "lost": "Lost {score} · {date}",
+    "none": "No match",
+    "summary": "Last 5: {list}",
+    "listAria": "Last 5 matches"
   }
 }

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { sortStatsByCanonicalOrder } from '@/types/database';
+import { usePlayerLabels } from '@/i18n/usePlayerLabels';
 
 interface RadarStat {
   key: string;
@@ -24,18 +25,6 @@ interface RadarChartProps {
   showValues?: boolean;
 }
 
-const STAT_ABBR_MAP: Record<string, string> = {
-  Velocità: 'VEL',
-  Fisico: 'FIS',
-  Resistenza: 'RES',
-  Tiro: 'TIR',
-  Passaggio: 'PAS',
-  Dribbling: 'DRI',
-  Difesa: 'DIF',
-  Visione: 'VIS',
-  Tecnica: 'TEC',
-};
-
 export function RadarChart({
   stats,
   size = 200,
@@ -44,6 +33,7 @@ export function RadarChart({
   overlay,
   showValues = true,
 }: RadarChartProps) {
+  const labels = usePlayerLabels();
   const statKeys = sortStatsByCanonicalOrder(Object.keys(stats));
   const totalAxes = Math.max(statKeys.length, 3);
 
@@ -171,7 +161,7 @@ export function RadarChart({
             const val = Math.max(1, Math.min(10, shown ?? 6));
             // Posiziona l'etichetta leggermente fuori dal raggio massimo
             const labelCoord = getCoordinates(i, 1.25);
-            const abbr = STAT_ABBR_MAP[key] || key.slice(0, 3).toUpperCase();
+            const abbr = labels.statCode(key);
 
             return (
               <g key={`label-${i}`} transform={`translate(${labelCoord.x}, ${labelCoord.y})`}>

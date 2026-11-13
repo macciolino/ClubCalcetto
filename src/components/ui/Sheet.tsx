@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { btn } from '@/components/ui/buttons';
+import { useTranslations } from 'next-intl';
 
 interface SheetProps {
   onClose: () => void;
@@ -30,6 +31,7 @@ interface SheetProps {
  */
 export function Sheet({ onClose, title, subtitle, headerActions, footer, size = 'md', height = 'auto', locked = false, children }: SheetProps) {
   const [mounted, setMounted] = useState(false);
+  const tc = useTranslations('common');
   const [dragY, setDragY] = useState(0);
   const startY = useRef<number | null>(null);
 
@@ -93,7 +95,7 @@ export function Sheet({ onClose, title, subtitle, headerActions, footer, size = 
                 type="button"
                 onClick={onClose}
                 disabled={locked}
-                aria-label="Chiudi"
+                aria-label={tc('close')}
                 className="p-2 rounded-full text-secondary hover:text-primary hover:bg-card-hover disabled:opacity-40"
               >
                 <X className="h-5 w-5" />

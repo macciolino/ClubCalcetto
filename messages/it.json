@@ -199,5 +199,193 @@
     "formatSaved": "Formato {label} per {date}",
     "saveFailed": "Salvataggio non riuscito, riprova.",
     "fieldWarning": "Il campo \"{name}\" non ha il costo per il {label}: si usa il costo standard del club. Aggiungilo in Impostazioni → Campi e costi."
+  },
+  "positions": {
+    "Portiere": {
+      "name": "Portiere",
+      "plural": "Portieri",
+      "abbr": "POR"
+    },
+    "Difensore": {
+      "name": "Difensore",
+      "plural": "Difensori",
+      "abbr": "DIF"
+    },
+    "Centrocampista": {
+      "name": "Centrocampista",
+      "plural": "Centrocampisti",
+      "abbr": "CEN"
+    },
+    "Esterno": {
+      "name": "Esterno",
+      "plural": "Esterni",
+      "abbr": "EST"
+    },
+    "Punta": {
+      "name": "Punta",
+      "plural": "Punte",
+      "abbr": "PUN"
+    }
+  },
+  "statNames": {
+    "velocita": {
+      "name": "Velocità",
+      "code": "VEL"
+    },
+    "fisico": {
+      "name": "Fisico",
+      "code": "FIS"
+    },
+    "resistenza": {
+      "name": "Resistenza",
+      "code": "RES"
+    },
+    "tiro": {
+      "name": "Tiro",
+      "code": "TIR"
+    },
+    "passaggio": {
+      "name": "Passaggio",
+      "code": "PAS"
+    },
+    "dribbling": {
+      "name": "Dribbling",
+      "code": "DRI"
+    },
+    "difesa": {
+      "name": "Difesa",
+      "code": "DIF"
+    },
+    "visione": {
+      "name": "Visione",
+      "code": "VIS"
+    },
+    "tecnica": {
+      "name": "Tecnica",
+      "code": "TEC"
+    }
+  },
+  "players": {
+    "title": "Giocatori",
+    "newGuest": "Nuovo ospite",
+    "leadersAria": "I migliori",
+    "topScorer": "Capocannoniere",
+    "topScorerShort": "Gol",
+    "goalsUnit": "gol",
+    "mostMvp": "Più MVP",
+    "mostMvpShort": "MVP",
+    "mvpUnit": "MVP",
+    "mostPlayed": "Più presenze",
+    "mostPlayedShort": "Presenze",
+    "playedUnit": "partite",
+    "search": "Cerca giocatore",
+    "roleFilter": "Filtro ruolo",
+    "allRoles": "Tutti",
+    "sortBy": "Ordina per",
+    "sortOvr": "Per OVR",
+    "sortGoals": "Per gol",
+    "sortMvp": "Per MVP",
+    "sortPlayed": "Per presenze",
+    "sortWins": "Per vittorie",
+    "sortName": "Nome A-Z",
+    "compareTwo": "Confronta due giocatori",
+    "compare": "Confronta",
+    "view": "Vista",
+    "viewCards": "Card",
+    "viewList": "Elenco",
+    "noneFound": "Nessun giocatore trovato con questi filtri.",
+    "count": "{count, plural, one {# giocatore} other {# giocatori}}",
+    "role": "Ruolo",
+    "wdl": "V · P · S",
+    "wdlAria": "{won} vinte, {drawn} pareggiate, {lost} perse",
+    "guestLower": "ospite",
+    "colPlayer": "Giocatore",
+    "colPlayerTitle": "nome",
+    "colWdl": "V-P-S",
+    "colWdlTitle": "vittorie",
+    "sortByTitle": "Ordina per {what}",
+    "actions": "Azioni",
+    "admin": "Admin",
+    "guest": "Ospite",
+    "you": "Tu",
+    "quickEdit": "Modifica rapida giocatore",
+    "editRatings": "Modifica voti e dettagli",
+    "deleteGuest": "Elimina ospite",
+    "deleteAccount": "Elimina account",
+    "wonShort": "{n}V",
+    "drawnShort": "{n}P",
+    "lostShort": "{n}S",
+    "confirmDeleteGuest": "Eliminare l'ospite \"{name}\"? Nelle partite già giocate resta il nome.",
+    "onlySuperAdmin": "Solo il super admin può disattivare un account registrato.",
+    "confirmDeactivate": "Disattivare l'account di \"{name}\"? Non potrà più entrare e sparirà dalle pagine; scheda, parametri e statistiche restano salvati. Potrai riattivarlo o eliminarlo del tutto da Impostazioni → Admin e account.",
+    "failed": "Operazione non riuscita. Riprova.",
+    "inviteText": "Ciao {first}! Ti ho aggiunto a Club Soccer, l'app del nostro calcetto. Registrati da questo link: le tue partite e statistiche saranno già tue.",
+    "inviteFailed": "Non sono riuscito a creare il link di invito, riprova.",
+    "confirmMakeAdmin": "Rendere admin \"{name}\"? Potrà gestire presenze, squadre, partite e impostazioni del club.",
+    "confirmRemoveAdmin": "Togliere i permessi di admin a \"{name}\"? Resterà un giocatore normale.",
+    "nowAdmin": "{name} ora è admin.",
+    "noLongerAdmin": "{name} non è più admin."
+  },
+  "playerCard": {
+    "superAdmin": "Super Admin",
+    "guestSuffix": " · ospite",
+    "noRecent": "nessuna partita recente",
+    "withForm": "con lo stato forma",
+    "parameters": "Parametri",
+    "statsAfterFirst": "Le statistiche compaiono dopo la prima partita archiviata.",
+    "won": "Vinte",
+    "drawn": "Pari",
+    "lost": "Perse",
+    "played": "Presenze",
+    "goals": "Gol",
+    "mvp": "MVP",
+    "winPct": "% vittorie",
+    "goalsPerMatch": "Gol a partita",
+    "inForm": "🔥 in forma",
+    "outOfForm": "❄️ fuori forma",
+    "editPlayer": "Modifica giocatore",
+    "edit": "Modifica",
+    "moreActions": "Altre azioni",
+    "inviteWhatsapp": "Invita su WhatsApp",
+    "removeAdmin": "Togli admin",
+    "makeAdmin": "Rendi admin",
+    "delete": "Elimina",
+    "last5": "Ultime 5",
+    "tabSkills": "Abilità",
+    "tabStats": "Statistiche"
+  },
+  "playerModal": {
+    "editTitle": "Modifica giocatore",
+    "newTitle": "Nuovo ospite",
+    "editSubtitle": "Ruolo, partite e parametri da 1 a 10",
+    "newSubtitle": "Aggiungi un compagno di calcetto",
+    "saveChanges": "Salva modifiche",
+    "addPlayer": "Aggiungi giocatore",
+    "photoFailed": "Impossibile caricare la foto.",
+    "nameRequired": "Il nome del giocatore è obbligatorio.",
+    "saveFailed": "Errore nel salvataggio",
+    "upload": "Carica",
+    "fullName": "Nome e cognome",
+    "namePlaceholder": "Es. Mario Rossi",
+    "position": "Ruolo in campo",
+    "positionHint": "Serve al bilanciamento e alla posizione sul campo.",
+    "matches": "Partite",
+    "total": "Totale {n}",
+    "parameters": "Parametri (1-10)",
+    "dragHint": "Trascina il cursore"
+  },
+  "compare": {
+    "title": "Confronta giocatori",
+    "first": "Primo giocatore",
+    "second": "Secondo giocatore"
+  },
+  "formDots": {
+    "absent": "Assente · {date}",
+    "won": "Vinta {score} · {date}",
+    "drawn": "Pareggiata {score} · {date}",
+    "lost": "Persa {score} · {date}",
+    "none": "Nessuna partita",
+    "summary": "Ultime 5: {list}",
+    "listAria": "Ultime 5 partite"
   }
 }

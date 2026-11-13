@@ -10,7 +10,7 @@ import { computeMatchStats } from '@/lib/utils/statUtils';
 import { lastCompletedMatches } from '@/components/FormDots';
 import { PlayerCompare } from '@/components/PlayerCompare';
 import { useAuth } from '@/lib/context/AuthContext';
-import { Profile, StatCategory, Match, FIELD_POSITION_ABBR, STAT_CANONICAL_ORDER } from '@/types/database';
+import { Profile, StatCategory, Match, STAT_CANONICAL_ORDER } from '@/types/database';
 import { subscribeProfiles, subscribeStatCategories, subscribeMatches, deleteProfileDoc, saveProfileDoc } from '@/lib/firebase/firestoreService';
 import { isFirebaseConfigured, auth as firebaseAuth } from '@/lib/firebase/config';
 import { getStoredPlayers, removeStoredPlayer, updateStoredPlayer, saveStoredPlayers, getPlayerMatchRecord } from '@/lib/services/playerService';
@@ -28,6 +28,8 @@ import {
   Table as TableIcon,
 } from 'lucide-react';
 import { btnInline } from '@/components/ui/buttons';
+import { useTranslations } from 'next-intl';
+import { usePlayerLabels } from '@/i18n/usePlayerLabels';
 
 const DEFAULT_CATEGORIES: StatCategory[] = DEFAULT_BASE_CATEGORIES;
 
@@ -37,6 +39,8 @@ export default function GiocatoriPage() {
   const [players, setPlayers] = useState<Profile[]>([]);
   const [categories, setCategories] = useState<StatCategory[]>(DEFAULT_CATEGORIES);
   const { forms } = useForms();
+  const t = useTranslations('players');
+  const labels = usePlayerLabels();
   // Statistiche delle card (tab "Statistiche"): dalle partite archiviate, come Storico e Profilo
   const [completedMatches, setCompletedMatches] = useState<Match[]>([]);
   useEffect(() => {
@@ -131,20 +135,20 @@ export default function GiocatoriPage() {
     const target = players.find((p) => p.id === playerId);
     try {
       if (target?.is_guest) {
-        if (!(await askConfirm(`Eliminare l'ospite "${name}"? Nelle partite già giocate resta il nome.`))) return;
+        if (!(await askConfirm(t('confirmDeleteGuest', { name })))) return;
         removeStoredPlayer(playerId);
         setPlayers(getStoredPlayers());
         await deleteProfileDoc(playerId);
         return;
       }
       if (!isSuperAdmin) {
-        notify('Solo il super admin può disattivare un account registrato.');
+        notify(t('onlySuperAdmin'));
         return;
       }
-      if (!(await askConfirm(`Disattivare l'account di "${name}"? Non potrà più entrare e sparirà dalle pagine; scheda, parametri e statistiche restano salvati. Potrai riattivarlo o eliminarlo del tutto da Impostazioni → Admin e account.`))) return;
+      if (!(await askConfirm(t('confirmDeactivate', { name })))) return;
       const res = await manageAccountAsSuperAdmin(playerId, 'deactivate');
       if (!res.ok) {
-        notify('Operazione non riuscita. Riprova.');
+        notify(t('failed'));
         return;
       }
       removeStoredPlayer(playerId);
@@ -169,14 +173,14 @@ export default function GiocatoriPage() {
       if (!data?.ok || !data.token) throw new Error(data?.error || 'invite');
       const link = `${window.location.origin}/login?invite=${data.token}`;
       const first = p.full_name.split(' ')[0];
-      const text = `Ciao ${first}! Ti ho aggiunto a Club Soccer, l'app del nostro calcetto. Registrati da questo link: le tue partite e statistiche saranno già tue.
+      const text = `${t('inviteText', { first })}
 ${link}`;
       const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
       if (win) win.location.href = url;
       else window.location.href = url;
     } catch {
       win?.close();
-      notify('Non sono riuscito a creare il link di invito, riprova.');
+      notify(t('inviteFailed'));
     }
   };
 
@@ -185,17 +189,17 @@ ${link}`;
     const next: 'admin' | 'player' = p.role === 'admin' ? 'player' : 'admin';
     const msg =
       next === 'admin'
-        ? `Rendere admin "${p.full_name}"? Potrà gestire presenze, squadre, partite e impostazioni del club.`
-        : `Togliere i permessi di admin a "${p.full_name}"? Resterà un giocatore normale.`;
+        ? t('confirmMakeAdmin', { name: p.full_name })
+        : t('confirmRemoveAdmin', { name: p.full_name });
     if (!(await askConfirm(msg))) return;
     const updated: Profile = { ...p, role: next, updated_at: new Date().toISOString() };
     try {
       await saveProfileDoc(updated);
       updateStoredPlayer(updated);
       setPlayers(getStoredPlayers());
-      notify(next === 'admin' ? `${p.full_name} ora è admin.` : `${p.full_name} non è più admin.`);
+      notify(next === 'admin' ? t('nowAdmin', { name: p.full_name }) : t('noLongerAdmin', { name: p.full_name }));
     } catch {
-      notify('Operazione non riuscita. Riprova.');
+      notify(t('failed'));
     }
   };
 
@@ -239,9 +243,9 @@ ${link}`;
     const best = (value: (p: Profile) => number) =>
       players.reduce<{ p: Profile | null; v: number }>((acc, p) => (value(p) > acc.v ? { p, v: value(p) } : acc), { p: null, v: 0 });
     return [
-      { key: 'goals', icon: '⚽', title: 'Capocannoniere', titleShort: 'Gol', ...best((p) => matchStats.get(p.id)?.goals || 0), unitShort: 'gol' },
-      { key: 'mvp', icon: '⭐', title: 'Più MVP', titleShort: 'MVP', ...best((p) => matchStats.get(p.id)?.mvp || 0), unitShort: 'MVP' },
-      { key: 'played', icon: '📅', title: 'Più presenze', titleShort: 'Presenze', ...best((p) => matchStats.get(p.id)?.played || 0), unitShort: 'partite' },
+      { key: 'goals', icon: '⚽', title: t('topScorer'), titleShort: t('topScorerShort'), ...best((p) => matchStats.get(p.id)?.goals || 0), unitShort: t('goalsUnit') },
+      { key: 'mvp', icon: '⭐', title: t('mostMvp'), titleShort: t('mostMvpShort'), ...best((p) => matchStats.get(p.id)?.mvp || 0), unitShort: t('mvpUnit') },
+      { key: 'played', icon: '📅', title: t('mostPlayed'), titleShort: t('mostPlayedShort'), ...best((p) => matchStats.get(p.id)?.played || 0), unitShort: t('playedUnit') },
     ].filter((l) => l.p);
   })();
   const sortHeader = ({ k, label, title, className = '' }: { k: string; label: string; title?: string; className?: string }) => (
@@ -249,7 +253,7 @@ ${link}`;
       <button
         type="button"
         onClick={() => handleTableSort(k)}
-        title={`Ordina per ${title || label}`}
+        title={t('sortByTitle', { what: title || label })}
         className={`w-full py-3.5 px-3 font-bold whitespace-nowrap ${k === 'name' ? 'text-left px-4' : 'text-center'} ${
           tableSort.key === k ? 'text-accent-text' : 'hover:text-primary'
         }`}
@@ -276,7 +280,7 @@ ${link}`;
     <div className="space-y-6 pb-12">
       {/* Titolo della pagina (senza riquadro) */}
       <header className="flex items-center justify-between gap-4 min-h-[2.5rem]">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-primary">Giocatori</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-primary">{t('title')}</h1>
 
         {/* PC: "Nuovo ospite" in alto a destra, solo admin (su telefono è il "+" nella ricerca) */}
         {isClientAdmin && (
@@ -286,14 +290,14 @@ ${link}`;
             className={`${btnInline.primary} hidden lg:inline-flex`}
           >
             <UserPlus className="h-4 w-4" />
-            Nuovo ospite
+            {t('newGuest')}
           </button>
         )}
       </header>
 
       {/* Leader: tre card su una riga, stesso stile delle card dei giocatori (solo informative) */}
       {leaders.length > 0 && (
-        <section aria-label="I migliori" className="grid grid-cols-3 gap-2 sm:gap-3">
+        <section aria-label={t('leadersAria')} className="grid grid-cols-3 gap-2 sm:gap-3">
           {leaders.map((l) => {
             const [first, ...rest] = (l.p?.full_name || '').trim().split(/\s+/);
             const short = rest.length ? `${first} ${rest[rest.length - 1][0]}.` : first;
@@ -324,7 +328,7 @@ ${link}`;
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
           <input
             type="search"
-            placeholder="Cerca giocatore"
+            placeholder={t('search')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className={`w-full pl-10 ${isClientAdmin ? 'pr-12 lg:pr-4' : 'pr-4'} py-2.5 bg-card border border-line rounded-full text-primary text-sm placeholder:text-muted focus:outline-none focus:border-accent transition-colors`}
@@ -333,8 +337,8 @@ ${link}`;
             <button
               type="button"
               onClick={handleOpenNewGuestModal}
-              aria-label="Nuovo ospite"
-              title="Nuovo ospite"
+              aria-label={t('newGuest')}
+              title={t('newGuest')}
               className="lg:hidden absolute right-1.5 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-accent hover:bg-accent/90 text-on-accent flex items-center justify-center"
             >
               <Plus className="h-4 w-4" />
@@ -346,15 +350,15 @@ ${link}`;
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value as typeof roleFilter)}
-            aria-label="Filtro ruolo"
+            aria-label={t('roleFilter')}
             className="flex-1 sm:flex-none sm:w-32 min-w-0 bg-card border border-line rounded-xl px-2.5 py-2.5 text-sm text-primary focus:outline-none focus:border-accent"
           >
-            <option value="all">Tutti</option>
-            <option value="Portiere">Portieri</option>
-            <option value="Difensore">Difensori</option>
-            <option value="Centrocampista">Centrocampisti</option>
-            <option value="Esterno">Esterni</option>
-            <option value="Punta">Punte</option>
+            <option value="all">{t('allRoles')}</option>
+            {POSITION_ORDER.map((pos) => (
+              <option key={pos} value={pos}>
+                {labels.positionPlural(pos)}
+              </option>
+            ))}
           </select>
           <select
             value={sortBy}
@@ -362,32 +366,32 @@ ${link}`;
               setSortBy(e.target.value as typeof sortBy);
               setSortSource('menu');
             }}
-            aria-label="Ordina per"
+            aria-label={t('sortBy')}
             className="flex-1 sm:flex-none sm:w-36 min-w-0 bg-card border border-line rounded-xl px-2.5 py-2.5 text-sm text-primary focus:outline-none focus:border-accent"
           >
-            <option value="ovr">Per OVR</option>
-            <option value="goals">Per gol</option>
-            <option value="mvp">Per MVP</option>
-            <option value="played">Per presenze</option>
-            <option value="wins">Per vittorie</option>
-            <option value="name">Nome A-Z</option>
+            <option value="ovr">{t('sortOvr')}</option>
+            <option value="goals">{t('sortGoals')}</option>
+            <option value="mvp">{t('sortMvp')}</option>
+            <option value="played">{t('sortPlayed')}</option>
+            <option value="wins">{t('sortWins')}</option>
+            <option value="name">{t('sortName')}</option>
           </select>
           <button
             type="button"
             onClick={() => setCompareOpen(true)}
             disabled={players.length < 2}
-            aria-label="Confronta due giocatori"
-            title="Confronta due giocatori"
+            aria-label={t('compareTwo')}
+            title={t('compareTwo')}
             className="flex-shrink-0 h-[42px] flex items-center justify-center gap-1.5 px-3 rounded-xl text-sm font-semibold border border-line bg-card text-primary hover:bg-card-hover disabled:opacity-40"
           >
             <GitCompare className="h-4 w-4" />
-            <span className="hidden lg:inline">Confronta</span>
+            <span className="hidden lg:inline">{t('compare')}</span>
           </button>
-          <div className="flex-shrink-0 flex items-center bg-card p-1 rounded-xl border border-line" role="radiogroup" aria-label="Vista">
+          <div className="flex-shrink-0 flex items-center bg-card p-1 rounded-xl border border-line" role="radiogroup" aria-label={t('view')}>
             {(
               [
-                ['cards', 'Card', LayoutGrid],
-                ['table', 'Elenco', TableIcon],
+                ['cards', t('viewCards'), LayoutGrid],
+                ['table', t('viewList'), TableIcon],
               ] as const
             ).map(([mode, label, Icon]) => (
               <button
@@ -418,7 +422,7 @@ ${link}`;
         /* GRIGLIA DI CARD CON OTTAGONO E STATISTICHE V-P-S */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3 animate-in">
           {filteredPlayers.length === 0 ? (
-            <p className="col-span-full py-12 text-center text-sm text-muted">Nessun giocatore trovato con questi filtri.</p>
+            <p className="col-span-full py-12 text-center text-sm text-muted">{t('noneFound')}</p>
           ) : (
             filteredPlayers.map((player) => (
               <PlayerCardFifa
@@ -438,13 +442,13 @@ ${link}`;
         {/* Telefono e tablet: elenco a colonne (giocatore | ruolo | V·P·S | OVR) */}
         <div className="lg:hidden animate-in">
           {filteredPlayers.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted">Nessun giocatore trovato con questi filtri.</p>
+            <p className="py-8 text-center text-sm text-muted">{t('noneFound')}</p>
           ) : (
             <div className="bg-card rounded-2xl overflow-hidden">
               <div className="grid grid-cols-[minmax(0,1fr)_3rem_4.5rem_2.25rem] items-center gap-2 px-3 py-2 border-b border-line text-[11px] font-medium text-muted">
-                <span>{filteredPlayers.length} giocatori</span>
-                <span className="text-center">Ruolo</span>
-                <span className="text-center">V · P · S</span>
+                <span>{t('count', { count: filteredPlayers.length })}</span>
+                <span className="text-center">{t('role')}</span>
+                <span className="text-center">{t('wdl')}</span>
                 <span className="text-right">OVR</span>
               </div>
               <ul className="divide-y divide-line">
@@ -474,15 +478,15 @@ ${link}`;
                           <span className={`block truncate text-sm font-medium ${isCurrent ? 'text-accent-text' : 'text-primary'}`}>
                             {player.full_name}
                           </span>
-                          {player.is_guest && <span className="block text-[11px] text-muted">ospite</span>}
+                          {player.is_guest && <span className="block text-[11px] text-muted">{t('guestLower')}</span>}
                         </span>
                       </span>
                       <span className="flex justify-center">
                         <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${POSITION_BADGE[pos] || POSITION_BADGE.Esterno}`}>
-                          {FIELD_POSITION_ABBR[pos as keyof typeof FIELD_POSITION_ABBR]}
+                          {labels.positionAbbr(pos)}
                         </span>
                       </span>
-                      <span className="text-center text-xs font-semibold tabular-nums" aria-label={`${ms?.won || 0} vinte, ${ms?.drawn || 0} pareggiate, ${ms?.lost || 0} perse`}>
+                      <span className="text-center text-xs font-semibold tabular-nums" aria-label={t('wdlAria', { won: ms?.won || 0, drawn: ms?.drawn || 0, lost: ms?.lost || 0 })}>
                         <span className={ms?.won ? 'text-accent-text' : 'text-muted'}>{ms?.won || 0}</span>
                         <span className="text-muted"> · </span>
                         <span className={ms?.drawn ? 'text-warning' : 'text-muted'}>{ms?.drawn || 0}</span>
@@ -505,22 +509,21 @@ ${link}`;
               <thead>
                 <tr className="border-b border-line bg-app/70 text-[11px] font-bold text-secondary uppercase tracking-wider">
                   <th className="py-3.5 px-4 w-12 text-center">#</th>
-                  {sortHeader({ k: 'name', label: 'Giocatore', title: 'nome' })}
-                  {sortHeader({ k: 'position', label: 'Ruolo' })}
+                  {sortHeader({ k: 'name', label: t('colPlayer'), title: t('colPlayerTitle') })}
+                  {sortHeader({ k: 'position', label: t('role') })}
                   {sortHeader({ k: 'ovr', label: 'OVR' })}
-                  {isClientAdmin && sortHeader({ k: 'wins', label: 'V-P-S', title: 'vittorie' })}
+                  {isClientAdmin && sortHeader({ k: 'wins', label: t('colWdl'), title: t('colWdlTitle') })}
                   {isClientAdmin && sortedCategories.map((cat) => {
-                    const shortName = cat.name.length > 5 ? cat.name.slice(0, 3).toUpperCase() : cat.name;
                     return sortHeader({
                       k: `stat:${cat.name}`,
-                      label: shortName,
-                      title: cat.label || cat.name,
+                      label: labels.statCode(cat.name),
+                      title: labels.statName(cat.name),
                       className: 'w-14 min-w-[54px]',
                     });
                   })}
                   {isClientAdmin && (
                     <th className="sticky right-0 z-30 py-3.5 px-4 text-center bg-app border-l border-line shadow-[-8px_0_12px_rgba(0,0,0,0.8)] min-w-[100px]">
-                      Azioni
+                      {t('actions')}
                     </th>
                   )}
                 </tr>
@@ -532,7 +535,7 @@ ${link}`;
                       colSpan={isClientAdmin ? 6 + sortedCategories.length : 4}
                       className="py-8 text-center text-muted italic"
                     >
-                      Nessun giocatore trovato con questi filtri.
+                      {t('noneFound')}
                     </td>
                   </tr>
                 ) : (
@@ -574,7 +577,7 @@ ${link}`;
                               {player.role === 'admin' && (
                                 <span
                                   className="absolute -bottom-1 -right-1 bg-amber-500 text-on-accent text-[8px] font-bold rounded-full h-3.5 w-3.5 flex items-center justify-center ring-1 ring-app"
-                                  title="Admin"
+                                  title={t('admin')}
                                 >
                                   ★
                                 </span>
@@ -598,19 +601,19 @@ ${link}`;
                                     type="button"
                                     onClick={() => handleOpenEditModal(player)}
                                     className="p-1 text-muted hover:text-accent-text hover:bg-card-hover rounded transition-colors cursor-pointer"
-                                    title="Modifica rapida giocatore"
+                                    title={t('quickEdit')}
                                   >
                                     <Edit3 className="h-3 w-3" />
                                   </button>
                                 )}
                                 {player.is_guest && (
                                   <span className="text-[10px] bg-card-hover text-secondary px-1.5 py-0.2 rounded font-medium">
-                                    Ospite
+                                    {t('guest')}
                                   </span>
                                 )}
                                 {isCurrent && (
                                   <span className="text-[10px] bg-accent/20 text-accent-text px-1.5 py-0.2 rounded font-bold">
-                                    Tu
+                                    {t('you')}
                                   </span>
                                 )}
                               </div>
@@ -621,7 +624,7 @@ ${link}`;
                         {/* Ruolo in campo */}
                         <td className="py-3 px-3 text-center">
                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${POSITION_BADGE[player.position || 'Esterno']}`}>
-                            {FIELD_POSITION_ABBR[player.position || 'Esterno']}
+                            {labels.positionAbbr(player.position)}
                           </span>
                         </td>
 
@@ -636,11 +639,11 @@ ${link}`;
                         {/* Record Partite V-P-S (solo admin) */}
                         {isClientAdmin && (
                         <td className="py-3 px-3 text-center tabular-nums text-xs whitespace-nowrap">
-                          <span className={rec.won ? 'text-accent-text font-semibold' : 'text-muted'}>{rec.won}V</span>
+                          <span className={rec.won ? 'text-accent-text font-semibold' : 'text-muted'}>{t('wonShort', { n: rec.won })}</span>
                           <span className="text-muted mx-1">-</span>
-                          <span className={rec.drawn ? 'text-warning font-semibold' : 'text-muted'}>{rec.drawn}P</span>
+                          <span className={rec.drawn ? 'text-warning font-semibold' : 'text-muted'}>{t('drawnShort', { n: rec.drawn })}</span>
                           <span className="text-muted mx-1">-</span>
-                          <span className={rec.lost ? 'text-danger font-semibold' : 'text-muted'}>{rec.lost}S</span>
+                          <span className={rec.lost ? 'text-danger font-semibold' : 'text-muted'}>{t('lostShort', { n: rec.lost })}</span>
                         </td>
                         )}
 
@@ -651,7 +654,7 @@ ${link}`;
                             <td
                               key={cat.id || cat.name}
                               className="py-3 px-2 text-center font-mono font-semibold w-14 min-w-[54px]"
-                              title={`${cat.label || cat.name}: ${val}`}
+                              title={`${labels.statName(cat.name)}: ${val}`}
                             >
                               <span className="block text-xs tabular-nums text-primary">{val}</span>
                               <span className="mt-1 mx-auto block h-1 w-8 rounded-full bg-card-hover overflow-hidden" aria-hidden="true">
@@ -669,7 +672,7 @@ ${link}`;
                                 type="button"
                                 onClick={() => handleOpenEditModal(player)}
                                 className="p-1.5 bg-accent/10 text-accent-text hover:bg-accent hover:text-on-accent rounded-lg transition-all cursor-pointer"
-                                title="Modifica voti e dettagli"
+                                title={t('editRatings')}
                               >
                                 <Edit3 className="h-4 w-4" />
                               </button>
@@ -678,8 +681,8 @@ ${link}`;
                                   type="button"
                                   onClick={() => handleDeletePlayer(player.id, player.full_name)}
                                   className="p-1.5 bg-card-hover text-secondary hover:text-danger hover:bg-rose-500/15 rounded-lg transition-all cursor-pointer"
-                                  title={player.is_guest ? 'Elimina ospite' : 'Elimina account'}
-                                  aria-label={player.is_guest ? 'Elimina ospite' : 'Elimina account'}
+                                  title={player.is_guest ? t('deleteGuest') : t('deleteAccount')}
+                                  aria-label={player.is_guest ? t('deleteGuest') : t('deleteAccount')}
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </button>

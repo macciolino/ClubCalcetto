@@ -4,16 +4,19 @@ import React, { useState } from 'react';
 import { initialsOf, uploadedPhoto, ovrDisplay, ovrTone } from '@/lib/utils/playerUtils';
 import { formatForm } from '@/lib/utils/formUtils';
 import { getStatValue, PlayerMatchStats, EMPTY_MATCH_STATS } from '@/lib/utils/statUtils';
-import { Match, Profile, StatCategory, STAT_DETAILS, sortStatsByCanonicalOrder } from '@/types/database';
+import { Match, Profile, StatCategory, sortStatsByCanonicalOrder } from '@/types/database';
 import { FormDots, playedAny } from './FormDots';
 import { RadarChart } from './RadarChart';
 import { Sheet } from './ui/Sheet';
 import { Edit3, Trash2, ShieldCheck, ShieldOff, MoreHorizontal, MessageCircle } from 'lucide-react';
 import { menu } from '@/components/ui/buttons';
+import { useTranslations } from 'next-intl';
+import { usePlayerLabels } from '@/i18n/usePlayerLabels';
 
 const isSuperAdminProfile = (p: Profile) => Boolean(p.email?.toLowerCase().includes('macciolino84'));
 
 function Avatar({ player, size = 'md' }: { player: Profile; size?: 'md' | 'lg' }) {
+  const t = useTranslations('playerCard');
   const photo = uploadedPhoto(player.avatar_url);
   const box = size === 'lg' ? 'w-14 h-14 text-base' : 'w-11 h-11 text-xs';
   return (
@@ -28,7 +31,7 @@ function Avatar({ player, size = 'md' }: { player: Profile; size?: 'md' | 'lg' }
       {isSuperAdminProfile(player) && (
         <span
           className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-bold text-on-accent ring-2 ring-card"
-          title="Super Admin"
+          title={t('superAdmin')}
         >
           ★
         </span>
@@ -55,11 +58,13 @@ export function PlayerCardFifa({
   onOpen: (player: Profile) => void;
 }) {
   const ovr = ovrDisplay(player.overall_rating, form);
+  const t = useTranslations('playerCard');
+  const labels = usePlayerLabels();
   return (
     <button
       type="button"
       onClick={() => onOpen(player)}
-      aria-label={`${player.full_name}, ${player.position || 'Esterno'}, OVR ${ovr}`}
+      aria-label={`${player.full_name}, ${labels.position(player.position)}, OVR ${ovr}`}
       className="w-full h-full flex items-center gap-3 rounded-2xl bg-card hover:bg-card-hover/80 px-3.5 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
     >
       <Avatar player={player} />
@@ -69,13 +74,13 @@ export function PlayerCardFifa({
         </span>
         <span className="mt-1 flex items-center gap-2 text-xs text-secondary">
           <span className="truncate">
-            {player.position || 'Esterno'}
-            {player.is_guest ? ' · ospite' : ''}
+            {labels.position(player.position)}
+            {player.is_guest ? t('guestSuffix') : ''}
           </span>
           {playedAny(player.id, recentMatches) ? (
             <FormDots playerId={player.id} matches={recentMatches} interactive={false} className="flex-shrink-0" />
           ) : (
-            <span className="text-[11px] text-muted truncate">nessuna partita recente</span>
+            <span className="text-[11px] text-muted truncate">{t('noRecent')}</span>
           )}
         </span>
       </span>
@@ -119,6 +124,8 @@ export function PlayerDetailSheet({
   onInvite?: (player: Profile) => void;
 }) {
   const [tab, setTab] = useState<'radar' | 'stats'>('radar');
+  const t = useTranslations('playerCard');
+  const labels = usePlayerLabels();
 
   // Parametri ufficiali dell'admin (con fallback al valore di default), prima e dopo la forma
   const displayStats: Record<string, number> = {};
@@ -148,17 +155,17 @@ export function PlayerDetailSheet({
       />
       {form !== 0 && (
         <p className="text-xs text-secondary flex items-center gap-1.5">
-          <span className="inline-block w-4 border-t-2 border-dashed border-emerald-300" aria-hidden="true" /> con lo stato forma
+          <span className="inline-block w-4 border-t-2 border-dashed border-emerald-300" aria-hidden="true" /> {t('withForm')}
         </p>
       )}
 
       {/* Valori dei parametri: piccole tessere con sigla, numero e barra sottile */}
-      <ul className="mt-4 w-full grid grid-cols-4 gap-2" aria-label="Parametri">
+      <ul className="mt-4 w-full grid grid-cols-4 gap-2" aria-label={t('parameters')}>
         {baseStats.map((b) => {
           const value = form !== 0 ? Number(displayStats[b.name] ?? b.value) : b.value;
-          const code = STAT_DETAILS[b.name]?.code || b.name.slice(0, 3).toUpperCase();
+          const code = labels.statCode(b.name);
           return (
-            <li key={b.name} className="rounded-xl bg-app/60 px-2 pt-2 pb-2.5 text-center" title={b.name}>
+            <li key={b.name} className="rounded-xl bg-app/60 px-2 pt-2 pb-2.5 text-center" title={labels.statName(b.name)}>
               <span className="block text-[10px] font-semibold tracking-wider text-muted">{code}</span>
               <span className="block mt-0.5 text-lg font-semibold text-primary tabular-nums leading-tight">
                 {String(Math.round(value * 10) / 10).replace('.', ',')}
@@ -178,16 +185,16 @@ export function PlayerDetailSheet({
 
   const stats =
     matchStats.played === 0 ? (
-      <p className="py-6 text-center text-sm text-secondary">Le statistiche compaiono dopo la prima partita archiviata.</p>
+      <p className="py-6 text-center text-sm text-secondary">{t('statsAfterFirst')}</p>
     ) : (
       <div className="space-y-4">
         <div className="space-y-2">
           <div className="grid grid-cols-3 text-center">
             {(
               [
-                ['Vinte', matchStats.won, 'text-accent-text'],
-                ['Pari', matchStats.drawn, 'text-warning'],
-                ['Perse', matchStats.lost, 'text-danger'],
+                [t('won'), matchStats.won, 'text-accent-text'],
+                [t('drawn'), matchStats.drawn, 'text-warning'],
+                [t('lost'), matchStats.lost, 'text-danger'],
               ] as const
             ).map(([label, value, color]) => (
               <div key={label}>
@@ -205,11 +212,11 @@ export function PlayerDetailSheet({
         <dl className="divide-y divide-line rounded-xl bg-app/50 px-3 text-sm">
           {(
             [
-              ['Presenze', String(matchStats.played)],
-              ['Gol', String(matchStats.goals)],
-              ['MVP', String(matchStats.mvp)],
-              ['% vittorie', `${Math.round((matchStats.won / matchStats.played) * 100)}%`],
-              ['Gol a partita', (matchStats.goals / matchStats.played).toFixed(1).replace('.', ',')],
+              [t('played'), String(matchStats.played)],
+              [t('goals'), String(matchStats.goals)],
+              [t('mvp'), String(matchStats.mvp)],
+              [t('winPct'), `${Math.round((matchStats.won / matchStats.played) * 100)}%`],
+              [t('goalsPerMatch'), (matchStats.goals / matchStats.played).toFixed(1).replace('.', ',')],
             ] as const
           ).map(([label, value]) => (
             <div key={label} className="flex items-center justify-between py-2">
@@ -232,12 +239,12 @@ export function PlayerDetailSheet({
           <span className="min-w-0">
             <span className="block leading-tight break-words">{player.full_name}</span>
             <span className="block text-sm font-normal text-secondary mt-0.5">
-              {player.position || 'Esterno'}
-              {player.is_guest ? ' · ospite' : ''}
+              {labels.position(player.position)}
+              {player.is_guest ? t('guestSuffix') : ''}
               {form !== 0 && (
                 <span className={form > 0 ? 'text-orange-700 dark:text-orange-300' : 'text-sky-700 dark:text-sky-300'}>
                   {' '}
-                  · {form > 0 ? '🔥 in forma' : '❄️ fuori forma'} {formatForm(form)}
+                  · {form > 0 ? t('inForm') : t('outOfForm')} {formatForm(form)}
                 </span>
               )}
             </span>
@@ -252,8 +259,8 @@ export function PlayerDetailSheet({
               <button
                 type="button"
                 onClick={() => onEdit(player)}
-                aria-label="Modifica giocatore"
-                title="Modifica"
+                aria-label={t('editPlayer')}
+                title={t('edit')}
                 className="p-2 rounded-full text-secondary hover:text-primary hover:bg-card-hover"
               >
                 <Edit3 className="h-5 w-5" />
@@ -264,7 +271,7 @@ export function PlayerDetailSheet({
                 <button
                   type="button"
                   onClick={() => setMenuOpen((o) => !o)}
-                  aria-label="Altre azioni"
+                  aria-label={t('moreActions')}
                   aria-expanded={menuOpen}
                   className="p-2 rounded-full text-secondary hover:text-primary hover:bg-card-hover"
                 >
@@ -284,7 +291,7 @@ export function PlayerDetailSheet({
                           }}
                           className={menu.item}
                         >
-                          <MessageCircle className="h-4 w-4 text-accent-text" /> Invita su WhatsApp
+                          <MessageCircle className="h-4 w-4 text-accent-text" /> {t('inviteWhatsapp')}
                         </button>
                       )}
                       {canToggleAdmin && (
@@ -298,7 +305,7 @@ export function PlayerDetailSheet({
                           className={menu.item}
                         >
                           {player.role === 'admin' ? <ShieldOff className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
-                          {player.role === 'admin' ? 'Togli admin' : 'Rendi admin'}
+                          {player.role === 'admin' ? t('removeAdmin') : t('makeAdmin')}
                         </button>
                       )}
                       {canDelete && (
@@ -311,7 +318,7 @@ export function PlayerDetailSheet({
                           }}
                           className={menu.danger}
                         >
-                          <Trash2 className="h-4 w-4" /> Elimina
+                          <Trash2 className="h-4 w-4" /> {t('delete')}
                         </button>
                       )}
                     </div>
@@ -330,7 +337,7 @@ export function PlayerDetailSheet({
           <span className="block text-xs text-secondary mt-1">OVR</span>
         </div>
         <div className="text-right">
-          <span className="block text-xs text-secondary mb-1">Ultime 5</span>
+          <span className="block text-xs text-secondary mb-1">{t('last5')}</span>
           <FormDots playerId={player.id} matches={recentMatches} size="md" />
         </div>
       </div>
@@ -340,8 +347,8 @@ export function PlayerDetailSheet({
         <div className="flex bg-app p-1 rounded-xl text-sm" role="tablist">
           {(
             [
-              ['radar', 'Abilità'],
-              ['stats', 'Statistiche'],
+              ['radar', t('tabSkills')],
+              ['stats', t('tabStats')],
             ] as const
           ).map(([key, label]) => (
             <button

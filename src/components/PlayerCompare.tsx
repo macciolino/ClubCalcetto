@@ -5,6 +5,8 @@ import { Profile, StatCategory } from '@/types/database';
 import { getStatValue } from '@/lib/utils/statUtils';
 import { RadarChart } from '@/components/RadarChart';
 import { Sheet } from '@/components/ui/Sheet';
+import { useTranslations } from 'next-intl';
+import { usePlayerLabels } from '@/i18n/usePlayerLabels';
 
 interface PlayerCompareProps {
   players: Profile[];
@@ -18,6 +20,8 @@ interface PlayerCompareProps {
  * Bottom sheet on phone/tablet, centred modal on desktop (see components/ui/Sheet).
  */
 export function PlayerCompare({ players, categories, initialA, onClose }: PlayerCompareProps) {
+  const t = useTranslations('compare');
+  const labels = usePlayerLabels();
   const sorted = [...players].sort((a, b) => a.full_name.localeCompare(b.full_name));
   const [aId, setAId] = useState(initialA || sorted[0]?.id || '');
   const [bId, setBId] = useState(sorted.find((p) => p.id !== (initialA || sorted[0]?.id))?.id || '');
@@ -50,10 +54,10 @@ export function PlayerCompare({ players, categories, initialA, onClose }: Player
   );
 
   return (
-    <Sheet onClose={onClose} size="lg" height="tall" title="Confronta giocatori">
+    <Sheet onClose={onClose} size="lg" height="tall" title={t('title')}>
       <div className="grid grid-cols-2 gap-3">
-        {select(aId, setAId, 'border-accent', 'Primo giocatore')}
-        {select(bId, setBId, 'border-sky-500', 'Secondo giocatore')}
+        {select(aId, setAId, 'border-accent', t('first'))}
+        {select(bId, setBId, 'border-sky-500', t('second'))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:items-center">
@@ -80,7 +84,7 @@ export function PlayerCompare({ players, categories, initialA, onClose }: Player
             return (
               <li key={c.name} className="grid grid-cols-[3rem_1fr_3rem] items-center gap-2 py-0.5">
                 <span className={`text-right tabular-nums font-semibold ${va > vb ? 'text-accent-text' : 'text-secondary'}`}>{va}</span>
-                <span className="text-center text-secondary truncate">{c.name}</span>
+                <span className="text-center text-secondary truncate">{labels.statName(c.name)}</span>
                 <span className={`tabular-nums font-semibold ${vb > va ? 'text-sky-700 dark:text-sky-300' : 'text-secondary'}`}>{vb}</span>
               </li>
             );

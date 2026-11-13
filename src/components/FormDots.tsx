@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { Match } from '@/types/database';
+import { useTranslations } from 'next-intl';
+import { useLocaleSetting } from '@/i18n/I18nProvider';
 
 /** How many matches the form tracker shows (fixed slots). */
 export const FORM_SLOTS = 5;
@@ -20,26 +22,27 @@ type Slot =
   | { kind: 'absent'; label: string }
   | { kind: 'empty'; label: string };
 
-const shortDate = (d: string) => {
+const shortDate = (d: string, locale: string) => {
   const [y, m, dd] = d.split('-').map(Number);
   if (!y) return d;
-  return new Date(y, m - 1, dd).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }).replace('.', '');
+  return new Date(y, m - 1, dd).toLocaleDateString(locale === 'en' ? 'en-GB' : 'it-IT', { day: 'numeric', month: 'short' }).replace('.', '');
 };
 
-function slotsFor(playerId: string, matches: Match[]): Slot[] {
+type FormT = ReturnType<typeof useTranslations<'formDots'>>;
+
+function slotsFor(playerId: string, matches: Match[], t: FormT, locale: string): Slot[] {
   const slots: Slot[] = matches.map((m) => {
-    const date = shortDate(m.match_date || m.id);
+    const date = shortDate(m.match_date || m.id, locale);
     const inWhite = m.team_white?.some((p) => p.id === playerId);
     const inBlack = m.team_black?.some((p) => p.id === playerId);
-    if (!inWhite && !inBlack) return { kind: 'absent', label: `Assente · ${date}` };
+    if (!inWhite && !inBlack) return { kind: 'absent', label: t('absent', { date }) };
     const mine = (inWhite ? m.score_white : m.score_black) ?? 0;
     const theirs = (inWhite ? m.score_black : m.score_white) ?? 0;
     const kind = mine === theirs ? 'drawn' : mine > theirs ? 'won' : 'lost';
-    const word = kind === 'won' ? 'Vinta' : kind === 'drawn' ? 'Pareggiata' : 'Persa';
-    return { kind, label: `${word} ${mine}-${theirs} · ${date}` };
+    return { kind, label: t(kind, { score: `${mine}-${theirs}`, date }) };
   });
   // Meno di 5 partite nello storico: slot vuoti all'inizio
-  while (slots.length < FORM_SLOTS) slots.unshift({ kind: 'empty', label: 'Nessuna partita' });
+  while (slots.length < FORM_SLOTS) slots.unshift({ kind: 'empty', label: t('none') });
   return slots;
 }
 
@@ -76,7 +79,9 @@ export function FormDots({
   size?: 'sm' | 'md';
   interactive?: boolean;
 }) {
-  const slots = slotsFor(playerId, matches.slice(-FORM_SLOTS));
+  const t = useTranslations('formDots');
+  const { locale } = useLocaleSetting();
+  const slots = slotsFor(playerId, matches.slice(-FORM_SLOTS), t, locale);
   const [open, setOpen] = useState<number | null>(null);
 
   useEffect(() => {
@@ -89,7 +94,7 @@ export function FormDots({
 
   if (!interactive) {
     return (
-      <span className={`inline-flex items-center gap-1 ${className}`} role="img" aria-label={`Ultime 5: ${slots.map((s) => s.label).join('; ')}`}>
+      <span className={`inline-flex items-center gap-1 ${className}`} role="img" aria-label={t('summary', { list: slots.map((s) => s.label).join('; ') })}>
         {slots.map((s, i) => (
           <span key={i} className={`block rounded-full ${dot} ${DOT[s.kind]}`} />
         ))}
@@ -98,7 +103,7 @@ export function FormDots({
   }
 
   return (
-    <span className={`inline-flex items-center ${size === 'md' ? 'gap-0.5' : 'gap-0'} ${className}`} role="list" aria-label="Ultime 5 partite">
+    <span className={`inline-flex items-center ${size === 'md' ? 'gap-0.5' : 'gap-0'} ${className}`} role="list" aria-label={t('listAria')}>
       {slots.map((s, i) => (
         <span key={i} role="listitem" className="relative">
           <button

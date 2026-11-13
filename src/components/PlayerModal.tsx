@@ -9,6 +9,8 @@ import { saveProfileDoc } from '@/lib/firebase/firestoreService';
 import { photoToAvatarDataUrl } from '@/lib/utils/imageUtils';
 import { Upload, Save, Loader2 } from 'lucide-react';
 import { Sheet, sheetBtn } from '@/components/ui/Sheet';
+import { useTranslations } from 'next-intl';
+import { usePlayerLabels } from '@/i18n/usePlayerLabels';
 
 interface PlayerModalProps {
   isOpen: boolean;
@@ -36,6 +38,10 @@ export function PlayerModal({
   const [stats, setStats] = useState<Record<string, number>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const t = useTranslations('playerModal');
+  const tc = useTranslations('common');
+  const tpc = useTranslations('playerCard');
+  const labels = usePlayerLabels();
 
   // Ordina categorie secondo l'ordine canonico
   const sortedCategories = [...statCategories].sort((a, b) => {
@@ -101,7 +107,7 @@ export function PlayerModal({
       setUploadingAvatar(false);
     } catch (err) {
       console.error('Errore durante caricamento avatar:', err);
-      setErrorMsg(err instanceof Error ? err.message : 'Impossibile caricare la foto.');
+      setErrorMsg(err instanceof Error ? err.message : t('photoFailed'));
       setUploadingAvatar(false);
     }
   };
@@ -116,7 +122,7 @@ export function PlayerModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName.trim()) {
-      setErrorMsg('Il nome del giocatore è obbligatorio.');
+      setErrorMsg(t('nameRequired'));
       return;
     }
 
@@ -173,7 +179,7 @@ export function PlayerModal({
       onClose();
     } catch (err: unknown) {
       console.error('Submit player error:', err);
-      const msg = err instanceof Error ? err.message : 'Errore nel salvataggio';
+      const msg = err instanceof Error ? err.message : t('saveFailed');
       setErrorMsg(msg);
     } finally {
       setIsSubmitting(false);
@@ -188,16 +194,16 @@ export function PlayerModal({
       locked={isSubmitting}
       size="lg"
       height="tall"
-      title={playerToEdit ? 'Modifica giocatore' : 'Nuovo ospite'}
-      subtitle={playerToEdit ? 'Ruolo, partite e parametri da 1 a 10' : 'Aggiungi un compagno di calcetto'}
+      title={playerToEdit ? t('editTitle') : t('newTitle')}
+      subtitle={playerToEdit ? t('editSubtitle') : t('newSubtitle')}
       footer={
         <>
           <button type="button" onClick={onClose} disabled={isSubmitting} className={sheetBtn.secondary}>
-            Annulla
+            {tc('cancel')}
           </button>
           <button type="submit" form="player-form" disabled={isSubmitting || uploadingAvatar} className={sheetBtn.primary}>
             {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            {playerToEdit ? 'Salva modifiche' : 'Aggiungi giocatore'}
+            {playerToEdit ? t('saveChanges') : t('addPlayer')}
           </button>
         </>
       }
@@ -227,7 +233,7 @@ export function PlayerModal({
                 ) : (
                   <>
                     <Upload className="h-5 w-5 text-accent-text" />
-                    <span className="text-[10px] text-primary mt-1">Carica</span>
+                    <span className="text-[10px] text-primary mt-1">{t('upload')}</span>
                   </>
                 )}
               </label>
@@ -235,12 +241,12 @@ export function PlayerModal({
             </div>
             <div className="flex-1 min-w-0 space-y-2">
               <label className="block">
-                <span className="block text-xs font-medium text-secondary mb-1.5">Nome e cognome</span>
+                <span className="block text-xs font-medium text-secondary mb-1.5">{t('fullName')}</span>
                 <input
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Es. Mario Rossi"
+                  placeholder={t('namePlaceholder')}
                   className="w-full px-3.5 py-2.5 bg-app border border-line rounded-xl text-primary text-sm focus:outline-none focus:border-accent transition-colors"
                   required
                 />
@@ -253,7 +259,7 @@ export function PlayerModal({
 
           <section className="space-y-1.5">
             <label htmlFor="player-position" className="block text-xs font-medium text-secondary">
-              Ruolo in campo
+              {t('position')}
             </label>
             <select
               id="player-position"
@@ -263,26 +269,26 @@ export function PlayerModal({
             >
               {FIELD_POSITIONS.map((pos) => (
                 <option key={pos} value={pos}>
-                  {pos}
+                  {labels.position(pos)}
                 </option>
               ))}
             </select>
-            <p className="text-xs text-muted">Serve al bilanciamento e alla posizione sul campo.</p>
+            <p className="text-xs text-muted">{t('positionHint')}</p>
           </section>
 
           <section className="space-y-2">
             <div className="flex items-baseline justify-between">
-              <h3 className="text-xs font-medium text-secondary">Partite</h3>
+              <h3 className="text-xs font-medium text-secondary">{t('matches')}</h3>
               <span className="text-xs text-muted">
-                Totale {Number(matchesWon || 0) + Number(matchesDrawn || 0) + Number(matchesLost || 0)}
+                {t('total', { n: Number(matchesWon || 0) + Number(matchesDrawn || 0) + Number(matchesLost || 0) })}
               </span>
             </div>
             <div className="grid grid-cols-3 gap-2">
               {(
                 [
-                  ['Vinte', matchesWon, setMatchesWon, 'text-accent-text'],
-                  ['Pari', matchesDrawn, setMatchesDrawn, 'text-warning'],
-                  ['Perse', matchesLost, setMatchesLost, 'text-danger'],
+                  [tpc('won'), matchesWon, setMatchesWon, 'text-accent-text'],
+                  [tpc('drawn'), matchesDrawn, setMatchesDrawn, 'text-warning'],
+                  [tpc('lost'), matchesLost, setMatchesLost, 'text-danger'],
                 ] as const
               ).map(([label, value, set, color]) => (
                 <label key={label} className="block rounded-xl bg-app/60 border border-line p-2.5 text-center">
@@ -302,15 +308,15 @@ export function PlayerModal({
         {/* Colonna 2: parametri */}
         <section className="space-y-3">
           <div className="flex items-baseline justify-between">
-            <h3 className="text-xs font-medium text-secondary">Parametri (1-10)</h3>
-            <span className="text-xs text-muted">Trascina il cursore</span>
+            <h3 className="text-xs font-medium text-secondary">{t('parameters')}</h3>
+            <span className="text-xs text-muted">{t('dragHint')}</span>
           </div>
           <div className="space-y-4 rounded-xl bg-app/60 border border-line p-4">
             {sortedCategories.map((cat) => {
               const val = stats[cat.name] ?? cat.default_value ?? 6;
               return (
                 <label key={cat.id || cat.name} className="flex items-center gap-3">
-                  <span className="w-24 text-sm text-secondary truncate">{cat.label || cat.name}</span>
+                  <span className="w-24 text-sm text-secondary truncate">{labels.statName(cat.name)}</span>
                   <input
                     type="range"
                     min="1"
