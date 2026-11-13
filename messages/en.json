@@ -16,7 +16,13 @@
     "history": "History",
     "settings": "Settings",
     "profile": "Profile",
-    "logout": "Log out"
+    "logout": "Log out",
+    "admin": "Admin",
+    "player": "Player",
+    "guest": "Guest",
+    "administrator": "Administrator",
+    "userMenu": "User menu",
+    "mainNav": "Main navigation"
   },
   "language": {
     "label": "Language",
@@ -42,5 +48,23 @@
     "savedOnDevice": "Your choice is saved on your profile and applies to all your devices.",
     "changed": "Theme: {name}",
     "notSaved": "Saved on this device only: try again later to save it on your profile."
+  },
+  "bell": {
+    "label": "Notifications",
+    "labelWithCount": "Notifications: {count} new or to handle",
+    "title": "Notifications",
+    "toHandle": "{count} to handle",
+    "toHandleAndNew": "{todo} to handle · {count} new",
+    "newCount": "{count, plural, one {# new} other {# new}}",
+    "allGood": "All caught up",
+    "sectionToHandle": "To handle",
+    "sectionNotifications": "Notifications",
+    "none": "No notifications.",
+    "emptyTitle": "No notifications",
+    "emptyText": "Club alerts show up here: match confirmed, teams, substitutions, sign-ups open, MVP vote.",
+    "new": "New",
+    "now": "just now",
+    "minutesAgo": "{n} min ago",
+    "hoursAgo": "{n} h ago"
   }
 }

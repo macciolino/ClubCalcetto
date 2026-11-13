@@ -16,7 +16,13 @@
     "history": "Storico",
     "settings": "Impostazioni",
     "profile": "Profilo",
-    "logout": "Logout"
+    "logout": "Logout",
+    "admin": "Admin",
+    "player": "Giocatore",
+    "guest": "Ospite",
+    "administrator": "Amministratore",
+    "userMenu": "Menu utente",
+    "mainNav": "Navigazione principale"
   },
   "language": {
     "label": "Lingua",
@@ -42,5 +48,23 @@
     "savedOnDevice": "La scelta si salva sul tuo profilo e vale su tutti i tuoi dispositivi.",
     "changed": "Tema: {name}",
     "notSaved": "Salvata solo su questo dispositivo: riprova più tardi per salvarla sul profilo."
+  },
+  "bell": {
+    "label": "Notifiche",
+    "labelWithCount": "Notifiche: {count} nuove o da gestire",
+    "title": "Notifiche",
+    "toHandle": "{count} da gestire",
+    "toHandleAndNew": "{todo} da gestire · {count} nuove",
+    "newCount": "{count, plural, one {# nuova} other {# nuove}}",
+    "allGood": "Tutto in ordine",
+    "sectionToHandle": "Da gestire",
+    "sectionNotifications": "Notifiche",
+    "none": "Nessuna notifica.",
+    "emptyTitle": "Nessuna notifica",
+    "emptyText": "Qui trovi gli avvisi del club: partita confermata, squadre, sostituzioni, iscrizioni aperte, voto MVP.",
+    "new": "Nuova",
+    "now": "adesso",
+    "minutesAgo": "{n} min fa",
+    "hoursAgo": "{n} h fa"
   }
 }

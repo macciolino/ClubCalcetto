@@ -18,11 +18,13 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { menu } from '@/components/ui/buttons';
+import { useTranslations } from 'next-intl';
 import { RequestsBell } from '@/components/admin/RequestsCenter';
 import { SelfRatingPrompt } from '@/components/SelfRatingPrompt';
 
 export function Navbar() {
   const pathname = usePathname();
+  const t = useTranslations('nav');
   const { user, profile, isAdmin, signOut } = useAuth();
 
   // Rinnova la registrazione per le notifiche a ogni avvio (i telefoni cambiano il codice ogni tanto)
@@ -66,17 +68,17 @@ export function Navbar() {
   const isStrictAdmin = Boolean(mounted && user && (profile?.role === 'admin' || isAdmin));
 
   const navItems = [
-    { href: '/', label: 'Home', icon: Home },
-    { href: '/attendance', label: 'Presenze', icon: CalendarDays },
-    { href: '/players', label: 'Giocatori', icon: Users },
-    { href: '/teams', label: 'Squadre', icon: Trophy },
-    { href: '/history', label: 'Storico', icon: History },
+    { href: '/', label: t('home'), icon: Home },
+    { href: '/attendance', label: t('attendance'), icon: CalendarDays },
+    { href: '/players', label: t('players'), icon: Users },
+    { href: '/teams', label: t('teams'), icon: Trophy },
+    { href: '/history', label: t('history'), icon: History },
     // Profilo: si apre dal menu dell'utente (icona in alto a destra), non serve nella barra
     // Admin: non è più nella barra. Si entra da Impostazioni (menu dell'icona), che per gli admin apre la partita della settimana
   ];
 
-  const displayName = mounted && profile?.full_name ? profile.full_name : 'Ospite';
-  const roleLabel = isStrictAdmin ? 'Admin' : 'Giocatore';
+  const displayName = mounted && profile?.full_name ? profile.full_name : t('guest');
+  const roleLabel = isStrictAdmin ? t('admin') : t('player');
   const showAdminBadge = isStrictAdmin;
   const avatarChar = mounted && profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : 'U';
   const avatarUrl = mounted ? profile?.avatar_url : null;
@@ -111,7 +113,7 @@ export function Navbar() {
                 aria-expanded={menuOpen}
                 aria-controls="user-menu"
                 className="flex items-center gap-2.5 hover:opacity-85 transition-opacity group cursor-pointer"
-                title="Menu utente"
+                title={t('userMenu')}
               >
                 <div className="relative">
                   {avatarUrl ? (
@@ -128,7 +130,7 @@ export function Navbar() {
                   {showAdminBadge && (
                     <span
                       className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-black text-on-accent ring-2 ring-app"
-                      title="Amministratore"
+                      title={t('administrator')}
                     >
                       ★
                     </span>
@@ -161,7 +163,7 @@ export function Navbar() {
                     onClick={() => setMenuOpen(false)}
                     className={menu.item}
                   >
-                    <User className="h-4 w-4 text-accent-text" /> Profilo
+                    <User className="h-4 w-4 text-accent-text" /> {t('profile')}
                   </Link>
                   <Link
                     href="/settings"
@@ -169,7 +171,7 @@ export function Navbar() {
                     onClick={() => setMenuOpen(false)}
                     className={menu.item}
                   >
-                    <Settings className="h-4 w-4 text-accent-text" /> Impostazioni
+                    <Settings className="h-4 w-4 text-accent-text" /> {t('settings')}
                   </Link>
                   <div className={menu.divider} />
                   <button
@@ -181,7 +183,7 @@ export function Navbar() {
                     }}
                     className={menu.danger}
                   >
-                    <LogOut className="h-4 w-4" /> Logout
+                    <LogOut className="h-4 w-4" /> {t('logout')}
                   </button>
                 </div>
               )}
@@ -195,7 +197,7 @@ export function Navbar() {
       <div className="relative z-10 hidden md:block bg-app/90 backdrop-blur-md">
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 py-3">
         {/* Desktop Navigation */}
-          <nav className="flex items-center gap-1 bg-card/80 p-1.5 rounded-xl border border-line/80">
+          <nav aria-label={t('mainNav')} className="flex items-center gap-1 bg-card/80 p-1.5 rounded-xl border border-line/80">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href.split('?')[0]);
@@ -222,7 +224,7 @@ export function Navbar() {
       </div>
 
       {/* Mobile Bottom Navigation Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-app/95 backdrop-blur-lg border-t border-line/80 pt-1.5 pb-safe">
+      <div role="navigation" aria-label={t('mainNav')} className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-app/95 backdrop-blur-lg border-t border-line/80 pt-1.5 pb-safe">
         <div className="flex items-center justify-around">
           {navItems.map((item) => {
             const Icon = item.icon;

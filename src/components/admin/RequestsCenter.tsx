@@ -3,6 +3,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { collection, doc, limit, onSnapshot, orderBy, query, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { useLocaleSetting } from '@/i18n/I18nProvider';
 import { db, auth as firebaseAuth, isFirebaseConfigured } from '@/lib/firebase/config';
 import { subscribeProfiles } from '@/lib/firebase/firestoreService';
 import { useAuth } from '@/lib/context/AuthContext';
@@ -160,15 +162,15 @@ function StatReviewCard({ player, categories, reviewerId }: { player: Profile; c
   );
 }
 
-/** "5 min fa", "ieri alle 21:40", "12 nov" */
-function ago(iso: string): string {
+/** "5 min fa" / "5 min ago", "3 h fa", "12 nov" — testi dal dizionario `bell` */
+function ago(iso: string, tb: (key: string, values?: Record<string, number>) => string, locale: string): string {
   const t = Date.parse(iso);
   if (!t) return '';
   const min = Math.round((Date.now() - t) / 60000);
-  if (min < 1) return 'adesso';
-  if (min < 60) return `${min} min fa`;
-  if (min < 24 * 60) return `${Math.round(min / 60)} h fa`;
-  return new Date(t).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }).replace(/\./g, '');
+  if (min < 1) return tb('now');
+  if (min < 60) return tb('minutesAgo', { n: min });
+  if (min < 24 * 60) return tb('hoursAgo', { n: Math.round(min / 60) });
+  return new Date(t).toLocaleDateString(locale === 'en' ? 'en-GB' : 'it-IT', { day: 'numeric', month: 'short' }).replace(/\./g, '');
 }
 
 /**
@@ -180,6 +182,8 @@ function ago(iso: string): string {
 export function RequestsBell() {
   const { profile, isAdmin } = useAuth();
   const router = useRouter();
+  const tb = useTranslations('bell');
+  const { locale } = useLocaleSetting();
   const admin = Boolean(isAdmin || profile?.role === 'admin');
   const profileId = profile?.id;
   // Notifiche personali (ultime 30) e quelle non lette al momento dell'apertura (restano evidenziate)
@@ -469,8 +473,8 @@ export function RequestsBell() {
         type="button"
         onClick={() => setOpen(true)}
         className="relative p-2 rounded-full text-secondary hover:text-primary hover:bg-card-hover transition-colors"
-        aria-label={count ? `Notifiche: ${count} nuove o da gestire` : 'Notifiche'}
-        title="Notifiche"
+        aria-label={count ? tb('labelWithCount', { count }) : tb('label')}
+        title={tb('label')}
       >
         <Bell className="h-5 w-5" />
         {admin && denied && count === 0 && (
@@ -486,18 +490,20 @@ export function RequestsBell() {
       {open && (
         <Sheet
           onClose={() => setOpen(false)}
-          title="Notifiche"
+          title={tb('title')}
           subtitle={
             todo
-              ? `${todo} da gestire${unreadCount ? ` · ${unreadCount} nuove` : ''}`
+              ? unreadCount
+                ? tb('toHandleAndNew', { todo, count: unreadCount })
+                : tb('toHandle', { count: todo })
               : unreadCount
-              ? `${unreadCount} ${unreadCount === 1 ? 'nuova' : 'nuove'}`
-              : 'Tutto in ordine'
+              ? tb('newCount', { count: unreadCount })
+              : tb('allGood')
           }
           size="lg"
           locked={busy !== null}
         >
-          {admin && (todo > 0 || denied) && <h3 className="px-1 -mb-3 text-xs font-semibold text-muted">Da gestire</h3>}
+          {admin && (todo > 0 || denied) && <h3 className="px-1 -mb-3 text-xs font-semibold text-muted">{tb('sectionToHandle')}</h3>}
           {admin && reviews.length > 0 && (
             <section className="space-y-2" aria-label="Valutazioni da rivedere">
               <h3 className="px-1 text-xs font-semibold text-muted">Valutazioni da rivedere · dopo la prima partita</h3>
@@ -547,18 +553,18 @@ export function RequestsBell() {
 
           {/* Notifiche personali: le stesse che arrivano sul telefono */}
           <section className="space-y-2" aria-label="Notifiche">
-            {admin && todo > 0 && <h3 className="px-1 text-xs font-semibold text-muted">Notifiche</h3>}
+            {admin && todo > 0 && <h3 className="px-1 text-xs font-semibold text-muted">{tb('sectionNotifications')}</h3>}
             {inbox.length === 0 ? (
               todo > 0 ? (
-                <p className="px-1 text-sm text-muted">Nessuna notifica.</p>
+                <p className="px-1 text-sm text-muted">{tb('none')}</p>
               ) : (
                 <div className="py-10 text-center space-y-2">
                   <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-card-hover text-accent-text">
                     <Check className="h-6 w-6" />
                   </span>
-                  <p className="text-sm font-semibold text-primary">Nessuna notifica</p>
+                  <p className="text-sm font-semibold text-primary">{tb('emptyTitle')}</p>
                   <p className="text-sm text-secondary">
-                    Qui trovi gli avvisi del club: partita confermata, squadre, sostituzioni, iscrizioni aperte, voto MVP.
+                    {tb('emptyText')}
                   </p>
                 </div>
               )
@@ -578,12 +584,12 @@ export function RequestsBell() {
                       >
                         <span
                           className={`mt-1.5 h-2 w-2 flex-shrink-0 rounded-full ${isNew ? 'bg-accent/90' : 'bg-transparent'}`}
-                          aria-label={isNew ? 'Nuova' : undefined}
+                          aria-label={isNew ? tb('new') : undefined}
                         />
                         <span className="flex-1 min-w-0">
                           <span className="flex items-baseline justify-between gap-3">
                             <span className={`text-sm truncate ${isNew ? 'font-semibold text-primary' : 'font-medium text-primary'}`}>{n.title}</span>
-                            <span className="flex-shrink-0 text-[11px] text-muted tabular-nums">{ago(n.created_at)}</span>
+                            <span className="flex-shrink-0 text-[11px] text-muted tabular-nums">{ago(n.created_at, tb, locale)}</span>
                           </span>
                           <span className="block text-sm text-secondary leading-snug mt-0.5">{n.body}</span>
                         </span>
