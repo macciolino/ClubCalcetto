@@ -4,122 +4,75 @@ import { MatchPaymentRecord } from '@/types/database';
 import { db, isFirebaseConfigured } from '@/lib/firebase/config';
 import { doc, setDoc, onSnapshot, Unsubscribe } from 'firebase/firestore';
 
+/**
+ * Cassa of a match (collection match_payments, doc id = date): `payments[playerId] = true` when paid.
+ *
+ * Safety rules (the payments of past matches are real data):
+ *  - READING never writes (a device opening the Cassa for the first time must not reset anything);
+ *  - every change writes ONLY the players touched (merge on `payments.<id>`), never the whole list,
+ *    so two admins on two phones, or an old copy on a phone, cannot overwrite each other;
+ *  - nothing is ever removed: a player who leaves the teams keeps his paid / unpaid status in the document.
+ */
+
 const PAYMENTS_KEY_PREFIX = 'clubcalcetto_payments_';
 
-export function getMatchPayments(
-  date: string,
-  starterIds: string[] = [],
-  totalCost: number = 80
-): MatchPaymentRecord {
-  const costPerPlayer = Number((totalCost / 10).toFixed(2));
-  const fallbackRecord: MatchPaymentRecord = {
-    date,
-    total_cost: totalCost,
-    cost_per_player: costPerPlayer,
-    payments: {},
-    updated_at: new Date().toISOString(),
-  };
+const emptyRecord = (date: string): MatchPaymentRecord => ({
+  date,
+  total_cost: 0,
+  cost_per_player: 0,
+  payments: {},
+  updated_at: '',
+});
 
-  if (typeof window === 'undefined') return fallbackRecord;
-
+/** Last known record on this device (cache of Firestore), or an empty one. Never writes. */
+export function getCachedMatchPayments(date: string): MatchPaymentRecord {
+  if (typeof window === 'undefined') return emptyRecord(date);
   try {
     const raw = localStorage.getItem(`${PAYMENTS_KEY_PREFIX}${date}`);
     if (raw) {
-      const parsed: MatchPaymentRecord = JSON.parse(raw);
-      return {
-        ...parsed,
-        total_cost: totalCost,
-        cost_per_player: costPerPlayer,
-      };
+      const parsed = JSON.parse(raw) as MatchPaymentRecord;
+      return { ...emptyRecord(date), ...parsed, payments: parsed.payments || {} };
     }
-  } catch (err) {
-    console.warn('Errore lettura pagamenti cassa:', err);
+  } catch {
+    /* cache illeggibile: si aspetta Firestore */
   }
-
-  // Pre-popola per i titolari esistenti (di default tutti da saldare)
-  const initialPayments: Record<string, boolean> = {};
-  starterIds.forEach((id) => {
-    initialPayments[id] = false;
-  });
-  fallbackRecord.payments = initialPayments;
-
-  saveMatchPayments(fallbackRecord);
-  return fallbackRecord;
+  return emptyRecord(date);
 }
 
-export function saveMatchPayments(record: MatchPaymentRecord) {
-  if (typeof window === 'undefined') return;
+function cache(record: MatchPaymentRecord) {
   try {
     localStorage.setItem(`${PAYMENTS_KEY_PREFIX}${record.date}`, JSON.stringify(record));
-    window.dispatchEvent(
-      new CustomEvent('clubcalcetto_payments_changed', { detail: record })
-    );
-
-    if (isFirebaseConfigured) {
-      setDoc(doc(db, 'match_payments', record.date), record, { merge: true }).catch((err) => {
-        console.warn('[Firestore] Error saving payments:', err);
-      });
-    }
-  } catch (err) {
-    console.warn('Errore salvataggio pagamenti cassa:', err);
+  } catch {
+    /* memoria del browser piena o bloccata (es. navigazione privata): basta Firestore */
   }
 }
 
-export function togglePlayerPayment(
-  date: string,
-  playerId: string,
-  starterIds: string[] = [],
-  totalCost: number = 80
-): MatchPaymentRecord {
-  const current = getMatchPayments(date, starterIds, totalCost);
-  const currentStatus = Boolean(current.payments[playerId]);
-  const updatedPayments = {
-    ...current.payments,
-    [playerId]: !currentStatus,
-  };
-
-  const updatedRecord: MatchPaymentRecord = {
-    ...current,
-    total_cost: totalCost,
-    cost_per_player: Number((totalCost / 10).toFixed(2)),
-    payments: updatedPayments,
-    updated_at: new Date().toISOString(),
-  };
-
-  saveMatchPayments(updatedRecord);
-  return updatedRecord;
-}
-
-export function setAllPayments(
-  date: string,
-  starterIds: string[],
+/**
+ * Marks some players as paid / unpaid. Writes only their entries (plus cost info for the record).
+ * Returns the record as it will be (shown at once, then confirmed by the realtime listener).
+ */
+export function setPlayersPaid(
+  current: MatchPaymentRecord,
+  playerIds: string[],
   paid: boolean,
-  totalCost: number = 80
+  cost: { totalCost: number; players: number }
 ): MatchPaymentRecord {
-  const current = getMatchPayments(date, starterIds, totalCost);
-  const newPayments: Record<string, boolean> = {};
-  starterIds.forEach((id) => {
-    newPayments[id] = paid;
-  });
-
-  const updatedRecord: MatchPaymentRecord = {
-    ...current,
-    total_cost: totalCost,
-    cost_per_player: Number((totalCost / 10).toFixed(2)),
-    payments: newPayments,
-    updated_at: new Date().toISOString(),
+  const changes: Record<string, boolean> = {};
+  playerIds.forEach((id) => (changes[id] = paid));
+  const now = new Date().toISOString();
+  const costInfo = {
+    total_cost: cost.totalCost,
+    cost_per_player: Number((cost.totalCost / Math.max(1, cost.players)).toFixed(2)),
   };
-
-  saveMatchPayments(updatedRecord);
-  return updatedRecord;
-}
-
-export function resetMatchPayments(
-  date: string,
-  starterIds: string[] = [],
-  totalCost: number = 80
-): MatchPaymentRecord {
-  return setAllPayments(date, starterIds, false, totalCost);
+  const next: MatchPaymentRecord = { ...current, ...costInfo, payments: { ...current.payments, ...changes }, updated_at: now };
+  if (typeof window !== 'undefined') cache(next);
+  if (isFirebaseConfigured && playerIds.length > 0) {
+    // merge su una mappa annidata: cambiano SOLO le chiavi scritte, le altre restano come sono
+    setDoc(doc(db, 'match_payments', current.date), { date: current.date, ...costInfo, payments: changes, updated_at: now }, { merge: true }).catch(
+      (err) => console.warn('[Firestore] Error saving payments:', err)
+    );
+  }
+  return next;
 }
 
 export function subscribeMatchPayments(
@@ -129,30 +82,20 @@ export function subscribeMatchPayments(
   if (!isFirebaseConfigured || typeof window === 'undefined') {
     return () => {};
   }
-
   try {
-    const docRef = doc(db, 'match_payments', date);
     return onSnapshot(
-      docRef,
+      doc(db, 'match_payments', date),
       (snap) => {
         if (snap.exists()) {
-          const data = snap.data() as MatchPaymentRecord;
+          const data = { ...emptyRecord(date), ...(snap.data() as MatchPaymentRecord) };
+          data.payments = data.payments || {};
           callback(data);
-          // Aggiorna cache locale
-          if (typeof window !== 'undefined') {
-            try {
-              localStorage.setItem(`${PAYMENTS_KEY_PREFIX}${date}`, JSON.stringify(data));
-            } catch {
-              /* memoria del browser piena o bloccata (es. navigazione privata): basta Firestore */
-            }
-          }
+          cache(data);
         } else {
           callback(null);
         }
       },
-      (err) => {
-        console.warn('[Firestore] subscribeMatchPayments warning:', err);
-      }
+      (err) => console.warn('[Firestore] subscribeMatchPayments warning:', err)
     );
   } catch (err) {
     console.warn('[Firestore] subscribeMatchPayments exception:', err);

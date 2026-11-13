@@ -34,7 +34,7 @@ import {
   subscribePresencesRange,
   subscribeTeamDatesSince,
 } from '@/lib/firebase/firestoreService';
-import { getMatchPayments, resetMatchPayments, setAllPayments, subscribeMatchPayments, togglePlayerPayment } from '@/lib/services/paymentService';
+import { getCachedMatchPayments, setPlayersPaid, subscribeMatchPayments } from '@/lib/services/paymentService';
 import { AppSettings, GeneratedTeamRecord, Match, MatchPaymentRecord, Presence, Profile, SportField } from '@/types/database';
 import { btn, btnInline, textLink } from '@/components/ui/buttons';
 import { ArrowRight, Check, Clock, Coins, Loader2, RotateCcw, Send, Settings2, Share2, Star, Trophy } from 'lucide-react';
@@ -214,29 +214,39 @@ export function TabOverviewMatch({
     return null;
   })();
 
-  // ---------- cassa: chi paga = chi gioca (squadre, altrimenti i titolari) ----------
-  const payers: { id: string; name: string }[] = teams
-    ? [...teams.white, ...teams.black].map((p) => ({ id: p.id, name: p.name }))
-    : starterProfiles.map((p) => ({ id: p.id, name: p.full_name }));
+  // ---------- cassa: chi paga ----------
+  // 1. Partita archiviata → i giocatori delle squadre archiviate (elenco congelato, come lo storico).
+  // 2. Squadre salvate in Squadre → i giocatori assegnati alle squadre (prima della partita con le sostituzioni;
+  //    dopo la data così come sono state salvate), anche se una squadra è incompleta.
+  // 3. Nessuna squadra → i titolari iscritti a quel giorno (quanti ne chiede il formato).
+  const cash = (() => {
+    const arch = archived.get(date);
+    if (arch?.team_white?.length || arch?.team_black?.length) {
+      return { source: 'archive' as const, list: [...(arch.team_white || []), ...(arch.team_black || [])] };
+    }
+    if (teamRecord?.team_white?.length || teamRecord?.team_black?.length) {
+      if (date < today) {
+        return { source: 'teams' as const, list: [...(teamRecord.team_white || []), ...(teamRecord.team_black || [])].map(toTeamPlayer) };
+      }
+      const r = reconcileTeams(teamRecord, starterProfiles.map(toTeamPlayer));
+      return { source: 'teams' as const, list: [...r.white, ...r.black] };
+    }
+    return { source: 'starters' as const, list: starterProfiles.map(toTeamPlayer) };
+  })();
+  const payers: { id: string; name: string }[] = Array.from(new Map(cash.list.map((p) => [p.id, { id: p.id, name: p.name }])).values());
   const payerIds = payers.map((p) => p.id);
-  const headCount = teams ? payers.length : info.players;
+  // Quota: con le squadre fatte si divide per chi gioca davvero, altrimenti per i posti del formato
+  const headCount = cash.source === 'starters' ? info.players : Math.max(1, payers.length);
   const quota = totalCost / Math.max(1, headCount);
-  const [payments, setPayments] = useState<MatchPaymentRecord>(() => getMatchPayments(date, payerIds, totalCost));
+  // Stato pagamenti: in tempo reale da Firestore (la copia locale serve solo per il primo istante; leggerla non scrive mai)
+  const [payments, setPayments] = useState<MatchPaymentRecord>(() => getCachedMatchPayments(date));
   useEffect(() => {
-    setPayments(getMatchPayments(date, payerIds, totalCost));
-    const unsub = subscribeMatchPayments(date, (remote) => remote && setPayments(remote));
-    const onChange = (e: Event) => {
-      const rec = (e as CustomEvent<MatchPaymentRecord>).detail;
-      if (rec?.date === date) setPayments(rec);
-    };
-    window.addEventListener('clubcalcetto_payments_changed', onChange);
-    return () => {
-      unsub();
-      window.removeEventListener('clubcalcetto_payments_changed', onChange);
-    };
-    // Basta il numero di chi paga: l'elenco è un array nuovo a ogni render
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [date, payerIds.length, totalCost]);
+    setPayments(getCachedMatchPayments(date));
+    const unsub = subscribeMatchPayments(date, (remote) => setPayments(remote || getCachedMatchPayments(date)));
+    return () => unsub();
+  }, [date]);
+  const markPaid = (ids: string[], paid: boolean) =>
+    setPayments(setPlayersPaid(payments.date === date ? payments : getCachedMatchPayments(date), ids, paid, { totalCost, players: headCount }));
   const paidCount = payers.filter((p) => payments.payments[p.id] === true).length;
   const unpaid = payers.filter((p) => !payments.payments[p.id]);
   const collected = paidCount * quota;
@@ -517,6 +527,13 @@ export function TabOverviewMatch({
         <p className="text-xs text-slate-400 tabular-nums">
           {paidCount} su {payers.length} hanno pagato{unpaid.length ? ` · mancano ${unpaid.length}` : payers.length ? ' · tutto saldato' : ''}
         </p>
+        <p className="text-xs text-slate-500">
+          {cash.source === 'archive'
+            ? 'Giocatori della partita archiviata: elenco bloccato.'
+            : cash.source === 'teams'
+            ? 'Giocatori delle squadre salvate in Squadre.'
+            : 'Titolari iscritti: quando salvi le squadre l’elenco diventa quello delle squadre.'}
+        </p>
       </div>
 
       {payers.length === 0 ? (
@@ -528,7 +545,7 @@ export function TabOverviewMatch({
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => setPayments(setAllPayments(date, payerIds, true, totalCost))}
+              onClick={() => markPaid(unpaid.map((p) => p.id), true)}
               disabled={unpaid.length === 0}
               className={`${btnInline.primary} flex-1 sm:flex-none`}
             >
@@ -541,7 +558,7 @@ export function TabOverviewMatch({
               type="button"
               onClick={async () => {
                 if (await askConfirm('Azzerare la cassa di questa partita? Tutti tornano "da saldare".')) {
-                  setPayments(resetMatchPayments(date, payerIds, totalCost));
+                  markPaid(payerIds, false);
                 }
               }}
               aria-label="Azzera la cassa"
@@ -579,7 +596,7 @@ export function TabOverviewMatch({
                 <li key={p.id}>
                   <button
                     type="button"
-                    onClick={() => setPayments(togglePlayerPayment(date, p.id, payerIds, totalCost))}
+                    onClick={() => markPaid([p.id], !paid)}
                     aria-pressed={paid}
                     className="w-full flex items-center gap-3 px-3.5 py-2.5 text-left hover:bg-slate-800/60 transition-colors"
                   >

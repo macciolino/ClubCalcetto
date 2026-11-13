@@ -140,3 +140,10 @@ Production data is REAL: never rewrite stats, no paid services, never print secr
   tap = go to the notification's page. Admins also see "Da gestire" on top.
 - Cleanup: the cron (`/api/cron/mvp-vote`) deletes notifications older than 60 days once a day (~4:00 Rome; `?clean=1` forces it).
 - Gemini tactical preview removed (route, lib, dependency) on 2026-11-13.
+
+## Cassa (match_payments/{date}) — `lib/services/paymentService.ts`
+- `payments[playerId] = true|false`. Reading NEVER writes; each change writes only the touched players
+  (`setDoc(..., { payments: { id: bool } }, { merge: true })`); keys are never removed (a player who leaves the teams keeps his status).
+- Who is listed (TabOverviewMatch): archived match → its archived teams (frozen); teams saved in Squadre → their players
+  (before the date with substitutions, after it as saved); otherwise the starters of the day. Quota = cost / players in the
+  teams, or / the format's players when the list is the starters.

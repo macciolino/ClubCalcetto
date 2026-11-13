@@ -271,6 +271,30 @@ await expectDenied('admin C writes an admin request', () => setDoc(doc(adminC.db
 await expectDenied('player B reads an invite', () => getDoc(doc(playerB.db, 'invites', 'tok')));
 await expectDenied('admin C writes an invite', () => setDoc(doc(adminC.db, 'invites', 'tok'), { guest_id: 'g' }));
 
+console.log('\nCassa: ogni tocco scrive solo il giocatore toccato (merge sulla mappa payments)');
+{
+  const ref = doc(adminC.db, 'match_payments', '2026-01-01');
+  const pay = (changes) => setDoc(ref, { date: '2026-01-01', payments: changes }, { merge: true });
+  await pay({ a: true });
+  await pay({ b: true }); // un secondo admin segna un altro giocatore
+  let p = (await getDoc(ref)).data().payments;
+  const ok1 = p.a === true && p.b === true;
+  await pay({ a: false }); // tolgo il pagamento ad A
+  p = (await getDoc(ref)).data().payments;
+  const ok2 = p.a === false && p.b === true;
+  await pay({ c: true, d: true }); // "Tutti pagati" solo sui mancanti
+  p = (await getDoc(ref)).data().payments;
+  const ok3 = p.a === false && p.b === true && p.c === true && p.d === true;
+  for (const [label, ok] of [
+    ['segnare B non tocca A', ok1],
+    ['togliere A non tocca B', ok2],
+    ['"Tutti pagati" sui mancanti non tocca gli altri', ok3],
+  ]) {
+    if (ok) { passed++; console.log(`  ✔ ${label}`); } else { failed++; console.log(`  ✘ ${label}`, JSON.stringify(p)); }
+  }
+  await expectDenied('player B writes the cassa', () => setDoc(doc(playerB.db, 'match_payments', '2026-01-01'), { payments: { b: false } }, { merge: true }));
+}
+
 console.log('\nImpostor (email/password account using the super admin address, NOT verified)');
 await expectDenied('writes settings', () => setDoc(doc(impostor.db, 'settings', 'official_match'), { date: 'x' }));
 await expectDenied('edits p-1', () => setDoc(doc(impostor.db, 'profiles', 'p-1'), { full_name: 'x' }, { merge: true }));
