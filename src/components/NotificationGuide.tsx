@@ -72,14 +72,14 @@ export function NotificationGuide() {
   });
 
   return (
-    <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4" aria-labelledby="notif-guide-title">
-      <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-        <Bell className="h-5 w-5 text-emerald-400" />
-        <h2 id="notif-guide-title" className="text-base font-bold text-white">
+    <section className="bg-card border border-line rounded-2xl p-5 space-y-4" aria-labelledby="notif-guide-title">
+      <div className="flex items-center gap-2 border-b border-line pb-3">
+        <Bell className="h-5 w-5 text-accent-text" />
+        <h2 id="notif-guide-title" className="text-base font-bold text-primary">
           Notifiche
         </h2>
       </div>
-      <div className="text-xs text-slate-400 space-y-1">
+      <div className="text-xs text-secondary space-y-1">
         <p>Ti avvisiamo quando:</p>
         <ul className="list-disc pl-5 space-y-0.5">
           <li>si aprono le iscrizioni della settimana prossima;</li>
@@ -94,12 +94,12 @@ export function NotificationGuide() {
       {status && (
         <div
           className={`rounded-2xl border p-3 space-y-2 ${
-            status === 'on' ? 'border-emerald-500/40 bg-emerald-500/10' : 'border-slate-700 bg-slate-950'
+            status === 'on' ? 'border-accent/40 bg-accent/10' : 'border-line-strong bg-app'
           }`}
         >
           <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-bold text-white flex items-center gap-2">
-              {status === 'on' ? <Bell className="h-4 w-4 text-emerald-400" /> : <BellOff className="h-4 w-4 text-slate-400" />}
+            <p className="text-sm font-bold text-primary flex items-center gap-2">
+              {status === 'on' ? <Bell className="h-4 w-4 text-accent-text" /> : <BellOff className="h-4 w-4 text-secondary" />}
               Notifiche su questo dispositivo
             </p>
             {(status === 'on' || status === 'off') && (
@@ -111,11 +111,11 @@ export function NotificationGuide() {
                 onClick={status === 'on' ? handleDisable : handleEnable}
                 disabled={busy || !profile}
                 className={`relative flex-shrink-0 h-8 w-14 rounded-full transition-colors disabled:opacity-60 ${
-                  status === 'on' ? 'bg-emerald-500' : 'bg-slate-700'
+                  status === 'on' ? 'bg-accent' : 'bg-line-strong'
                 }`}
               >
                 {busy ? (
-                  <Loader2 className="absolute inset-0 m-auto h-4 w-4 animate-spin text-white" />
+                  <Loader2 className="absolute inset-0 m-auto h-4 w-4 animate-spin text-primary" />
                 ) : (
                   <span
                     className={`absolute top-1 left-1 h-6 w-6 rounded-full bg-white shadow transition-transform ${
@@ -126,12 +126,12 @@ export function NotificationGuide() {
               </button>
             )}
           </div>
-          <p className="text-xs text-slate-300">{STATUS_TEXT[status]}</p>
+          <p className="text-xs text-secondary">{STATUS_TEXT[status]}</p>
         </div>
       )}
 
-      <p className="text-xs font-bold text-slate-300 pt-1">Come attivarle sul telefono</p>
-      <div className="flex items-center gap-1 bg-slate-950 border border-slate-800 p-1 rounded-xl text-sm">
+      <p className="text-xs font-bold text-secondary pt-1">Come attivarle sul telefono</p>
+      <div className="flex items-center gap-1 bg-app border border-line p-1 rounded-xl text-sm">
         {(['android', 'ios'] as Platform[]).map((p) => (
           <button
             key={p}
@@ -139,7 +139,7 @@ export function NotificationGuide() {
             onClick={() => setPlatform(p)}
             aria-pressed={platform === p}
             className={`flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg font-bold transition-all ${
-              platform === p ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:text-white'
+              platform === p ? 'bg-accent text-on-accent' : 'text-secondary hover:text-primary'
             }`}
           >
             <Smartphone className="h-4 w-4" /> {p === 'android' ? 'Android' : 'iPhone'}
@@ -149,8 +149,8 @@ export function NotificationGuide() {
 
       <ol className="space-y-2.5">
         {STEPS[platform].map((step, i) => (
-          <li key={i} className="flex gap-3 text-sm text-slate-200">
-            <span className="flex-shrink-0 h-6 w-6 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center justify-center">
+          <li key={i} className="flex gap-3 text-sm text-primary">
+            <span className="flex-shrink-0 h-6 w-6 rounded-full bg-accent/15 border border-accent/40 text-accent-text text-xs font-bold flex items-center justify-center">
               {i + 1}
             </span>
             <span className="pt-0.5">{step}</span>

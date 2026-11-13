@@ -39,8 +39,12 @@ description: ClubCalcetto UI conventions - theme, shared components (tables, dro
   filled red/amber stays white/dark on purpose.
 - Converted (Block 1, 2026-11-13): layout (html/body bg + `color-scheme` per theme, themeColor per system scheme), Navbar
   (top bar, desktop tabs, bottom nav, user menu), `ui/Sheet`, `ui/Feedback` (toasts + confirm), `ui/buttons` (btn, menu,
-  textLink, presenceBtn), `settings/ThemeSetting`. NOT yet: page contents (Block 2: settings + Partita della settimana;
-  Block 3: players, teams, attendance, history, home, profile). Don't push a light theme to users before Block 3.
+  textLink, presenceBtn), `settings/ThemeSetting`. Block 2: `/settings`, all `components/admin/*` (Partita della settimana,
+  Cassa, campi, regole, parametri, notifiche club, accessi, campanella), AccountSettings, DeleteAccountSection, NotificationGuide,
+  MatchFormatPicker, MatchResultFields, CollapsibleCard, StatRatingFields. NOT yet (Block 3): players, teams, attendance, history,
+  home, profile and their components.
+- Theme exceptions: team ovals — Bianchi `bg-white ring-1 ring-line-strong`, Neri always `bg-slate-950`; white text on filled
+  red; amber/rose text → `text-warning` / `text-danger`; other hues `text-X-700 dark:text-X-300`. Don't push a light theme to users before Block 3.
 
 ## Current style (approved 2026-11-11, applied to every page)
 

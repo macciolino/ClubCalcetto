@@ -107,7 +107,7 @@ export function NotificationSettingsCard({ defaultOpen = false }: { defaultOpen?
   };
 
   return (
-    <div className="bg-slate-900 p-4 sm:p-5 rounded-2xl space-y-4">
+    <div className="bg-card p-4 sm:p-5 rounded-2xl space-y-4">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -115,20 +115,20 @@ export function NotificationSettingsCard({ defaultOpen = false }: { defaultOpen?
         className="w-full flex items-center justify-between gap-3 text-left"
       >
         <div className="min-w-0">
-          <h3 className="text-sm font-bold text-white flex items-center gap-2">
-            <Bell className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+          <h3 className="text-sm font-bold text-primary flex items-center gap-2">
+            <Bell className="h-4 w-4 text-accent-text flex-shrink-0" />
             Notifiche ai giocatori
           </h3>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Destinatari: <strong className={mode === 'all' ? 'text-emerald-300' : mode === 'admins' ? 'text-violet-300' : 'text-slate-300'}>{MODES.find((m) => m.value === mode)?.label}</strong>
+          <p className="text-xs text-secondary mt-0.5">
+            Destinatari: <strong className={mode === 'all' ? 'text-accent-text' : mode === 'admins' ? 'text-violet-700 dark:text-violet-300' : 'text-secondary'}>{MODES.find((m) => m.value === mode)?.label}</strong>
           </p>
         </div>
-        <ChevronDown className={`h-5 w-5 text-slate-400 flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`h-5 w-5 text-secondary flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
-      <div className="space-y-4 border-t border-slate-800 pt-4">
-      <p className="text-xs text-slate-400">
+      <div className="space-y-4 border-t border-line pt-4">
+      <p className="text-xs text-secondary">
         Iscrizioni aperte (a tutti i registrati), sei entrato tra i titolari (a chi sale dalla lista d&apos;attesa), partita confermata, squadre cambiate, chi subentra a chi (ai 10
         della partita) e voto MVP aperto (a tutti i registrati). Agli admin arriva anche l&apos;avviso quando una partita è al completo (10, 14, 16 o 22 iscritti secondo il formato) e la proposta di passare a un formato più grande quando gli iscritti sono tanti. Gratuite (Firebase Cloud Messaging).
       </p>
@@ -143,11 +143,11 @@ export function NotificationSettingsCard({ defaultOpen = false }: { defaultOpen?
             onClick={() => handleMode(m.value)}
             disabled={saving}
             className={`w-full text-left p-3 rounded-2xl border transition-all ${
-              mode === m.value ? 'border-emerald-500 bg-emerald-500/10' : 'border-slate-800 bg-slate-950 hover:border-slate-700'
+              mode === m.value ? 'border-accent bg-accent/10' : 'border-line bg-app hover:border-line-strong'
             }`}
           >
-            <span className="block text-sm font-bold text-white">{m.label}</span>
-            <span className="block text-xs text-slate-400 mt-0.5">{m.help}</span>
+            <span className="block text-sm font-bold text-primary">{m.label}</span>
+            <span className="block text-xs text-secondary mt-0.5">{m.help}</span>
           </button>
         ))}
       </div>
@@ -156,21 +156,21 @@ export function NotificationSettingsCard({ defaultOpen = false }: { defaultOpen?
         type="button"
         onClick={handleTest}
         disabled={testing}
-        className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs border border-slate-700 disabled:opacity-60"
+        className="flex items-center gap-2 px-4 py-2.5 bg-card-hover hover:bg-line-strong text-primary font-bold rounded-xl text-xs border border-line-strong disabled:opacity-60"
       >
-        {testing ? <Loader2 className="h-4 w-4 animate-spin text-emerald-400" /> : <Send className="h-4 w-4 text-emerald-400" />}
+        {testing ? <Loader2 className="h-4 w-4 animate-spin text-accent-text" /> : <Send className="h-4 w-4 text-accent-text" />}
         Manda una notifica di prova a me
       </button>
-      {message && <p className="text-xs text-slate-300">{message}</p>}
+      {message && <p className="text-xs text-secondary">{message}</p>}
 
       {/* Telefoni degli admin */}
-      <div className="border-t border-slate-800 pt-4 space-y-2">
+      <div className="border-t border-line pt-4 space-y-2">
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => loadDevices('admin_devices')}
             disabled={loadingDevices}
-            className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs border border-slate-700 disabled:opacity-60"
+            className="px-4 py-2.5 bg-card-hover hover:bg-line-strong text-primary font-bold rounded-xl text-xs border border-line-strong disabled:opacity-60"
           >
             {loadingDevices ? 'Controllo…' : 'Controlla i telefoni degli admin'}
           </button>
@@ -178,7 +178,7 @@ export function NotificationSettingsCard({ defaultOpen = false }: { defaultOpen?
             type="button"
             onClick={() => loadDevices('test_admins')}
             disabled={loadingDevices}
-            className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs border border-slate-700 disabled:opacity-60"
+            className="px-4 py-2.5 bg-card-hover hover:bg-line-strong text-primary font-bold rounded-xl text-xs border border-line-strong disabled:opacity-60"
           >
             Manda una prova a tutti gli admin
           </button>
@@ -186,19 +186,19 @@ export function NotificationSettingsCard({ defaultOpen = false }: { defaultOpen?
         {devices && (
           <ul className="space-y-1.5">
             {devices.map((d) => (
-              <li key={d.name} className="flex items-start justify-between gap-3 p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs">
-                <span className="font-bold text-white truncate">{d.name}</span>
+              <li key={d.name} className="flex items-start justify-between gap-3 p-2.5 rounded-xl bg-app border border-line text-xs">
+                <span className="font-bold text-primary truncate">{d.name}</span>
                 {d.count > 0 ? (
-                  <span className="text-right text-emerald-300">
+                  <span className="text-right text-accent-text">
                     {d.count} {d.count === 1 ? 'telefono' : 'dispositivi'} ({d.platforms.map(platformLabel).join(', ')})
                     {d.last && (
-                      <span className="block text-slate-500">
+                      <span className="block text-muted">
                         aggiornato {new Date(d.last).toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                       </span>
                     )}
                   </span>
                 ) : (
-                  <span className="text-right text-amber-300">nessun telefono: deve attivare le notifiche dal Profilo</span>
+                  <span className="text-right text-warning">nessun telefono: deve attivare le notifiche dal Profilo</span>
                 )}
               </li>
             ))}

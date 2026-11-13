@@ -2,7 +2,7 @@ import React from 'react';
 
 /** Grey pulsing shape shown where content is about to appear (instead of a spinner). */
 export function Skeleton({ className = '' }: { className?: string }) {
-  return <div className={`animate-pulse rounded-xl bg-slate-800/70 ${className}`} aria-hidden="true" />;
+  return <div className={`animate-pulse rounded-xl bg-card-hover/70 ${className}`} aria-hidden="true" />;
 }
 
 /** Generic page placeholder: title, subtitle and two cards. */

@@ -46,11 +46,11 @@ export function SettingsBlock({
   children: React.ReactNode;
 }) {
   return (
-    <section className="bg-slate-900 rounded-2xl p-4 sm:p-5 space-y-4">
+    <section className="bg-card rounded-2xl p-4 sm:p-5 space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="text-base font-semibold text-white">{title}</h3>
-          {help && <p className="text-sm text-slate-400 mt-0.5">{help}</p>}
+          <h3 className="text-base font-semibold text-primary">{title}</h3>
+          {help && <p className="text-sm text-secondary mt-0.5">{help}</p>}
         </div>
         {action}
       </div>
@@ -113,7 +113,7 @@ export function TabClubConfigFields({
   };
 
   const inputCls =
-    'w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500';
+    'w-full px-3.5 py-2.5 bg-app border border-line rounded-xl text-primary text-sm focus:outline-none focus:border-accent';
 
   return (
     <div className="space-y-4">
@@ -136,31 +136,31 @@ export function TabClubConfigFields({
             }
           >
             {fields.length === 0 ? (
-              <p className="text-sm text-slate-500">Nessun campo: aggiungine uno.</p>
+              <p className="text-sm text-muted">Nessun campo: aggiungine uno.</p>
             ) : (
-              <ul className="divide-y divide-slate-800 rounded-xl bg-slate-950/50">
+              <ul className="divide-y divide-line rounded-xl bg-app/50">
                 {fields.map((field) => {
                   const isDefault = defaultFieldId === field.id;
                   return (
                     <li key={field.id} className="px-3.5 py-3 flex items-start gap-3">
                       <div className="flex-1 min-w-0 space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-sm font-semibold text-white">{field.name}</span>
+                          <span className="text-sm font-semibold text-primary">{field.name}</span>
                           {isDefault && (
-                            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300">Predefinito</span>
+                            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-accent/15 text-accent-text">Predefinito</span>
                           )}
                         </div>
-                        <p className="text-sm text-slate-300 tabular-nums">
+                        <p className="text-sm text-secondary tabular-nums">
                           {field.cost ? (
                             <>
-                              5vs5 {euro(field.cost)} · <span className="text-slate-400">{euro(field.cost / 10)} a testa</span>
+                              5vs5 {euro(field.cost)} · <span className="text-secondary">{euro(field.cost / 10)} a testa</span>
                             </>
                           ) : (
-                            <span className="text-slate-400">5vs5: costo standard del club ({euro(standardCost)})</span>
+                            <span className="text-secondary">5vs5: costo standard del club ({euro(standardCost)})</span>
                           )}
                         </p>
                         {BIG.some((f) => Number(field.costs?.[f]) > 0) && (
-                          <p className="flex flex-wrap gap-x-3 text-xs text-slate-400 tabular-nums">
+                          <p className="flex flex-wrap gap-x-3 text-xs text-secondary tabular-nums">
                             {BIG.filter((f) => Number(field.costs?.[f]) > 0).map((f) => (
                               <span key={f}>
                                 {FORMAT_INFO[f].label} {euro(Number(field.costs![f]))}
@@ -168,20 +168,20 @@ export function TabClubConfigFields({
                             ))}
                           </p>
                         )}
-                        <p className="flex items-center gap-1.5 text-xs text-slate-400 min-w-0">
+                        <p className="flex items-center gap-1.5 text-xs text-secondary min-w-0">
                           <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
                           <span className="truncate">{field.address}</span>
                           {field.maps_url && (
-                            <a href={field.maps_url} target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300" title="Apri su Google Maps">
+                            <a href={field.maps_url} target="_blank" rel="noopener noreferrer" className="text-accent-text hover:text-accent-text" title="Apri su Google Maps">
                               <ExternalLink className="h-3 w-3" />
                             </a>
                           )}
                         </p>
                         {(field.phone || field.court_type) && (
-                          <p className="flex flex-wrap items-center gap-x-3 text-xs text-slate-500">
+                          <p className="flex flex-wrap items-center gap-x-3 text-xs text-muted">
                             {field.court_type && <span>{field.court_type}</span>}
                             {field.phone && (
-                              <a href={`tel:${field.phone.replace(/\s+/g, '')}`} className="flex items-center gap-1 hover:text-white">
+                              <a href={`tel:${field.phone.replace(/\s+/g, '')}`} className="flex items-center gap-1 hover:text-primary">
                                 <Phone className="h-3 w-3" /> {field.phone}
                               </a>
                             )}
@@ -193,7 +193,7 @@ export function TabClubConfigFields({
                           <button
                             type="button"
                             onClick={() => onSetDefaultFieldId(field.id)}
-                            className="p-2 rounded-lg text-slate-500 hover:text-emerald-300 hover:bg-slate-800"
+                            className="p-2 rounded-lg text-muted hover:text-accent-text hover:bg-card-hover"
                             title="Imposta come predefinito"
                             aria-label={`Imposta ${field.name} come predefinito`}
                           >
@@ -206,7 +206,7 @@ export function TabClubConfigFields({
                             setEditingField(field);
                             setIsFieldModalOpen(true);
                           }}
-                          className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800"
+                          className="p-2 rounded-lg text-muted hover:text-primary hover:bg-card-hover"
                           title="Modifica campo"
                           aria-label={`Modifica ${field.name}`}
                         >
@@ -217,7 +217,7 @@ export function TabClubConfigFields({
                           onClick={async () => {
                             if (await askConfirm(`Eliminare il campo "${field.name}"?`)) onDeleteField(field.id);
                           }}
-                          className="p-2 rounded-lg text-slate-500 hover:text-rose-300 hover:bg-slate-800"
+                          className="p-2 rounded-lg text-muted hover:text-danger hover:bg-card-hover"
                           title="Elimina campo"
                           aria-label={`Elimina ${field.name}`}
                         >
@@ -238,23 +238,23 @@ export function TabClubConfigFields({
             <form onSubmit={handleSaveDefaults} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">
-                  <span className="block text-xs font-medium text-slate-300 mb-1.5">Orario</span>
+                  <span className="block text-xs font-medium text-secondary mb-1.5">Orario</span>
                   <input type="time" value={timeInput} onChange={(e) => setTimeInput(e.target.value)} className={inputCls} />
                 </label>
                 <label className="block">
-                  <span className="block text-xs font-medium text-slate-300 mb-1.5">Costo standard (€)</span>
+                  <span className="block text-xs font-medium text-secondary mb-1.5">Costo standard (€)</span>
                   <NumberInput min={30} max={300} value={costInput} onValueChange={setCostInput} decimal className={`${inputCls} tabular-nums`} />
                 </label>
               </div>
               <div className="space-y-2">
-                <p className="text-xs font-medium text-slate-300">Costo standard degli altri formati (€)</p>
+                <p className="text-xs font-medium text-secondary">Costo standard degli altri formati (€)</p>
                 <div className="grid grid-cols-3 gap-2">
                   {BIG.map((f) => {
                     const v = Number(String(bigCosts[f] || '').replace(',', '.'));
                     const auto = (Number(costInput || 80) / 10) * FORMAT_INFO[f].players;
                     return (
-                      <label key={f} className="block rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 focus-within:border-emerald-500">
-                        <span className="block text-xs font-semibold text-white">{FORMAT_INFO[f].label}</span>
+                      <label key={f} className="block rounded-xl bg-app border border-line px-3 py-2 focus-within:border-accent">
+                        <span className="block text-xs font-semibold text-primary">{FORMAT_INFO[f].label}</span>
                         <input
                           type="text"
                           inputMode="decimal"
@@ -262,17 +262,17 @@ export function TabClubConfigFields({
                           placeholder={String(Math.round(auto * 100) / 100).replace('.', ',')}
                           onChange={(e) => setBigCosts((c) => ({ ...c, [f]: e.target.value.replace(/[^0-9.,]/g, '') }))}
                           aria-label={`Costo standard ${FORMAT_INFO[f].label}`}
-                          className="mt-0.5 w-full bg-transparent text-white tabular-nums focus:outline-none placeholder:text-slate-600"
+                          className="mt-0.5 w-full bg-transparent text-primary tabular-nums focus:outline-none placeholder:text-muted"
                         />
-                        <span className="block text-[11px] text-slate-500 tabular-nums">{euro((v > 0 ? v : auto) / FORMAT_INFO[f].players)} a testa</span>
+                        <span className="block text-[11px] text-muted tabular-nums">{euro((v > 0 ? v : auto) / FORMAT_INFO[f].players)} a testa</span>
                       </label>
                     );
                   })}
                 </div>
-                <p className="text-xs text-slate-500">Vuoto = stessa quota a testa del 5vs5.</p>
+                <p className="text-xs text-muted">Vuoto = stessa quota a testa del 5vs5.</p>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <span className="text-sm text-slate-400 tabular-nums">5vs5: {euro(Number(costInput || 80) / 10)} a testa</span>
+                <span className="text-sm text-secondary tabular-nums">5vs5: {euro(Number(costInput || 80) / 10)} a testa</span>
                 <button type="submit" className={btnInline.primary}>
                   <Check className="h-4 w-4" /> {saved ? 'Salvato' : 'Salva'}
                 </button>
@@ -289,13 +289,13 @@ export function TabClubConfigFields({
             help="Se attivo, i giocatori non possono ritirarsi a ridosso della partita. Gli admin possono sempre modificare le presenze."
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <label className="flex items-center gap-2 text-sm text-slate-300">
+              <label className="flex items-center gap-2 text-sm text-secondary">
                 Blocca
                 <select
                   value={timelockHours}
                   onChange={(e) => onUpdateTimelock(timelockEnabled, parseInt(e.target.value) || 4)}
                   disabled={!timelockEnabled}
-                  className="bg-slate-950 border border-slate-800 text-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 disabled:opacity-50"
+                  className="bg-app border border-line text-primary rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-accent disabled:opacity-50"
                 >
                   <option value="2">2 ore prima</option>
                   <option value="4">4 ore prima</option>
@@ -308,7 +308,7 @@ export function TabClubConfigFields({
                 role="switch"
                 aria-checked={timelockEnabled}
                 onClick={() => onUpdateTimelock(!timelockEnabled, timelockHours)}
-                className={`relative h-7 w-12 flex-shrink-0 rounded-full transition-colors ${timelockEnabled ? 'bg-emerald-500' : 'bg-slate-700'}`}
+                className={`relative h-7 w-12 flex-shrink-0 rounded-full transition-colors ${timelockEnabled ? 'bg-accent' : 'bg-line-strong'}`}
                 aria-label="Blocco ritiri"
               >
                 <span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-all ${timelockEnabled ? 'left-6' : 'left-1'}`} />

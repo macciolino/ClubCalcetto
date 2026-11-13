@@ -80,7 +80,7 @@ function Avatar({ name, photo }: { name: string; photo?: string | null }) {
   return src ? (
     <img src={src} alt="" className="h-9 w-9 rounded-full object-cover flex-shrink-0" />
   ) : (
-    <span className="h-9 w-9 rounded-full bg-slate-800 flex items-center justify-center text-xs font-bold text-emerald-300 flex-shrink-0">
+    <span className="h-9 w-9 rounded-full bg-card-hover flex items-center justify-center text-xs font-bold text-accent-text flex-shrink-0">
       {initialsOf(name)}
     </span>
   );
@@ -122,25 +122,25 @@ function StatReviewCard({ player, categories, reviewerId }: { player: Profile; c
   };
 
   return (
-    <li className="rounded-2xl bg-slate-950/50 p-4 space-y-3">
+    <li className="rounded-2xl bg-app/50 p-4 space-y-3">
       <button type="button" onClick={() => setOpen((o) => !o)} className="w-full flex items-center gap-3 text-left" aria-expanded={open}>
         <Avatar name={player.full_name} photo={player.avatar_url} />
         <span className="flex-1 min-w-0">
-          <span className="block text-sm font-semibold text-white truncate">{player.full_name}</span>
-          <span className="block text-xs text-slate-500">
+          <span className="block text-sm font-semibold text-primary truncate">{player.full_name}</span>
+          <span className="block text-xs text-muted">
             {played === 1 ? 'Prima partita giocata' : `${played} partite giocate`} ·{' '}
             {player.self_stats ? 'si è autovalutato' : 'autovalutazione non compilata'}
           </span>
         </span>
         <span className="text-right flex-shrink-0">
-          <span className="block text-[10px] font-semibold tracking-wider text-slate-500">OVR</span>
-          <span className="block text-lg font-semibold text-white tabular-nums leading-tight">{Math.round(ovrOf(values) * 10)}</span>
+          <span className="block text-[10px] font-semibold tracking-wider text-muted">OVR</span>
+          <span className="block text-lg font-semibold text-primary tabular-nums leading-tight">{Math.round(ovrOf(values) * 10)}</span>
         </span>
-        <ChevronDown className={`h-4 w-4 text-slate-500 flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
+        <ChevronDown className={`h-4 w-4 text-muted flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
       </button>
       {open && (
         <div className="space-y-4 pt-1">
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-secondary">
             Correggi i voti in base a quello che hai visto in campo. Sotto ogni parametro c&apos;è il voto che si è dato.
           </p>
           <StatRatingFields
@@ -292,22 +292,22 @@ export function RequestsBell() {
       .sort((a, b) => b.score - a.score || a.g.full_name.localeCompare(b.g.full_name));
     return (
       <>
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-secondary">
           Si è registrato senza link di invito. È uno degli ospiti già in rosa? Collegandolo, le sue partite, gol, MVP, presenze e valutazioni
           passano al nuovo account.
         </p>
         {ranked.length === 0 ? (
-          <p className="text-sm text-slate-500">Non ci sono più ospiti senza account.</p>
+          <p className="text-sm text-muted">Non ci sono più ospiti senza account.</p>
         ) : (
-          <ul className="rounded-xl bg-slate-950/50 divide-y divide-slate-800 max-h-64 overflow-y-auto">
+          <ul className="rounded-xl bg-app/50 divide-y divide-line max-h-64 overflow-y-auto">
             {ranked.map(({ g, score }, i) => (
               <li key={g.id} className="flex items-center gap-3 px-3.5 py-2.5">
                 <Avatar name={g.full_name} photo={g.avatar_url} />
                 <span className="flex-1 min-w-0">
-                  <span className="block text-sm font-medium text-white truncate">{g.full_name}</span>
-                  <span className="block text-xs text-slate-500">
+                  <span className="block text-sm font-medium text-primary truncate">{g.full_name}</span>
+                  <span className="block text-xs text-muted">
                     Ospite · {(g.matches_won || 0) + (g.matches_drawn || 0) + (g.matches_lost || 0)} partite
-                    {i === 0 && score >= 0.5 && <span className="ml-1.5 text-emerald-300">· nome simile</span>}
+                    {i === 0 && score >= 0.5 && <span className="ml-1.5 text-accent-text">· nome simile</span>}
                   </span>
                 </span>
                 <button
@@ -346,7 +346,7 @@ export function RequestsBell() {
 
   const restoreCard = (r: AdminRequest) => (
     <>
-      <p className="text-sm text-slate-400">
+      <p className="text-sm text-secondary">
         Aveva chiuso l&apos;account e ha provato a rientrare. Ora vede &quot;Bentornato&quot; e aspetta la tua scelta.
       </p>
       <div className="flex flex-col sm:flex-row gap-2">
@@ -389,7 +389,7 @@ export function RequestsBell() {
     if (!next || !r.date) return null;
     return (
       <>
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-secondary">
           {already
             ? `La partita è già ${FORMAT_INFO[current!].label}: puoi chiudere l'avviso.`
             : `Con il ${FORMAT_INFO[next].label} i primi ${FORMAT_INFO[next].players} iscritti diventano titolari e ricevono la notifica. Le squadre già fatte vanno rigenerate.`}
@@ -424,11 +424,11 @@ export function RequestsBell() {
 
   const closedCard = (r: AdminRequest) => (
     <>
-      <p className="text-sm text-slate-400">
+      <p className="text-sm text-secondary">
         {r.mode === 'delete'
           ? 'Account eliminato: i dati sono stati cancellati, le partite archiviate restano con il suo nome.'
           : 'Account disattivato: dati e storico sono conservati. Se torna, ti arriva una richiesta di rientro.'}
-        {r.reason && <span className="block mt-1 text-slate-500">Motivo: {r.reason}</span>}
+        {r.reason && <span className="block mt-1 text-muted">Motivo: {r.reason}</span>}
       </p>
       <button
         type="button"
@@ -443,11 +443,11 @@ export function RequestsBell() {
   );
 
   const META: Record<AdminRequest['type'], { icon: React.ElementType; tone: string; title: (r: AdminRequest) => string }> = {
-    new_signup: { icon: UserPlus, tone: 'bg-emerald-500/15 text-emerald-300', title: (r) => `Nuovo iscritto: ${r.name}` },
-    restore: { icon: RotateCcw, tone: 'bg-amber-500/15 text-amber-300', title: (r) => `Richiesta di rientro: ${r.name}` },
+    new_signup: { icon: UserPlus, tone: 'bg-accent/15 text-accent-text', title: (r) => `Nuovo iscritto: ${r.name}` },
+    restore: { icon: RotateCcw, tone: 'bg-amber-500/15 text-warning', title: (r) => `Richiesta di rientro: ${r.name}` },
     format_proposal: {
       icon: Lightbulb,
-      tone: 'bg-sky-500/15 text-sky-300',
+      tone: 'bg-sky-500/15 text-sky-700 dark:text-sky-300',
       title: (r) =>
         `${r.count} iscritti per ${r.date ? formatItalianDate(r.date) : 'la partita'}: passare al ${
           isMatchFormat(r.format) ? FORMAT_INFO[r.format].label : r.format
@@ -455,7 +455,7 @@ export function RequestsBell() {
     },
     account_closed: {
       icon: UserX,
-      tone: 'bg-slate-800 text-slate-300',
+      tone: 'bg-card-hover text-secondary',
       title: (r) => `${r.name} ha ${r.mode === 'delete' ? 'eliminato' : 'disattivato'} il proprio account`,
     },
   };
@@ -468,16 +468,16 @@ export function RequestsBell() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="relative p-2 rounded-full text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+        className="relative p-2 rounded-full text-secondary hover:text-primary hover:bg-card-hover transition-colors"
         aria-label={count ? `Notifiche: ${count} nuove o da gestire` : 'Notifiche'}
         title="Notifiche"
       >
         <Bell className="h-5 w-5" />
         {admin && denied && count === 0 && (
-          <span className="absolute top-1 right-1 h-2.5 w-2.5 rounded-full bg-amber-400 ring-2 ring-slate-950" aria-hidden="true" />
+          <span className="absolute top-1 right-1 h-2.5 w-2.5 rounded-full bg-amber-400 ring-2 ring-app" aria-hidden="true" />
         )}
         {count > 0 && (
-          <span className="absolute top-0.5 right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-slate-950 tabular-nums">
+          <span className="absolute top-0.5 right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-app tabular-nums">
             {count > 9 ? '9+' : count}
           </span>
         )}
@@ -497,10 +497,10 @@ export function RequestsBell() {
           size="lg"
           locked={busy !== null}
         >
-          {admin && (todo > 0 || denied) && <h3 className="px-1 -mb-3 text-xs font-semibold text-slate-500">Da gestire</h3>}
+          {admin && (todo > 0 || denied) && <h3 className="px-1 -mb-3 text-xs font-semibold text-muted">Da gestire</h3>}
           {admin && reviews.length > 0 && (
             <section className="space-y-2" aria-label="Valutazioni da rivedere">
-              <h3 className="px-1 text-xs font-semibold text-slate-500">Valutazioni da rivedere · dopo la prima partita</h3>
+              <h3 className="px-1 text-xs font-semibold text-muted">Valutazioni da rivedere · dopo la prima partita</h3>
               <ul className="space-y-3">
                 {reviews.map((p) => (
                   <StatReviewCard key={p.id} player={p} categories={categories} reviewerId={profile?.id || ''} />
@@ -509,7 +509,7 @@ export function RequestsBell() {
             </section>
           )}
           {!admin ? null : denied ? (
-            <div className="rounded-2xl bg-amber-500/10 border border-amber-500/25 p-4 text-sm text-amber-200 leading-relaxed">
+            <div className="rounded-2xl bg-amber-500/10 border border-amber-500/25 p-4 text-sm text-warning leading-relaxed">
               Non riesco a leggere le richieste: le regole Firestore aggiornate non risultano pubblicate. Pubblica il file firestore.rules
               dalla console Firebase (Firestore → Regole) e riapri questa finestra.
             </div>
@@ -519,14 +519,14 @@ export function RequestsBell() {
                 const m = META[r.type];
                 const Icon = m.icon;
                 return (
-                  <li key={r.id} className="rounded-2xl bg-slate-950/50 p-4 space-y-3">
+                  <li key={r.id} className="rounded-2xl bg-app/50 p-4 space-y-3">
                     <div className="flex items-start gap-3">
                       <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ${m.tone}`}>
                         <Icon className="h-[18px] w-[18px]" />
                       </span>
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-white">{m.title(r)}</p>
-                        <p className="text-xs text-slate-500 truncate">
+                        <p className="text-sm font-semibold text-primary">{m.title(r)}</p>
+                        <p className="text-xs text-muted truncate">
                           {r.email ? `${r.email} · ` : ''}
                           {when(r.created_at)}
                         </p>
@@ -547,23 +547,23 @@ export function RequestsBell() {
 
           {/* Notifiche personali: le stesse che arrivano sul telefono */}
           <section className="space-y-2" aria-label="Notifiche">
-            {admin && todo > 0 && <h3 className="px-1 text-xs font-semibold text-slate-500">Notifiche</h3>}
+            {admin && todo > 0 && <h3 className="px-1 text-xs font-semibold text-muted">Notifiche</h3>}
             {inbox.length === 0 ? (
               todo > 0 ? (
-                <p className="px-1 text-sm text-slate-500">Nessuna notifica.</p>
+                <p className="px-1 text-sm text-muted">Nessuna notifica.</p>
               ) : (
                 <div className="py-10 text-center space-y-2">
-                  <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-800 text-emerald-400">
+                  <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-card-hover text-accent-text">
                     <Check className="h-6 w-6" />
                   </span>
-                  <p className="text-sm font-semibold text-white">Nessuna notifica</p>
-                  <p className="text-sm text-slate-400">
+                  <p className="text-sm font-semibold text-primary">Nessuna notifica</p>
+                  <p className="text-sm text-secondary">
                     Qui trovi gli avvisi del club: partita confermata, squadre, sostituzioni, iscrizioni aperte, voto MVP.
                   </p>
                 </div>
               )
             ) : (
-              <ul className="rounded-2xl bg-slate-950/50 divide-y divide-slate-800 overflow-hidden">
+              <ul className="rounded-2xl bg-app/50 divide-y divide-line overflow-hidden">
                 {inbox.map((n) => {
                   const isNew = !n.read || freshIds.has(n.id);
                   return (
@@ -574,18 +574,18 @@ export function RequestsBell() {
                           setOpen(false);
                           if (n.url) router.push(n.url);
                         }}
-                        className={`w-full text-left flex items-start gap-3 px-4 py-3 transition-colors hover:bg-slate-800/60 ${isNew ? 'bg-emerald-500/[0.06]' : ''}`}
+                        className={`w-full text-left flex items-start gap-3 px-4 py-3 transition-colors hover:bg-card-hover/60 ${isNew ? 'bg-accent/[0.06]' : ''}`}
                       >
                         <span
-                          className={`mt-1.5 h-2 w-2 flex-shrink-0 rounded-full ${isNew ? 'bg-emerald-400' : 'bg-transparent'}`}
+                          className={`mt-1.5 h-2 w-2 flex-shrink-0 rounded-full ${isNew ? 'bg-accent/90' : 'bg-transparent'}`}
                           aria-label={isNew ? 'Nuova' : undefined}
                         />
                         <span className="flex-1 min-w-0">
                           <span className="flex items-baseline justify-between gap-3">
-                            <span className={`text-sm truncate ${isNew ? 'font-semibold text-white' : 'font-medium text-slate-200'}`}>{n.title}</span>
-                            <span className="flex-shrink-0 text-[11px] text-slate-500 tabular-nums">{ago(n.created_at)}</span>
+                            <span className={`text-sm truncate ${isNew ? 'font-semibold text-primary' : 'font-medium text-primary'}`}>{n.title}</span>
+                            <span className="flex-shrink-0 text-[11px] text-muted tabular-nums">{ago(n.created_at)}</span>
                           </span>
-                          <span className="block text-sm text-slate-400 leading-snug mt-0.5">{n.body}</span>
+                          <span className="block text-sm text-secondary leading-snug mt-0.5">{n.body}</span>
                         </span>
                       </button>
                     </li>

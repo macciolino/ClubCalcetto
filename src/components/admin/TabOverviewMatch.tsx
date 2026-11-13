@@ -46,10 +46,10 @@ type DayStatus = 'Ufficiale' | 'In programma' | 'Da chiudere' | 'Archiviata';
 type TabId = 'org' | 'cash' | 'result';
 
 const STATUS_TONE: Record<DayStatus, string> = {
-  Ufficiale: 'bg-emerald-500/15 text-emerald-300',
-  'In programma': 'bg-slate-800 text-slate-400',
-  'Da chiudere': 'bg-amber-500/15 text-amber-300',
-  Archiviata: 'bg-slate-700/70 text-slate-200',
+  Ufficiale: 'bg-accent/15 text-accent-text',
+  'In programma': 'bg-card-hover text-secondary',
+  'Da chiudere': 'bg-amber-500/15 text-warning',
+  Archiviata: 'bg-line-strong/70 text-primary',
 };
 
 const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
@@ -347,25 +347,25 @@ export function TabOverviewMatch({
   };
 
   // ---------- pannelli ----------
-  const panel = 'bg-slate-900 rounded-2xl p-4 sm:p-5 space-y-4';
+  const panel = 'bg-card rounded-2xl p-4 sm:p-5 space-y-4';
   const inputCls =
-    'w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500 disabled:opacity-60';
+    'w-full px-3.5 py-2.5 bg-app border border-line rounded-xl text-primary text-sm focus:outline-none focus:border-accent disabled:opacity-60';
   const visible = (t: TabId) => (tab === t ? '' : 'hidden lg:block');
   const official = Boolean(activeDate) && date === activeDate;
 
   const orgPanel = (
     <section className={`${panel} ${visible('org')}`} aria-label="Organizzazione e campo">
-      <h3 className="hidden lg:flex items-center gap-2 text-base font-semibold text-white">
-        <Settings2 className="h-4 w-4 text-emerald-400" /> Organizzazione e campo
+      <h3 className="hidden lg:flex items-center gap-2 text-base font-semibold text-primary">
+        <Settings2 className="h-4 w-4 text-accent-text" /> Organizzazione e campo
       </h3>
 
       {/* Giorno ufficiale */}
-      <div className="flex items-center justify-between gap-3 rounded-xl bg-slate-950/60 px-4 py-3">
+      <div className="flex items-center justify-between gap-3 rounded-xl bg-app/60 px-4 py-3">
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-white flex items-center gap-1.5">
-            <Star className={`h-4 w-4 ${official ? 'text-amber-400 fill-amber-400' : 'text-slate-500'}`} /> Giorno ufficiale
+          <p className="text-sm font-semibold text-primary flex items-center gap-1.5">
+            <Star className={`h-4 w-4 ${official ? 'text-warning fill-amber-400' : 'text-muted'}`} /> Giorno ufficiale
           </p>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-secondary">
             {official
               ? 'È la partita mostrata a tutti in Home, Presenze e Squadre.'
               : activeDate
@@ -388,7 +388,7 @@ export function TabOverviewMatch({
             if (await askConfirm(`Rendere ${formatItalianDate(date)} il giorno ufficiale della settimana?`)) onSelectDate(date);
           }}
           className={`relative h-7 w-12 flex-shrink-0 rounded-full transition-colors disabled:cursor-default ${
-            official ? 'bg-emerald-500' : 'bg-slate-700'
+            official ? 'bg-accent' : 'bg-line-strong'
           } ${isArchived && !official ? 'opacity-40' : ''}`}
         >
           <span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-all ${official ? 'left-6' : 'left-1'}`} />
@@ -398,7 +398,7 @@ export function TabOverviewMatch({
       {/* Campo e orario */}
       <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_8rem] gap-3">
         <label className="block min-w-0">
-          <span className="block text-xs font-medium text-slate-300 mb-1.5">Campo</span>
+          <span className="block text-xs font-medium text-secondary mb-1.5">Campo</span>
           <select
             value={field?.id || ''}
             disabled={isArchived}
@@ -417,7 +417,7 @@ export function TabOverviewMatch({
           </select>
         </label>
         <label className="block">
-          <span className="block text-xs font-medium text-slate-300 mb-1.5">Orario</span>
+          <span className="block text-xs font-medium text-secondary mb-1.5">Orario</span>
           <input
             type="time"
             value={timeInput}
@@ -432,7 +432,7 @@ export function TabOverviewMatch({
       {/* Costo */}
       <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
         <label className="block flex-1 min-w-[10rem]">
-          <span className="block text-xs font-medium text-slate-300 mb-1.5">Costo della partita (€)</span>
+          <span className="block text-xs font-medium text-secondary mb-1.5">Costo della partita (€)</span>
           <input
             type="text"
             inputMode="decimal"
@@ -447,7 +447,7 @@ export function TabOverviewMatch({
             className={`${inputCls} tabular-nums`}
           />
         </label>
-        <div className="pb-2.5 text-sm text-slate-300 tabular-nums">€{perHead(totalCost, headCount)} a testa</div>
+        <div className="pb-2.5 text-sm text-secondary tabular-nums">€{perHead(totalCost, headCount)} a testa</div>
         {match?.cost_override && !isArchived && (
           <button type="button" onClick={() => save({ cost_override: false }, 'Costo del campo ripristinato')} className={`${textLink} pb-2.5`}>
             Usa il costo del campo
@@ -457,7 +457,7 @@ export function TabOverviewMatch({
 
       {/* Note */}
       <label className="block">
-        <span className="block text-xs font-medium text-slate-300 mb-1.5">Note e info utili</span>
+        <span className="block text-xs font-medium text-secondary mb-1.5">Note e info utili</span>
         <textarea
           rows={2}
           value={notesInput}
@@ -473,9 +473,9 @@ export function TabOverviewMatch({
       </button>
 
       {/* Formato e modulo */}
-      <div className="space-y-3 pt-4 border-t border-slate-800">
+      <div className="space-y-3 pt-4 border-t border-line">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-sm font-semibold text-white">
+          <p className="text-sm font-semibold text-primary">
             Formato · {info.label} {fmt.formation}
           </p>
           <Link href={`/teams?date=${date}`} className={textLink}>
@@ -483,7 +483,7 @@ export function TabOverviewMatch({
           </Link>
         </div>
         {isArchived ? (
-          <p className="text-sm text-slate-400">Partita archiviata: il formato non si cambia più.</p>
+          <p className="text-sm text-secondary">Partita archiviata: il formato non si cambia più.</p>
         ) : (
           <MatchFormatPicker
             date={date}
@@ -500,24 +500,24 @@ export function TabOverviewMatch({
 
   const cashPanel = (
     <section className={`${panel} ${visible('cash')} lg:sticky lg:top-36`} aria-label="Cassa e quote">
-      <h3 className="hidden lg:flex items-center gap-2 text-base font-semibold text-white">
-        <Coins className="h-4 w-4 text-emerald-400" /> Cassa e quote
+      <h3 className="hidden lg:flex items-center gap-2 text-base font-semibold text-primary">
+        <Coins className="h-4 w-4 text-accent-text" /> Cassa e quote
       </h3>
       {/* Riepilogo */}
       <div className="space-y-2">
         <div className="flex items-baseline justify-between gap-3">
-          <p className="text-2xl font-bold text-white tabular-nums">
-            €{perHead(collected, 1)} <span className="text-sm font-medium text-slate-400">di €{perHead(totalCost, 1)}</span>
+          <p className="text-2xl font-bold text-primary tabular-nums">
+            €{perHead(collected, 1)} <span className="text-sm font-medium text-secondary">di €{perHead(totalCost, 1)}</span>
           </p>
-          <p className="text-sm text-slate-300 tabular-nums">€{perHead(totalCost, headCount)} a testa</p>
+          <p className="text-sm text-secondary tabular-nums">€{perHead(totalCost, headCount)} a testa</p>
         </div>
-        <div className="h-2.5 rounded-full bg-slate-950 overflow-hidden" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
-          <div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{ width: `${progress}%` }} />
+        <div className="h-2.5 rounded-full bg-app overflow-hidden" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
+          <div className="h-full rounded-full bg-accent transition-all duration-500" style={{ width: `${progress}%` }} />
         </div>
-        <p className="text-xs text-slate-400 tabular-nums">
+        <p className="text-xs text-secondary tabular-nums">
           {paidCount} su {payers.length} hanno pagato{unpaid.length ? ` · mancano ${unpaid.length}` : payers.length ? ' · tutto saldato' : ''}
         </p>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-muted">
           {cash.source === 'archive'
             ? 'Giocatori della partita archiviata: elenco bloccato.'
             : cash.source === 'teams'
@@ -527,7 +527,7 @@ export function TabOverviewMatch({
       </div>
 
       {payers.length === 0 ? (
-        <p className="rounded-xl bg-slate-950/60 py-6 px-4 text-center text-sm text-slate-400">
+        <p className="rounded-xl bg-app/60 py-6 px-4 text-center text-sm text-secondary">
           Nessun titolare per questo giorno: le quote compaiono quando i giocatori si iscrivono.
         </p>
       ) : (
@@ -553,13 +553,13 @@ export function TabOverviewMatch({
               }}
               aria-label="Azzera la cassa"
               title="Azzera la cassa"
-              className="p-2.5 rounded-xl text-slate-400 hover:text-rose-300 hover:bg-slate-800"
+              className="p-2.5 rounded-xl text-secondary hover:text-danger hover:bg-card-hover"
             >
               <RotateCcw className="h-4 w-4" />
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-950/60 p-1" role="radiogroup" aria-label="Filtro">
+          <div className="grid grid-cols-2 gap-1 rounded-xl bg-app/60 p-1" role="radiogroup" aria-label="Filtro">
             {(
               [
                 [false, `Tutti (${payers.length})`],
@@ -572,14 +572,14 @@ export function TabOverviewMatch({
                 role="radio"
                 aria-checked={onlyUnpaid === v}
                 onClick={() => setOnlyUnpaid(v)}
-                className={`rounded-lg py-1.5 text-xs font-semibold transition-colors ${onlyUnpaid === v ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'}`}
+                className={`rounded-lg py-1.5 text-xs font-semibold transition-colors ${onlyUnpaid === v ? 'bg-line-strong text-primary' : 'text-secondary hover:text-primary'}`}
               >
                 {label}
               </button>
             ))}
           </div>
 
-          <ul className="rounded-xl bg-slate-950/50 divide-y divide-slate-800 overflow-hidden">
+          <ul className="rounded-xl bg-app/50 divide-y divide-line overflow-hidden">
             {(onlyUnpaid ? unpaid : payers).map((p) => {
               const paid = payments.payments[p.id] === true;
               return (
@@ -588,15 +588,15 @@ export function TabOverviewMatch({
                     type="button"
                     onClick={() => markPaid([p.id], !paid)}
                     aria-pressed={paid}
-                    className="w-full flex items-center gap-3 px-3.5 py-2.5 text-left hover:bg-slate-800/60 transition-colors"
+                    className="w-full flex items-center gap-3 px-3.5 py-2.5 text-left hover:bg-card-hover/60 transition-colors"
                   >
-                    <span className="h-8 w-8 flex-shrink-0 rounded-full bg-slate-800 flex items-center justify-center text-[11px] font-bold text-emerald-300">
+                    <span className="h-8 w-8 flex-shrink-0 rounded-full bg-card-hover flex items-center justify-center text-[11px] font-bold text-accent-text">
                       {initialsOf(p.name)}
                     </span>
-                    <span className="flex-1 min-w-0 truncate text-sm text-slate-100">{p.name}</span>
+                    <span className="flex-1 min-w-0 truncate text-sm text-primary">{p.name}</span>
                     <span
                       className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                        paid ? 'bg-emerald-500 text-slate-950' : 'bg-amber-500/15 text-amber-300'
+                        paid ? 'bg-accent text-on-accent' : 'bg-amber-500/15 text-warning'
                       }`}
                     >
                       {paid ? <Check className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
@@ -606,7 +606,7 @@ export function TabOverviewMatch({
                 </li>
               );
             })}
-            {onlyUnpaid && unpaid.length === 0 && <li className="px-4 py-4 text-center text-sm text-emerald-300">Hanno pagato tutti 🎉</li>}
+            {onlyUnpaid && unpaid.length === 0 && <li className="px-4 py-4 text-center text-sm text-accent-text">Hanno pagato tutti 🎉</li>}
           </ul>
         </>
       )}
@@ -615,12 +615,12 @@ export function TabOverviewMatch({
 
   const resultPanel = (
     <section className={`${panel} ${visible('result')}`} aria-label="Risultato e chiusura">
-      <h3 className="hidden lg:flex items-center gap-2 text-base font-semibold text-white">
-        <Trophy className="h-4 w-4 text-amber-400" /> Risultato e chiusura
+      <h3 className="hidden lg:flex items-center gap-2 text-base font-semibold text-primary">
+        <Trophy className="h-4 w-4 text-warning" /> Risultato e chiusura
       </h3>
       {isArchived && (
-        <p className="flex items-start gap-2 rounded-xl bg-slate-950/60 px-3.5 py-2.5 text-sm text-slate-300">
-          <Check className="h-4 w-4 flex-shrink-0 text-emerald-400 mt-0.5" />
+        <p className="flex items-start gap-2 rounded-xl bg-app/60 px-3.5 py-2.5 text-sm text-secondary">
+          <Check className="h-4 w-4 flex-shrink-0 text-accent-text mt-0.5" />
           <span>
             Archiviata {archived.get(date)?.score_white ?? 0} – {archived.get(date)?.score_black ?? 0}: puoi correggere e risalvare.{' '}
             <Link href="/history" className={textLink}>
@@ -634,29 +634,29 @@ export function TabOverviewMatch({
           <div className="grid grid-cols-2 gap-3 text-sm">
             {(
               [
-                ['Bianchi', teams.white, 'h-[9px] w-[33px] bg-white'],
+                ['Bianchi', teams.white, 'h-[9px] w-[33px] bg-white ring-1 ring-line-strong'],
                 ['Neri', teams.black, 'h-2.5 w-9 bg-slate-950 border border-slate-500'],
               ] as const
             ).map(([title, list, oval]) => (
-              <div key={title} className="rounded-xl bg-slate-950/60 p-3 space-y-1 min-w-0">
-                <p className="flex items-center gap-2 text-xs font-semibold text-slate-300">
+              <div key={title} className="rounded-xl bg-app/60 p-3 space-y-1 min-w-0">
+                <p className="flex items-center gap-2 text-xs font-semibold text-secondary">
                   <span className={`rounded-full ${oval}`} aria-hidden="true" /> {title}
                 </p>
                 {list.map((p) => (
-                  <p key={p.id} className="truncate text-slate-200">
+                  <p key={p.id} className="truncate text-primary">
                     {p.name}
                   </p>
                 ))}
               </div>
             ))}
           </div>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-muted">
             {teams.fromArchive ? (
               <>Squadre archiviate: si correggono con la matita nello Storico.</>
             ) : (
               <>
                 Squadre prese da{' '}
-                <Link href={`/teams?date=${date}`} className="text-emerald-400 underline">
+                <Link href={`/teams?date=${date}`} className="text-accent-text underline">
                   Squadre
                 </Link>
                 : se sono sbagliate correggile lì prima di salvare.
@@ -670,9 +670,9 @@ export function TabOverviewMatch({
           </button>
         </>
       ) : (
-        <div className="rounded-xl bg-slate-950/60 py-8 px-4 text-center space-y-3">
-          <p className="text-sm font-semibold text-slate-200">Squadre non ancora pronte</p>
-          <p className="text-sm text-slate-400 max-w-sm mx-auto">Il risultato si salva sulle squadre: prima generale ({info.label}) per questa partita.</p>
+        <div className="rounded-xl bg-app/60 py-8 px-4 text-center space-y-3">
+          <p className="text-sm font-semibold text-primary">Squadre non ancora pronte</p>
+          <p className="text-sm text-secondary max-w-sm mx-auto">Il risultato si salva sulle squadre: prima generale ({info.label}) per questa partita.</p>
           <Link href={`/teams?date=${date}`} className={btn.primary}>
             Vai alle squadre <ArrowRight className="h-4 w-4" />
           </Link>
@@ -704,16 +704,16 @@ export function TabOverviewMatch({
               aria-label={`${formatItalianDate(d)}: ${st}, ${count} su ${max}`}
               onClick={() => chooseDay(d)}
               className={`flex-shrink-0 w-[5.25rem] rounded-2xl px-2 py-2.5 text-center transition-colors ${
-                selected ? 'bg-slate-800 ring-2 ring-emerald-500' : 'bg-slate-900 hover:bg-slate-800'
+                selected ? 'bg-card-hover ring-2 ring-accent' : 'bg-card hover:bg-card-hover'
               }`}
             >
-              <span className="block text-xs font-medium capitalize text-slate-400">
+              <span className="block text-xs font-medium capitalize text-secondary">
                 {dt.toLocaleDateString('it-IT', { weekday: 'short' }).replace('.', '')}
               </span>
-              <span className="block text-xl font-bold leading-tight text-white">{dd}</span>
-              <span className="block text-[11px] capitalize text-slate-500">{dt.toLocaleDateString('it-IT', { month: 'short' }).replace('.', '')}</span>
+              <span className="block text-xl font-bold leading-tight text-primary">{dd}</span>
+              <span className="block text-[11px] capitalize text-muted">{dt.toLocaleDateString('it-IT', { month: 'short' }).replace('.', '')}</span>
               <span className={`mt-1.5 block rounded-full px-1.5 py-0.5 text-[10px] font-semibold whitespace-nowrap ${STATUS_TONE[st]}`}>{st}</span>
-              <span className={`mt-1 block text-[11px] font-semibold tabular-nums ${count >= max && max > 0 ? 'text-emerald-400' : 'text-slate-500'}`}>
+              <span className={`mt-1 block text-[11px] font-semibold tabular-nums ${count >= max && max > 0 ? 'text-accent-text' : 'text-muted'}`}>
                 {count}/{max}
               </span>
             </button>
@@ -723,15 +723,15 @@ export function TabOverviewMatch({
 
       {/* Il giorno scelto in una riga */}
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-        <h2 className="text-lg font-semibold text-white capitalize">{formatItalianDate(date)}</h2>
+        <h2 className="text-lg font-semibold text-primary capitalize">{formatItalianDate(date)}</h2>
         <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${STATUS_TONE[status]}`}>{status}</span>
-        <span className="text-slate-400">
+        <span className="text-secondary">
           · {time} · {field?.name || location} · {info.label}
         </span>
       </div>
 
       {/* 2. Le tre schede (telefono e tablet); su PC i pannelli sono affiancati */}
-      <div className="lg:hidden grid grid-cols-3 gap-1 rounded-2xl bg-slate-900 p-1" role="tablist" aria-label="Sezioni della partita">
+      <div className="lg:hidden grid grid-cols-3 gap-1 rounded-2xl bg-card p-1" role="tablist" aria-label="Sezioni della partita">
         {TABS.map((t) => {
           const Icon = t.icon;
           const active = tab === t.id;
@@ -744,7 +744,7 @@ export function TabOverviewMatch({
               aria-selected={active}
               onClick={() => setTab(t.id)}
               className={`relative flex flex-col items-center gap-0.5 rounded-xl py-2 text-xs font-semibold transition-colors ${
-                active ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:text-white'
+                active ? 'bg-accent text-on-accent' : 'text-secondary hover:text-primary'
               }`}
             >
               <Icon className="h-4 w-4" />
@@ -752,7 +752,7 @@ export function TabOverviewMatch({
               {badge !== null && (
                 <span
                   className={`absolute top-1 right-2 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold flex items-center justify-center ${
-                    active ? 'bg-slate-950 text-emerald-300' : 'bg-amber-500 text-slate-950'
+                    active ? 'bg-app text-accent-text' : 'bg-amber-500 text-on-accent'
                   }`}
                 >
                   {badge}

@@ -27,13 +27,13 @@ export function AdminsCard({ players, onToggleRole }: { players: Profile[]; onTo
   };
 
   return (
-    <section className="bg-slate-900 rounded-2xl p-4 sm:p-5 space-y-4">
+    <section className="bg-card rounded-2xl p-4 sm:p-5 space-y-4">
       <div>
-        <h3 className="text-base font-semibold text-white">Admin</h3>
-        <p className="text-sm text-slate-400 mt-0.5">Chi gestisce il club. Ogni admin può aggiungere o togliere admin; il super admin non si può togliere.</p>
+        <h3 className="text-base font-semibold text-primary">Admin</h3>
+        <p className="text-sm text-secondary mt-0.5">Chi gestisce il club. Ogni admin può aggiungere o togliere admin; il super admin non si può togliere.</p>
       </div>
 
-      <ul className="divide-y divide-slate-800 rounded-xl bg-slate-950/50">
+      <ul className="divide-y divide-line rounded-xl bg-app/50">
         {admins.map((p) => {
           const photo = uploadedPhoto(p.avatar_url);
           return (
@@ -41,23 +41,23 @@ export function AdminsCard({ players, onToggleRole }: { players: Profile[]; onTo
               {photo ? (
                 <img src={photo} alt="" className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
               ) : (
-                <span className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center text-xs font-bold text-emerald-300 flex-shrink-0">
+                <span className="w-9 h-9 rounded-full bg-card-hover flex items-center justify-center text-xs font-bold text-accent-text flex-shrink-0">
                   {initialsOf(p.full_name)}
                 </span>
               )}
               <span className="flex-1 min-w-0">
-                <span className="block text-sm font-semibold text-white truncate">{p.full_name}</span>
-                <span className="block text-xs text-slate-400 truncate">{p.email || 'nessuna email'}</span>
+                <span className="block text-sm font-semibold text-primary truncate">{p.full_name}</span>
+                <span className="block text-xs text-secondary truncate">{p.email || 'nessuna email'}</span>
               </span>
               {isSuper(p) ? (
-                <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300">Super admin</span>
+                <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-500/15 text-warning">Super admin</span>
               ) : (
                 <button
                   type="button"
                   onClick={async () => {
                     if (await askConfirm(`Togliere i permessi di admin a "${p.full_name}"? Resterà un giocatore normale.`)) await onToggleRole(p);
                   }}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-slate-700 text-slate-300 hover:text-rose-300 hover:border-rose-500/40"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-line-strong text-secondary hover:text-danger hover:border-rose-500/40"
                 >
                   <ShieldOff className="h-3.5 w-3.5" /> Togli admin
                 </button>
@@ -72,7 +72,7 @@ export function AdminsCard({ players, onToggleRole }: { players: Profile[]; onTo
           value={pick}
           onChange={(e) => setPick(e.target.value)}
           aria-label="Giocatore da rendere admin"
-          className="flex-1 min-w-0 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+          className="flex-1 min-w-0 bg-app border border-line rounded-xl px-3 py-2.5 text-sm text-primary focus:outline-none focus:border-accent"
         >
           <option value="">Scegli un giocatore…</option>
           {candidates.map((p) => (

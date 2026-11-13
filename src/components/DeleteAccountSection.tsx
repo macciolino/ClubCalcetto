@@ -22,7 +22,7 @@ export function DeleteAccountSection({ isSuperAdmin }: { isSuperAdmin: boolean }
 
   if (isSuperAdmin) {
     return (
-      <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5 text-xs text-slate-400">
+      <section className="bg-card border border-line rounded-2xl p-5 text-xs text-secondary">
         L&apos;account del super amministratore non si può eliminare dall&apos;app.
       </section>
     );
@@ -68,19 +68,19 @@ export function DeleteAccountSection({ isSuperAdmin }: { isSuperAdmin: boolean }
   };
 
   return (
-    <section className="bg-slate-900 border border-rose-500/30 rounded-2xl p-5 space-y-4" aria-labelledby="delete-account-title">
+    <section className="bg-card border border-rose-500/30 rounded-2xl p-5 space-y-4" aria-labelledby="delete-account-title">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 id="delete-account-title" className="text-sm font-bold text-rose-300 flex items-center gap-2">
+          <h2 id="delete-account-title" className="text-sm font-bold text-danger flex items-center gap-2">
             <Trash2 className="h-4 w-4" /> Disattiva o elimina account
           </h2>
-          <p className="text-xs text-slate-400 mt-0.5">Metti in pausa il tuo account oppure cancellalo con tutti i dati.</p>
+          <p className="text-xs text-secondary mt-0.5">Metti in pausa il tuo account oppure cancellalo con tutti i dati.</p>
         </div>
         {!open && (
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="flex-shrink-0 px-4 py-2.5 rounded-xl text-xs font-bold text-rose-300 border border-rose-500/40 hover:bg-rose-500/10"
+            className="flex-shrink-0 px-4 py-2.5 rounded-xl text-xs font-bold text-danger border border-rose-500/40 hover:bg-rose-500/10"
           >
             Disattiva o elimina
           </button>
@@ -90,7 +90,7 @@ export function DeleteAccountSection({ isSuperAdmin }: { isSuperAdmin: boolean }
       {open && (
         <div className="space-y-4">
           <fieldset className="space-y-2">
-            <legend className="text-xs font-bold text-white mb-1">Cosa vuoi fare?</legend>
+            <legend className="text-xs font-bold text-primary mb-1">Cosa vuoi fare?</legend>
             {(
               [
                 ['deactivate', 'Disattiva (posso tornare)', 'Non potrai più entrare, ma scheda, parametri e statistiche restano salvati: un amministratore può riattivare l’account e ritrovi tutto.'],
@@ -100,7 +100,7 @@ export function DeleteAccountSection({ isSuperAdmin }: { isSuperAdmin: boolean }
               <label
                 key={value}
                 className={`flex items-start gap-3 p-3 rounded-xl border text-sm cursor-pointer ${
-                  mode === value ? 'border-rose-400 bg-rose-500/10 text-white' : 'border-slate-800 bg-slate-950 text-slate-300'
+                  mode === value ? 'border-rose-400 bg-rose-500/10 text-primary' : 'border-line bg-app text-secondary'
                 }`}
               >
                 <input
@@ -113,22 +113,22 @@ export function DeleteAccountSection({ isSuperAdmin }: { isSuperAdmin: boolean }
                 />
                 <span>
                   <span className="block font-bold">{label}</span>
-                  <span className="block text-xs text-slate-400 mt-0.5">{help}</span>
+                  <span className="block text-xs text-secondary mt-0.5">{help}</span>
                 </span>
               </label>
             ))}
-            <p className="text-xs text-slate-400 flex items-center gap-1.5">
-              <AlertTriangle className="h-3.5 w-3.5 text-rose-300" /> In entrambi i casi vengono tolte le tue iscrizioni e le notifiche.
+            <p className="text-xs text-secondary flex items-center gap-1.5">
+              <AlertTriangle className="h-3.5 w-3.5 text-danger" /> In entrambi i casi vengono tolte le tue iscrizioni e le notifiche.
             </p>
           </fieldset>
 
           <fieldset className="space-y-2">
-            <legend className="text-xs font-bold text-white mb-1">Perché lasci? (obbligatorio)</legend>
+            <legend className="text-xs font-bold text-primary mb-1">Perché lasci? (obbligatorio)</legend>
             {DELETE_REASONS.map((r) => (
               <label
                 key={r}
                 className={`flex items-center gap-3 p-3 rounded-xl border text-sm cursor-pointer ${
-                  reason === r ? 'border-rose-400 bg-rose-500/10 text-white' : 'border-slate-800 bg-slate-950 text-slate-300'
+                  reason === r ? 'border-rose-400 bg-rose-500/10 text-primary' : 'border-line bg-app text-secondary'
                 }`}
               >
                 <input
@@ -145,7 +145,7 @@ export function DeleteAccountSection({ isSuperAdmin }: { isSuperAdmin: boolean }
           </fieldset>
 
           <label className="block">
-            <span className="text-xs font-bold text-white">
+            <span className="text-xs font-bold text-primary">
               Vuoi aggiungere qualcosa? {reason === 'Altro' ? '(obbligatorio)' : '(facoltativo)'}
             </span>
             <textarea
@@ -154,11 +154,11 @@ export function DeleteAccountSection({ isSuperAdmin }: { isSuperAdmin: boolean }
               maxLength={500}
               rows={3}
               placeholder="Il tuo commento arriva allo sviluppatore dell'app."
-              className="mt-1 w-full px-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-rose-400"
+              className="mt-1 w-full px-3 py-2.5 bg-app border border-line-strong rounded-xl text-sm text-primary focus:outline-none focus:border-rose-400"
             />
           </label>
 
-          {error && <p className="text-xs text-rose-300">{error}</p>}
+          {error && <p className="text-xs text-danger">{error}</p>}
 
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
             <button
@@ -168,7 +168,7 @@ export function DeleteAccountSection({ isSuperAdmin }: { isSuperAdmin: boolean }
                 setError('');
               }}
               disabled={busy}
-              className="w-full sm:w-auto px-5 py-3 rounded-xl text-xs font-bold text-slate-300 border border-slate-700 hover:bg-slate-800"
+              className="w-full sm:w-auto px-5 py-3 rounded-xl text-xs font-bold text-secondary border border-line-strong hover:bg-card-hover"
             >
               Annulla
             </button>

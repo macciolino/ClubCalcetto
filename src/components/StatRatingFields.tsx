@@ -48,15 +48,15 @@ export function StatRatingFields({
           <li key={cat.name} className="space-y-1.5">
             <div className="flex items-baseline justify-between gap-3">
               <label htmlFor={id} className="min-w-0">
-                <span className="text-[11px] font-semibold tracking-wider text-slate-500 mr-1.5">{d?.code || cat.name.slice(0, 3).toUpperCase()}</span>
-                <span className="text-sm font-medium text-white">{cat.name}</span>
+                <span className="text-[11px] font-semibold tracking-wider text-muted mr-1.5">{d?.code || cat.name.slice(0, 3).toUpperCase()}</span>
+                <span className="text-sm font-medium text-primary">{cat.name}</span>
                 {ref !== undefined && (
-                  <span className="block text-xs text-slate-500">
-                    {referenceLabel}: <span className="text-slate-300 tabular-nums">{ref}</span>
+                  <span className="block text-xs text-muted">
+                    {referenceLabel}: <span className="text-secondary tabular-nums">{ref}</span>
                   </span>
                 )}
               </label>
-              <span className={`text-lg font-semibold tabular-nums ${value >= 8 ? 'text-emerald-300' : value >= 6 ? 'text-white' : 'text-slate-400'}`}>
+              <span className={`text-lg font-semibold tabular-nums ${value >= 8 ? 'text-accent-text' : value >= 6 ? 'text-primary' : 'text-secondary'}`}>
                 {value}
               </span>
             </div>
@@ -72,7 +72,7 @@ export function StatRatingFields({
               className="w-full accent-emerald-500 h-2 cursor-pointer disabled:opacity-50"
               aria-valuetext={`${cat.name} ${value} su 10`}
             />
-            {showHelp && d?.description && <p className="text-xs text-slate-500 leading-relaxed">{d.description}</p>}
+            {showHelp && d?.description && <p className="text-xs text-muted leading-relaxed">{d.description}</p>}
           </li>
         );
       })}

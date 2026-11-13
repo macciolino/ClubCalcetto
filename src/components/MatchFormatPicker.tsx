@@ -69,7 +69,7 @@ export function MatchFormatPicker({
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-4 gap-1.5 rounded-xl bg-slate-950/60 p-1" role="radiogroup" aria-label="Formato della partita">
+      <div className="grid grid-cols-4 gap-1.5 rounded-xl bg-app/60 p-1" role="radiogroup" aria-label="Formato della partita">
         {MATCH_FORMATS.map((f) => {
           const active = f === format;
           return (
@@ -81,11 +81,11 @@ export function MatchFormatPicker({
               disabled={busy}
               onClick={() => change(f)}
               className={`rounded-lg px-1 py-2 text-center transition-colors disabled:opacity-60 ${
-                active ? 'bg-emerald-500 text-slate-950' : 'text-slate-300 hover:bg-slate-800'
+                active ? 'bg-accent text-on-accent' : 'text-secondary hover:bg-card-hover'
               }`}
             >
               <span className="block text-sm font-semibold">{FORMAT_INFO[f].label}</span>
-              <span className={`block text-[10px] tabular-nums ${active ? 'text-slate-900' : 'text-slate-500'}`}>{FORMAT_INFO[f].players} giocatori</span>
+              <span className={`block text-[10px] tabular-nums ${active ? 'text-slate-900' : 'text-muted'}`}>{FORMAT_INFO[f].players} giocatori</span>
             </button>
           );
         })}
@@ -93,7 +93,7 @@ export function MatchFormatPicker({
 
       {info.formations.length > 1 && (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-slate-400">Modulo</span>
+          <span className="text-xs text-secondary">Modulo</span>
           {info.formations.map((m) => (
             <button
               key={m}
@@ -102,19 +102,19 @@ export function MatchFormatPicker({
               onClick={() => change(format, m)}
               aria-pressed={m === formation}
               className={`px-3 py-1.5 rounded-full text-xs font-semibold tabular-nums transition-colors ${
-                m === formation ? 'bg-slate-700 text-white' : 'border border-slate-700 text-slate-300 hover:bg-slate-800'
+                m === formation ? 'bg-line-strong text-primary' : 'border border-line-strong text-secondary hover:bg-card-hover'
               }`}
             >
               {m}
             </button>
           ))}
-          {busy && <Loader2 className="h-4 w-4 animate-spin text-slate-400" />}
+          {busy && <Loader2 className="h-4 w-4 animate-spin text-secondary" />}
         </div>
       )}
 
       {field && !fieldHostsFormat(field, format) && (
-        <p className="flex items-start gap-2 text-xs text-amber-200">
-          <AlertTriangle className="h-4 w-4 flex-shrink-0 text-amber-400" />
+        <p className="flex items-start gap-2 text-xs text-warning">
+          <AlertTriangle className="h-4 w-4 flex-shrink-0 text-warning" />
           Il campo &quot;{field.name}&quot; non ha il costo per il {info.label}: si usa il costo standard del club. Aggiungilo in
           Impostazioni → Campi e costi.
         </p>

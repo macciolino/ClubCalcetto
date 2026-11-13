@@ -21,7 +21,7 @@ export function DeletionFeedbackCard() {
   }, [open, items]);
 
   return (
-    <div className="bg-slate-900 p-4 sm:p-5 rounded-2xl">
+    <div className="bg-card p-4 sm:p-5 rounded-2xl">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -29,34 +29,34 @@ export function DeletionFeedbackCard() {
         className="w-full flex items-center justify-between gap-3 text-left"
       >
         <div>
-          <h2 className="text-sm font-bold text-white flex items-center gap-2">
-            <MessageSquareWarning className="h-5 w-5 text-rose-300" /> Feedback account chiusi
+          <h2 className="text-sm font-bold text-primary flex items-center gap-2">
+            <MessageSquareWarning className="h-5 w-5 text-danger" /> Feedback account chiusi
           </h2>
-          <p className="text-xs text-slate-400 mt-0.5">Solo per te (super admin): i motivi lasciati da chi ha disattivato o eliminato l&apos;account.</p>
+          <p className="text-xs text-secondary mt-0.5">Solo per te (super admin): i motivi lasciati da chi ha disattivato o eliminato l&apos;account.</p>
         </div>
-        <span className="text-xs text-slate-400">{open ? 'Chiudi' : 'Apri'}</span>
+        <span className="text-xs text-secondary">{open ? 'Chiudi' : 'Apri'}</span>
       </button>
       {open && (
-        <div className="mt-4 pt-4 border-t border-slate-800 space-y-2">
+        <div className="mt-4 pt-4 border-t border-line space-y-2">
           {loading && (
-            <p className="text-xs text-slate-400 flex items-center gap-2">
+            <p className="text-xs text-secondary flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" /> Caricamento…
             </p>
           )}
-          {error && <p className="text-xs text-rose-300">{error}</p>}
-          {items && items.length === 0 && <p className="text-xs text-slate-400">Nessun account chiuso finora.</p>}
+          {error && <p className="text-xs text-danger">{error}</p>}
+          {items && items.length === 0 && <p className="text-xs text-secondary">Nessun account chiuso finora.</p>}
           {items?.map((f) => (
-            <div key={f.id} className="p-3 rounded-2xl bg-slate-950 border border-slate-800 text-xs space-y-1">
+            <div key={f.id} className="p-3 rounded-2xl bg-app border border-line text-xs space-y-1">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-bold text-white">{f.name}</span>
-                <span className="text-slate-500">
+                <span className="font-bold text-primary">{f.name}</span>
+                <span className="text-muted">
                   {new Date(f.at).toLocaleString('it-IT', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   {f.mode === 'deactivate' ? ' · disattivato' : ' · eliminato'}
                   {f.deletedBy === 'super_admin' ? ' da te' : ''}
                 </span>
               </div>
-              <div className="text-rose-200">Motivo: {f.reason}</div>
-              {f.details && <div className="text-slate-300 italic">&quot;{f.details}&quot;</div>}
+              <div className="text-danger">Motivo: {f.reason}</div>
+              {f.details && <div className="text-secondary italic">&quot;{f.details}&quot;</div>}
             </div>
           ))}
         </div>

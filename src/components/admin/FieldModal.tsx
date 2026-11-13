@@ -110,53 +110,53 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
     >
         <form id="field-form" onSubmit={handleSubmit} className="space-y-4 text-sm">
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1.5">Nome del centro</label>
+            <label className="block text-xs font-medium text-secondary mb-1.5">Nome del centro</label>
             <input
               type="text"
               required
               placeholder="Es. Centro Sportivo Green Club"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white font-medium focus:outline-none focus:border-emerald-500"
+              className="w-full px-3.5 py-2.5 bg-app border border-line rounded-xl text-primary font-medium focus:outline-none focus:border-accent"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1.5">Indirizzo</label>
+            <label className="block text-xs font-medium text-secondary mb-1.5">Indirizzo</label>
             <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted" />
               <input
                 type="text"
                 required
                 placeholder="Es. Via dello Sport 12, Milano"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                className="w-full pl-9 pr-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white font-medium focus:outline-none focus:border-emerald-500"
+                className="w-full pl-9 pr-3.5 py-2.5 bg-app border border-line rounded-xl text-primary font-medium focus:outline-none focus:border-accent"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1.5">Telefono</label>
+              <label className="block text-xs font-medium text-secondary mb-1.5">Telefono</label>
               <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted" />
                 <input
                   type="text"
                   placeholder="Es. +39 02 8765432"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="w-full pl-9 pr-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white font-medium focus:outline-none focus:border-emerald-500"
+                  className="w-full pl-9 pr-3.5 py-2.5 bg-app border border-line rounded-xl text-primary font-medium focus:outline-none focus:border-accent"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1.5">Fondo</label>
+              <label className="block text-xs font-medium text-secondary mb-1.5">Fondo</label>
               <select
                 value={courtType}
                 onChange={(e) => setCourtType(e.target.value)}
-                className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white font-medium focus:outline-none focus:border-emerald-500"
+                className="w-full px-3 py-2.5 bg-app border border-line rounded-xl text-primary font-medium focus:outline-none focus:border-accent"
               >
                 <option value="Erba Sintetica 4G Outdoor">Sintetico 4G Outdoor</option>
                 <option value="Erba Sintetica 5G Intaso Naturale">Sintetico 5G Intaso Naturale</option>
@@ -168,8 +168,8 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
           </div>
 
           <fieldset className="space-y-2">
-            <legend className="block text-xs font-medium text-slate-300 mb-1.5">Costo per formato (€, totale della partita)</legend>
-            <p className="text-xs text-slate-500">
+            <legend className="block text-xs font-medium text-secondary mb-1.5">Costo per formato (€, totale della partita)</legend>
+            <p className="text-xs text-muted">
               Casella vuota = su questo campo non si gioca quel formato (il 5vs5 vuoto usa il costo standard del club).
             </p>
             <div className="grid grid-cols-2 gap-2">
@@ -184,10 +184,10 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
                 const value = f === '5v5' ? cost : costs[f];
                 const set = (v: string) => (f === '5v5' ? setCost(v) : setCosts((c) => ({ ...c, [f]: v })));
                 return (
-                  <label key={f} className="block rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 focus-within:border-emerald-500">
+                  <label key={f} className="block rounded-xl bg-app border border-line px-3 py-2 focus-within:border-accent">
                     <span className="flex items-baseline justify-between gap-2 text-xs">
-                      <span className="font-semibold text-white">{label}</span>
-                      <span className="text-slate-500 tabular-nums">
+                      <span className="font-semibold text-primary">{label}</span>
+                      <span className="text-muted tabular-nums">
                         {num(value) > 0 ? `€${(num(value) / n).toFixed(2).replace('.', ',')} a testa` : f === '5v5' ? 'standard' : 'non disponibile'}
                       </span>
                     </span>
@@ -199,7 +199,7 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
                       value={value}
                       onChange={(e) => set(e.target.value.replace(/[^0-9.,]/g, ''))}
                       aria-label={`Costo ${label}`}
-                      className="mt-0.5 w-full bg-transparent text-white font-medium tabular-nums focus:outline-none"
+                      className="mt-0.5 w-full bg-transparent text-primary font-medium tabular-nums focus:outline-none"
                     />
                   </label>
                 );
@@ -208,13 +208,13 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
           </fieldset>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1.5">Note</label>
+            <label className="block text-xs font-medium text-secondary mb-1.5">Note</label>
             <textarea
               rows={2}
               placeholder="Es. Campo 3 coperto, spogliatoi con phon a gettone, parcheggio interno."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-white font-medium focus:outline-none focus:border-emerald-500"
+              className="w-full px-3.5 py-2 bg-app border border-line rounded-xl text-primary font-medium focus:outline-none focus:border-accent"
             />
           </div>
 

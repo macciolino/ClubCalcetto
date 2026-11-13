@@ -79,18 +79,18 @@ export function StatParametersCard({ categories, onOpenLegend }: StatParametersC
   return (
     <CollapsibleCard
       title="Parametri dei giocatori"
-      icon={<Sliders className="h-5 w-5 text-emerald-400" />}
+      icon={<Sliders className="h-5 w-5 text-accent-text" />}
       summary={categories.length ? categories.map((c) => c.name).join(' · ') : 'Nessun parametro'}
     >
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-secondary">
           Le abilità di ogni giocatore (card, radar e bilanciamento squadre). Si aggiungono e tolgono solo qui.
         </p>
         {onOpenLegend && (
           <button
             type="button"
             onClick={onOpenLegend}
-            className="self-start flex items-center gap-1.5 px-3 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 font-bold rounded-xl text-xs border border-indigo-500/30"
+            className="self-start flex items-center gap-1.5 px-3 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 font-bold rounded-xl text-xs border border-indigo-500/30"
           >
             <Info className="h-3.5 w-3.5" /> Cosa misurano
           </button>
@@ -98,9 +98,9 @@ export function StatParametersCard({ categories, onOpenLegend }: StatParametersC
       </div>
 
       {/* Legenda: cosa succede quando aggiungi o togli */}
-      <div className="rounded-2xl border border-slate-700 bg-slate-950/70 p-3 sm:p-4 space-y-1.5 text-xs text-slate-300">
-        <p className="font-bold text-white flex items-center gap-1.5">
-          <Info className="h-4 w-4 text-emerald-400" /> Come funziona
+      <div className="rounded-2xl border border-line-strong bg-app/70 p-3 sm:p-4 space-y-1.5 text-xs text-secondary">
+        <p className="font-bold text-primary flex items-center gap-1.5">
+          <Info className="h-4 w-4 text-accent-text" /> Come funziona
         </p>
         <ul className="list-disc pl-5 space-y-1">
           <li>
@@ -120,24 +120,24 @@ export function StatParametersCard({ categories, onOpenLegend }: StatParametersC
 
       {/* Elenco parametri */}
       {categories.length === 0 ? (
-        <p className="text-sm text-amber-300">Nessun parametro: aggiungine almeno uno qui sotto.</p>
+        <p className="text-sm text-warning">Nessun parametro: aggiungine almeno uno qui sotto.</p>
       ) : (
         <ul className="grid grid-cols-1 min-[420px]:grid-cols-2 lg:grid-cols-4 gap-2">
           {categories.map((cat) => (
             <li
               key={cat.id}
-              className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-2xl pl-3 pr-1 py-1 min-h-[48px]"
+              className="flex items-center gap-2 bg-app border border-line rounded-2xl pl-3 pr-1 py-1 min-h-[48px]"
             >
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-bold text-white truncate">{cat.name}</div>
-                <div className="text-[11px] text-slate-500">predefinito {cat.default_value}</div>
+                <div className="text-sm font-bold text-primary truncate">{cat.name}</div>
+                <div className="text-[11px] text-muted">predefinito {cat.default_value}</div>
               </div>
               <button
                 type="button"
                 onClick={() => handleRemove(cat)}
                 disabled={busy !== null}
                 aria-label={`Togli ${cat.name}`}
-                className="h-11 w-11 flex items-center justify-center rounded-xl text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 disabled:opacity-40"
+                className="h-11 w-11 flex items-center justify-center rounded-xl text-muted hover:text-danger hover:bg-rose-500/10 disabled:opacity-40"
               >
                 {busy === cat.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
               </button>
@@ -156,24 +156,24 @@ export function StatParametersCard({ categories, onOpenLegend }: StatParametersC
             onChange={(e) => setName(e.target.value)}
             placeholder="Nuovo parametro (es. Tecnica)"
             maxLength={30}
-            className="w-full px-3.5 py-3 bg-slate-950 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500"
+            className="w-full px-3.5 py-3 bg-app border border-line-strong rounded-xl text-primary text-sm focus:outline-none focus:border-accent"
           />
         </label>
         <div className="flex gap-2">
-          <label className="flex items-center gap-2 bg-slate-950 px-3 rounded-xl border border-slate-700 flex-1 sm:flex-none">
-            <span className="text-xs text-slate-400 whitespace-nowrap">Valore iniziale</span>
+          <label className="flex items-center gap-2 bg-app px-3 rounded-xl border border-line-strong flex-1 sm:flex-none">
+            <span className="text-xs text-secondary whitespace-nowrap">Valore iniziale</span>
             <NumberInput
               min={1}
               max={10}
               value={defaultValue}
               onValueChange={setDefaultValue}
-              className="w-12 py-3 bg-transparent text-white font-mono text-sm text-center focus:outline-none font-bold"
+              className="w-12 py-3 bg-transparent text-primary font-mono text-sm text-center focus:outline-none font-bold"
             />
           </label>
           <button
             type="submit"
             disabled={busy !== null || !name.trim()}
-            className="flex items-center justify-center gap-1.5 px-5 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-xl text-sm disabled:bg-slate-800 disabled:text-slate-500"
+            className="flex items-center justify-center gap-1.5 px-5 py-3 bg-accent hover:bg-accent/90 text-on-accent font-semibold rounded-xl text-sm disabled:bg-card-hover disabled:text-muted"
           >
             {busy === 'add' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             Aggiungi
@@ -182,11 +182,11 @@ export function StatParametersCard({ categories, onOpenLegend }: StatParametersC
       </form>
 
       {message && (
-        <p className="text-xs text-emerald-300 flex items-start gap-1.5">
+        <p className="text-xs text-accent-text flex items-start gap-1.5">
           <Check className="h-4 w-4 flex-shrink-0" /> {message}
         </p>
       )}
-      {error && <p className="text-xs text-rose-300">{error}</p>}
+      {error && <p className="text-xs text-danger">{error}</p>}
     </CollapsibleCard>
   );
 }

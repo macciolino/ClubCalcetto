@@ -124,7 +124,7 @@ function SettingsContent() {
   if (!user || !profile) {
     return (
       <div className="min-h-[50vh] flex flex-col items-center justify-center text-center gap-3">
-        <p className="text-sm text-slate-400">Accedi per gestire le tue impostazioni.</p>
+        <p className="text-sm text-secondary">Accedi per gestire le tue impostazioni.</p>
         <Link href="/login" className={btn.primary}>
           Vai al login <ArrowRight className="h-4 w-4" />
         </Link>
@@ -148,23 +148,23 @@ function SettingsContent() {
         href={`/settings?sezione=${s.id}`}
         aria-current={active ? 'page' : undefined}
         className={`flex items-center gap-3 px-3.5 py-3 text-sm transition-colors ${
-          active ? 'bg-slate-800 text-white' : 'text-slate-200 hover:bg-slate-800/60'
+          active ? 'bg-card-hover text-primary' : 'text-primary hover:bg-card-hover/60'
         }`}
       >
-        <span className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-slate-800 text-emerald-400">
+        <span className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-card-hover text-accent-text">
           <Icon className="h-4 w-4" />
           {Boolean(alerts[s.id]) && (
-            <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-amber-400 ring-2 ring-slate-900" aria-label="Da gestire" />
+            <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-amber-400 ring-2 ring-card" aria-label="Da gestire" />
           )}
         </span>
         <span className="flex-1 min-w-0">
           <span className="block font-medium truncate">{s.label}</span>
-          {withValue && summary[s.id] && <span className="sm:hidden block text-xs text-slate-400 truncate">{summary[s.id]}</span>}
+          {withValue && summary[s.id] && <span className="sm:hidden block text-xs text-secondary truncate">{summary[s.id]}</span>}
         </span>
         {withValue && summary[s.id] && (
-          <span className="hidden sm:block max-w-[45%] truncate text-xs text-slate-400 text-right">{summary[s.id]}</span>
+          <span className="hidden sm:block max-w-[45%] truncate text-xs text-secondary text-right">{summary[s.id]}</span>
         )}
-        <ChevronRight className="h-4 w-4 flex-shrink-0 text-slate-600" aria-hidden="true" />
+        <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted" aria-hidden="true" />
       </Link>
     );
   };
@@ -173,8 +173,8 @@ function SettingsContent() {
     <div className="space-y-5">
       {groups.map((g) => (
         <section key={g.title} className="space-y-1.5" aria-label={g.title}>
-          <h2 className="px-1 text-xs font-semibold text-slate-500">{g.title}</h2>
-          <div className="bg-slate-900 rounded-2xl overflow-hidden divide-y divide-slate-800">
+          <h2 className="px-1 text-xs font-semibold text-muted">{g.title}</h2>
+          <div className="bg-card rounded-2xl overflow-hidden divide-y divide-line">
             {g.items.map((s) => (
               <div key={s.id}>{row(s, withValue)}</div>
             ))}
@@ -189,7 +189,7 @@ function SettingsContent() {
   return (
     <div className="space-y-6 pb-16">
       <header className="min-h-[2.5rem] flex items-center">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Impostazioni</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-primary">Impostazioni</h1>
       </header>
 
       {!requested ? (
@@ -203,16 +203,16 @@ function SettingsContent() {
           <section className="space-y-4 min-w-0" aria-labelledby="settings-section-title">
             <Link
               href="/settings"
-              className="inline-flex items-center gap-1 text-sm font-medium text-emerald-400 hover:text-emerald-300"
+              className="inline-flex items-center gap-1 text-sm font-medium text-accent-text hover:text-accent-text"
               aria-label="Torna alla schermata generale delle impostazioni"
             >
               <ArrowLeft className="h-4 w-4" /> Impostazioni
             </Link>
             <div>
-              <h2 id="settings-section-title" className="text-xl font-semibold text-white">
+              <h2 id="settings-section-title" className="text-xl font-semibold text-primary">
                 {current.label}
               </h2>
-              <p className="text-sm text-slate-400 mt-0.5">{current.description}</p>
+              <p className="text-sm text-secondary mt-0.5">{current.description}</p>
             </div>
 
             {current.id === 'notifiche' ? (

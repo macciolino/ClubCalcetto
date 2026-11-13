@@ -63,7 +63,7 @@ export function FormSettingsCard({ show = 'form' }: { show?: 'form' | 'keeper' }
       on: settings.mvp,
       label: 'MVP e voti',
       help: `MVP della partita +${num(FORM_MVP_POINTS)}; gli altri da ${FORM_MIN_VOTES} voti in su +${num(FORM_VOTE_POINTS)} per voto.`,
-      icon: <Star className="h-4 w-4 text-amber-400" />,
+      icon: <Star className="h-4 w-4 text-warning" />,
     },
     {
       key: 'form_results' as const,
@@ -79,12 +79,12 @@ export function FormSettingsCard({ show = 'form' }: { show?: 'form' | 'keeper' }
     return (
       <>
       {/* Come gioca il club in porta */}
-      <section className="bg-slate-900 rounded-2xl p-4 sm:p-5 space-y-3">
+      <section className="bg-card rounded-2xl p-4 sm:p-5 space-y-3">
         <div>
-          <h3 className="text-base font-semibold text-white">Portiere</h3>
-          <p className="text-sm text-slate-400 mt-0.5">Come gioca il club in porta: cambia il bilanciamento delle squadre e il campo.</p>
+          <h3 className="text-base font-semibold text-primary">Portiere</h3>
+          <p className="text-sm text-secondary mt-0.5">Come gioca il club in porta: cambia il bilanciamento delle squadre e il campo.</p>
         </div>
-        <div className="grid grid-cols-2 gap-1 bg-slate-950 p-1 rounded-xl text-sm" role="radiogroup" aria-label="Portiere">
+        <div className="grid grid-cols-2 gap-1 bg-app p-1 rounded-xl text-sm" role="radiogroup" aria-label="Portiere">
           {([
             ['rotation', 'A rotazione'],
             ['fixed', 'Fisso'],
@@ -98,14 +98,14 @@ export function FormSettingsCard({ show = 'form' }: { show?: 'form' | 'keeper' }
                 aria-checked={active}
                 disabled={saving}
                 onClick={() => setKeeperMode(value)}
-                className={`py-2.5 rounded-lg font-bold transition-all ${active ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}
+                className={`py-2.5 rounded-lg font-bold transition-all ${active ? 'bg-accent text-on-accent' : 'text-secondary hover:text-primary'}`}
               >
                 {label}
               </button>
             );
           })}
         </div>
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-secondary">
           {settings.fixedKeeper
             ? 'Fisso: due portieri tra i 10 vanno uno per squadra; il portiere prende il bonus dal primo gol e i rigori parati contano.'
             : 'A rotazione (es. ogni 5 minuti): nessun portiere fisso, sul campo il posto in porta è "PORTA ↻" e le squadre si bilanciano senza cercare un portiere.'}
@@ -116,13 +116,13 @@ export function FormSettingsCard({ show = 'form' }: { show?: 'form' | 'keeper' }
   }
 
   return (
-    <div className="bg-slate-900 p-4 sm:p-5 rounded-2xl space-y-4">
+    <div className="bg-card p-4 sm:p-5 rounded-2xl space-y-4">
       <div>
-        <h2 className="text-sm font-bold text-white flex items-center gap-2">
-          <Flame className="h-5 w-5 text-orange-400 flex-shrink-0" />
+        <h2 className="text-sm font-bold text-primary flex items-center gap-2">
+          <Flame className="h-5 w-5 text-orange-700 dark:text-orange-400 flex-shrink-0" />
           Stato forma dei giocatori
         </h2>
-        <p className="text-xs text-slate-400 mt-0.5">
+        <p className="text-xs text-secondary mt-0.5">
           {anyOn
             ? `Attivo: in base alle ultime ${FORM_MATCHES} partite i giocatori salgono o scendono un po' in tutti i parametri e nel bilanciamento delle squadre.`
             : 'Spento: contano solo i valori scritti nella scheda di ogni giocatore.'}
@@ -131,12 +131,12 @@ export function FormSettingsCard({ show = 'form' }: { show?: 'form' | 'keeper' }
 
       <div className="space-y-2">
         {rows.map((r) => (
-          <div key={r.key} className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-slate-950 border border-slate-800">
+          <div key={r.key} className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-app border border-line">
             <div className="min-w-0">
-              <div className="text-sm font-bold text-white flex items-center gap-2">
+              <div className="text-sm font-bold text-primary flex items-center gap-2">
                 {r.icon} {r.label}
               </div>
-              <div className="text-xs text-slate-400 mt-0.5">{r.help}</div>
+              <div className="text-xs text-secondary mt-0.5">{r.help}</div>
             </div>
             <button
               type="button"
@@ -146,7 +146,7 @@ export function FormSettingsCard({ show = 'form' }: { show?: 'form' | 'keeper' }
               disabled={saving}
               onClick={() => toggle(r.key, !r.on)}
               className={`relative flex-shrink-0 h-8 w-14 rounded-full transition-colors disabled:opacity-60 ${
-                r.on ? 'bg-emerald-500' : 'bg-slate-700'
+                r.on ? 'bg-accent' : 'bg-line-strong'
               }`}
             >
               <span
@@ -160,22 +160,22 @@ export function FormSettingsCard({ show = 'form' }: { show?: 'form' | 'keeper' }
       </div>
 
       {/* Legenda di quanto deciso (a tendina) */}
-      <div className="rounded-2xl border border-slate-700 bg-slate-950/70">
+      <div className="rounded-2xl border border-line-strong bg-app/70">
         <button
           type="button"
           onClick={() => setLegendOpen((o) => !o)}
           aria-expanded={legendOpen}
           className="w-full flex items-center justify-between gap-2 p-3 text-left"
         >
-          <span className="text-xs font-bold text-white flex items-center gap-1.5">
-            <Info className="h-4 w-4 text-emerald-400" /> Legenda: come si calcola lo stato forma
+          <span className="text-xs font-bold text-primary flex items-center gap-1.5">
+            <Info className="h-4 w-4 text-accent-text" /> Legenda: come si calcola lo stato forma
           </span>
-          <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${legendOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`h-4 w-4 text-secondary transition-transform ${legendOpen ? 'rotate-180' : ''}`} />
         </button>
         {legendOpen && (
-          <div className="px-3 pb-3 space-y-3 text-xs text-slate-300">
+          <div className="px-3 pb-3 space-y-3 text-xs text-secondary">
             <div>
-              <p className="font-bold text-white mb-1">Punti di ogni partita</p>
+              <p className="font-bold text-primary mb-1">Punti di ogni partita</p>
               <ul className="list-disc pl-5 space-y-0.5">
                 <li>
                   <strong>MVP della partita</strong> (scelto dall&apos;admin alla chiusura): <strong>+{num(FORM_MVP_POINTS)}</strong>.
@@ -207,7 +207,7 @@ export function FormSettingsCard({ show = 'form' }: { show?: 'form' | 'keeper' }
               </ul>
             </div>
             <div>
-              <p className="font-bold text-white mb-1">Stato forma</p>
+              <p className="font-bold text-primary mb-1">Stato forma</p>
               <ul className="list-disc pl-5 space-y-0.5">
                 <li>
                   È la <strong>media dei punti delle ultime {FORM_MATCHES} partite</strong> archiviate (una partita non giocata conta 0),
@@ -228,7 +228,7 @@ export function FormSettingsCard({ show = 'form' }: { show?: 'form' | 'keeper' }
               </ul>
             </div>
             <div>
-              <p className="font-bold text-white mb-1">Esempi (tutti gli interruttori accesi)</p>
+              <p className="font-bold text-primary mb-1">Esempi (tutti gli interruttori accesi)</p>
               <ul className="list-disc pl-5 space-y-1">
                 <li>
                   <strong>Marco B.</strong>: ultima partita vinta (+0,2), MVP (+1) e 4 gol (+0,5) = 1,7; nelle 2 partite prima ha perso
@@ -241,7 +241,7 @@ export function FormSettingsCard({ show = 'form' }: { show?: 'form' | 'keeper' }
               </ul>
             </div>
             <div>
-              <p className="font-bold text-white mb-1">Portiere a rotazione o fisso</p>
+              <p className="font-bold text-primary mb-1">Portiere a rotazione o fisso</p>
               <ul className="list-disc pl-5 space-y-0.5">
                 <li>
                   <strong>A rotazione</strong> (in porta a turno): il ruolo Portiere non conta, nessun bonus da portiere, le squadre si
@@ -253,7 +253,7 @@ export function FormSettingsCard({ show = 'form' }: { show?: 'form' | 'keeper' }
                 </li>
               </ul>
             </div>
-            <p className="text-slate-400">Con tutti gli interruttori spenti lo stato forma è 0 per tutti.</p>
+            <p className="text-secondary">Con tutti gli interruttori spenti lo stato forma è 0 per tutti.</p>
           </div>
         )}
       </div>
