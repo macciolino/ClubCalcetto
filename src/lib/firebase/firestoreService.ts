@@ -373,10 +373,8 @@ export function subscribeOfficialMatchDate(
     return onSnapshot(
       docRef,
       (snap) => {
-        if (snap.exists()) {
-          const d = snap.data();
-          if (d?.date) callback(d.date);
-        }
+        // '' = un admin ha tolto il giorno ufficiale
+        if (snap.exists()) callback(String(snap.data()?.date || ''));
       },
       (err) => {
         console.warn('[Firestore] subscribeOfficialMatchDate warning:', err.message);

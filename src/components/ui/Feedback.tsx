@@ -131,7 +131,7 @@ export function FeedbackHost() {
             <p id="confirm-message" className="text-sm text-slate-100 leading-relaxed whitespace-pre-line">
               {request.message}
             </p>
-            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+            <div className="flex flex-col-reverse lg:flex-row lg:justify-end gap-2 [&>*]:w-full lg:[&>*]:w-auto">
               <button
                 type="button"
                 onClick={() => close(false)}

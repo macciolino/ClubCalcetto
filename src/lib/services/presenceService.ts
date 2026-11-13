@@ -43,22 +43,39 @@ export function getPromotedOnRemoval(dayPresences: Presence[], presenceId: strin
 // 2. GIORNO UFFICIALE PARTITA
 // ==========================================
 
+/** Saved on this device when an admin removed the official day ("no official match this week") */
+const NO_OFFICIAL = 'none';
+
+/** Official match day, or today when there is none (pages always need a day to show). */
 export function getOfficialMatchDate(): string {
   if (typeof window === 'undefined') {
     return TODAY_DATE;
   }
   try {
     const saved = localStorage.getItem(MATCH_DATE_STORAGE_KEY);
+    if (saved === NO_OFFICIAL) return TODAY_DATE;
     if (saved) return saved;
   } catch {}
   setOfficialMatchDate(TODAY_DATE);
   return TODAY_DATE;
 }
 
+/** Official match day as known on this device, '' when an admin removed it. */
+export function getStoredOfficialMatchDate(): string {
+  if (typeof window === 'undefined') return '';
+  try {
+    const saved = localStorage.getItem(MATCH_DATE_STORAGE_KEY);
+    return saved && saved !== NO_OFFICIAL ? saved : '';
+  } catch {
+    return '';
+  }
+}
+
+/** '' = no official day (removed by an admin). */
 export function setOfficialMatchDate(date: string) {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(MATCH_DATE_STORAGE_KEY, date);
+    localStorage.setItem(MATCH_DATE_STORAGE_KEY, date || NO_OFFICIAL);
     window.dispatchEvent(
       new CustomEvent('clubcalcetto_match_date_changed', { detail: { date } })
     );

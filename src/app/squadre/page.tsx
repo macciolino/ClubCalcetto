@@ -34,7 +34,7 @@ import {
 } from '@/lib/firebase/firestoreService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { getStoredPlayers } from '@/lib/services/playerService';
-import { getOfficialMatchDate } from '@/lib/services/presenceService';
+import { getOfficialMatchDate, getStoredOfficialMatchDate } from '@/lib/services/presenceService';
 import { balanceTeams, BalancedTeamsResult, summarizeTeams } from '@/lib/algorithm/teamBalancer';
 import { VirtualPitch } from '@/components/VirtualPitch';
 import { formatItalianDate, getCalendarDays } from '@/lib/utils/dateUtils';
@@ -488,7 +488,7 @@ function SquadreContent() {
     });
     return () => unsub();
   }, [calendarDays]);
-  const officialDate = mounted ? getOfficialMatchDate() : '';
+  const officialDate = mounted ? getStoredOfficialMatchDate() : '';
   const pillDays = Array.from(new Set([...calendarDays.map((d) => d.dateString), ...(selectedDate ? [selectedDate] : [])])).sort();
 
   const costPerPerson = (Number(totalCost || 80) / fmt.players).toFixed(2);

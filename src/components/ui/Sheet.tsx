@@ -107,7 +107,7 @@ export function Sheet({ onClose, title, subtitle, headerActions, footer, size = 
 
         {/* Azioni sempre visibili in basso */}
         {footer && (
-          <div className="flex-shrink-0 border-t border-slate-800 px-5 lg:px-6 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:pb-4 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+          <div className="flex-shrink-0 border-t border-slate-800 px-5 lg:px-6 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:pb-4 flex flex-col-reverse lg:flex-row lg:justify-end gap-2 [&>*]:w-full lg:[&>*]:w-auto">
             {footer}
           </div>
         )}

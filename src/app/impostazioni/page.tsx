@@ -10,7 +10,7 @@ import { NotificationGuide } from '@/components/NotificationGuide';
 import { AccountSettings } from '@/components/AccountSettings';
 import { AdminSection, AdminSections } from '@/components/admin/AdminSections';
 import { AppSettings, Profile, SportField } from '@/types/database';
-import { subscribeAppSettings, subscribeProfiles } from '@/lib/firebase/firestoreService';
+import { subscribeAppSettings, subscribeOfficialMatchDate, subscribeProfiles } from '@/lib/firebase/firestoreService';
 import { subscribeSportFields } from '@/lib/services/fieldService';
 import { db, isFirebaseConfigured } from '@/lib/firebase/config';
 import { useStatCategories } from '@/lib/hooks/useStatCategories';
@@ -54,6 +54,7 @@ function useSummary(
   // Account chiusi che hanno chiesto di rientrare (pallino su "Admin e account")
   const [returning, setReturning] = useState(0);
   const [notifyMode, setNotifyMode] = useState<string>('');
+  const [officialDate, setOfficialDate] = useState('');
   const [permission, setPermission] = useState<string>('');
   const categories = useStatCategories();
   const form = useFormSettings();
@@ -68,6 +69,7 @@ function useSummary(
     const unsubs = [
       subscribeAppSettings((s) => setSettings(s || {})),
       subscribeSportFields((list) => setFields(list || [])),
+      subscribeOfficialMatchDate(setOfficialDate),
       onSnapshot(
         doc(db, 'settings', 'notifications'),
         (snap) => setNotifyMode(String(snap.data()?.mode || 'admins')),
@@ -91,7 +93,7 @@ function useSummary(
   const values: Partial<Record<SectionId, string>> = {
     notifiche: permission === 'granted' ? 'attive' : permission === 'denied' ? 'bloccate' : permission === 'unsupported' ? '' : 'spente',
     account: email || '',
-    partita: short(settings.official_match_date),
+    partita: officialDate ? short(officialDate) : 'nessun giorno ufficiale',
     campi: def ? `${def.name} · €${Number(def.cost || settings.standard_total_cost || 80)}` : '',
     regole: `${settings.timelock_enabled ? `ritiri bloccati ${settings.timelock_hours_before || 4}h prima` : 'ritiri liberi'} · portiere ${
       form.fixedKeeper ? 'fisso' : 'a rotazione'

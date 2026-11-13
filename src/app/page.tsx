@@ -80,7 +80,8 @@ export default function HomePage() {
   useEffect(() => {
     if (!isFirebaseConfigured) return;
     const unsubs = [
-      subscribeOfficialMatchDate((d) => d && setDate(d)),
+      // Senza giorno ufficiale (tolto da un admin) la Home mostra oggi
+      subscribeOfficialMatchDate((d) => setDate(d || toDateString(new Date()))),
       subscribeProfiles((list) => setProfiles(list || [])),
       subscribeSportFields((list) => setFields(list || [])),
       subscribeAppSettings((s) =>

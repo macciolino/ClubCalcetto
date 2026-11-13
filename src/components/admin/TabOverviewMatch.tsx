@@ -64,6 +64,8 @@ interface TabOverviewMatchProps {
   activeDate: string;
   /** Makes a day the official one */
   onSelectDate: (dateString: string) => void;
+  /** Removes the official day ('' = no match shown to everyone) */
+  onClearOfficial?: () => void;
   players: Profile[];
   /** Not used anymore: this page reads the presences of every day it shows */
   presences?: Presence[];
@@ -84,6 +86,7 @@ export function TabOverviewMatch({
   days,
   activeDate,
   onSelectDate,
+  onClearOfficial,
   players,
   totalMatchCost: standardMatchCost = 80,
   fields = [],
@@ -131,16 +134,16 @@ export function TabOverviewMatch({
   }, [rangeFrom, rangeTo]);
 
   // ---------- giorno scelto: tutta la pagina parla solo di lui ----------
-  const [date, setDate] = useState(activeDate);
+  const [date, setDate] = useState(activeDate || today);
   const lastActive = useRef(activeDate);
   useEffect(() => {
-    // Se cambia il giorno ufficiale da fuori e stavi guardando il vecchio, segui il nuovo
-    setDate((cur) => (cur === lastActive.current || !cur ? activeDate : cur));
+    // Se cambia il giorno ufficiale da fuori e stavi guardando il vecchio, segui il nuovo (tolto: resti dove sei)
+    setDate((cur) => (activeDate && (cur === lastActive.current || !cur) ? activeDate : cur || today));
     lastActive.current = activeDate;
-  }, [activeDate]);
+  }, [activeDate, today]);
 
   const statusOf = (d: string): DayStatus =>
-    archived.has(d) ? 'Archiviata' : d === activeDate ? 'Ufficiale' : d < today ? 'Da chiudere' : 'In programma';
+    archived.has(d) ? 'Archiviata' : activeDate && d === activeDate ? 'Ufficiale' : d < today ? 'Da chiudere' : 'In programma';
   const status = statusOf(date);
   const [tab, setTab] = useState<TabId>('org');
   const chooseDay = (d: string) => {
@@ -348,7 +351,7 @@ export function TabOverviewMatch({
   const inputCls =
     'w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500 disabled:opacity-60';
   const visible = (t: TabId) => (tab === t ? '' : 'hidden lg:block');
-  const official = date === activeDate;
+  const official = Boolean(activeDate) && date === activeDate;
 
   const orgPanel = (
     <section className={`${panel} ${visible('org')}`} aria-label="Organizzazione e campo">
@@ -363,7 +366,11 @@ export function TabOverviewMatch({
             <Star className={`h-4 w-4 ${official ? 'text-amber-400 fill-amber-400' : 'text-slate-500'}`} /> Giorno ufficiale
           </p>
           <p className="text-xs text-slate-400">
-            {official ? 'È la partita mostrata a tutti in Home, Presenze e Squadre.' : `Ora è ${formatItalianDate(activeDate)}.`}
+            {official
+              ? 'È la partita mostrata a tutti in Home, Presenze e Squadre.'
+              : activeDate
+              ? `Ora è ${formatItalianDate(activeDate)}.`
+              : 'Nessun giorno ufficiale: attivalo per mostrarlo a tutti.'}
           </p>
         </div>
         <button
@@ -371,8 +378,13 @@ export function TabOverviewMatch({
           role="switch"
           aria-checked={official}
           aria-label="Giorno ufficiale"
-          disabled={official || isArchived}
+          disabled={(isArchived && !official) || (official && !onClearOfficial)}
           onClick={async () => {
+            if (official) {
+              if (await askConfirm('Togliere il giorno ufficiale? Home, Presenze e Squadre non metteranno in evidenza nessuna partita finché non ne scegli un altro.'))
+                onClearOfficial?.();
+              return;
+            }
             if (await askConfirm(`Rendere ${formatItalianDate(date)} il giorno ufficiale della settimana?`)) onSelectDate(date);
           }}
           className={`relative h-7 w-12 flex-shrink-0 rounded-full transition-colors disabled:cursor-default ${

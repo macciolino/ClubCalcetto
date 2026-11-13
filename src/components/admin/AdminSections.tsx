@@ -19,6 +19,7 @@ import {
   subscribePresencesRange,
   saveProfileDoc,
   saveOfficialMatchDateDoc,
+  subscribeOfficialMatchDate,
   subscribeAppSettings,
   saveAppSettingsDoc,
   saveStandardCostsDoc,
@@ -31,7 +32,7 @@ import {
   saveStoredPlayers,
 } from '@/lib/services/playerService';
 import { 
-  getOfficialMatchDate, 
+  getStoredOfficialMatchDate,
   setOfficialMatchDate, 
   getAppSettings, 
   saveAppSettings,
@@ -48,7 +49,7 @@ import {
   removeStoredField,
   subscribeSportFields 
 } from '@/lib/services/fieldService';
-import { getCalendarDays } from '@/lib/utils/dateUtils';
+import { getCalendarDays, toDateString } from '@/lib/utils/dateUtils';
 
 /** Admin sections shown in Impostazioni (each one was a part of the old /admin page). */
 export type AdminSection = 'partita' | 'campi' | 'regole' | 'parametri' | 'notifiche-club' | 'accessi';
@@ -59,7 +60,12 @@ export function AdminSections({ section }: { section: AdminSection }) {
 
   // Stato Dati Globali
   const [upcomingDays] = useState(() => getCalendarDays());
-  const [activeDate, setActiveDate] = useState<string>(() => getOfficialMatchDate());
+  // Giorno ufficiale ('' = nessuno: un admin l'ha tolto)
+  const [activeDate, setActiveDate] = useState<string>(() => getStoredOfficialMatchDate());
+  useEffect(() => {
+    const unsub = subscribeOfficialMatchDate((d) => setActiveDate(d));
+    return () => unsub();
+  }, []);
   const [categories, setCategories] = useState<StatCategory[]>(() => getStoredCategories());
   const [players, setPlayers] = useState<Profile[]>(() => getStoredPlayers());
   const [presences, setPresences] = useState<Presence[]>([]);
@@ -87,10 +93,7 @@ export function AdminSections({ section }: { section: AdminSection }) {
       if (e.detail) setAppSettingsState(e.detail);
       else setAppSettingsState(getAppSettings());
     };
-    const handleDate = (e: any) => {
-      const d = e.detail?.date || getOfficialMatchDate();
-      if (d) setActiveDate(d);
-    };
+    const handleDate = (e: Event) => setActiveDate((e as CustomEvent<{ date?: string }>).detail?.date || '');
 
     window.addEventListener('clubcalcetto_players_changed', handlePlayers);
     window.addEventListener('clubcalcetto_categories_changed', handleCats);
@@ -120,8 +123,8 @@ export function AdminSections({ section }: { section: AdminSection }) {
       });
       unsubSettings = subscribeAppSettings((remote) => {
         if (remote) {
+          // Il giorno ufficiale arriva solo da settings/official_match (il vecchio official_match_date non conta più)
           setAppSettingsState((prev) => ({ ...prev, ...remote }));
-          if (remote.official_match_date) setActiveDate(remote.official_match_date);
         }
       });
     }
@@ -144,15 +147,12 @@ export function AdminSections({ section }: { section: AdminSection }) {
     if (!isFirebaseConfigured) return;
 
     // Presenze del calendario visibile (+ la data attiva, anche se passata), in tempo reale
-    const first = upcomingDays[0]?.dateString || activeDate;
-    const last = upcomingDays[upcomingDays.length - 1]?.dateString || activeDate;
-    const unsubPres = subscribePresencesRange(
-      activeDate < first ? activeDate : first,
-      activeDate > last ? activeDate : last,
-      (list) => setPresences(list)
-    );
+    const base = activeDate || toDateString(new Date());
+    const first = upcomingDays[0]?.dateString || base;
+    const last = upcomingDays[upcomingDays.length - 1]?.dateString || base;
+    const unsubPres = subscribePresencesRange(base < first ? base : first, base > last ? base : last, (list) => setPresences(list));
 
-    const unsubTeams = subscribeGeneratedTeams(activeDate, (record) => {
+    const unsubTeams = subscribeGeneratedTeams(base, (record) => {
       setGeneratedTeams(record);
     });
 
@@ -189,6 +189,12 @@ export function AdminSections({ section }: { section: AdminSection }) {
     setActiveDate(dateString);
     setOfficialMatchDate(dateString);
     saveOfficialMatchDateDoc(dateString);
+  };
+  // Nessun giorno ufficiale: Home, Presenze e Squadre non mettono in evidenza nessuna partita
+  const handleClearOfficialDate = () => {
+    setActiveDate('');
+    setOfficialMatchDate('');
+    saveOfficialMatchDateDoc('');
   };
 
   // Blocco ritiri (impostazione in Campi & Parametri)
@@ -309,6 +315,7 @@ export function AdminSections({ section }: { section: AdminSection }) {
             days={upcomingDays}
             activeDate={activeDate}
             onSelectDate={handleSelectOfficialDate}
+            onClearOfficial={handleClearOfficialDate}
             players={players}
             presences={presences}
             generatedTeamRecord={generatedTeams}

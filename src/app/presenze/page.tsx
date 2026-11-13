@@ -81,6 +81,8 @@ export default function PresenzePage() {
       if (remoteDate) {
         setOfficialMatchDate(remoteDate);
         if (remoteDate >= firstDay && remoteDate <= lastDay) setSelectedDayString(remoteDate);
+      } else {
+        setOfficialMatchDate(''); // nessun giorno ufficiale
       }
     });
     const unsubCalendar = subscribeCalendarSettings((cal) => setOpenUntil(cal.open_until || ''));
