@@ -37,7 +37,10 @@ import { getStoredPlayers } from '@/lib/services/playerService';
 import { getOfficialMatchDate, getStoredOfficialMatchDate } from '@/lib/services/presenceService';
 import { balanceTeams, BalancedTeamsResult, summarizeTeams } from '@/lib/algorithm/teamBalancer';
 import { VirtualPitch } from '@/components/VirtualPitch';
-import { formatItalianDate, getCalendarDays } from '@/lib/utils/dateUtils';
+import { formatLongDate, shortDayParts, getCalendarDays } from '@/lib/utils/dateUtils';
+import { useTranslations } from 'next-intl';
+import { useLocaleSetting } from '@/i18n/I18nProvider';
+import { usePlayerLabels } from '@/i18n/usePlayerLabels';
 import Link from 'next/link';
 import { CollapsibleCard } from '@/components/CollapsibleCard';
 import { generateWhatsAppMessage, getWhatsAppShareUrl, copyToClipboard } from '@/lib/utils/whatsapp';
@@ -66,6 +69,11 @@ function SquadreContent() {
   const dateParam = searchParams.get('date');
   const { user, profile, isAdmin } = useAuth();
   const [mounted, setMounted] = useState(false);
+  const t = useTranslations('teams');
+  const tc = useTranslations('common');
+  const { locale } = useLocaleSetting();
+  const labels = usePlayerLabels();
+  const fmtDate = (d: string) => formatLongDate(d, locale);
 
   useEffect(() => {
     setMounted(true);
@@ -305,15 +313,15 @@ function SquadreContent() {
   const handleGenerateTeams = async () => {
     setErrorMsg('');
     if (!isStrictAdmin) {
-      setErrorMsg('La generazione delle squadre è riservata esclusivamente agli amministratori.');
+      setErrorMsg(t('adminOnly'));
       return;
     }
     if (starterProfiles.length < fmt.players) {
-      setErrorMsg(`Servono ${fmt.players} titolari per generare le squadre ${fmt.label}. Attualmente: ${starterProfiles.length}/${fmt.players}.`);
+      setErrorMsg(t('needStarters', { n: fmt.players, label: fmt.label, count: starterProfiles.length }));
       return;
     }
     const isRebalance = Boolean(teamRecord);
-    if (isRebalance && isConfirmed && !(await askConfirm('La partita è già confermata con queste squadre. Vuoi davvero rimescolarle? I giocatori verranno avvisati.'))) {
+    if (isRebalance && isConfirmed && !(await askConfirm(t('confirmReshuffle')))) {
       return;
     }
 
@@ -334,10 +342,10 @@ function SquadreContent() {
         notifyMatchPlayers({ type: 'teams_changed', date: selectedDate, playerIds: starters.map((p) => p.id) });
       }
       setTab('pitch');
-      flash(isRebalance ? 'Squadre ribilanciate e salvate.' : 'Squadre generate e salvate: restano queste finché non le cambi tu.');
+      flash(isRebalance ? t('rebalanced') : t('generated'));
     } catch (err: unknown) {
       console.error('Generazione fallita:', err);
-      setErrorMsg(err instanceof Error ? err.message : 'Generazione non riuscita. Riprova.');
+      setErrorMsg(err instanceof Error ? err.message : t('generateFailed'));
     } finally {
       setIsGenerating(false);
     }
@@ -346,22 +354,22 @@ function SquadreContent() {
   // Conferma partita: da qui in poi queste sono le squadre (i giocatori vengono avvisati)
   const handleConfirmMatch = async () => {
     if (!teamRecord || !teamsComplete) return;
-    if (!(await askConfirm(`Confermi la partita del ${formatItalianDate(selectedDate)} con queste squadre?`))) return;
+    if (!(await askConfirm(t('confirmMatchQ', { date: fmtDate(selectedDate) })))) return;
     setIsConfirming(true);
     try {
       await confirmTeams(selectedDate, profile?.id || '');
       notifyMatchPlayers({ type: 'match_confirmed', date: selectedDate, playerIds: allTeamIds });
-      flash('Partita confermata. Le squadre restano queste salvo sostituzioni, modifiche manuali o Ribilancia.');
+      flash(t('matchConfirmedMsg'));
     } catch (err) {
       console.warn('[Squadre] conferma non riuscita:', err);
-      setErrorMsg('Conferma non riuscita. Riprova.');
+      setErrorMsg(t('confirmFailed'));
     } finally {
       setIsConfirming(false);
     }
   };
 
   const handleUnconfirmMatch = async () => {
-    if (!(await askConfirm('Annullare la conferma della partita?'))) return;
+    if (!(await askConfirm(t('unconfirmQ')))) return;
     try {
       await confirmTeams(selectedDate, profile?.id || '', false);
     } catch (err) {
@@ -392,10 +400,10 @@ function SquadreContent() {
         notifyMatchPlayers({ type: 'teams_changed', date: selectedDate, playerIds: allTeamIds });
       }
       setTab('pitch');
-      flash('Squadre modificate e salvate.');
+      flash(t('manualSaved'));
     } catch (err) {
       console.warn('[Squadre] salvataggio manuale non riuscito:', err);
-      setErrorMsg('Salvataggio non riuscito. Riprova.');
+      setErrorMsg(t('saveFailed'));
     } finally {
       setIsSavingManual(false);
     }
@@ -496,27 +504,27 @@ function SquadreContent() {
 
   // Stato della partita in una frase (barra di stato)
   const status: { tone: 'done' | 'ok' | 'wait' | 'todo'; title: string; detail: string } = isCompleted
-    ? { tone: 'done', title: 'Partita archiviata', detail: 'Squadre bloccate: risultato e marcatori sono nello Storico.' }
+    ? { tone: 'done', title: t('stArchived'), detail: t('stArchivedDetail') }
     : isConfirmed
-    ? { tone: 'ok', title: 'Partita confermata', detail: 'Le squadre restano queste salvo sostituzioni o modifiche.' }
+    ? { tone: 'ok', title: t('stConfirmed'), detail: t('stConfirmedDetail') }
     : teamRecord
     ? {
         tone: 'todo',
-        title: isClientAdmin ? 'Squadre pronte, da confermare' : 'Squadre provvisorie',
-        detail: isClientAdmin ? 'Controlla il campo e conferma: i giocatori ricevono l’avviso.' : 'Un admin deve ancora confermare la partita.',
+        title: isClientAdmin ? t('stReadyAdmin') : t('stReady'),
+        detail: isClientAdmin ? t('stReadyAdminDetail') : t('stReadyDetail'),
       }
     : starterProfiles.length >= fmt.players
     ? {
         tone: 'todo',
-        title: isClientAdmin ? 'Pronti per generare le squadre' : 'Squadre in arrivo',
+        title: isClientAdmin ? t('stCanGenAdmin') : t('stCanGen'),
         detail: isClientAdmin
-          ? `${fmt.players} titolari su ${fmt.players}: l’app li divide in due squadre ${fmt.label} equilibrate.`
-          : `${fmt.players} titolari su ${fmt.players}: un admin genera a breve le squadre.`,
+          ? t('stCanGenAdminDetail', { n: fmt.players, label: fmt.label })
+          : t('stCanGenDetail', { n: fmt.players }),
       }
     : {
         tone: 'wait',
-        title: `In attesa dei titolari (${starterProfiles.length}/${fmt.players})`,
-        detail: `Mancano ${fmt.players - starterProfiles.length} giocatori: le squadre ${fmt.label} si generano a quota ${fmt.players}.`,
+        title: t('stWaiting', { count: starterProfiles.length, n: fmt.players }),
+        detail: t('stWaitingDetail', { missing: fmt.players - starterProfiles.length, label: fmt.label, n: fmt.players }),
       };
   const statusIcon =
     status.tone === 'done' ? (
@@ -529,18 +537,18 @@ function SquadreContent() {
       <AlertCircle className="h-5 w-5 text-secondary" />
     );
 
-  const generateLabel = teamRecord && !teamsWrongFormat ? 'Ribilancia' : `Genera squadre ${fmt.label}`;
+  const generateLabel = teamRecord && !teamsWrongFormat ? t('rebalance') : t('generate', { label: fmt.label });
   const primaryBtn = btn.primary;
   const secondaryBtn = btn.secondary;
 
   // Barre di confronto Bianchi / Neri
   const compareRows = balancedResult
     ? ([
-        ['Media', balancedResult.whiteStats.overallAvg, balancedResult.blackStats.overallAvg],
-        ['Difesa', balancedResult.whiteStats.defenseAvg, balancedResult.blackStats.defenseAvg],
-        ['Attacco', balancedResult.whiteStats.attackAvg, balancedResult.blackStats.attackAvg],
-        ['Resistenza', balancedResult.whiteStats.staminaAvg, balancedResult.blackStats.staminaAvg],
-        ['Tecnica', balancedResult.whiteStats.techniqueAvg, balancedResult.blackStats.techniqueAvg],
+        [t('avg'), balancedResult.whiteStats.overallAvg, balancedResult.blackStats.overallAvg],
+        [t('defense'), balancedResult.whiteStats.defenseAvg, balancedResult.blackStats.defenseAvg],
+        [t('attack'), balancedResult.whiteStats.attackAvg, balancedResult.blackStats.attackAvg],
+        [t('stamina'), balancedResult.whiteStats.staminaAvg, balancedResult.blackStats.staminaAvg],
+        [t('technique'), balancedResult.whiteStats.techniqueAvg, balancedResult.blackStats.techniqueAvg],
       ] as const)
     : [];
   const fmtNum = (n: number) => String(n).replace('.', ',');
@@ -559,7 +567,7 @@ function SquadreContent() {
           return (
             <li key={p.id} className="flex flex-col sm:flex-row sm:items-center sm:gap-2 min-w-0">
               <span className="sm:w-12 flex-shrink-0 text-[10px] font-semibold text-muted">
-                {slotLabel(i, fixedKeeper, team.length === slots.length ? slots : undefined)}
+                {labels.slot(slotLabel(i, fixedKeeper, team.length === slots.length ? slots : undefined))}
               </span>
               <span className="truncate text-primary">
                 {p.full_name}
@@ -581,9 +589,9 @@ function SquadreContent() {
     <div className="space-y-6 pb-16">
       {/* 1. Titolo + riepilogo della partita in una riga */}
       <header className="space-y-2">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-primary">Squadre</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-primary">{t('title')}</h1>
         <p className="text-sm text-secondary flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="capitalize">{formatItalianDate(selectedDate)}</span>
+          <span className="capitalize">{fmtDate(selectedDate)}</span>
           <span className="text-muted" aria-hidden="true">·</span>
           <span className="tabular-nums">{matchTime}</span>
           {matchLocation && (
@@ -595,7 +603,7 @@ function SquadreContent() {
           <span className="text-muted" aria-hidden="true">·</span>
           <span className="font-semibold text-primary">{fmt.label}</span>
           <span className="text-muted" aria-hidden="true">·</span>
-          <span className="text-accent-text font-semibold tabular-nums">€{costPerPerson.replace('.', ',')} a testa</span>
+          <span className="text-accent-text font-semibold tabular-nums">{t('perHead', { amount: locale === 'en' ? costPerPerson : costPerPerson.replace('.', ',') })}</span>
         </p>
         {selectedField?.address && (
           <a
@@ -614,11 +622,10 @@ function SquadreContent() {
       </header>
 
       {/* 2. Scelta della data: pillole come in Presenze */}
-      <section aria-label="Data della partita" className="space-y-2">
+      <section aria-label={t('dateAria')} className="space-y-2">
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
           {pillDays.map((d) => {
-            const [y, m, dd] = d.split('-').map(Number);
-            const dt = new Date(y, m - 1, dd);
+            const dd = Number(d.slice(8, 10));
             const selected = d === selectedDate;
             const count = d === selectedDate ? confirmedPresences.length : dayCounts.get(d) || 0;
             const dayMax = maxPlayersFor(matchFormats, d);
@@ -636,12 +643,12 @@ function SquadreContent() {
                 {official && (
                   <span
                     className={`absolute top-1.5 right-1.5 h-2 w-2 rounded-full ${selected ? 'bg-app' : 'bg-accent/90'}`}
-                    title="Giorno ufficiale"
-                    aria-label="Giorno ufficiale"
+                    title={t('officialDay')}
+                    aria-label={t('officialDay')}
                   />
                 )}
                 <span className={`text-xs font-medium capitalize ${selected ? 'text-slate-900' : 'text-secondary'}`}>
-                  {dt.toLocaleDateString('it-IT', { weekday: 'short' }).replace('.', '')}
+                  {shortDayParts(d, locale).weekday}
                 </span>
                 <span className="text-xl font-bold leading-tight">{dd}</span>
                 <span
@@ -657,10 +664,10 @@ function SquadreContent() {
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-secondary">
           <span className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-accent/90" aria-hidden="true" /> giorno ufficiale
+            <span className="h-2 w-2 rounded-full bg-accent/90" aria-hidden="true" /> {t('officialDayLegend')}
           </span>
           <label className="flex items-center gap-2">
-            <span>Altra data</span>
+            <span>{t('otherDate')}</span>
             <input
               type="date"
               value={selectedDate}
@@ -683,7 +690,7 @@ function SquadreContent() {
                 <>
                   {' '}
                   <button type="button" onClick={handleUnconfirmMatch} className="text-secondary underline">
-                    Annulla conferma
+                    {t('unconfirm')}
                   </button>
                 </>
               )}
@@ -704,7 +711,7 @@ function SquadreContent() {
             {teamRecord && !isConfirmed && (
               <button type="button" onClick={handleConfirmMatch} disabled={isConfirming || !teamsComplete} className={primaryBtn}>
                 {isConfirming ? <Loader2 className="h-4 w-4 animate-spin" /> : <BadgeCheck className="h-4 w-4" />}
-                Conferma partita
+                {t('confirmMatch')}
               </button>
             )}
           </div>
@@ -716,8 +723,8 @@ function SquadreContent() {
         <div className="rounded-xl bg-amber-500/10 px-4 py-3 text-sm text-amber-100 flex items-start gap-2" role="status">
           <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5 text-warning" />
           <span>
-            Le squadre salvate sono da {teamRecord?.team_white?.length} giocatori, ma la partita ora è {fmt.label}.
-            {isClientAdmin ? ` Premi "Genera squadre ${fmt.label}" per rifarle.` : ' Un admin deve rigenerarle.'}
+            {t('wrongFormat', { size: teamRecord?.team_white?.length || 0, label: fmt.label })}
+            {isClientAdmin ? t('wrongFormatAdmin', { label: fmt.label }) : t('wrongFormatPlayer')}
           </span>
         </div>
       )}
@@ -725,9 +732,9 @@ function SquadreContent() {
       {/* Formato e modulo della partita: solo admin */}
       {isClientAdmin && !isCompleted && (
         <CollapsibleCard
-          title={`Formato: ${fmt.label} · ${fmt.formation}`}
+          title={t('formatTitle', { label: fmt.label, formation: fmt.formation })}
           icon={<Users className="h-4 w-4 text-secondary" />}
-          summary={`${fmt.players} titolari, ${fmt.perTeam} per squadra`}
+          summary={t('formatSummary', { players: fmt.players, perTeam: fmt.perTeam })}
         >
           <MatchFormatPicker
             date={selectedDate}
@@ -743,13 +750,13 @@ function SquadreContent() {
       {/* 2. Dettagli modificabili: solo admin, chiusi di default */}
       {isClientAdmin && (
         <CollapsibleCard
-          title="Modifica dettagli partita"
+          title={t('editDetails')}
           icon={<Pencil className="h-4 w-4 text-secondary" />}
-          summary={hasCustomValues ? 'Costo o orario personalizzati per questa partita' : 'Orario, campo e costo di questa partita'}
+          summary={hasCustomValues ? t('customSummary') : t('defaultSummary')}
         >
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
             <label className="block">
-              <span className="block text-xs text-secondary font-semibold mb-1">Ora inizio</span>
+              <span className="block text-xs text-secondary font-semibold mb-1">{t('startTime')}</span>
               <input
                 type="time"
                 value={matchTime}
@@ -761,7 +768,7 @@ function SquadreContent() {
               />
             </label>
             <label className="block">
-              <span className="block text-xs text-secondary font-semibold mb-1">Campo</span>
+              <span className="block text-xs text-secondary font-semibold mb-1">{t('field')}</span>
               {fields.length > 0 ? (
                 <select
                   value={matchLocation}
@@ -788,13 +795,13 @@ function SquadreContent() {
                     markDirty('location');
                     setMatchLocation(e.target.value);
                   }}
-                  placeholder="Es. Centro Sportivo"
+                  placeholder={t('fieldPlaceholder')}
                   className="w-full px-3 py-2.5 bg-app border border-line rounded-xl text-primary focus:outline-none focus:border-accent"
                 />
               )}
             </label>
             <label className="block">
-              <span className="block text-xs text-secondary font-semibold mb-1">Costo totale (€)</span>
+              <span className="block text-xs text-secondary font-semibold mb-1">{t('totalCost')}</span>
               <NumberInput
                 value={totalCost}
                 onValueChange={(v) => {
@@ -809,13 +816,13 @@ function SquadreContent() {
           <p className="text-xs text-secondary">
             {hasCustomValues ? (
               <>
-                Questa partita ha costo o orario personalizzati.{' '}
+                {t('customNote')}{' '}
                 <button type="button" onClick={handleResetToStandard} className="text-accent-text underline font-semibold">
-                  Usa valori standard
+                  {t('useStandard')}
                 </button>
               </>
             ) : (
-              'Seguono il campo scelto e i valori del club (Impostazioni → Campi e costi). Se li cambi qui valgono solo per questa partita; si salvano da soli.'
+              t('standardNote')
             )}
           </p>
         </CollapsibleCard>
@@ -837,7 +844,7 @@ function SquadreContent() {
       {copySuccess && (
         <div className="rounded-xl bg-accent/10 px-4 py-3 text-sm text-accent-text flex items-start gap-2">
           <Check className="h-4 w-4 flex-shrink-0 mt-0.5" />
-          <span>Testo copiato: si apre WhatsApp per incollarlo.</span>
+          <span>{t('copied')}</span>
         </div>
       )}
       {!isCompleted && (teamRecord?.substitutions?.length || reconciled?.substitutions.length) ? (
@@ -846,7 +853,7 @@ function SquadreContent() {
             <div key={`${sub.out_id}-${sub.in_id}-${i}`} className="flex items-start gap-2">
               <ArrowLeftRight className="h-4 w-4 flex-shrink-0 mt-0.5 text-warning" />
               <span>
-                <span className="font-semibold">{sub.in_name}</span> subentra al posto di {sub.out_name}
+                {t.rich('subIn', { inName: sub.in_name, outName: sub.out_name, b: (c) => <span className="font-semibold">{c}</span> })}
               </span>
             </div>
           ))}
@@ -856,7 +863,7 @@ function SquadreContent() {
         <div className="rounded-xl bg-rose-500/10 px-4 py-3 text-sm text-danger flex items-start gap-2">
           <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
           <span>
-            {reconciled.emptySlots === 1 ? 'Manca 1 giocatore' : `Mancano ${reconciled.emptySlots} giocatori`}: il posto verrà preso dal primo che si iscrive.
+            {t('missing', { n: reconciled.emptySlots })}
           </span>
         </div>
       )}
@@ -866,8 +873,8 @@ function SquadreContent() {
         <div className="flex items-center gap-1 bg-card border border-line p-1 rounded-xl text-sm" role="tablist">
           {(
             [
-              ['pitch', 'Campo', <Trophy key="t" className="h-4 w-4" />],
-              ['manual', 'Modifica manuale', <Pencil key="p" className="h-4 w-4" />],
+              ['pitch', t('tabPitch'), <Trophy key="t" className="h-4 w-4" />],
+              ['manual', t('tabManual'), <Pencil key="p" className="h-4 w-4" />],
             ] as const
           ).map(([key, label, icon]) => (
             <button
@@ -889,8 +896,8 @@ function SquadreContent() {
       {tab === 'manual' && manualDraft && isClientAdmin && !isCompleted ? (
         <div className="bg-card border border-line rounded-2xl p-5 space-y-4">
           <div>
-            <h3 className="text-base font-semibold text-primary">Modifica manuale</h3>
-            <p className="text-sm text-secondary mt-0.5">Scambia i giocatori tra le squadre o i ruoli, poi salva.</p>
+            <h3 className="text-base font-semibold text-primary">{t('manualTitle')}</h3>
+            <p className="text-sm text-secondary mt-0.5">{t('manualHint')}</p>
           </div>
           <TeamSwapEditor
             fixedKeeper={fixedKeeper}
@@ -901,11 +908,11 @@ function SquadreContent() {
           />
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-3 border-t border-line">
             <button type="button" onClick={() => setTab('pitch')} className={secondaryBtn}>
-              Annulla
+              {tc('cancel')}
             </button>
             <button type="button" onClick={handleSaveManual} disabled={isSavingManual} className={primaryBtn}>
               {isSavingManual ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-              Salva squadre
+              {t('saveTeams')}
             </button>
           </div>
         </div>
@@ -941,12 +948,12 @@ function SquadreContent() {
                   className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-[#25D366] hover:bg-[#20ba59] text-on-accent font-semibold rounded-xl text-sm transition-colors disabled:opacity-40"
                 >
                   {isSharing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}
-                  Condividi su WhatsApp
+                  {t('shareWhatsapp')}
                 </button>
               )}
               <button type="button" onClick={handleDownloadPitchImage} className={secondaryBtn}>
                 <Download className="h-4 w-4" />
-                Scarica immagine
+                {t('downloadImage')}
               </button>
             </div>
           </section>
@@ -955,21 +962,21 @@ function SquadreContent() {
           <section className="bg-card border border-line rounded-2xl p-5 space-y-5">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <h3 className="text-base font-semibold text-primary">Equilibrio</h3>
-                <p className="text-sm text-secondary mt-0.5">Medie dei parametri delle due squadre</p>
+                <h3 className="text-base font-semibold text-primary">{t('balance')}</h3>
+                <p className="text-sm text-secondary mt-0.5">{t('balanceHint')}</p>
               </div>
               <div className="text-right">
                 <span className="block text-2xl font-bold text-accent-text tabular-nums leading-none">
                   {balancedResult.fairnessScore}%
                 </span>
-                <span className="text-xs text-secondary">equilibrio</span>
+                <span className="text-xs text-secondary">{t('balanceLower')}</span>
               </div>
             </div>
 
             <div className="space-y-3">
               <div className="flex justify-between text-xs font-semibold text-secondary">
-                <span>Bianchi</span>
-                <span>Neri</span>
+                <span>{t('white')}</span>
+                <span>{t('black')}</span>
               </div>
               {compareRows.map(([label, w, b]) => {
                 const total = w + b || 1;
@@ -990,8 +997,8 @@ function SquadreContent() {
             </div>
 
             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-line">
-              {teamList(balancedResult.teamWhite, 'Bianchi', 'bg-white ring-1 ring-line-strong')}
-              {teamList(balancedResult.teamBlack, 'Neri', 'bg-slate-950 border border-slate-500')}
+              {teamList(balancedResult.teamWhite, t('white'), 'bg-white ring-1 ring-line-strong')}
+              {teamList(balancedResult.teamBlack, t('black'), 'bg-slate-950 border border-slate-500')}
             </div>
           </section>
 
@@ -1015,11 +1022,11 @@ function SquadreContent() {
           <div className="inline-flex p-3 bg-card-hover text-accent-text rounded-2xl">
             <Trophy className="h-7 w-7" />
           </div>
-          <h3 className="text-base font-semibold text-primary">Nessuna squadra per questa data</h3>
+          <h3 className="text-base font-semibold text-primary">{t('noTeams')}</h3>
           {isClientAdmin && starterProfiles.length >= fmt.players ? (
             <>
               <p className="text-sm text-secondary max-w-md mx-auto">
-                Ci sono {fmt.players} titolari: genera le squadre {fmt.label}, restano quelle finché non le cambi.
+                {t('canGenerate', { n: fmt.players, label: fmt.label })}
               </p>
               <button
                 type="button"
@@ -1028,19 +1035,19 @@ function SquadreContent() {
                 className={`${primaryBtn} mx-auto`}
               >
                 {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shuffle className="h-4 w-4" />}
-                Genera squadre {fmt.label}
+                {t('generate', { label: fmt.label })}
               </button>
             </>
           ) : (
             <>
               <p className="text-sm text-secondary max-w-md mx-auto">
-                Le squadre {fmt.label} arrivano quando ci sono {fmt.players} titolari (ora {starterProfiles.length}/{fmt.players}).
+                {t('teamsArrive', { label: fmt.label, n: fmt.players, count: starterProfiles.length })}
               </p>
               <Link
                 href="/attendance"
                 className={textLink}
               >
-                Vai alle presenze <ArrowRight className="h-4 w-4" />
+                {t('goAttendance')} <ArrowRight className="h-4 w-4" />
               </Link>
             </>
           )}

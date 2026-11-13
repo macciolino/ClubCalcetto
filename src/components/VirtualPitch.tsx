@@ -7,7 +7,10 @@ import { Profile } from '@/types/database';
 import { PlayerPitchPosition, getShortPlayerName } from '@/lib/utils/formation';
 import { FormationSlot, slotsForTeamSize } from '@/lib/utils/matchFormat';
 import { getPlayerOverallRating } from '@/lib/algorithm/teamBalancer';
-import { formatItalianDate } from '@/lib/utils/dateUtils';
+import { formatLongDate } from '@/lib/utils/dateUtils';
+import { useTranslations } from 'next-intl';
+import { useLocaleSetting } from '@/i18n/I18nProvider';
+import { usePlayerLabels } from '@/i18n/usePlayerLabels';
 import { MapPin, Clock, Calendar, Coins } from 'lucide-react';
 
 interface VirtualPitchProps {
@@ -40,6 +43,8 @@ function pitchLayout(perTeam: number) {
 
 export const VirtualPitch = forwardRef<HTMLDivElement, VirtualPitchProps>(
   ({ teamWhite, teamBlack, matchInfo, whiteAvg, blackAvg, fixedKeeper = true, slots, formatLabel, players }, ref) => {
+    const t = useTranslations('pitch');
+    const { locale } = useLocaleSetting();
     const keeperLabel = (pos: PlayerPitchPosition, idx: number) =>
       idx === 0 && !fixedKeeper ? { ...pos, roleLabel: ROTATION_KEEPER_LABEL } : pos;
     const perTeam = Math.max(teamWhite.length, teamBlack.length, slots?.length || 0) || 5;
@@ -70,18 +75,18 @@ export const VirtualPitch = forwardRef<HTMLDivElement, VirtualPitchProps>(
                 <div className="text-xs sm:text-sm font-black tracking-tight text-white flex items-start gap-1.5">
                   <MapPin className="h-3.5 w-3.5 text-emerald-400 flex-shrink-0 mt-0.5" />
                   <span className="min-w-0 break-words leading-snug">
-                    {matchInfo.location || 'Centro Sportivo Calcetto'}
+                    {matchInfo.location || t('defaultLocation')}
                   </span>
                 </div>
                 <div className="text-[10px] sm:text-[11px] text-slate-400 flex items-center gap-1.5 sm:gap-2 mt-0.5 font-medium flex-wrap">
                   <span className="flex items-center gap-1">
                     <Calendar className="h-3 w-3 text-slate-500 flex-shrink-0" />
-                    {formatItalianDate(matchInfo.date)}
+                    {formatLongDate(matchInfo.date, locale)}
                   </span>
                   <span>•</span>
                   <span className="flex items-center gap-1 text-slate-300 font-bold">
                     <Clock className="h-3 w-3 text-emerald-400 flex-shrink-0" />
-                    Ore {matchInfo.time}
+                    {t('at', { time: matchInfo.time })}
                   </span>
                 </div>
               </div>
@@ -93,7 +98,7 @@ export const VirtualPitch = forwardRef<HTMLDivElement, VirtualPitchProps>(
               <div className="text-left font-mono">
                 <span className="text-xs font-black text-emerald-400">{matchInfo.totalCost}€</span>
                 <span className="text-[9px] sm:text-[10px] text-slate-400 font-sans ml-1">
-                  ({costPerPerson}€ / pers.)
+                  {t('perPerson', { amount: costPerPerson })}
                 </span>
               </div>
             </div>
@@ -145,7 +150,7 @@ export const VirtualPitch = forwardRef<HTMLDivElement, VirtualPitchProps>(
           {/* Badge Squadra Bianca Discreto e Compatto (Angolo in alto a sinistra) */}
           <div className="absolute top-2 left-2 sm:top-2.5 sm:left-2.5 flex items-center gap-1 bg-slate-950/90 text-white/90 border border-white/20 px-2 py-0.5 rounded-full text-[8px] sm:text-[9px] font-bold shadow-md pointer-events-none z-10 backdrop-blur-sm">
             <span className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-white ring-1 ring-slate-400" />
-            <span className="tracking-wider">BIANCHI</span>
+            <span className="tracking-wider">{t('white')}</span>
             {whiteAvg && (
               <span className="bg-white text-slate-950 text-[7.5px] sm:text-[8px] font-black px-1 rounded font-mono ml-0.5">
                 {whiteAvg}
@@ -160,7 +165,7 @@ export const VirtualPitch = forwardRef<HTMLDivElement, VirtualPitchProps>(
                 {blackAvg}
               </span>
             )}
-            <span className="tracking-wider">NERI</span>
+            <span className="tracking-wider">{t('black')}</span>
             <span className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-slate-900 border border-amber-400 ring-1 ring-slate-700" />
           </div>
 
@@ -215,6 +220,7 @@ function PlayerSticker({
   compact?: boolean;
 }) {
   const ovr = getPlayerOverallRating(player);
+  const labels = usePlayerLabels();
   // Senza foto: iniziali di nome e cognome al posto dell'immagine e, sotto, solo il nome
   const nameParts = (player.full_name || '').trim().split(/\s+/).filter(Boolean);
   const initials = initialsOf(player.full_name);
@@ -239,7 +245,7 @@ function PlayerSticker({
             isWhite ? 'bg-slate-100 text-slate-900 border-b border-slate-300' : 'bg-slate-900 text-amber-300'
           }`}
         >
-          <span>{pos.roleLabel}</span>
+          <span>{labels.slot(pos.roleLabel)}</span>
           <span className="font-mono">{ovr}</span>
         </div>
         {/* Foto */}

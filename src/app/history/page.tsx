@@ -8,7 +8,9 @@ import { Match, Profile } from '@/types/database';
 import { subscribeMatches, subscribeProfiles, deleteMatchResult } from '@/lib/firebase/firestoreService';
 import { useAuth } from '@/lib/context/AuthContext';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
-import { formatItalianDate, getVisibleHistoryYear } from '@/lib/utils/dateUtils';
+import { formatLongDate, getVisibleHistoryYear } from '@/lib/utils/dateUtils';
+import { useTranslations } from 'next-intl';
+import { useLocaleSetting } from '@/i18n/I18nProvider';
 import { Trophy, ListOrdered, CalendarDays, Trash2, Loader2, MoreHorizontal } from 'lucide-react';
 import { MatchDetailSheet } from '@/components/MatchDetailSheet';
 import { PlayerDetailSheet } from '@/components/PlayerCardFifa';
@@ -33,14 +35,14 @@ interface PlayerLine {
 
 type SortKey = 'played' | 'won' | 'drawn' | 'lost' | 'goals' | 'mvp';
 
-/** Sortable columns of the leaderboard, in table order */
-const SORT_COLUMNS: { key: SortKey; label: string; title: string; cell: string }[] = [
-  { key: 'played', label: 'PG', title: 'Presenze', cell: '' },
-  { key: 'won', label: 'V', title: 'Partite vinte', cell: 'text-accent-text' },
-  { key: 'drawn', label: 'P', title: 'Pareggi', cell: 'text-warning' },
-  { key: 'lost', label: 'S', title: 'Sconfitte', cell: 'text-danger' },
-  { key: 'goals', label: 'Gol', title: 'Gol segnati', cell: '' },
-  { key: 'mvp', label: 'MVP', title: 'Premi MVP', cell: '' },
+/** Sortable columns of the leaderboard, in table order (label/title: history.col<Name> / col<Name>Title) */
+const SORT_COLUMNS: { key: SortKey; name: string; cell: string }[] = [
+  { key: 'played', name: 'Played', cell: '' },
+  { key: 'won', name: 'Won', cell: 'text-accent-text' },
+  { key: 'drawn', name: 'Drawn', cell: 'text-warning' },
+  { key: 'lost', name: 'Lost', cell: 'text-danger' },
+  { key: 'goals', name: 'Goals', cell: '' },
+  { key: 'mvp', name: 'Mvp', cell: '' },
 ];
 
 /** Builds the leaderboard ONLY from archived matches (nothing is stored on the profiles). */
@@ -81,6 +83,8 @@ export default function HistoryPage() {
   const { user, profile, isAdmin: ctxIsAdmin } = useAuth();
   const isAdmin = Boolean(user && (ctxIsAdmin || profile?.role === 'admin'));
   const [deleting, setDeleting] = useState<string | null>(null);
+  const t = useTranslations('history');
+  const { locale } = useLocaleSetting();
   const [matches, setMatches] = useState<Match[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -144,7 +148,7 @@ export default function HistoryPage() {
   );
 
   const nameOf = (id: string, fallback?: string) =>
-    profiles.find((p) => p.id === id)?.full_name || fallback || 'Giocatore';
+    profiles.find((p) => p.id === id)?.full_name || fallback || t('playerFallback');
 
   const leaderboard = useMemo(() => {
     const list = buildLeaderboard(visibleMatches, nameOf);
@@ -161,20 +165,20 @@ export default function HistoryPage() {
 
   // Cancellazione (solo admin): toglie anche le V/P/S che la partita aveva aggiunto ai profili
   const handleDeleteMatch = async (m: Match) => {
-    if (!(await askConfirm(`Cancellare dallo storico la partita del ${formatItalianDate(m.match_date || m.id)}? Vittorie/pareggi/sconfitte di questa partita verranno tolti dai profili.`))) return;
+    if (!(await askConfirm(t('confirmDeleteMatch', { date: formatLongDate(m.match_date || m.id, locale) })))) return;
     setDeleting(m.id);
     try {
       await deleteMatchResult(m.match_date || m.id);
     } catch (err) {
       console.warn('[Storico] cancellazione non riuscita:', err);
-      notify('Cancellazione non riuscita. Riprova.');
+      notify(t('deleteFailed'));
     } finally {
       setDeleting(null);
     }
   };
 
   const handleDeleteAll = async () => {
-    if (!(await askConfirm(`Vuoi davvero cancellare tutto lo storico${season === 'all' ? '' : ` ${season}`}?`))) return;
+    if (!(await askConfirm(season === 'all' ? t('confirmDeleteAll') : t('confirmDeleteYear', { year: season })))) return;
     setDeleting('all');
     try {
       for (const m of visibleMatches) {
@@ -182,7 +186,7 @@ export default function HistoryPage() {
       }
     } catch (err) {
       console.warn('[Storico] cancellazione non riuscita:', err);
-      notify('Cancellazione interrotta. Alcune partite potrebbero essere ancora presenti: riprova.');
+      notify(t('deleteInterrupted'));
     } finally {
       setDeleting(null);
     }
@@ -194,11 +198,18 @@ export default function HistoryPage() {
   const detailPlayer = profiles.find((p) => p.id === detailPlayerId) || null;
   const detailMatch = matches.find((m) => m.id === detailMatchId) || null;
 
-  const UNIT: Record<SortKey, string> = { played: 'partite', won: 'vinte', drawn: 'pari', lost: 'perse', goals: 'gol', mvp: 'MVP' };
+  const UNIT: Record<SortKey, string> = {
+    played: t('unitPlayed'),
+    won: t('unitWon'),
+    drawn: t('unitDrawn'),
+    lost: t('unitLost'),
+    goals: t('unitGoals'),
+    mvp: t('unitMvp'),
+  };
   const zeroTone = (v: number, tone: string) => (v === 0 ? 'text-muted' : tone);
   const shortDate = (d: string) => {
     const [y, mo, dd] = d.split('-').map(Number);
-    return new Date(y, mo - 1, dd).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '');
+    return new Date(y, mo - 1, dd).toLocaleDateString(locale === 'en' ? 'en-GB' : 'it-IT', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '');
   };
   const shortName = (full: string) => {
     const [first, ...rest] = full.trim().split(/\s+/);
@@ -209,7 +220,7 @@ export default function HistoryPage() {
     <div className="space-y-5 pb-12">
       {/* Titolo + stagione (e menu admin) sulla stessa riga */}
       <header className="flex items-center justify-between gap-3 min-h-[2.5rem]">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-primary">Storico</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-primary">{t('title')}</h1>
         <div className="flex items-center gap-2">
           {seasons.length > 0 && (
             <select
@@ -218,13 +229,13 @@ export default function HistoryPage() {
                 setSeason(e.target.value);
                 setPickedDate(null);
               }}
-              aria-label="Stagione"
+              aria-label={t('season')}
               className="bg-card border border-line rounded-full pl-3.5 pr-8 py-2 text-sm text-primary focus:outline-none focus:border-accent"
             >
-              <option value="all">Tutte le stagioni</option>
+              <option value="all">{t('allSeasons')}</option>
               {seasons.map((y) => (
                 <option key={y} value={y}>
-                  Stagione {y}
+                  {t('seasonYear', { year: y })}
                 </option>
               ))}
             </select>
@@ -234,7 +245,7 @@ export default function HistoryPage() {
               <button
                 type="button"
                 onClick={() => setMenuOpen((o) => !o)}
-                aria-label="Altre azioni"
+                aria-label={t('moreActions')}
                 aria-expanded={menuOpen}
                 className="h-9 w-9 flex items-center justify-center rounded-full text-secondary hover:text-primary hover:bg-card-hover"
               >
@@ -254,7 +265,7 @@ export default function HistoryPage() {
                       className={menu.danger}
                     >
                       {deleting === 'all' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                      {season === 'all' ? 'Cancella tutto lo storico' : `Cancella storico ${season}`}
+                      {season === 'all' ? t('deleteAll') : t('deleteSeason', { year: season })}
                     </button>
                   </div>
                 </>
@@ -269,9 +280,9 @@ export default function HistoryPage() {
         <div className="flex gap-2 overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
           {(
             [
-              [visibleMatches.length, 'partite'],
-              [totalGoals, 'gol'],
-              [leaderboard.length, 'giocatori'],
+              [visibleMatches.length, t('chipMatches', { count: visibleMatches.length })],
+              [totalGoals, t('chipGoals')],
+              [leaderboard.length, t('chipPlayers', { count: leaderboard.length })],
             ] as const
           ).map(([v, label]) => (
             <span key={label} className="flex-shrink-0 rounded-full bg-card px-3.5 py-1.5 text-sm text-secondary whitespace-nowrap">
@@ -279,11 +290,11 @@ export default function HistoryPage() {
             </span>
           ))}
         </div>
-        <div className="flex items-center bg-card p-1 rounded-full border border-line text-sm self-stretch sm:self-auto" role="radiogroup" aria-label="Vista">
+        <div className="flex items-center bg-card p-1 rounded-full border border-line text-sm self-stretch sm:self-auto" role="radiogroup" aria-label={t('view')}>
           {(
             [
-              ['leaderboard', 'Classifica', ListOrdered],
-              ['matches', 'Partite', CalendarDays],
+              ['leaderboard', t('leaderboard'), ListOrdered],
+              ['matches', t('matches'), CalendarDays],
             ] as const
           ).map(([key, label, Icon]) => (
             <button
@@ -303,37 +314,37 @@ export default function HistoryPage() {
       </div>
 
       {!loaded ? (
-        <div className="space-y-3" role="status" aria-label="Caricamento in corso">
+        <div className="space-y-3" role="status" aria-label={t('loading')}>
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-64 w-full rounded-2xl" />
         </div>
       ) : visibleMatches.length === 0 ? (
         <div className="rounded-2xl bg-card/60 p-8 text-center space-y-2">
           <Trophy className="h-8 w-8 text-muted mx-auto" />
-          <p className="text-sm text-secondary font-semibold">Nessuna partita archiviata</p>
-          <p className="text-sm text-muted">Dopo ogni partita un admin inserisce risultato, marcatori e MVP.</p>
+          <p className="text-sm text-secondary font-semibold">{t('emptyTitle')}</p>
+          <p className="text-sm text-muted">{t('emptyText')}</p>
         </div>
       ) : view === 'leaderboard' ? (
         <>
           {/* Telefono e tablet: righe, ordinamento dalla tendina */}
           <div className="lg:hidden space-y-2">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs text-muted">Tocca un giocatore per la sua scheda</span>
+              <span className="text-xs text-muted">{t('tapPlayer')}</span>
               <select
                 value={sortBy}
                 onChange={(e) => {
                   setSortBy(e.target.value as SortKey);
                   setSortDir('desc');
                 }}
-                aria-label="Ordina per"
+                aria-label={t('sortBy')}
                 className="bg-card border border-line rounded-xl px-2.5 py-2 text-sm text-primary focus:outline-none focus:border-accent"
               >
-                <option value="won">Per vittorie</option>
-                <option value="goals">Per gol</option>
-                <option value="mvp">Per MVP</option>
-                <option value="played">Per presenze</option>
-                <option value="drawn">Per pareggi</option>
-                <option value="lost">Per sconfitte</option>
+                <option value="won">{t('sortWon')}</option>
+                <option value="goals">{t('sortGoals')}</option>
+                <option value="mvp">{t('sortMvp')}</option>
+                <option value="played">{t('sortPlayed')}</option>
+                <option value="drawn">{t('sortDrawn')}</option>
+                <option value="lost">{t('sortLost')}</option>
               </select>
             </div>
             <ul className="bg-card rounded-2xl divide-y divide-line overflow-hidden">
@@ -348,10 +359,10 @@ export default function HistoryPage() {
                     <span className="flex-1 min-w-0">
                       <span className="block truncate text-sm font-semibold text-primary">{l.name}</span>
                       <span className="block text-xs text-secondary tabular-nums">
-                        {l.played} {l.played === 1 ? 'partita' : 'partite'} ·{' '}
-                        <span className={zeroTone(l.won, 'text-accent-text')}>{l.won}V</span>{' '}
-                        <span className={zeroTone(l.drawn, 'text-warning')}>{l.drawn}P</span>{' '}
-                        <span className={zeroTone(l.lost, 'text-danger')}>{l.lost}S</span>
+                        {t('playedCount', { count: l.played })} ·{' '}
+                        <span className={zeroTone(l.won, 'text-accent-text')}>{t('wShort', { n: l.won })}</span>{' '}
+                        <span className={zeroTone(l.drawn, 'text-warning')}>{t('dShort', { n: l.drawn })}</span>{' '}
+                        <span className={zeroTone(l.lost, 'text-danger')}>{t('lShort', { n: l.lost })}</span>
                       </span>
                     </span>
                     <span className="flex-shrink-0 text-right">
@@ -372,7 +383,7 @@ export default function HistoryPage() {
               <thead>
                 <tr className="text-xs text-secondary border-b border-line">
                   <th className="text-left pl-5 pr-2 py-3 w-14">#</th>
-                  <th className="text-left px-2 py-3">Giocatore</th>
+                  <th className="text-left px-2 py-3">{t('player')}</th>
                   {SORT_COLUMNS.map((c) => (
                     <th
                       key={c.key}
@@ -382,10 +393,10 @@ export default function HistoryPage() {
                       <button
                         type="button"
                         onClick={() => handleSort(c.key)}
-                        title={`Ordina per ${c.title}`}
+                        title={t('sortByTitle', { what: t(`col${c.name}Title`) })}
                         className={`w-full px-2 py-3 font-semibold whitespace-nowrap ${sortBy === c.key ? 'text-primary' : 'hover:text-primary'}`}
                       >
-                        {c.label}
+                        {t(`col${c.name}`)}
                         <span className="inline-block w-3 text-[9px]" aria-hidden="true">
                           {sortBy === c.key ? (sortDir === 'desc' ? '▼' : '▲') : ''}
                         </span>
@@ -445,11 +456,11 @@ export default function HistoryPage() {
                     >
                       <span className="text-sm text-secondary capitalize">{shortDate(m.match_date || m.id)}</span>
                       <span className="flex items-center justify-center gap-2 text-sm">
-                        <span className="hidden sm:inline text-secondary">Bianchi</span>
+                        <span className="hidden sm:inline text-secondary">{t('white')}</span>
                         <span className={`text-lg font-bold tabular-nums ${w > b ? 'text-accent-text' : 'text-primary'}`}>{w}</span>
                         <span className="text-muted">–</span>
                         <span className={`text-lg font-bold tabular-nums ${b > w ? 'text-accent-text' : 'text-primary'}`}>{b}</span>
-                        <span className="hidden sm:inline text-secondary">Neri</span>
+                        <span className="hidden sm:inline text-secondary">{t('black')}</span>
                       </span>
                       <span className="truncate text-right text-xs text-warning">
                         {m.mvp_player_id ? `⭐ ${shortName(nameOf(m.mvp_player_id))}` : ''}

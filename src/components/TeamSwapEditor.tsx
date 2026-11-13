@@ -5,6 +5,8 @@ import { MatchTeamPlayer } from '@/types/database';
 import { slotLabel } from '@/lib/utils/teamUtils';
 import { slotsForTeamSize } from '@/lib/utils/matchFormat';
 import { ArrowLeftRight } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { usePlayerLabels } from '@/i18n/usePlayerLabels';
 
 type Side = 'white' | 'black' | 'bench';
 interface Selection {
@@ -32,6 +34,8 @@ interface TeamSwapEditorProps {
 export function TeamSwapEditor({ white, black, onChange, bench = [], disabled, fixedKeeper = true, formation }: TeamSwapEditorProps) {
   const slots = slotsForTeamSize(Math.max(white.length, black.length), formation);
   const [selected, setSelected] = useState<Selection | null>(null);
+  const t = useTranslations('swap');
+  const labels = usePlayerLabels();
 
   const listOf = (side: Side) => (side === 'white' ? white : side === 'black' ? black : bench);
 
@@ -94,7 +98,7 @@ export function TeamSwapEditor({ white, black, onChange, bench = [], disabled, f
           aria-pressed={selected?.side === side && selected.index === i}
         >
           <span className="w-12 flex-shrink-0 text-[10px] font-mono font-bold text-accent-text">
-            {slotLabel(i, fixedKeeper, slots)}
+            {labels.slot(slotLabel(i, fixedKeeper, slots))}
           </span>
           <span className="truncate">{p.name}</span>
         </button>
@@ -109,17 +113,17 @@ export function TeamSwapEditor({ white, black, onChange, bench = [], disabled, f
       <p className="text-xs text-secondary flex items-center gap-1.5">
         <ArrowLeftRight className="h-3.5 w-3.5 text-accent-text flex-shrink-0" />
         {selected
-          ? 'Ora tocca il giocatore con cui scambiarlo (tocca di nuovo per annullare).'
-          : 'Tocca un giocatore e poi un altro per scambiarli di squadra o di ruolo.'}
+          ? t('selected')
+          : t('hint')}
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {renderTeam('white', '⚪ Bianchi')}
-        {renderTeam('black', '⚫ Neri')}
+        {renderTeam('white', t('white'))}
+        {renderTeam('black', t('black'))}
       </div>
       {benchPlayers.length > 0 && (
         <div className="space-y-1.5">
           <div className="text-xs font-bold text-secondary">
-            Altri giocatori (tocca e poi scegli chi sostituire)
+            {t('bench')}
           </div>
           <div className="flex flex-wrap gap-1.5">
             {bench.map((p, i) =>

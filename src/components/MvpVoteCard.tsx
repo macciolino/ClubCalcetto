@@ -6,7 +6,9 @@ import React, { useEffect, useState } from 'react';
 import { MatchTeamPlayer, MvpVote } from '@/types/database';
 import { castMvpVote, countMvpVotes, subscribeMvpVotes, setMvpVoteTest, clearMvpVotes } from '@/lib/firebase/firestoreService';
 import { mvpVotingWindow } from '@/lib/utils/matchUtils';
-import { formatItalianDate } from '@/lib/utils/dateUtils';
+import { formatLongDate } from '@/lib/utils/dateUtils';
+import { useTranslations } from 'next-intl';
+import { useLocaleSetting } from '@/i18n/I18nProvider';
 import { Star, Clock, Check, Loader2, FlaskConical, Trash2 } from 'lucide-react';
 
 interface MvpVoteCardProps {
@@ -21,7 +23,7 @@ interface MvpVoteCardProps {
   testMode?: 'admins' | 'all' | false;
 }
 
-const timeLabel = (d: Date) => d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+const timeLabel = (d: Date, locale: string) => d.toLocaleTimeString(locale === 'en' ? 'en-GB' : 'it-IT', { hour: '2-digit', minute: '2-digit' });
 const toYmd = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
@@ -31,6 +33,9 @@ export function MvpVoteCard({ date, matchTime, white, black, voterUid, isAdmin =
   const [now, setNow] = useState(() => new Date());
   const [saving, setSaving] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const t = useTranslations('mvpVote');
+  const { locale } = useLocaleSetting();
+  const when = (d: Date) => t('dateAt', { date: formatLongDate(toYmd(d), locale), time: timeLabel(d, locale) });
 
   useEffect(() => {
     setVotes([]);
@@ -55,22 +60,22 @@ export function MvpVoteCard({ date, matchTime, white, black, voterUid, isAdmin =
   const leader = tally[0] ? players.find((p) => p.id === tally[0].playerId) : undefined;
 
   const changeTest = async (mode: 'admins' | 'all' | false) => {
-    if (mode === 'all' && !(await askConfirm('Il voto di prova si apre ADESSO per tutti i giocatori. Ricordati di azzerare i voti alla fine. Continuare?'))) return;
+    if (mode === 'all' && !(await askConfirm(t('confirmTestAll')))) return;
     try {
       await setMvpVoteTest(date, mode);
     } catch (err) {
       console.warn('[MVP] modalità test non aggiornata:', err);
-      setError('Non è stato possibile cambiare la modalità test (servono le squadre salvate).');
+      setError(t('testFailed'));
     }
   };
 
   const handleClearVotes = async () => {
-    if (!(await askConfirm(`Cancellare tutti i ${votes.length} voti MVP di questa partita?`))) return;
+    if (!(await askConfirm(t('confirmClear', { count: votes.length })))) return;
     try {
       await clearMvpVotes(date);
     } catch (err) {
       console.warn('[MVP] cancellazione voti non riuscita:', err);
-      setError('Cancellazione dei voti non riuscita.');
+      setError(t('clearFailed'));
     }
   };
 
@@ -82,21 +87,21 @@ export function MvpVoteCard({ date, matchTime, white, black, voterUid, isAdmin =
       await castMvpVote(date, voterUid, playerId);
     } catch (err) {
       console.warn('[MVP] voto non riuscito:', err);
-      setError('Voto non registrato. Riprova.');
+      setError(t('voteFailed'));
     } finally {
       setSaving(null);
     }
   };
 
-  const opensLabel = `${formatItalianDate(toYmd(opensAt))} alle ${timeLabel(opensAt)}`;
+  const opensLabel = when(opensAt);
 
   return (
     <section className="bg-card border border-line rounded-2xl p-5 space-y-4" aria-labelledby="mvp-vote-title">
       <div className="flex items-center justify-between gap-2 border-b border-line pb-3">
         <h3 id="mvp-vote-title" className="text-sm font-bold text-primary flex items-center gap-2">
-          <Star className="h-4 w-4 text-warning" /> Vota l&apos;MVP della giornata
+          <Star className="h-4 w-4 text-warning" /> {t('title')}
         </h3>
-        <span className="text-xs font-mono text-secondary">{votes.length} voti</span>
+        <span className="text-xs font-mono text-secondary">{t('votes', { count: votes.length })}</span>
       </div>
 
       {isAdmin && (
@@ -104,10 +109,10 @@ export function MvpVoteCard({ date, matchTime, white, black, voterUid, isAdmin =
           <p className="text-xs text-secondary flex items-start gap-1.5">
             <FlaskConical className="h-4 w-4 text-violet-700 dark:text-violet-300 flex-shrink-0" />
             {testMode === 'all'
-              ? 'PROVA CON TUTTI attiva: ogni giocatore vede il voto aperto e può votare adesso. A fine prova premi "Termina prova" e poi "Azzera voti".'
+              ? t('testAllOn')
               : testMode
-              ? 'PROVA SOLO ADMIN attiva: solo gli amministratori vedono il voto aperto. I giocatori vedono il voto normale.'
-              : 'Solo admin: puoi provare il voto prima della partita, solo tra admin oppure con tutti i giocatori.'}
+              ? t('testAdminsOn')
+              : t('testOff')}
           </p>
           <div className="flex flex-wrap gap-2">
             {testMode !== 'admins' && (
@@ -116,7 +121,7 @@ export function MvpVoteCard({ date, matchTime, white, black, voterUid, isAdmin =
                 onClick={() => changeTest('admins')}
                 className="px-3 py-2 rounded-xl text-xs font-bold border border-violet-400/50 text-violet-200 hover:bg-violet-500/20"
               >
-                Prova solo admin
+                {t('testAdmins')}
               </button>
             )}
             {testMode !== 'all' && (
@@ -125,7 +130,7 @@ export function MvpVoteCard({ date, matchTime, white, black, voterUid, isAdmin =
                 onClick={() => changeTest('all')}
                 className="px-3 py-2 rounded-xl text-xs font-bold border border-violet-400/50 text-violet-200 hover:bg-violet-500/20"
               >
-                Prova con tutti
+                {t('testAll')}
               </button>
             )}
             {testMode && (
@@ -134,7 +139,7 @@ export function MvpVoteCard({ date, matchTime, white, black, voterUid, isAdmin =
                 onClick={() => changeTest(false)}
                 className="px-3 py-2 rounded-xl text-xs font-bold border border-slate-600 text-primary hover:bg-card-hover"
               >
-                Termina prova
+                {t('endTest')}
               </button>
             )}
             {votes.length > 0 && (
@@ -143,7 +148,7 @@ export function MvpVoteCard({ date, matchTime, white, black, voterUid, isAdmin =
                 onClick={handleClearVotes}
                 className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold border border-rose-500/40 text-danger hover:bg-rose-500/15"
               >
-                <Trash2 className="h-3.5 w-3.5" /> Azzera voti
+                <Trash2 className="h-3.5 w-3.5" /> {t('clearVotes')}
               </button>
             )}
           </div>
@@ -153,27 +158,23 @@ export function MvpVoteCard({ date, matchTime, white, black, voterUid, isAdmin =
       {!isAdmin && testMode === 'all' && (
         <p className="text-xs text-violet-200 bg-violet-500/10 border border-violet-400/40 rounded-xl p-3 flex items-start gap-1.5">
           <FlaskConical className="h-4 w-4 flex-shrink-0" />
-          Voto di PROVA: serve a controllare che tutto funzioni, i voti verranno cancellati.
+          {t('testNotice')}
         </p>
       )}
 
       {!isOpen && !isClosed && (
         <p className="text-sm text-secondary flex items-center gap-2">
           <Clock className="h-4 w-4 text-accent-text flex-shrink-0" />
-          Il voto si apre a fine partita: {opensLabel}.
+          {t('opensAt', { when: opensLabel })}
         </p>
       )}
 
       {isClosed && (
         <p className="text-sm text-secondary">
-          Voto chiuso.{' '}
-          {leader ? (
-            <>
-              Il più votato è <strong className="text-warning">{leader.name}</strong> ({tally[0].count} voti).
-            </>
-          ) : (
-            'Nessun voto ricevuto.'
-          )}
+          {t('closed')}{' '}
+          {leader
+            ? t.rich('topVoted', { name: leader.name, count: tally[0].count, b: (c) => <strong className="text-warning">{c}</strong> })
+            : t('noVotes')}
         </p>
       )}
 
@@ -182,13 +183,13 @@ export function MvpVoteCard({ date, matchTime, white, black, voterUid, isAdmin =
           <p className="text-xs text-secondary">
             {voterUid
               ? myVote
-                ? 'Hai votato. Puoi cambiare il voto fino alla chiusura.'
-                : 'Tocca il giocatore che secondo te è stato il migliore in campo.'
-              : 'Accedi per votare.'}{' '}
-            Chiusura: {formatItalianDate(toYmd(closesAt))} alle {timeLabel(closesAt)}.
+                ? t('voted')
+                : t('tapToVote')
+              : t('signIn')}{' '}
+            {t('closesAt', { when: when(closesAt) })}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {([['⚪ Bianchi', white], ['⚫ Neri', black]] as const).map(([title, list]) => (
+            {([[t('white'), white], [t('black'), black]] as const).map(([title, list]) => (
               <div key={title} className="space-y-1.5">
                 <div className="text-xs font-bold text-secondary">{title}</div>
                 {list.map((p) => {

@@ -5,7 +5,9 @@ import { useFormSettings } from '@/lib/hooks/useForms';
 import React, { useEffect, useState } from 'react';
 import { Match, MatchTeamPlayer, Profile } from '@/types/database';
 import { saveMatchResult } from '@/lib/firebase/firestoreService';
-import { formatItalianDate } from '@/lib/utils/dateUtils';
+import { formatLongDate } from '@/lib/utils/dateUtils';
+import { useTranslations } from 'next-intl';
+import { useLocaleSetting } from '@/i18n/I18nProvider';
 import { toTeamPlayer } from '@/lib/utils/teamUtils';
 import { TeamSwapEditor } from '@/components/TeamSwapEditor';
 import { MatchResultFields, MatchResultValue, validateScorers } from '@/components/MatchResultFields';
@@ -36,6 +38,9 @@ export function MatchEditModal({ match, profiles, closedBy, onClose }: MatchEdit
   const [saving, setSaving] = useState(false);
   const fixedKeeper = Boolean(useFormSettings().fixedKeeper);
   const [error, setError] = useState('');
+  const t = useTranslations('matchEdit');
+  const tc = useTranslations('common');
+  const { locale } = useLocaleSetting();
 
   // Chiudi con Esc e blocca lo scroll della pagina sotto
   useEffect(() => {
@@ -87,7 +92,7 @@ export function MatchEditModal({ match, profiles, closedBy, onClose }: MatchEdit
       onClose();
     } catch (err) {
       console.warn('[Storico] modifica non riuscita:', err);
-      setError('Salvataggio non riuscito. Controlla la connessione e riprova.');
+      setError(t('saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -99,11 +104,11 @@ export function MatchEditModal({ match, profiles, closedBy, onClose }: MatchEdit
       locked={saving}
       size="lg"
       height="tall"
-      title={`Modifica partita del ${formatItalianDate(match.match_date || match.id)}`}
+      title={t('title', { date: formatLongDate(match.match_date || match.id, locale) })}
       footer={
         <>
           <button type="button" onClick={onClose} disabled={saving} className={sheetBtn.secondary}>
-            Annulla
+            {tc('cancel')}
           </button>
           <button
             type="button"
@@ -112,23 +117,23 @@ export function MatchEditModal({ match, profiles, closedBy, onClose }: MatchEdit
             className={sheetBtn.primary}
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-            Salva modifiche
+            {t('save')}
           </button>
         </>
       }
     >
           <section className="space-y-2">
-            <h3 className="text-xs font-bold text-secondary">Squadre</h3>
+            <h3 className="text-xs font-bold text-secondary">{t('teams')}</h3>
             <TeamSwapEditor white={white} black={black} onChange={handleTeamsChange} bench={bench} />
             {duplicate && (
               <p className="text-xs text-danger flex items-center gap-1.5">
-                <AlertCircle className="h-4 w-4" /> Lo stesso giocatore compare due volte.
+                <AlertCircle className="h-4 w-4" /> {t('duplicate')}
               </p>
             )}
           </section>
 
           <section className="space-y-2">
-            <h3 className="text-xs font-bold text-secondary">Risultato, MVP e marcatori</h3>
+            <h3 className="text-xs font-bold text-secondary">{t('result')}</h3>
             <MatchResultFields fixedKeeper={fixedKeeper} value={result} onChange={setResult} white={white} black={black} />
           </section>
 

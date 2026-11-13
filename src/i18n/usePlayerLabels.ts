@@ -23,6 +23,7 @@ const STAT_IDS: Record<string, string> = {
 export function usePlayerLabels() {
   const tp = useTranslations('positions');
   const ts = useTranslations('statNames');
+  const tslot = useTranslations('slots');
   const pos = (p: string | null | undefined, field: 'name' | 'plural' | 'abbr') => {
     const k = p || 'Esterno';
     return tp.has(`${k}.${field}`) ? tp(`${k}.${field}`) : k;
@@ -33,5 +34,11 @@ export function usePlayerLabels() {
     positionAbbr: (p?: string | null) => pos(p, 'abbr'),
     statName: (name: string) => (STAT_IDS[name] ? ts(`${STAT_IDS[name]}.name`) : name),
     statCode: (name: string) => (STAT_IDS[name] ? ts(`${STAT_IDS[name]}.code`) : name.slice(0, 3).toUpperCase()),
+    /** Pitch place labels ("DIF SX", "PORTA ↻"…) translated word by word. */
+    slot: (label: string) =>
+      label
+        .split(' ')
+        .map((w) => (/^[A-Z]+$/.test(w) && tslot.has(w) ? tslot(w) : w))
+        .join(' '),
   };
 }
