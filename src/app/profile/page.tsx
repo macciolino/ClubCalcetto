@@ -7,7 +7,7 @@ import { getStatValue, computeMatchStats, EMPTY_MATCH_STATS } from '@/lib/utils/
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/context/AuthContext';
-import { FieldPosition, FIELD_POSITIONS, FIELD_POSITION_ABBR, sortStatsByCanonicalOrder } from '@/types/database';
+import { FieldPosition, FIELD_POSITIONS, sortStatsByCanonicalOrder } from '@/types/database';
 import { RadarChart } from '@/components/RadarChart';
 import { StatBadge } from '@/components/StatBadge';
 import { useStatCategories } from '@/lib/hooks/useStatCategories';
@@ -29,11 +29,15 @@ import {
   Loader2,
 } from 'lucide-react';
 import { btn, textLink } from '@/components/ui/buttons';
+import { useTranslations } from 'next-intl';
+import { usePlayerLabels } from '@/i18n/usePlayerLabels';
 
 export default function ProfiloPage() {
   const { user, profile, isAdmin, updateProfile } = useAuth();
   const [mounted, setMounted] = useState(false);
-  const [fullName, setFullName] = useState(profile?.full_name || 'Giocatore');
+  const t = useTranslations('profile');
+  const labels = usePlayerLabels();
+  const [fullName, setFullName] = useState(profile?.full_name || t('playerFallback'));
   const [position, setPosition] = useState<FieldPosition>(profile?.position || 'Esterno');
   const categories = useStatCategories();
   const { forms } = useForms();
@@ -59,7 +63,7 @@ export default function ProfiloPage() {
 
   useEffect(() => {
     if (profile) {
-      setFullName(profile.full_name || 'Giocatore');
+      setFullName(profile.full_name || t('playerFallback'));
       setPosition(profile.position || 'Esterno');
     }
   }, [profile]);
@@ -72,15 +76,15 @@ export default function ProfiloPage() {
         <div className="p-4 bg-accent/15 text-accent-text rounded-2xl border border-accent/30">
           <User className="h-10 w-10" />
         </div>
-        <h2 className="text-xl font-bold text-primary">Effettua il Login</h2>
+        <h2 className="text-xl font-bold text-primary">{t('loginTitle')}</h2>
         <p className="text-xs text-secondary max-w-sm">
-          Per visualizzare e modificare il tuo profilo personale, accedi con il tuo account Google.
+          {t('loginText')}
         </p>
         <Link
           href="/login"
           className={btn.primary}
         >
-          Vai al login <ArrowRight className="h-4 w-4" />
+          {t('goLogin')} <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
     );
@@ -109,14 +113,14 @@ export default function ProfiloPage() {
       const dataUrl = await photoToAvatarDataUrl(file);
       await updateProfile({ avatar_url: dataUrl });
     } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : 'Impossibile caricare la foto.');
+      setErrorMsg(err instanceof Error ? err.message : t('photoFailed'));
     } finally {
       setIsUploading(false);
     }
   };
 
   const handleRemovePhoto = async () => {
-    if (!(await askConfirm('Vuoi togliere la tua foto?'))) return;
+    if (!(await askConfirm(t('confirmRemovePhoto')))) return;
     await updateProfile({ avatar_url: null });
   };
 
@@ -124,7 +128,7 @@ export default function ProfiloPage() {
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName.trim()) {
-      setErrorMsg('Il nome non può essere vuoto.');
+      setErrorMsg(t('nameEmpty'));
       return;
     }
 
@@ -138,7 +142,7 @@ export default function ProfiloPage() {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 4000);
     } catch {
-      setErrorMsg('Errore durante il salvataggio.');
+      setErrorMsg(t('saveFailed'));
     } finally {
       setIsSaving(false);
     }
@@ -149,14 +153,14 @@ export default function ProfiloPage() {
       {/* Titolo della pagina (senza riquadro) */}
       <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div className="space-y-1.5">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-primary">Profilo</h1>
-          <p className="text-sm text-secondary max-w-xl leading-relaxed">I tuoi dati, le tue abilità e le tue statistiche di tutte le partite archiviate.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-primary">{t('title')}</h1>
+          <p className="text-sm text-secondary max-w-xl leading-relaxed">{t('intro')}</p>
         </div>
 
         {saveSuccess && (
           <div className="px-4 py-2 bg-accent/20 border border-accent/40 text-accent-text rounded-xl text-xs font-bold flex items-center gap-2 animate-in fade-in">
             <Check className="h-4 w-4 text-accent-text" />
-            <span>Profilo aggiornato con successo!</span>
+            <span>{t('saved')}</span>
           </div>
         )}
       </header>
@@ -169,7 +173,7 @@ export default function ProfiloPage() {
             {profile.avatar_url && !profile.avatar_url.startsWith('data:image/svg') ? (
               <img
                 src={profile.avatar_url}
-                alt={`Foto di ${fullName}`}
+                alt={t('photoAlt', { name: fullName })}
                 referrerPolicy="no-referrer"
                 className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover ring-4 ring-accent/40"
               />
@@ -186,11 +190,11 @@ export default function ProfiloPage() {
               className="flex items-center gap-1.5 px-3 py-2 bg-card-hover hover:bg-line-strong text-primary font-bold rounded-xl text-xs border border-line-strong disabled:opacity-60"
             >
               {isUploading ? <Loader2 className="h-4 w-4 animate-spin text-accent-text" /> : <Camera className="h-4 w-4 text-accent-text" />}
-              {profile.avatar_url ? 'Cambia foto' : 'Carica la tua foto'}
+              {profile.avatar_url ? t('changePhoto') : t('uploadPhoto')}
             </button>
             {profile.avatar_url && (
               <button type="button" onClick={handleRemovePhoto} className="text-[11px] text-muted hover:text-danger underline">
-                Togli foto
+                {t('removePhoto')}
               </button>
             )}
           </div>
@@ -200,25 +204,25 @@ export default function ProfiloPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-secondary mb-1.5">
-                  Nome Giocatore Visualizzato
+                  {t('displayName')}
                 </label>
                 <input
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-app border border-line rounded-xl text-primary text-sm font-semibold focus:outline-none focus:border-accent"
-                  placeholder="Il tuo nome in campo"
+                  placeholder={t('namePlaceholder')}
                   required
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-secondary mb-1.5">
-                  Email Account
+                  {t('email')}
                 </label>
                 <div className="px-3.5 py-2.5 bg-app/60 border border-line rounded-xl text-secondary text-sm font-mono flex items-center gap-2">
                   <Mail className="h-4 w-4 text-muted" />
-                  <span className="truncate">{profile.email || 'Nessun account Google'}</span>
+                  <span className="truncate">{profile.email || t('noGoogle')}</span>
                 </div>
               </div>
             </div>
@@ -226,7 +230,7 @@ export default function ProfiloPage() {
             {/* Posizione Tattica in Campo (Separata dal ruolo applicativo) */}
             <div>
               <label className="block text-xs font-bold text-secondary mb-1.5">
-                Posizione Tattica Preferita (Campetto & Rombo 1-1-2-1)
+                {t('position')}
               </label>
               <select
                 value={position}
@@ -235,7 +239,7 @@ export default function ProfiloPage() {
               >
                 {FIELD_POSITIONS.map((pos) => (
                   <option key={pos} value={pos}>
-                    {pos} ({FIELD_POSITION_ABBR[pos]})
+                    {labels.position(pos)} ({labels.positionAbbr(pos)})
                   </option>
                 ))}
               </select>
@@ -243,7 +247,7 @@ export default function ProfiloPage() {
 
             <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
               <div className="flex items-center gap-2">
-                <span className="text-xs text-secondary">Ruolo Piattaforma:</span>
+                <span className="text-xs text-secondary">{t('platformRole')}</span>
                 <span
                   className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${
                     isStrictAdmin
@@ -251,7 +255,7 @@ export default function ProfiloPage() {
                       : 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30'
                   }`}
                 >
-                  {isStrictAdmin ? '★ Amministratore' : 'Giocatore'}
+                  {isStrictAdmin ? t('admin') : t('player')}
                 </span>
                 <StatBadge score={profile.overall_rating || 6.0} size="md" />
               </div>
@@ -262,7 +266,7 @@ export default function ProfiloPage() {
                 className={btn.primary}
               >
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                Salva modifiche
+                {t('save')}
               </button>
             </div>
 
@@ -284,7 +288,7 @@ export default function ProfiloPage() {
               <div className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-accent-text" />
                 <h2 className="text-base font-bold text-primary">
-                  Le Mie Abilità Tecniche
+                  {t('skills')}
                 </h2>
               </div>
               <span className="text-xs font-mono font-bold text-warning bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md">
@@ -292,18 +296,16 @@ export default function ProfiloPage() {
               </span>
             </div>
             <p className="text-xs text-secondary mt-2">
-              Poligono radar ottagonale generato sui tuoi attributi calcistici.
+              {t('radarHint')}
             </p>
             {myForm > 0 && (
               <p className="mt-2 text-xs text-orange-700 dark:text-orange-300 bg-orange-500/10 border border-orange-400/30 rounded-xl p-2.5">
-                🔥 <strong>In forma {formatForm(myForm)}</strong>: per le ultime 3 partite (MVP, voti, gol o vittorie) tutti i tuoi
-                valori e l&apos;OVR sono saliti di {formatForm(myForm).slice(1)}. È temporaneo.
+                🔥 {t.rich('inForm', { value: formatForm(myForm), delta: formatForm(myForm).slice(1), b: (c) => <strong>{c}</strong> })}
               </p>
             )}
             {myForm < 0 && (
               <p className="mt-2 text-xs text-sky-700 dark:text-sky-300 bg-sky-500/10 border border-sky-400/30 rounded-xl p-2.5">
-                ❄️ <strong>Fuori forma {formatForm(myForm)}</strong>: per le ultime 3 partite (sconfitte) tutti i tuoi valori e
-                l&apos;OVR sono scesi di {formatForm(myForm).slice(1)}. È temporaneo: risale con vittorie, voti MVP o gol.
+                ❄️ {t.rich('outOfForm', { value: formatForm(myForm), delta: formatForm(myForm).slice(1), b: (c) => <strong>{c}</strong> })}
               </p>
             )}
           </div>
@@ -318,7 +320,7 @@ export default function ProfiloPage() {
               const val = profileStats[statName] ?? 6;
               return (
                 <div key={statName} className="bg-app/70 border border-line p-2 rounded-xl flex items-center justify-between">
-                  <span className="text-[11px] font-semibold text-secondary">{statName}</span>
+                  <span className="text-[11px] font-semibold text-secondary">{labels.statName(statName)}</span>
                   <span
                     className={`text-xs font-mono font-bold ${
                       val >= 8 ? 'text-accent-text' : val >= 6 ? 'text-primary' : 'text-danger'
@@ -337,41 +339,41 @@ export default function ProfiloPage() {
           <div className="border-b border-line pb-3">
             <div className="flex items-center gap-2">
               <Trophy className="h-5 w-5 text-warning" />
-              <h2 className="text-base font-bold text-primary">Le Mie Statistiche</h2>
+              <h2 className="text-base font-bold text-primary">{t('myStats')}</h2>
             </div>
             <p className="text-xs text-secondary mt-2">
-              Totali di tutte le partite archiviate ({record.played} giocate).
+              {t('statsHint', { count: record.played })}
             </p>
           </div>
 
           <div className="grid grid-cols-3 gap-3 text-center">
             <div className="bg-accent/10 border border-accent/30 p-3.5 rounded-2xl space-y-1">
-              <div className="text-xs font-bold text-accent-text">Vinte</div>
+              <div className="text-xs font-bold text-accent-text">{t('won')}</div>
               <div className="text-3xl font-bold text-accent-text font-mono">{record.won}</div>
             </div>
             <div className="bg-amber-500/10 border border-amber-500/30 p-3.5 rounded-2xl space-y-1">
-              <div className="text-xs font-bold text-warning">Pareggiate</div>
+              <div className="text-xs font-bold text-warning">{t('drawn')}</div>
               <div className="text-3xl font-bold text-warning font-mono">{record.drawn}</div>
             </div>
             <div className="bg-rose-500/10 border border-rose-500/30 p-3.5 rounded-2xl space-y-1">
-              <div className="text-xs font-bold text-danger">Perse</div>
+              <div className="text-xs font-bold text-danger">{t('lost')}</div>
               <div className="text-3xl font-bold text-danger font-mono">{record.lost}</div>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3 text-center">
             <div className="bg-app/80 border border-line p-3.5 rounded-2xl space-y-1">
-              <div className="text-xs font-bold text-secondary">Gol segnati</div>
+              <div className="text-xs font-bold text-secondary">{t('goals')}</div>
               <div className="text-3xl font-bold text-primary font-mono">{record.goals}</div>
             </div>
             <div className="bg-app/80 border border-line p-3.5 rounded-2xl space-y-1">
-              <div className="text-xs font-bold text-secondary">MVP</div>
+              <div className="text-xs font-bold text-secondary">{t('mvp')}</div>
               <div className="text-3xl font-bold text-warning font-mono">{record.mvp}</div>
             </div>
           </div>
 
           <Link href="/history" className={`${textLink} w-full justify-center`}>
-            Vedi la classifica completa nello Storico <ArrowRight className="h-4 w-4" />
+            {t('seeLeaderboard')} <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       </div>
@@ -382,8 +384,8 @@ export default function ProfiloPage() {
           className="flex items-center justify-between gap-3 bg-card hover:bg-card-hover/80 rounded-2xl p-4 text-sm"
         >
           <span>
-            <span className="block font-semibold text-primary">Notifiche</span>
-            <span className="text-xs text-secondary">Attivale su questo dispositivo</span>
+            <span className="block font-semibold text-primary">{t('notifications')}</span>
+            <span className="text-xs text-secondary">{t('notificationsHint')}</span>
           </span>
           <span className="text-muted" aria-hidden="true">›</span>
         </Link>
@@ -392,8 +394,8 @@ export default function ProfiloPage() {
           className="flex items-center justify-between gap-3 bg-card hover:bg-card-hover/80 rounded-2xl p-4 text-sm"
         >
           <span>
-            <span className="block font-semibold text-primary">Account</span>
-            <span className="text-xs text-secondary">Esci da tutti i dispositivi, disattiva o elimina</span>
+            <span className="block font-semibold text-primary">{t('account')}</span>
+            <span className="text-xs text-secondary">{t('accountHint')}</span>
           </span>
           <span className="text-muted" aria-hidden="true">›</span>
         </Link>

@@ -12,6 +12,9 @@ import { useAuth, savePendingInvite, takePendingInvite, afterRegistration, reque
 import { notify } from '@/components/ui/Feedback';
 import { btn } from '@/components/ui/buttons';
 import { FIELD_POSITIONS, FieldPosition } from '@/types/database';
+import { useTranslations } from 'next-intl';
+import { useLocaleSetting } from '@/i18n/I18nProvider';
+import { usePlayerLabels } from '@/i18n/usePlayerLabels';
 import { 
   Loader2, 
   ArrowRight, 
@@ -42,6 +45,9 @@ export default function LoginPage() {
     signOut,
     refreshProfile,
   } = useAuth();
+  const t = useTranslations('login');
+  const { locale } = useLocaleSetting();
+  const labels = usePlayerLabels();
   // Link di invito per un ospite (/login?invite=…): nome dell'ospite per il banner
   const [inviteName, setInviteName] = useState('');
   // Account chiuso che prova a tornare: schermata "Bentornato", decide l'admin
@@ -81,10 +87,10 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('expired') === '1') {
-      setErrorMessage('La sessione è scaduta (dura 30 giorni): accedi di nuovo con Google.');
+      setErrorMessage(t('expired'));
     }
     if (new URLSearchParams(window.location.search).get('signedout') === '1') {
-      setSuccessMessage('Sei uscito da tutti i dispositivi.');
+      setSuccessMessage(t('signedOut'));
     }
     if (new URLSearchParams(window.location.search).get('bentornato') === '1') setReturning({});
     const invite = new URLSearchParams(window.location.search).get('invite');
@@ -97,7 +103,7 @@ export default function LoginPage() {
             savePendingInvite(invite);
             setAuthMode('signup');
           } else {
-            setErrorMessage('Questo link di invito non è più valido: chiedi un nuovo link all’amministratore.');
+            setErrorMessage(t('inviteInvalid'));
           }
         })
         .catch(() => undefined);
@@ -119,8 +125,8 @@ export default function LoginPage() {
         afterRegistration(user, invite).then(async (res) => {
           if (res?.claimed) {
             await refreshProfile();
-            notify(`Profilo di ${res.guestName} collegato: partite e statistiche sono tue.`);
-          } else if (res && !res.ok) notify('Il link di invito non è più valido: chiedi un nuovo link all’amministratore.');
+            notify(t('guestClaimed', { name: res.guestName || '' }));
+          } else if (res && !res.ok) notify(t('inviteInvalid2'));
           router.replace('/');
         });
         return;
@@ -139,7 +145,7 @@ export default function LoginPage() {
       await signInWithGoogle();
     } catch (err: unknown) {
       console.error('Google login error:', err);
-      const msg = err instanceof Error ? err.message : 'Errore durante il login con Google';
+      const msg = err instanceof Error ? err.message : t('googleError');
       if (msg.includes('auth/user-disabled')) {
         // Account chiuso: Google spesso non restituisce l'email; si prova dall'errore, altrimenti la si chiede
         let mail = (err as { customData?: { email?: string } }).customData?.email;
@@ -153,7 +159,7 @@ export default function LoginPage() {
         }
         if (!(await checkReturn(mail))) setReturning({ askEmail: true });
       } else if (msg.includes('auth/unauthorized-domain')) {
-        setErrorMessage('Dominio non autorizzato su Firebase Console. Aggiungi localhost nelle impostazioni Auth.');
+        setErrorMessage(t('unauthorizedDomain'));
       } else if (!msg.includes('popup-closed-by-user')) {
         setErrorMessage(msg);
       }
@@ -164,22 +170,22 @@ export default function LoginPage() {
 
   // Requisiti della password (solo in registrazione)
   const passwordRules = [
-    { label: 'Almeno 8 caratteri', ok: [...password].length >= 8 },
-    { label: 'Una lettera maiuscola', ok: /\p{Lu}/u.test(password) },
-    { label: 'Una lettera minuscola', ok: /\p{Ll}/u.test(password) },
-    { label: 'Un numero', ok: /\p{N}/u.test(password) },
-    { label: 'Un carattere speciale (es. ! ? @ # $ %)', ok: /[^\p{L}\p{N}\s]/u.test(password) }, // lettere accentate e spazi non contano
+    { label: t('rule8'), ok: [...password].length >= 8 },
+    { label: t('ruleUpper'), ok: /\p{Lu}/u.test(password) },
+    { label: t('ruleLower'), ok: /\p{Ll}/u.test(password) },
+    { label: t('ruleNumber'), ok: /\p{N}/u.test(password) },
+    { label: t('ruleSpecial'), ok: /[^\p{L}\p{N}\s]/u.test(password) }, // lettere accentate e spazi non contano
   ];
   const isSignup = authMode === 'signup';
   const fieldErrors: Record<string, string> = {};
-  if (isSignup && !firstName.trim()) fieldErrors.firstName = 'Il nome è obbligatorio.';
-  if (isSignup && !lastName.trim()) fieldErrors.lastName = 'Il cognome è obbligatorio.';
-  if (!email.trim()) fieldErrors.email = "L'email è obbligatoria.";
-  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) fieldErrors.email = 'Inserisci un indirizzo email valido.';
-  if (!password) fieldErrors.password = 'La password è obbligatoria.';
-  else if (isSignup && passwordRules.some((r) => !r.ok)) fieldErrors.password = 'La password non rispetta tutti i requisiti.';
-  if (isSignup && !confirmPassword) fieldErrors.confirmPassword = 'Ripeti la password.';
-  else if (isSignup && confirmPassword !== password) fieldErrors.confirmPassword = 'Le password non coincidono.';
+  if (isSignup && !firstName.trim()) fieldErrors.firstName = t('errFirstName');
+  if (isSignup && !lastName.trim()) fieldErrors.lastName = t('errLastName');
+  if (!email.trim()) fieldErrors.email = t('errEmail');
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) fieldErrors.email = t('errEmailInvalid');
+  if (!password) fieldErrors.password = t('errPassword');
+  else if (isSignup && passwordRules.some((r) => !r.ok)) fieldErrors.password = t('errPasswordRules');
+  if (isSignup && !confirmPassword) fieldErrors.confirmPassword = t('errRepeat');
+  else if (isSignup && confirmPassword !== password) fieldErrors.confirmPassword = t('errMismatch');
   const showError = (field: string) => (submitted || touched[field]) && Boolean(fieldErrors[field]);
   const inputClass = (field: string, withIcon = true) =>
     `w-full ${withIcon ? 'pl-9' : 'pl-3'} pr-3 py-3 bg-app border rounded-xl text-primary text-sm placeholder:text-muted focus:outline-none transition-colors ${
@@ -199,20 +205,20 @@ export default function LoginPage() {
     const mail = email.trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) {
       touch('email');
-      setErrorMessage('Scrivi la tua email qui sopra, poi tocca "Password dimenticata?".');
+      setErrorMessage(t('forgotNeedEmail'));
       return;
     }
     setResetBusy(true);
     try {
-      firebaseAuth.languageCode = 'it';
+      firebaseAuth.languageCode = locale;
       await sendPasswordResetEmail(firebaseAuth, mail);
-      setSuccessMessage(`Se ${mail} è registrata, ti abbiamo inviato un link per scegliere una nuova password. Controlla anche lo spam.`);
+      setSuccessMessage(t('resetSent', { email: mail }));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : '';
-      if (msg.includes('auth/too-many-requests')) setErrorMessage('Troppi tentativi: riprova tra qualche minuto.');
-      else if (msg.includes('auth/invalid-email')) setErrorMessage("L'email non è valida.");
+      if (msg.includes('auth/too-many-requests')) setErrorMessage(t('tooMany'));
+      else if (msg.includes('auth/invalid-email')) setErrorMessage(t('emailInvalid'));
       // Utente inesistente: stesso messaggio di successo (non si rivela chi è registrato)
-      else setSuccessMessage(`Se ${mail} è registrata, ti abbiamo inviato un link per scegliere una nuova password. Controlla anche lo spam.`);
+      else setSuccessMessage(t('resetSent', { email: mail }));
     } finally {
       setResetBusy(false);
     }
@@ -231,25 +237,23 @@ export default function LoginPage() {
         await signInWithEmailPassword(email, password);
       } else {
         await signUpWithEmailPassword(email, password, firstName, lastName, position);
-        setSuccessMessage('Account creato con successo! Ti abbiamo inviato una mail di verifica.');
+        setSuccessMessage(t('accountCreated'));
       }
     } catch (err: unknown) {
       console.error('Auth error:', err);
-      const msg = err instanceof Error ? err.message : 'Errore durante l\'autenticazione';
+      const msg = err instanceof Error ? err.message : t('authError');
       if ((msg.includes('auth/email-already-in-use') || msg.includes('auth/user-disabled')) && (await checkReturn(email))) {
         // account chiuso che torna: schermata "Bentornato"
       } else if (msg.includes('auth/user-disabled')) {
-        setErrorMessage('Questo account è stato disattivato. Per riattivarlo contatta l’amministratore del club.');
+        setErrorMessage(t('disabled'));
       } else if (msg.includes('auth/email-already-in-use')) {
-        setErrorMessage('Questa email è già registrata. Effettua l\'accesso.');
+        setErrorMessage(t('inUse'));
       } else if (msg.includes('auth/wrong-password') || msg.includes('auth/user-not-found') || msg.includes('auth/invalid-credential')) {
-        setErrorMessage('Email o password non corretti.');
+        setErrorMessage(t('wrongCredentials'));
       } else if (msg.includes('auth/weak-password')) {
-        setErrorMessage('Password troppo debole: rispetta tutti i requisiti indicati.');
+        setErrorMessage(t('weakPassword'));
       } else if (msg.includes('auth/operation-not-allowed')) {
-        setErrorMessage(
-          'Il provider Email/Password non è ancora abilitato nella console Firebase (Authentication > Sign-in method > Email/Password > Abilita).'
-        );
+        setErrorMessage(t('providerOff'));
       } else {
         setErrorMessage(msg);
       }
@@ -267,7 +271,7 @@ export default function LoginPage() {
         markJustSignedIn();
       window.location.href = '/';
       } else {
-        setErrorMessage('L\'email non risulta ancora verificata. Clicca sul link che hai ricevuto via email.');
+        setErrorMessage(t('notVerified'));
       }
     } finally {
       setIsCheckingVerification(false);
@@ -277,9 +281,9 @@ export default function LoginPage() {
   const handleResendVerification = async () => {
     try {
       await sendVerificationEmail();
-      setSuccessMessage('Email di verifica inviata di nuovo! Controlla la posta.');
+      setSuccessMessage(t('verificationResent'));
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Errore invio';
+      const msg = err instanceof Error ? err.message : t('sendError');
       setErrorMessage(msg);
     }
   };
@@ -314,13 +318,13 @@ export default function LoginPage() {
         {/* Messaggio e punti forti: nella metà campo inferiore, centrati */}
         <div className="absolute inset-x-0 top-[52%] px-10 flex flex-col items-center text-center gap-4">
           <h2 className="text-3xl xl:text-[2.1rem] font-bold tracking-tight text-primary leading-tight">
-            Il tuo calcetto, <span className="text-accent-text">senza chat infinite.</span>
+            {t.rich('tagline', { accent: (c) => <span className="text-accent-text">{c}</span> })}
           </h2>
           <ul className="w-full max-w-sm space-y-2.5 text-left">
             {[
-              { icon: CalendarCheck, title: 'Presenze', text: 'I primi 10 che ci sono giocano.' },
-              { icon: Shuffle, title: 'Squadre equilibrate', text: 'Bianchi contro Neri, divisi bene.' },
-              { icon: BarChart3, title: 'Statistiche', text: 'Gol, MVP, vittorie e forma.' },
+              { icon: CalendarCheck, title: t('f1Title'), text: t('f1Text') },
+              { icon: Shuffle, title: t('f2Title'), text: t('f2Text') },
+              { icon: BarChart3, title: t('f3Title'), text: t('f3Text') },
             ].map(({ icon: Icon, title, text }) => (
               <li
                 key={title}
@@ -352,27 +356,29 @@ export default function LoginPage() {
           <div className="space-y-1">
             <h1 className="text-3xl font-bold tracking-tight text-primary">
               {returning
-                ? `Bentornato${returning.name ? ` ${returning.name}` : ''}!`
+                ? returning.name
+                  ? t('welcomeBackName', { name: returning.name })
+                  : t('welcomeBackBang')
                 : user && !isEmailVerified
-                ? 'Verifica la tua email'
+                ? t('verifyTitle')
                 : profile
-                ? 'Bentornato'
+                ? t('welcomeBack')
                 : authMode === 'signin'
-                ? 'Bentornato in campo'
-                : 'Entra nel club'}
+                ? t('welcomePitch')
+                : t('joinClub')}
             </h1>
             <p className="text-sm text-secondary">
               {returning?.askEmail
-                ? 'Il tuo account era stato chiuso.'
+                ? t('closedAccount')
                 : returning
-                ? 'Abbiamo rilevato un tuo profilo precedente.'
+                ? t('foundProfile')
                 : user && !isEmailVerified
-                ? 'Manca solo un passaggio.'
+                ? t('oneStep')
                 : profile
-                ? 'Sei già collegato.'
+                ? t('alreadyIn')
                 : authMode === 'signin'
-                ? 'Accedi per segnare la tua presenza.'
-                : 'Crea il tuo account in un minuto.'}
+                ? t('signInHint')
+                : t('signUpHint')}
             </p>
           </div>
         </div>
@@ -384,8 +390,7 @@ export default function LoginPage() {
               <Link2 className="h-[18px] w-[18px]" />
             </span>
             <p className="text-sm text-primary leading-relaxed">
-              Stai collegando il tuo account al profilo di <span className="font-semibold text-primary">{inviteName}</span>: le tue partite e
-              statistiche verranno mantenute.
+              {t.rich('inviteBanner', { name: inviteName, b: (c) => <span className="font-semibold text-primary">{c}</span> })}
             </p>
           </div>
         )}
@@ -393,7 +398,7 @@ export default function LoginPage() {
         {!mounted ? (
           <div className="py-12 flex flex-col items-center justify-center gap-3">
             <Loader2 className="h-7 w-7 text-accent-text animate-spin" />
-            <p className="text-sm text-secondary">Caricamento…</p>
+            <p className="text-sm text-secondary">{t('loading')}</p>
           </div>
         ) : returning?.askEmail ? (
           /* Account chiuso con Google, email sconosciuta: la chiediamo per avvisare l'admin */
@@ -405,11 +410,11 @@ export default function LoginPage() {
               setReturnBusy(true);
               const ok = await checkReturn(returnEmail);
               setReturnBusy(false);
-              if (!ok) setReturnError('Non troviamo un account chiuso con questa email. Controllala o contatta l’amministratore del club.');
+              if (!ok) setReturnError(t('noClosedAccount'));
             }}
           >
             <p className="text-sm text-secondary leading-relaxed">
-              Scrivi l&apos;email con cui accedevi: avvisiamo l&apos;amministratore, che configura il tuo rientro.
+              {t('returnHint')}
             </p>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
@@ -420,7 +425,7 @@ export default function LoginPage() {
                 value={returnEmail}
                 onChange={(e) => setReturnEmail(e.target.value)}
                 placeholder="nome@gmail.com"
-                aria-label="Email dell'account"
+                aria-label={t('returnEmailAria')}
                 className="w-full pl-9 pr-3 py-3 bg-app border border-line rounded-xl text-primary text-sm placeholder:text-muted focus:outline-none focus:border-accent"
               />
             </div>
@@ -428,7 +433,7 @@ export default function LoginPage() {
             <div className="flex flex-col sm:flex-row gap-2">
               <button type="submit" disabled={returnBusy || !returnEmail.trim()} className={`${btn.primary} sm:flex-1`}>
                 {returnBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                Chiedi il rientro
+                {t('askReturn')}
               </button>
               <button
                 type="button"
@@ -438,7 +443,7 @@ export default function LoginPage() {
                 }}
                 className={btn.secondary}
               >
-                Annulla
+                {t('cancel')}
               </button>
             </div>
           </form>
@@ -450,9 +455,9 @@ export default function LoginPage() {
                 <Hourglass className="h-5 w-5 text-accent-text" />
               </span>
               <div className="space-y-2 text-sm leading-relaxed">
-                <p className="text-primary">L&apos;amministratore del gruppo sta configurando il tuo rientro.</p>
+                <p className="text-primary">{t('adminConfiguring')}</p>
                 <p className="text-secondary">
-                  Non devi fare altro: appena conferma, entri con il tuo solito account (Google o email e password).
+                  {t('nothingToDo')}
                 </p>
               </div>
             </div>
@@ -465,7 +470,7 @@ export default function LoginPage() {
               }}
               className={`${btn.secondary} sm:w-full`}
             >
-              Torna all&apos;accesso
+              {t('backToLogin')}
             </button>
           </div>
         ) : user && !isEmailVerified ? (
@@ -476,8 +481,7 @@ export default function LoginPage() {
                 <Mail className="h-5 w-5 text-warning" />
               </span>
               <p className="text-sm text-secondary leading-relaxed">
-                Ti abbiamo inviato un link a <span className="font-semibold text-primary break-all">{user.email}</span>. Aprilo per
-                attivare l&apos;account, poi torna qui.
+                {t.rich('verifySent', { email: user.email || '', b: (c) => <span className="font-semibold text-primary break-all">{c}</span> })}
               </p>
             </div>
 
@@ -492,7 +496,7 @@ export default function LoginPage() {
                 className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-accent hover:bg-accent/90 text-on-accent font-semibold rounded-xl text-sm transition-colors disabled:opacity-50"
               >
                 <RefreshCw className={`h-4 w-4 ${isCheckingVerification ? 'animate-spin' : ''}`} />
-                Ho verificato l&apos;email
+                {t('iVerified')}
               </button>
               <button
                 type="button"
@@ -500,7 +504,7 @@ export default function LoginPage() {
                 className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-line-strong text-primary hover:bg-card-hover font-semibold rounded-xl text-sm transition-colors"
               >
                 <Send className="h-4 w-4" />
-                Reinvia l&apos;email
+                {t('resend')}
               </button>
               <button
                 type="button"
@@ -508,7 +512,7 @@ export default function LoginPage() {
                 className="w-full flex items-center justify-center gap-1.5 py-2.5 text-secondary hover:text-primary text-sm transition-colors"
               >
                 <LogOut className="h-4 w-4" />
-                Usa un altro account
+                {t('otherAccount')}
               </button>
             </div>
           </div>
@@ -528,8 +532,8 @@ export default function LoginPage() {
               <div className="min-w-0">
                 <p className="text-base font-semibold text-primary truncate">{profile.full_name}</p>
                 <p className="text-xs text-secondary">
-                  {isStrictAdmin ? 'Amministratore' : 'Giocatore'}
-                  {profile.position ? ` · ${profile.position}` : ''}
+                  {isStrictAdmin ? t('admin') : t('player')}
+                  {profile.position ? ` · ${labels.position(profile.position)}` : ''}
                 </p>
               </div>
             </div>
@@ -538,7 +542,7 @@ export default function LoginPage() {
                 href="/"
                 className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-accent hover:bg-accent/90 text-on-accent font-semibold rounded-xl text-sm transition-colors"
               >
-                Vai alla Home <ArrowRight className="h-4 w-4" />
+                {t('goHome')} <ArrowRight className="h-4 w-4" />
               </Link>
               <button
                 type="button"
@@ -546,7 +550,7 @@ export default function LoginPage() {
                 className="w-full flex items-center justify-center gap-1.5 py-2.5 text-secondary hover:text-danger text-sm transition-colors"
               >
                 <LogOut className="h-4 w-4" />
-                Esci
+                {t('signOut')}
               </button>
             </div>
           </div>
@@ -554,11 +558,11 @@ export default function LoginPage() {
           /* STATO 3: ACCESSO / REGISTRAZIONE */
           <div className="space-y-5">
             {/* Accedi / Registrati */}
-            <div className="flex bg-card border border-line p-1 rounded-xl text-sm" role="tablist" aria-label="Accesso">
+            <div className="flex bg-card border border-line p-1 rounded-xl text-sm" role="tablist" aria-label={t('accessAria')}>
               {(
                 [
-                  ['signin', 'Accedi'],
-                  ['signup', 'Registrati'],
+                  ['signin', t('tabSignIn')],
+                  ['signup', t('tabSignUp')],
                 ] as const
               ).map(([mode, label]) => (
                 <button
@@ -614,12 +618,12 @@ export default function LoginPage() {
                   />
                 </svg>
               )}
-              Continua con Google
+              {t('google')}
             </button>
 
             <div className="flex items-center gap-3">
               <div className="flex-1 border-t border-line" />
-              <span className="text-xs text-muted">oppure con email</span>
+              <span className="text-xs text-muted">{t('orEmail')}</span>
               <div className="flex-1 border-t border-line" />
             </div>
 
@@ -629,7 +633,7 @@ export default function LoginPage() {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label htmlFor="signup-first-name" className={labelClass}>
-                        Nome
+                        {t('firstName')}
                       </label>
                       <div className="relative">
                         <User className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
@@ -643,7 +647,7 @@ export default function LoginPage() {
                           onBlur={() => touch('firstName')}
                           aria-invalid={showError('firstName')}
                           aria-describedby={showError('firstName') ? 'firstName-error' : undefined}
-                          placeholder="Mario"
+                          placeholder={t('firstNamePh')}
                           className={inputClass('firstName')}
                         />
                       </div>
@@ -651,7 +655,7 @@ export default function LoginPage() {
                     </div>
                     <div>
                       <label htmlFor="signup-last-name" className={labelClass}>
-                        Cognome
+                        {t('lastName')}
                       </label>
                       <div className="relative">
                         <User className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
@@ -665,7 +669,7 @@ export default function LoginPage() {
                           onBlur={() => touch('lastName')}
                           aria-invalid={showError('lastName')}
                           aria-describedby={showError('lastName') ? 'lastName-error' : undefined}
-                          placeholder="Rossi"
+                          placeholder={t('lastNamePh')}
                           className={inputClass('lastName')}
                         />
                       </div>
@@ -675,7 +679,7 @@ export default function LoginPage() {
 
                   <div>
                     <label htmlFor="signup-position" className={labelClass}>
-                      Ruolo in campo
+                      {t('position')}
                     </label>
                     <select
                       id="signup-position"
@@ -686,18 +690,18 @@ export default function LoginPage() {
                     >
                       {FIELD_POSITIONS.map((pos) => (
                         <option key={pos} value={pos}>
-                          {pos}
+                          {labels.position(pos)}
                         </option>
                       ))}
                     </select>
-                    <p className="text-xs text-muted mt-1">Serve per comporre squadre equilibrate. Puoi cambiarlo dopo.</p>
+                    <p className="text-xs text-muted mt-1">{t('positionHint')}</p>
                   </div>
                 </>
               )}
 
               <div>
                 <label htmlFor="auth-email" className={labelClass}>
-                  Email
+                  {t('email')}
                 </label>
                 <div className="relative">
                   <Mail className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
@@ -711,7 +715,7 @@ export default function LoginPage() {
                     onBlur={() => touch('email')}
                     aria-invalid={showError('email')}
                     aria-describedby={showError('email') ? 'email-error' : undefined}
-                    placeholder="nome@esempio.it"
+                    placeholder={t('emailPh')}
                     className={inputClass('email')}
                   />
                 </div>
@@ -721,7 +725,7 @@ export default function LoginPage() {
               <div>
                 <div className="flex items-baseline justify-between gap-3">
                   <label htmlFor="auth-password" className={labelClass}>
-                    Password
+                    {t('password')}
                   </label>
                   {!isSignup && (
                     <button
@@ -730,7 +734,7 @@ export default function LoginPage() {
                       disabled={resetBusy}
                       className="mb-1.5 text-xs font-semibold text-accent-text hover:text-accent-text disabled:opacity-50"
                     >
-                      {resetBusy ? 'Invio…' : 'Password dimenticata?'}
+                      {resetBusy ? t('sending') : t('forgot')}
                     </button>
                   )}
                 </div>
@@ -746,13 +750,13 @@ export default function LoginPage() {
                     onBlur={() => touch('password')}
                     aria-invalid={showError('password')}
                     aria-describedby={isSignup ? 'password-rules' : showError('password') ? 'password-error' : undefined}
-                    placeholder={isSignup ? 'Crea una password sicura' : 'La tua password'}
+                    placeholder={isSignup ? t('passwordNewPh') : t('passwordPh')}
                     className={inputClass('password')}
                   />
                 </div>
                 {fieldError("password")}
                 {isSignup && (
-                  <ul id="password-rules" className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1" aria-label="Requisiti della password">
+                  <ul id="password-rules" className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1" aria-label={t('rulesAria')}>
                     {passwordRules.map((r) => (
                       <li
                         key={r.label}
@@ -762,7 +766,7 @@ export default function LoginPage() {
                       >
                         <span aria-hidden="true">{r.ok ? '✓' : '•'}</span>
                         {r.label}
-                        <span className="sr-only">{r.ok ? ' (rispettato)' : ' (mancante)'}</span>
+                        <span className="sr-only">{r.ok ? t('ruleOk') : t('ruleMissing')}</span>
                       </li>
                     ))}
                   </ul>
@@ -772,7 +776,7 @@ export default function LoginPage() {
               {authMode === 'signup' && (
                 <div>
                   <label htmlFor="auth-confirm-password" className={labelClass}>
-                    Conferma password
+                    {t('confirmPassword')}
                   </label>
                   <div className="relative">
                     <Lock className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
@@ -786,13 +790,13 @@ export default function LoginPage() {
                       onBlur={() => touch('confirmPassword')}
                       aria-invalid={showError('confirmPassword')}
                       aria-describedby={showError('confirmPassword') ? 'confirmPassword-error' : undefined}
-                      placeholder="Ripeti la password"
+                      placeholder={t('confirmPh')}
                       className={inputClass('confirmPassword')}
                     />
                   </div>
                   {fieldError("confirmPassword")}
                   {confirmPassword && confirmPassword === password && (
-                    <p className="mt-1 text-xs text-accent-text">✓ Le password coincidono</p>
+                    <p className="mt-1 text-xs text-accent-text">{t('match')}</p>
                   )}
                 </div>
               )}
@@ -802,21 +806,21 @@ export default function LoginPage() {
                 disabled={isLoading}
                 className="w-full py-3 px-4 bg-accent hover:bg-accent/90 text-on-accent font-semibold rounded-xl text-sm transition-colors active:scale-[0.99] disabled:opacity-60 flex items-center justify-center gap-2"
               >
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : authMode === 'signin' ? 'Login' : 'Registrati'}
+                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : authMode === 'signin' ? t('submitSignIn') : t('submitSignUp')}
               </button>
               {isSignup && (
-                <p className="text-xs text-muted text-center">Ti invieremo un&apos;email per confermare l&apos;indirizzo.</p>
+                <p className="text-xs text-muted text-center">{t('verifyNote')}</p>
               )}
             </form>
 
             <p className="text-sm text-secondary text-center">
-              {authMode === 'signin' ? 'Non hai un account? ' : 'Hai già un account? '}
+              {authMode === 'signin' ? t('noAccount') : t('haveAccount')}
               <button
                 type="button"
                 onClick={() => switchMode(authMode === 'signin' ? 'signup' : 'signin')}
                 className="font-semibold text-accent-text hover:text-accent-text"
               >
-                {authMode === 'signin' ? 'Registrati' : 'Accedi'}
+                {authMode === 'signin' ? t('tabSignUp') : t('tabSignIn')}
               </button>
             </p>
           </div>
