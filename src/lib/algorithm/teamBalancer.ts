@@ -1,4 +1,5 @@
-import { Profile } from '@/types/database';
+import { FieldPosition, Profile } from '@/types/database';
+import { FormationSlot } from '@/lib/utils/matchFormat';
 
 export interface TeamStatsSummary {
   overallAvg: number;
@@ -166,10 +167,15 @@ export interface BalanceOptions {
   /** How many of the best alternatives to choose from when rebalancing (default 5) */
   pickAmongTop?: number;
   /**
-   * Club plays with a fixed goalkeeper: with 2 or more 'Portiere' among the 10, each team gets at least one.
+   * Club plays with a fixed goalkeeper: with 2 or more 'Portiere' among the starters, each team gets at least one.
    * false (rotation, default) = the role Portiere is ignored.
    */
   fixedKeeper?: boolean;
+  /**
+   * Places of the formation (7vs7, 8vs8, 11vs11). Without it (or with 5 per team) the 5vs5 rombo is used.
+   * The number of players must be twice the number of places.
+   */
+  slots?: FormationSlot[];
 }
 
 /**
@@ -178,6 +184,8 @@ export interface BalanceOptions {
  * per media generale, poi per difesa + attacco. Senza opzioni il risultato è deterministico.
  */
 export function balanceTeams(players: Profile[], options: BalanceOptions = {}): BalancedTeamsResult {
+  const perTeam = options.slots?.length || 5;
+  if (perTeam !== 5) return balanceTeamsLarge(players, { ...options, slots: options.slots! });
   if (players.length !== 10) {
     throw new Error("L'algoritmo richiede esattamente 10 giocatori.");
   }
@@ -251,6 +259,184 @@ export function summarizeTeams(teamWhite: Profile[], teamBlack: Profile[]): Bala
   return {
     teamWhite,
     teamBlack,
+    whiteStats,
+    blackStats,
+    difference: Number(diffAvg.toFixed(2)),
+    fairnessScore: Math.max(0, Math.min(100, Math.round(100 - diffAvg * 15))),
+  };
+}
+
+// =====================================================================================
+// 7vs7, 8vs8, 11vs11: troppe divisioni per provarle tutte (11vs11 ≈ 350.000), quindi:
+// tante partenze diverse + scambi a coppie finché migliorano (ricerca locale). Pochi millisecondi anche su telefono.
+// =====================================================================================
+
+/** Close roles: a Centrocampista can play wide, an Esterno in the middle, a Punta on the wing, … */
+const ROLE_NEAR: Record<FieldPosition, FieldPosition[]> = {
+  Portiere: [],
+  Difensore: ['Centrocampista'],
+  Centrocampista: ['Esterno', 'Difensore'],
+  Esterno: ['Centrocampista', 'Punta'],
+  Punta: ['Esterno'],
+};
+
+const roleOf = (p: Profile): FieldPosition => (p.position as FieldPosition) || 'Esterno';
+const stat = (p: Profile, k: string) => Number(p.stats?.[k]) || getPlayerOverallRating(p);
+
+/** Small seeded random generator: same inputs → same teams (only "Ribilancia" asks for different ones). */
+function seeded(seed: number) {
+  let t = seed >>> 0;
+  return () => {
+    t += 0x6d2b79f5;
+    let r = Math.imul(t ^ (t >>> 15), 1 | t);
+    r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * Split quality (lower = better): difference of total level first, then defence + attack,
+ * then how differently the roles are spread (each team should get its defenders, midfielders, forwards).
+ */
+function splitCost(white: Profile[], black: Profile[]): { diff: number; secondary: number; roles: number } {
+  const sum = (t: Profile[], f: (p: Profile) => number) => t.reduce((a, p) => a + f(p), 0);
+  const diff = Math.abs(sum(white, getPlayerOverallRating) - sum(black, getPlayerOverallRating));
+  const def = (p: Profile) => stat(p, 'Difesa');
+  const atk = (p: Profile) => stat(p, 'Tiro');
+  const secondary = Math.abs(sum(white, def) - sum(black, def)) + Math.abs(sum(white, atk) - sum(black, atk));
+  const count = (t: Profile[], r: FieldPosition) => t.filter((p) => roleOf(p) === r).length;
+  const roles = (['Difensore', 'Centrocampista', 'Esterno', 'Punta'] as FieldPosition[]).reduce(
+    (a, r) => a + Math.abs(count(white, r) - count(black, r)),
+    0
+  );
+  return { diff, secondary, roles };
+}
+const score = (c: { diff: number; secondary: number; roles: number }) => c.diff + c.secondary * 0.15 + c.roles * 0.35;
+
+/**
+ * Puts a team on the places of the formation: the goalkeeper first (a 'Portiere' when the keeper is fixed,
+ * otherwise the best in defence + physique), then each place to the player whose role fits it best
+ * (same role > close role > any), using the stat that matters for that place as tie-break.
+ */
+export function orderTeamForFormation(team: Profile[], slots: FormationSlot[], fixedKeeper = true): Profile[] {
+  const pool = [...team];
+  const out: (Profile | undefined)[] = new Array(slots.length).fill(undefined);
+
+  let gk = fixedKeeper ? pool.findIndex((p) => roleOf(p) === 'Portiere') : -1;
+  if (gk === -1) {
+    // Senza portiere vero: in porta chi difende meglio, ma mai una punta se c'è altro
+    let best = -1;
+    pool.forEach((p, i) => {
+      const v = stat(p, 'Difesa') + stat(p, 'Fisico') - (roleOf(p) === 'Punta' ? 3 : 0);
+      if (v > best) {
+        best = v;
+        gk = i;
+      }
+    });
+  }
+  out[0] = pool.splice(Math.max(0, gk), 1)[0];
+
+  const keyStat: Record<FieldPosition, string> = {
+    Portiere: 'Difesa',
+    Difensore: 'Difesa',
+    Centrocampista: 'Visione',
+    Esterno: 'Velocità',
+    Punta: 'Tiro',
+  };
+  const fit = (p: Profile, slot: FormationSlot) => {
+    const r = roleOf(p);
+    const base = r === slot.role ? 30 : ROLE_NEAR[slot.role].includes(r) ? 15 : r === 'Portiere' ? 0 : 5;
+    return base + stat(p, keyStat[slot.role]);
+  };
+  const pairs: { pi: number; si: number; v: number }[] = [];
+  pool.forEach((p, pi) => slots.forEach((slot, si) => si > 0 && pairs.push({ pi, si, v: fit(p, slot) })));
+  pairs.sort((a, b) => b.v - a.v);
+  const usedP = new Set<number>();
+  for (const { pi, si } of pairs) {
+    if (usedP.has(pi) || out[si]) continue;
+    out[si] = pool[pi];
+    usedP.add(pi);
+  }
+  // (sicurezza) eventuali posti rimasti vuoti con chi resta
+  const rest = pool.filter((_, i) => !usedP.has(i));
+  return out.map((p) => p || rest.shift()).filter((p): p is Profile => Boolean(p));
+}
+
+function balanceTeamsLarge(players: Profile[], options: BalanceOptions & { slots: FormationSlot[] }): BalancedTeamsResult {
+  const perTeam = options.slots.length;
+  if (players.length !== perTeam * 2) {
+    throw new Error(`Servono esattamente ${perTeam * 2} giocatori per ${perTeam} contro ${perTeam}.`);
+  }
+  const keepers = players.filter((p) => roleOf(p) === 'Portiere');
+  const lockKeepers = Boolean(options.fixedKeeper) && keepers.length >= 2;
+  // Con il portiere fisso: i due portieri migliori uno per squadra, mai scambiati
+  const sortedKeepers = [...keepers].sort((a, b) => getPlayerOverallRating(b) - getPlayerOverallRating(a));
+  const fixedW = lockKeepers ? sortedKeepers[0] : undefined;
+  const fixedB = lockKeepers ? sortedKeepers[1] : undefined;
+  const free = players.filter((p) => p !== fixedW && p !== fixedB);
+
+  const seedBase = players.reduce((a, p) => a + p.id.split('').reduce((x, c) => x + c.charCodeAt(0), 0), 0);
+  const rand = seeded(options.excludeSplitKey ? Math.floor(Math.random() * 1e9) : seedBase);
+
+  const found = new Map<string, { white: Profile[]; black: Profile[]; cost: number; parts: ReturnType<typeof splitCost> }>();
+  const RESTARTS = 40;
+  for (let r = 0; r < RESTARTS; r++) {
+    // Partenza: a serpentina per livello (la prima) oppure mescolata
+    const order =
+      r === 0
+        ? [...free].sort((a, b) => getPlayerOverallRating(b) - getPlayerOverallRating(a))
+        : [...free].sort(() => rand() - 0.5);
+    const white: Profile[] = fixedW ? [fixedW] : [];
+    const black: Profile[] = fixedB ? [fixedB] : [];
+    order.forEach((p, i) => {
+      const snake = i % 4 === 0 || i % 4 === 3;
+      if ((snake && white.length < perTeam) || black.length >= perTeam) white.push(p);
+      else black.push(p);
+    });
+
+    // Scambi a coppie finché il risultato migliora
+    let best = score(splitCost(white, black));
+    let improved = true;
+    while (improved) {
+      improved = false;
+      for (let i = 0; i < white.length; i++) {
+        if (white[i] === fixedW) continue;
+        for (let j = 0; j < black.length; j++) {
+          if (black[j] === fixedB) continue;
+          [white[i], black[j]] = [black[j], white[i]];
+          const c = score(splitCost(white, black));
+          if (c + 1e-9 < best) {
+            best = c;
+            improved = true;
+          } else {
+            [white[i], black[j]] = [black[j], white[i]];
+          }
+        }
+      }
+    }
+    const key = [white.map((p) => p.id).sort().join(','), black.map((p) => p.id).sort().join(',')].sort().join('|');
+    if (!found.has(key)) found.set(key, { white: [...white], black: [...black], cost: best, parts: splitCost(white, black) });
+  }
+
+  const candidates = Array.from(found.entries())
+    .map(([key, v]) => ({ key, ...v }))
+    .sort((a, b) => a.cost - b.cost);
+  let chosen = candidates[0];
+  if (options.excludeSplitKey) {
+    const others = candidates.filter((c) => c.key !== options.excludeSplitKey);
+    const pool = others.slice(0, Math.max(1, options.pickAmongTop ?? 5));
+    if (pool.length > 0) chosen = pool[Math.floor(Math.random() * pool.length)];
+  }
+  const swapColours = Boolean(options.excludeSplitKey) && Math.random() < 0.5;
+  const bestWhite = swapColours ? chosen.black : chosen.white;
+  const bestBlack = swapColours ? chosen.white : chosen.black;
+
+  const whiteStats = calculateTeamSummary(bestWhite);
+  const blackStats = calculateTeamSummary(bestBlack);
+  const diffAvg = Math.abs(whiteStats.overallAvg - blackStats.overallAvg);
+  return {
+    teamWhite: orderTeamForFormation(bestWhite, options.slots, Boolean(options.fixedKeeper)),
+    teamBlack: orderTeamForFormation(bestBlack, options.slots, Boolean(options.fixedKeeper)),
     whiteStats,
     blackStats,
     difference: Number(diffAvg.toFixed(2)),

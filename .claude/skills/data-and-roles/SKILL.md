@@ -107,3 +107,24 @@ Production data is REAL: never rewrite stats, no paid services, never print secr
 - Coming back: profiles with `restore_requested_at` show an amber dot on Impostazioni → "Admin e account" and are listed first
   with "Vuole rientrare". Reactivating from that list also closes the `restore_…` request.
 - Login: "Password dimenticata?" (sign-in mode) → `sendPasswordResetEmail` in Italian; same message whether or not the email exists.
+
+## Match formats (2026-11-13) — `lib/utils/matchFormat.ts`
+- Formats `5v5 | 7v7 | 8v8 | 11v11` → 10 / 14 / 16 / 22 players. Chosen by an admin PER MATCH DAY in
+  `settings/match_formats` → `days[date] = { format, formation, updated_at, updated_by }` (no entry = 5vs5 1-1-2-1).
+  Rules: it lives under `settings` (read signed-in, write admin) — no rule change.
+- Formations (first = default): 5v5 1-1-2-1 · 7v7 1-2-3-1 / 1-3-2-1 · 8v8 1-3-3-1 / 1-2-3-2 · 11v11 1-4-3-3 / 1-4-4-2.
+  `FORMATIONS` has each place (label, role, x/y in the white half; black mirrored). Team arrays are stored in slot order.
+- Starters vs waitlist: `rankDayPresences(list, maxStarters)`; the app subscriptions (`subscribePresences*`) and the
+  server (`loadRankedPresences` reads the format) rank with the day's format. Changing the format re-ranks at once
+  (nothing written); `requestTeamsCheck(date)` → server notifies who moves up.
+- Roles: `FieldPosition` now includes 'Centrocampista' (5vs5 treats it as Esterno).
+- Teams: `balanceTeams(players, { slots })` — 5 per team = exact search (unchanged); 7/8/11 = 40 restarts + pair swaps
+  (deterministic unless "Ribilancia"), then `orderTeamForFormation` puts players on the places by role.
+  Teams saved for another size → Squadre shows "rigenera" (`teamsWrongFormat`).
+- Cost: field `cost` = 5vs5, `costs['7v7'|'8v8'|'11v11']` (empty = field does not host that format);
+  club `standard_total_cost` = 5vs5, `standard_costs[...]` (empty = proportional to the 5vs5 quota).
+  `matchCostFor(match, settings, fields, format)`; quota = cost / players. Archived matches keep total_cost and
+  `cost_per_player` = total / players of that match.
+- Proposals: `checkPromotions` → `proposeBiggerFormat`: future day, sign-ups (starters + waitlist) ≥ next format's
+  players → `admin_requests/format_<date>_<format>` (type `format_proposal`, created once ever) + push to admins.
+  Bell: "Passa al …" (`apply_format`, writes the day's format and re-checks promotions) or "Resta …" (`dismiss`).

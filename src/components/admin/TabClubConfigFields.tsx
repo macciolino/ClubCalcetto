@@ -5,7 +5,8 @@ import { StatParametersCard } from '@/components/admin/StatParametersCard';
 import { FormSettingsCard } from '@/components/admin/FormSettingsCard';
 import { NumberInput } from '@/components/NumberInput';
 import React, { useState, useEffect } from 'react';
-import { SportField, StatCategory } from '@/types/database';
+import { AppSettings, SportField, StatCategory } from '@/types/database';
+import { FORMAT_INFO, MatchFormat } from '@/lib/utils/matchFormat';
 import { FieldModal } from './FieldModal';
 import { StatsLegendModal } from './StatsLegendModal';
 import { MapPin, Phone, Plus, ExternalLink, Edit3, Trash2, Check, Star } from 'lucide-react';
@@ -21,8 +22,10 @@ interface TabClubConfigFieldsProps {
   categories: StatCategory[];
   onReset8Categories: () => void;
   standardCost: number;
+  /** Club standard cost of 7vs7, 8vs8, 11vs11 (empty = proportional to the 5vs5) */
+  standardCosts?: AppSettings['standard_costs'];
   standardTime: string;
-  onSaveEconomicConfig: (cost: number, time: string) => void;
+  onSaveEconomicConfig: (cost: number, time: string, costs?: AppSettings['standard_costs']) => void;
   timelockEnabled: boolean;
   timelockHours: number;
   onUpdateTimelock: (enabled: boolean, hours: number) => void;
@@ -67,6 +70,7 @@ export function TabClubConfigFields({
   onSetDefaultFieldId,
   categories,
   standardCost,
+  standardCosts,
   standardTime,
   onSaveEconomicConfig,
   timelockEnabled,
@@ -81,6 +85,13 @@ export function TabClubConfigFields({
   const [costInput, setCostInput] = useState<number>(standardCost || 80);
   const [timeInput, setTimeInput] = useState<string>(standardTime || '20:30');
   const [saved, setSaved] = useState(false);
+  const BIG: Exclude<MatchFormat, '5v5'>[] = ['7v7', '8v8', '11v11'];
+  const [bigCosts, setBigCosts] = useState<Record<string, string>>({});
+  useEffect(
+    () => setBigCosts(Object.fromEntries(BIG.map((f) => [f, standardCosts?.[f] ? String(standardCosts[f]) : '']))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [standardCosts]
+  );
   useEffect(() => setCostInput(standardCost || 80), [standardCost]);
   useEffect(() => setTimeInput(standardTime || '20:30'), [standardTime]);
 
@@ -91,7 +102,12 @@ export function TabClubConfigFields({
 
   const handleSaveDefaults = (e: React.FormEvent) => {
     e.preventDefault();
-    onSaveEconomicConfig(costInput, timeInput);
+    const costs: NonNullable<AppSettings['standard_costs']> = {};
+    BIG.forEach((f) => {
+      const v = Number(String(bigCosts[f] || '').replace(',', '.'));
+      if (v > 0) costs[f] = v;
+    });
+    onSaveEconomicConfig(costInput, timeInput, costs);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
@@ -137,12 +153,21 @@ export function TabClubConfigFields({
                         <p className="text-sm text-slate-300 tabular-nums">
                           {field.cost ? (
                             <>
-                              {euro(field.cost)} a partita · <span className="text-slate-400">{euro(field.cost / 10)} a testa</span>
+                              5vs5 {euro(field.cost)} · <span className="text-slate-400">{euro(field.cost / 10)} a testa</span>
                             </>
                           ) : (
-                            <span className="text-slate-400">Costo standard del club ({euro(standardCost)})</span>
+                            <span className="text-slate-400">5vs5: costo standard del club ({euro(standardCost)})</span>
                           )}
                         </p>
+                        {BIG.some((f) => Number(field.costs?.[f]) > 0) && (
+                          <p className="flex flex-wrap gap-x-3 text-xs text-slate-400 tabular-nums">
+                            {BIG.filter((f) => Number(field.costs?.[f]) > 0).map((f) => (
+                              <span key={f}>
+                                {FORMAT_INFO[f].label} {euro(Number(field.costs![f]))}
+                              </span>
+                            ))}
+                          </p>
+                        )}
                         <p className="flex items-center gap-1.5 text-xs text-slate-400 min-w-0">
                           <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
                           <span className="truncate">{field.address}</span>
@@ -221,8 +246,33 @@ export function TabClubConfigFields({
                   <NumberInput min={30} max={300} value={costInput} onValueChange={setCostInput} decimal className={`${inputCls} tabular-nums`} />
                 </label>
               </div>
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-slate-300">Costo standard degli altri formati (€)</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {BIG.map((f) => {
+                    const v = Number(String(bigCosts[f] || '').replace(',', '.'));
+                    const auto = (Number(costInput || 80) / 10) * FORMAT_INFO[f].players;
+                    return (
+                      <label key={f} className="block rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 focus-within:border-emerald-500">
+                        <span className="block text-xs font-semibold text-white">{FORMAT_INFO[f].label}</span>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={bigCosts[f] || ''}
+                          placeholder={String(Math.round(auto * 100) / 100).replace('.', ',')}
+                          onChange={(e) => setBigCosts((c) => ({ ...c, [f]: e.target.value.replace(/[^0-9.,]/g, '') }))}
+                          aria-label={`Costo standard ${FORMAT_INFO[f].label}`}
+                          className="mt-0.5 w-full bg-transparent text-white tabular-nums focus:outline-none placeholder:text-slate-600"
+                        />
+                        <span className="block text-[11px] text-slate-500 tabular-nums">{euro((v > 0 ? v : auto) / FORMAT_INFO[f].players)} a testa</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-slate-500">Vuoto = stessa quota a testa del 5vs5.</p>
+              </div>
               <div className="flex items-center justify-between gap-3">
-                <span className="text-sm text-slate-400 tabular-nums">{euro(Number(costInput || 80) / 10)} a testa</span>
+                <span className="text-sm text-slate-400 tabular-nums">5vs5: {euro(Number(costInput || 80) / 10)} a testa</span>
                 <button type="submit" className={btnInline.primary}>
                   <Check className="h-4 w-4" /> {saved ? 'Salvato' : 'Salva'}
                 </button>

@@ -130,7 +130,7 @@ export function NotificationSettingsCard({ defaultOpen = false }: { defaultOpen?
       <div className="space-y-4 border-t border-slate-800 pt-4">
       <p className="text-xs text-slate-400">
         Iscrizioni aperte (a tutti i registrati), sei entrato tra i titolari (a chi sale dalla lista d&apos;attesa), partita confermata, squadre cambiate, chi subentra a chi (ai 10
-        della partita) e voto MVP aperto (a tutti i registrati). Agli admin arriva anche l&apos;avviso quando una partita raggiunge 10 iscritti. Gratuite (Firebase Cloud Messaging).
+        della partita) e voto MVP aperto (a tutti i registrati). Agli admin arriva anche l&apos;avviso quando una partita è al completo (10, 14, 16 o 22 iscritti secondo il formato) e la proposta di passare a un formato più grande quando gli iscritti sono tanti. Gratuite (Firebase Cloud Messaging).
       </p>
 
       <div className="space-y-2" role="radiogroup" aria-label="Chi riceve le notifiche">

@@ -10,7 +10,7 @@ import { FeedbackHost } from '@/components/ui/Feedback';
 import { SplashScreen, SPLASH_GUARD } from '@/components/SplashScreen';
 export const metadata: Metadata = {
   title: 'Club Soccer - Gestione Partite & Squadre Bilanciate',
-  description: 'App privata per la gestione presenze, statistiche giocatori e generazione squadre 5v5 con algoritmo di bilanciamento.',
+  description: 'App privata per la gestione presenze, statistiche giocatori e generazione squadre (5vs5, 7vs7, 8vs8, 11vs11) con algoritmo di bilanciamento.',
   icons: {
     icon: [{ url: '/icons/icon-96.png', sizes: '96x96', type: 'image/png' }, { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
     apple: [{ url: '/icons/apple-icon-180.png', sizes: '180x180' }],

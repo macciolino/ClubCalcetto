@@ -1,11 +1,12 @@
 import { GeneratedTeamRecord, MatchTeamPlayer, Profile, StoredTeamPlayer, TeamSubstitution } from '@/types/database';
+import type { FormationSlot } from '@/lib/utils/matchFormat';
 
-/** Slot labels of the 1-1-2-1 diamond, in the order players are stored. */
+/** Slot labels of the 5vs5 1-1-2-1 diamond, in the order players are stored (other formats: FormationSlot.label). */
 export const SLOT_LABELS = ['POR', 'DIF', 'EST SX', 'EST DX', 'PUN'] as const;
 /** With the goalkeeper in rotation nobody is the keeper for the whole match */
 export const ROTATION_KEEPER_LABEL = 'PORTA ↻';
-export const slotLabel = (i: number, fixedKeeper = true): string =>
-  i === 0 && !fixedKeeper ? ROTATION_KEEPER_LABEL : SLOT_LABELS[i] || '—';
+export const slotLabel = (i: number, fixedKeeper = true, slots?: FormationSlot[]): string =>
+  i === 0 && !fixedKeeper ? ROTATION_KEEPER_LABEL : (slots ? slots[i]?.label : SLOT_LABELS[i]) || '—';
 
 export const storedName = (p: StoredTeamPlayer): string => p.name || p.full_name || 'Giocatore';
 
@@ -26,7 +27,7 @@ export interface ReconciledTeams {
   black: MatchTeamPlayer[];
   /** Players who left the starters, replaced by who took their place */
   substitutions: Omit<TeamSubstitution, 'at'>[];
-  /** Places still empty (fewer than 10 starters) */
+  /** Places still empty (fewer starters than the format needs) */
   emptySlots: number;
 }
 

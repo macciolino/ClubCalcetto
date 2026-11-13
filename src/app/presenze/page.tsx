@@ -4,6 +4,8 @@ import { notify, askConfirm } from '@/components/ui/Feedback';
 
 import { callNotifyApi } from '@/lib/services/pushService';
 import { firstToTenByWeek } from '@/lib/utils/presenceRanking';
+import { useMatchFormats } from '@/lib/hooks/useMatchFormats';
+import { FORMAT_INFO, dayFormat, maxPlayersFor } from '@/lib/utils/matchFormat';
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/context/AuthContext';
@@ -54,6 +56,8 @@ export default function PresenzePage() {
   const [selectedDayString, setSelectedDayString] = useState<string>(days[0]?.dateString || '');
   const [busyDate, setBusyDate] = useState<string | null>(null);
   const [isSavingCalendar, setIsSavingCalendar] = useState(false);
+  // Formato di ogni giorno (5vs5, 7vs7, 8vs8, 11vs11): decide quanti sono i titolari
+  const matchFormats = useMatchFormats();
 
   const firstDay = days[0]?.dateString || '';
   const lastDay = days[days.length - 1]?.dateString || '';
@@ -190,18 +194,20 @@ export default function PresenzePage() {
     }
   };
 
-  // Controlla se la data selezionata ha 10 giocatori
+  // Titolari di ogni giorno = giocatori del suo formato (10, 14, 16 o 22)
+  const maxOf = (date: string) => maxPlayersFor(matchFormats, date);
+  const selectedMax = maxOf(selectedDayString);
+  const selectedFormat = dayFormat(matchFormats, selectedDayString).format;
   const selectedDayPresences = presences.filter((p) => p.date === selectedDayString);
   const selectedStarters = selectedDayPresences.filter((p) => p.status === 'confirmed');
-  const isMatchReady = selectedStarters.length >= 10;
+  const isMatchReady = selectedStarters.length >= selectedMax;
 
-  // Giorni che hanno raggiunto il quorum dei 10 titolari
-  // Il giorno arrivato per primo a 10 iscritti in ogni settimana (come in Admin → Match)
-  const firstToTen = firstToTenByWeek(days, presences);
+  // Il giorno arrivato per primo al completo in ogni settimana (come in Admin → Match)
+  const firstToTen = firstToTenByWeek(days, presences, maxOf);
 
   const daysWithQuorum = days.filter((d) => {
     const dayP = presences.filter((p) => p.date === d.dateString);
-    return dayP.filter((p) => p.status === 'confirmed').length >= 10;
+    return dayP.filter((p) => p.status === 'confirmed').length >= maxOf(d.dateString);
   });
 
   const currentUserId = mounted ? profile?.id || (user as any)?.uid || (user as any)?.id : undefined;
@@ -219,6 +225,7 @@ export default function PresenzePage() {
     isLocked: isDayLocked(day.dateString),
     isFirstToTen: firstToTen.has(day.dateString),
     isToggling: busyDate === day.dateString,
+    maxPlayers: maxOf(day.dateString),
   });
   const focusDay = days.find((d) => d.dateString === selectedDayString) || days[0];
 
@@ -229,8 +236,8 @@ export default function PresenzePage() {
         <div className="space-y-1.5">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Presenze</h1>
           <p className="text-sm text-slate-400 max-w-xl leading-relaxed">
-            Segna i giorni in cui puoi giocare. I primi 10 sono titolari, gli altri vanno in lista d&apos;attesa e
-            subentrano da soli.
+            Segna i giorni in cui puoi giocare. I primi {selectedMax} sono titolari ({FORMAT_INFO[selectedFormat].label}), gli altri
+            vanno in lista d&apos;attesa e subentrano da soli.
           </p>
         </div>
 
@@ -252,7 +259,7 @@ export default function PresenzePage() {
         )}
       </header>
 
-      {/* Admin: più giorni a 10, scegli quello ufficiale */}
+      {/* Admin: più giorni al completo, scegli quello ufficiale */}
       {daysWithQuorum.length > 1 && isStrictAdmin && (
         <section className="rounded-2xl bg-slate-900 border border-slate-800 p-5 space-y-3">
           <div className="flex items-start gap-3">
@@ -260,7 +267,7 @@ export default function PresenzePage() {
             <div>
               <h2 className="text-base font-semibold text-white">Scegli il giorno ufficiale</h2>
               <p className="text-sm text-slate-400 mt-0.5">
-                {daysWithQuorum.length} giorni hanno 10 titolari. Il giorno scelto vale anche per Squadre e Admin.
+                {daysWithQuorum.length} giorni sono al completo. Il giorno scelto vale anche per Squadre e Admin.
               </p>
             </div>
           </div>
@@ -294,7 +301,7 @@ export default function PresenzePage() {
               <CheckCircle2 className="h-5 w-5 text-emerald-400" /> Partita al completo
             </h2>
             <p className="text-sm text-slate-400 mt-0.5">
-              {formatItalianDate(selectedDayString)} · 10 titolari su 10
+              {formatItalianDate(selectedDayString)} · {FORMAT_INFO[selectedFormat].label} · {selectedMax} titolari su {selectedMax}
             </p>
           </div>
           <Link
@@ -316,7 +323,8 @@ export default function PresenzePage() {
           {days.map((day) => {
             const confirmedCount = presences.filter((p) => p.date === day.dateString && p.status === 'confirmed').length;
             const isSelected = selectedDayString === day.dateString;
-            const isFull = confirmedCount >= 10;
+            const dayMax = maxOf(day.dateString);
+            const isFull = confirmedCount >= dayMax;
             const locked = isDayLocked(day.dateString);
             const startsNextWeek = day.dateString === nextWeekStart;
             const isFirstToTen = firstToTen.has(day.dateString);
@@ -328,8 +336,8 @@ export default function PresenzePage() {
                   type="button"
                   onClick={() => handleSelectDay(day.dateString)}
                   aria-pressed={isSelected}
-                  aria-label={`${day.dayName} ${day.dayNumber} ${day.monthName}: ${locked ? 'chiuso' : `${confirmedCount} su 10`}${isFirstToTen ? ', primo a 10' : ''}`}
-                  title={locked ? 'Iscrizioni non ancora aperte' : `${confirmedCount}/10`}
+                  aria-label={`${day.dayName} ${day.dayNumber} ${day.monthName}: ${locked ? 'chiuso' : `${confirmedCount} su ${dayMax}`}${isFirstToTen ? ', primo al completo' : ''}`}
+                  title={locked ? 'Iscrizioni non ancora aperte' : `${confirmedCount}/${dayMax}`}
                   className={`flex-shrink-0 flex flex-col items-center w-14 sm:w-16 py-2.5 rounded-2xl transition-colors ${
                     isSelected ? 'bg-emerald-500 text-slate-950' : locked ? 'text-slate-600' : 'text-slate-300 hover:bg-slate-900'
                   }`}
@@ -338,7 +346,7 @@ export default function PresenzePage() {
                     {day.dayName.slice(0, 3)}
                   </span>
                   <span className="text-xl font-bold leading-tight mt-0.5">{day.dayNumber}</span>
-                  {/* Pallino di stato: ambra = primo a 10, verde = completo, grigio = qualcuno iscritto */}
+                  {/* Pallino di stato: ambra = primo al completo, verde = completo, grigio = qualcuno iscritto */}
                   <span className="mt-1.5 h-1.5 flex items-center" aria-hidden="true">
                     {locked ? (
                       <Lock className="h-3 w-3" />
@@ -363,7 +371,7 @@ export default function PresenzePage() {
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" /> completo
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true" /> primo a 10 della settimana
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true" /> primo al completo della settimana
           </span>
         </p>
       </section>

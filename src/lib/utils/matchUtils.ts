@@ -1,4 +1,5 @@
-import { Match, SportField } from '@/types/database';
+import { AppSettings, Match, MatchFormat, SportField } from '@/types/database';
+import { FORMAT_INFO, fieldFormatCost, standardFormatCost } from '@/lib/utils/matchFormat';
 
 export const DEFAULT_MATCH_COST = 80;
 export const DEFAULT_MATCH_TIME = '20:30';
@@ -35,12 +36,44 @@ export function fieldCostFor(
   match: Match | null | undefined,
   fields: SportField[],
   defaultFieldId?: string,
-  location?: string
+  location?: string,
+  format: MatchFormat = '5v5'
 ): number | undefined {
+  return fieldFormatCost(matchField(match, fields, defaultFieldId, location), format);
+}
+
+/** The field where the match is played: the one of `location` (or of the match), otherwise the default field. */
+export function matchField(
+  match: Match | null | undefined,
+  fields: SportField[],
+  defaultFieldId?: string,
+  location?: string
+): SportField | undefined {
   const loc = location ?? match?.location;
   const byLocation = loc ? fields.find((f) => fieldLabel(f) === loc || f.name === loc) : undefined;
-  const field = byLocation || (loc ? undefined : fields.find((f) => f.id === defaultFieldId) || fields[0]);
-  return field && Number(field.cost) > 0 ? Number(field.cost) : undefined;
+  return byLocation || (loc ? undefined : fields.find((f) => f.id === defaultFieldId) || fields[0]);
+}
+
+/**
+ * Club standard cost for a format. Without one set for 7vs7 / 8vs8 / 11vs11, the 5vs5 standard is scaled to the
+ * number of players (e.g. €80 for 10 → €112 for 14), so the quota a testa stays the same.
+ */
+export function standardCostFor(settings: Pick<AppSettings, 'standard_total_cost' | 'standard_costs'> | null | undefined, format: MatchFormat): number {
+  const own = standardFormatCost(settings, format);
+  if (own) return own;
+  const base = Number(settings?.standard_total_cost) || DEFAULT_MATCH_COST;
+  return Math.round((base / 10) * FORMAT_INFO[format].players * 100) / 100;
+}
+
+/** Total cost of a match of a given format: match override → field cost for the format → club standard for the format. */
+export function matchCostFor(
+  match: Match | null | undefined,
+  settings: Pick<AppSettings, 'standard_total_cost' | 'standard_costs' | 'default_field_id'> | null | undefined,
+  fields: SportField[],
+  format: MatchFormat,
+  location?: string
+): number {
+  return effectiveMatchCost(match, standardCostFor(settings, format), fieldCostFor(match, fields, settings?.default_field_id, location, format));
 }
 
 /** Location of a match: the one saved on the match, otherwise the admin's default field. */

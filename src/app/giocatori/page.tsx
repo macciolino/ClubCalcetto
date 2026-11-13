@@ -52,7 +52,7 @@ export default function GiocatoriPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [sortBy, setSortBy] = useState<'ovr' | 'wins' | 'name' | 'goals' | 'mvp' | 'played' | 'form'>('ovr');
-  const [roleFilter, setRoleFilter] = useState<'all' | 'Portiere' | 'Difensore' | 'Esterno' | 'Punta'>('all');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'Portiere' | 'Difensore' | 'Centrocampista' | 'Esterno' | 'Punta'>('all');
   const [compareOpen, setCompareOpen] = useState(false);
   // Giocatore aperto nel dettaglio (finestra), da card, elenco o tabella
   const [detailId, setDetailId] = useState<string | null>(null);
@@ -201,7 +201,7 @@ ${link}`;
   };
 
   // Filtraggio e ordinamento (card: pulsanti in alto; tabella: intestazioni cliccabili)
-  const POSITION_ORDER = ['Portiere', 'Difensore', 'Esterno', 'Punta'];
+  const POSITION_ORDER = ['Portiere', 'Difensore', 'Centrocampista', 'Esterno', 'Punta'];
   const tableValue = (p: Profile, key: string): number | string => {
     if (key === 'name') return p.full_name.toLowerCase();
     if (key === 'position') return POSITION_ORDER.indexOf(p.position || 'Esterno');
@@ -353,6 +353,7 @@ ${link}`;
             <option value="all">Tutti</option>
             <option value="Portiere">Portieri</option>
             <option value="Difensore">Difensori</option>
+            <option value="Centrocampista">Centrocampisti</option>
             <option value="Esterno">Esterni</option>
             <option value="Punta">Punte</option>
           </select>

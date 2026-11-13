@@ -84,6 +84,18 @@ function toFirestore(field: SportField, removeEmpty: boolean): Record<string, un
     (['maps_url', 'phone', 'court_type', 'notes', 'cost'] as const).forEach((k) => {
       if (field[k] === undefined) out[k] = deleteField();
     });
+    // Costi per formato: con merge le chiavi svuotate vanno tolte una per una (casella vuota = formato non disponibile)
+    const costs: Record<string, unknown> = {};
+    (['7v7', '8v8', '11v11'] as const).forEach((f) => {
+      const v = field.costs?.[f];
+      costs[f] = Number(v) > 0 ? Number(v) : deleteField();
+    });
+    out.costs = costs;
+  } else if (field.costs) {
+    const costs: Record<string, number> = {};
+    Object.entries(field.costs).forEach(([f, v]) => Number(v) > 0 && (costs[f] = Number(v)));
+    if (Object.keys(costs).length) out.costs = costs;
+    else delete out.costs;
   }
   return out;
 }

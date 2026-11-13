@@ -27,6 +27,8 @@ export function MatchDetailSheet({
   onDelete?: (m: Match) => void;
   onClose: () => void;
 }) {
+  // Giocatori della partita (10 in un 5vs5, 14 in un 7vs7…): per la quota a testa
+  const headCount = (match.team_white?.length || 0) + (match.team_black?.length || 0) || 10;
   const w = match.score_white ?? 0;
   const b = match.score_black ?? 0;
   const goalsOf = (id: string) => (match.scorers || []).filter((s) => s.player_id === id).reduce((n, s) => n + (s.goals || 0), 0);
@@ -79,7 +81,9 @@ export function MatchDetailSheet({
       title={<span className="capitalize">{formatItalianDate(match.match_date || match.id)}</span>}
       subtitle={
         match.total_cost
-          ? `Campo €${Number(match.total_cost).toFixed(0)} · €${(Number(match.total_cost) / 10).toFixed(2).replace('.', ',')} a testa`
+          ? `${headCount / 2}vs${headCount / 2} · Campo €${Number(match.total_cost).toFixed(0)} · €${(Number(match.total_cost) / headCount)
+              .toFixed(2)
+              .replace('.', ',')} a testa`
           : undefined
       }
       footer={

@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/context/AuthContext';
-import { GeneratedTeamRecord, Match, MvpVote, Presence, Profile, SportField } from '@/types/database';
+import { AppSettings, GeneratedTeamRecord, Match, MvpVote, Presence, Profile, SportField } from '@/types/database';
 import {
   joinPresence,
   leavePresence,
@@ -21,7 +21,9 @@ import { subscribeSportFields } from '@/lib/services/fieldService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { getOfficialMatchDate, isTimelockActive } from '@/lib/services/presenceService';
 import { formatItalianDate, isDateOpenForPlayers, toDateString } from '@/lib/utils/dateUtils';
-import { effectiveMatchCost, effectiveMatchLocation, effectiveMatchTime, fieldCostFor, mvpVotingWindow } from '@/lib/utils/matchUtils';
+import { effectiveMatchLocation, effectiveMatchTime, matchCostFor, mvpVotingWindow } from '@/lib/utils/matchUtils';
+import { useDayFormat } from '@/lib/hooks/useMatchFormats';
+import { perHead } from '@/lib/utils/matchFormat';
 import { computeMatchStats } from '@/lib/utils/statUtils';
 import { FormDots, lastCompletedMatches } from '@/components/FormDots';
 import { useForms } from '@/lib/hooks/useForms';
@@ -61,12 +63,14 @@ export default function HomePage() {
   const [match, setMatch] = useState<Match | null>(null);
   const [teamRecord, setTeamRecord] = useState<GeneratedTeamRecord | null>(null);
   const [fields, setFields] = useState<SportField[]>([]);
-  const [standard, setStandard] = useState<{ cost?: number; time?: string; fieldId?: string }>({});
+  const [standard, setStandard] = useState<{ cost?: number; costs?: AppSettings['standard_costs']; time?: string; fieldId?: string }>({});
   const [openUntil, setOpenUntil] = useState('');
   const [busy, setBusy] = useState(false);
   const [completedMatches, setCompletedMatches] = useState<Match[]>([]);
   const [votes, setVotes] = useState<MvpVote[]>([]);
   const { forms } = useForms();
+  // Formato della partita (5vs5, 7vs7, 8vs8, 11vs11): titolari, posti liberi e quota
+  const fmt = useDayFormat(date);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 60000);
@@ -80,7 +84,7 @@ export default function HomePage() {
       subscribeProfiles((list) => setProfiles(list || [])),
       subscribeSportFields((list) => setFields(list || [])),
       subscribeAppSettings((s) =>
-        setStandard({ cost: s.standard_total_cost, time: s.standard_match_time, fieldId: s.default_field_id })
+        setStandard({ cost: s.standard_total_cost, costs: s.standard_costs, time: s.standard_match_time, fieldId: s.default_field_id })
       ),
       subscribeCalendarSettings((cal) => setOpenUntil(cal.open_until || '')),
       subscribeMatches((list) => setCompletedMatches(list.filter((m) => m.status === 'completed'))),
@@ -108,7 +112,7 @@ export default function HomePage() {
   const mine = profile ? (presences || []).find((p) => p.player_id === profile.id) : undefined;
   const myStarterIdx = mine ? starters.findIndex((p) => p.id === mine.id) : -1;
   const myWaitIdx = mine ? waitlist.findIndex((p) => p.id === mine.id) : -1;
-  const isFull = starters.length >= 10;
+  const isFull = starters.length >= fmt.players;
   const locked = !admin && !isDateOpenForPlayers(date, openUntil);
   const cancelLocked = Boolean(mine) && !admin && isTimelockActive(date).locked;
 
@@ -154,7 +158,12 @@ export default function HomePage() {
   const hasMatch = date >= today;
   const time = effectiveMatchTime(match, standard.time);
   const location = effectiveMatchLocation(match, fields, standard.fieldId);
-  const cost = effectiveMatchCost(match, standard.cost, fieldCostFor(match, fields, standard.fieldId));
+  const cost = matchCostFor(
+    match,
+    { standard_total_cost: standard.cost, standard_costs: standard.costs, default_field_id: standard.fieldId },
+    fields,
+    fmt.format
+  );
 
   // Intestazione: stato della partita in una frase (la prima condizione vera vince)
   const day = dayLabel(date, today);
@@ -223,10 +232,10 @@ export default function HomePage() {
         detail: admin ? 'I giocatori non possono ancora iscriversi.' : `La partita di ${day} sarà disponibile a breve.`,
         action: admin ? { href: '/presenze', label: 'Apri la settimana' } : undefined,
       };
-    const missing = 10 - starters.length;
+    const missing = fmt.players - starters.length;
     return mine
-      ? { title: `Sei iscritto per ${day}`, detail: `Siamo ${starters.length} su 10: ${missing === 1 ? 'manca 1 giocatore' : `mancano ${missing} giocatori`}.` }
-      : { title: `Iscrizioni aperte per ${day}`, detail: `Siamo ${starters.length} su 10. Conferma la tua presenza.` };
+      ? { title: `Sei iscritto per ${day}`, detail: `Siamo ${starters.length} su ${fmt.players}: ${missing === 1 ? 'manca 1 giocatore' : `mancano ${missing} giocatori`}.` }
+      : { title: `Iscrizioni aperte per ${day}`, detail: `Siamo ${starters.length} su ${fmt.players}. Conferma la tua presenza.` };
   })();
 
   return (
@@ -264,7 +273,9 @@ export default function HomePage() {
                   <MapPin className="h-4 w-4 text-slate-400 flex-shrink-0 mt-0.5" />
                   <span className="break-words">{location}</span>
                 </span>
-                <span className="text-slate-400">€{(cost / 10).toFixed(2)} a testa</span>
+                <span className="text-slate-400">
+                  {fmt.label} · €{perHead(cost, fmt.players)} a testa
+                </span>
               </div>
             </div>
             {teamRecord?.confirmed && (
@@ -328,9 +339,9 @@ export default function HomePage() {
           {/* Posti e squadra */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="flex items-center gap-4 rounded-xl bg-slate-950/50 p-4">
-              <CountRing count={starters.length} />
+              <CountRing count={starters.length} max={fmt.players} />
               <div className="text-sm">
-                <p className="font-semibold text-white">{isFull ? 'Al completo' : `${10 - starters.length} posti liberi`}</p>
+                <p className="font-semibold text-white">{isFull ? 'Al completo' : `${fmt.players - starters.length} posti liberi`}</p>
                 <p className="text-slate-400">{waitlist.length > 0 ? `${waitlist.length} in lista d’attesa` : 'Nessuno in attesa'}</p>
               </div>
             </div>
@@ -347,7 +358,7 @@ export default function HomePage() {
               ) : (
                 <>
                   <p className="font-semibold text-white">Squadre non ancora fatte</p>
-                  <p className="text-slate-400">Le prepara un admin quando ci sono 10 titolari.</p>
+                  <p className="text-slate-400">Le prepara un admin quando ci sono {fmt.players} titolari.</p>
                 </>
               )}
             </div>
@@ -355,7 +366,7 @@ export default function HomePage() {
         </section>
       ) : (
         <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center space-y-3">
-          <p className="text-sm text-slate-300">Segna i giorni in cui puoi giocare: la partita si decide quando si arriva a 10.</p>
+          <p className="text-sm text-slate-300">Segna i giorni in cui puoi giocare: la partita si decide quando si arriva al completo.</p>
           <Link href="/presenze" className={btn.primary}>
             Vai alle presenze <ArrowRight className="h-4 w-4" />
           </Link>

@@ -19,6 +19,7 @@ export function initialsOf(name: string | null | undefined): string {
 export const POSITION_BADGE: Record<string, string> = {
   Portiere: 'bg-sky-500/15 text-sky-300',
   Difensore: 'bg-indigo-500/15 text-indigo-300',
+  Centrocampista: 'bg-violet-500/15 text-violet-300',
   Esterno: 'bg-teal-500/15 text-teal-300',
   Punta: 'bg-orange-500/15 text-orange-300',
 };

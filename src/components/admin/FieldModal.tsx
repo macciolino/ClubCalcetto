@@ -20,6 +20,14 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
   const [courtType, setCourtType] = useState('Erba Sintetica 4G Outdoor');
   const [notes, setNotes] = useState('');
   const [cost, setCost] = useState('');
+  // Costi degli altri formati (casella vuota = il campo non ospita quel formato)
+  const [costs, setCosts] = useState<Record<'7v7' | '8v8' | '11v11', string>>({ '7v7': '', '8v8': '', '11v11': '' });
+  const num = (v: string) => Number(v.replace(',', '.'));
+  const costsOut = () => {
+    const out: NonNullable<SportField['costs']> = {};
+    (['7v7', '8v8', '11v11'] as const).forEach((f) => num(costs[f]) > 0 && (out[f] = num(costs[f])));
+    return Object.keys(out).length ? out : undefined;
+  };
 
   useEffect(() => {
     if (fieldToEdit) {
@@ -30,6 +38,11 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
       setCourtType(fieldToEdit.court_type || 'Erba Sintetica 4G Outdoor');
       setNotes(fieldToEdit.notes || '');
       setCost(fieldToEdit.cost ? String(fieldToEdit.cost) : '');
+      setCosts({
+        '7v7': fieldToEdit.costs?.['7v7'] ? String(fieldToEdit.costs['7v7']) : '',
+        '8v8': fieldToEdit.costs?.['8v8'] ? String(fieldToEdit.costs['8v8']) : '',
+        '11v11': fieldToEdit.costs?.['11v11'] ? String(fieldToEdit.costs['11v11']) : '',
+      });
     } else {
       setName('');
       setAddress('');
@@ -38,6 +51,7 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
       setCourtType('Erba Sintetica 4G Outdoor');
       setNotes('');
       setCost('');
+      setCosts({ '7v7': '', '8v8': '', '11v11': '' });
     }
   }, [fieldToEdit, isOpen]);
 
@@ -60,6 +74,7 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
         court_type: courtType.trim() || undefined,
         notes: notes.trim() || undefined,
         cost: Number(cost.replace(',', '.')) > 0 ? Number(cost.replace(',', '.')) : undefined,
+        costs: costsOut(),
       });
     } else {
       onSave({
@@ -70,6 +85,7 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
         court_type: courtType.trim() || undefined,
         notes: notes.trim() || undefined,
         cost: Number(cost.replace(',', '.')) > 0 ? Number(cost.replace(',', '.')) : undefined,
+        costs: costsOut(),
       });
     }
     onClose();
@@ -151,23 +167,45 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
             </div>
           </div>
 
-          <div>
-            <label htmlFor="field-cost" className="block text-xs font-medium text-slate-300 mb-1.5">Costo della partita su questo campo (€)</label>
-            <input
-              id="field-cost"
-              type="text"
-              inputMode="decimal"
-              placeholder="Vuoto = costo standard del club"
-              value={cost}
-              onChange={(e) => setCost(e.target.value.replace(/[^0-9.,]/g, ''))}
-              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white font-medium focus:outline-none focus:border-emerald-500"
-            />
-            <p className="mt-1 text-xs text-slate-500">
-              {Number(cost.replace(',', '.')) > 0
-                ? `€${(Number(cost.replace(',', '.')) / 10).toFixed(2).replace('.', ',')} a testa (10 giocatori).`
-                : 'Il totale del campo: la quota a testa è questo diviso 10.'}
+          <fieldset className="space-y-2">
+            <legend className="block text-xs font-medium text-slate-300 mb-1.5">Costo per formato (€, totale della partita)</legend>
+            <p className="text-xs text-slate-500">
+              Casella vuota = su questo campo non si gioca quel formato (il 5vs5 vuoto usa il costo standard del club).
             </p>
-          </div>
+            <div className="grid grid-cols-2 gap-2">
+              {(
+                [
+                  ['5v5', '5vs5', 10],
+                  ['7v7', '7vs7', 14],
+                  ['8v8', '8vs8', 16],
+                  ['11v11', '11vs11', 22],
+                ] as const
+              ).map(([f, label, n]) => {
+                const value = f === '5v5' ? cost : costs[f];
+                const set = (v: string) => (f === '5v5' ? setCost(v) : setCosts((c) => ({ ...c, [f]: v })));
+                return (
+                  <label key={f} className="block rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 focus-within:border-emerald-500">
+                    <span className="flex items-baseline justify-between gap-2 text-xs">
+                      <span className="font-semibold text-white">{label}</span>
+                      <span className="text-slate-500 tabular-nums">
+                        {num(value) > 0 ? `€${(num(value) / n).toFixed(2).replace('.', ',')} a testa` : f === '5v5' ? 'standard' : 'non disponibile'}
+                      </span>
+                    </span>
+                    <input
+                      id={f === '5v5' ? 'field-cost' : `field-cost-${f}`}
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="—"
+                      value={value}
+                      onChange={(e) => set(e.target.value.replace(/[^0-9.,]/g, ''))}
+                      aria-label={`Costo ${label}`}
+                      className="mt-0.5 w-full bg-transparent text-white font-medium tabular-nums focus:outline-none"
+                    />
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
 
           <div>
             <label className="block text-xs font-medium text-slate-300 mb-1.5">Note</label>

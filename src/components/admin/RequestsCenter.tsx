@@ -10,7 +10,10 @@ import { Sheet } from '@/components/ui/Sheet';
 import { askConfirm, notify } from '@/components/ui/Feedback';
 import { btn, btnInline } from '@/components/ui/buttons';
 import { initialsOf, uploadedPhoto } from '@/lib/utils/playerUtils';
-import { Bell, Check, Link2, Loader2, RotateCcw, UserPlus, UserX, Eraser, ClipboardCheck, ChevronDown } from 'lucide-react';
+import { Bell, Check, Link2, Loader2, RotateCcw, UserPlus, UserX, Eraser, ClipboardCheck, ChevronDown, Lightbulb } from 'lucide-react';
+import { useMatchFormats } from '@/lib/hooks/useMatchFormats';
+import { FORMAT_INFO, dayFormat, isMatchFormat } from '@/lib/utils/matchFormat';
+import { formatItalianDate } from '@/lib/utils/dateUtils';
 import { useStatCategories } from '@/lib/hooks/useStatCategories';
 import { StatRatingFields, ovrOf, orderedCategories } from '@/components/StatRatingFields';
 
@@ -171,6 +174,7 @@ export function RequestsBell() {
   // Lettura negata: di solito le regole Firestore aggiornate non sono ancora pubblicate
   const [denied, setDenied] = useState(false);
   const categories = useStatCategories();
+  const matchFormats = useMatchFormats();
 
   useEffect(() => {
     if (!admin || !isFirebaseConfigured) return;
@@ -327,6 +331,47 @@ export function RequestsBell() {
     </>
   );
 
+  // Proposta di cambio formato: tanti iscritti per un giorno
+  const formatCard = (r: AdminRequest) => {
+    const next = isMatchFormat(r.format) ? r.format : null;
+    const current = r.date ? dayFormat(matchFormats, r.date).format : null;
+    const already = next && current && FORMAT_INFO[current].players >= FORMAT_INFO[next].players;
+    if (!next || !r.date) return null;
+    return (
+      <>
+        <p className="text-sm text-slate-400">
+          {already
+            ? `La partita è già ${FORMAT_INFO[current!].label}: puoi chiudere l'avviso.`
+            : `Con il ${FORMAT_INFO[next].label} i primi ${FORMAT_INFO[next].players} iscritti diventano titolari e ricevono la notifica. Le squadre già fatte vanno rigenerate.`}
+        </p>
+        <div className="flex flex-col sm:flex-row gap-2">
+          {!already && (
+            <button
+              type="button"
+              disabled={busy !== null}
+              onClick={() =>
+                run(`${r.id}:apply`, () => resolve(r.id, 'apply_format'), `Partita del ${formatItalianDate(r.date!)}: ${FORMAT_INFO[next].label}`)
+              }
+              className={btn.primary}
+            >
+              {busy === `${r.id}:apply` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+              Passa al {FORMAT_INFO[next].label}
+            </button>
+          )}
+          <button
+            type="button"
+            disabled={busy !== null}
+            onClick={() => run(r.id, () => resolve(r.id, 'dismiss'), already ? 'Avviso chiuso' : `Resta ${FORMAT_INFO[current || '5v5'].label}`)}
+            className={btn.secondary}
+          >
+            {busy === r.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            {already ? 'Chiudi avviso' : `Resta ${FORMAT_INFO[current || '5v5'].label}`}
+          </button>
+        </div>
+      </>
+    );
+  };
+
   const closedCard = (r: AdminRequest) => (
     <>
       <p className="text-sm text-slate-400">
@@ -350,6 +395,14 @@ export function RequestsBell() {
   const META: Record<AdminRequest['type'], { icon: React.ElementType; tone: string; title: (r: AdminRequest) => string }> = {
     new_signup: { icon: UserPlus, tone: 'bg-emerald-500/15 text-emerald-300', title: (r) => `Nuovo iscritto: ${r.name}` },
     restore: { icon: RotateCcw, tone: 'bg-amber-500/15 text-amber-300', title: (r) => `Richiesta di rientro: ${r.name}` },
+    format_proposal: {
+      icon: Lightbulb,
+      tone: 'bg-sky-500/15 text-sky-300',
+      title: (r) =>
+        `${r.count} iscritti per ${r.date ? formatItalianDate(r.date) : 'la partita'}: passare al ${
+          isMatchFormat(r.format) ? FORMAT_INFO[r.format].label : r.format
+        }?`,
+    },
     account_closed: {
       icon: UserX,
       tone: 'bg-slate-800 text-slate-300',
@@ -357,7 +410,7 @@ export function RequestsBell() {
     },
   };
   // Prima le richieste che aspettano una scelta (rientro, nuovi iscritti), poi gli avvisi
-  const order = { restore: 0, new_signup: 1, account_closed: 2 } as const;
+  const order = { format_proposal: 0, restore: 1, new_signup: 2, account_closed: 3 } as const;
   const sorted = [...requests].sort((a, b) => order[a.type] - order[b.type]);
 
   return (
@@ -430,7 +483,13 @@ export function RequestsBell() {
                         </p>
                       </div>
                     </div>
-                    {r.type === 'new_signup' ? signupCard(r) : r.type === 'restore' ? restoreCard(r) : closedCard(r)}
+                    {r.type === 'new_signup'
+                      ? signupCard(r)
+                      : r.type === 'restore'
+                      ? restoreCard(r)
+                      : r.type === 'format_proposal'
+                      ? formatCard(r)
+                      : closedCard(r)}
                   </li>
                 );
               })}

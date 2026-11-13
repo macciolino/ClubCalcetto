@@ -1,0 +1,124 @@
+'use client';
+
+import React, { useState } from 'react';
+import { SportField } from '@/types/database';
+import { saveDayFormat } from '@/lib/firebase/firestoreService';
+import { requestTeamsCheck } from '@/lib/services/notificationService';
+import { askConfirm, notify } from '@/components/ui/Feedback';
+import { FORMAT_INFO, MATCH_FORMATS, MatchFormat, fieldHostsFormat } from '@/lib/utils/matchFormat';
+import { formatItalianDate } from '@/lib/utils/dateUtils';
+import { AlertTriangle, Loader2 } from 'lucide-react';
+
+/**
+ * Admins only: format (5vs5, 7vs7, 8vs8, 11vs11) and formation of ONE match day.
+ * Changing the format changes the number of starters at once (the first N sign-ups are starters);
+ * who moves up from the waitlist is notified by the server. Teams already made must be regenerated.
+ */
+export function MatchFormatPicker({
+  date,
+  format,
+  formation,
+  field,
+  hasTeams = false,
+  adminId,
+}: {
+  date: string;
+  format: MatchFormat;
+  formation: string;
+  /** Field of the match: warns when it has no cost for the chosen format (= it does not host it) */
+  field?: SportField;
+  /** Teams already saved (not archived) for that day */
+  hasTeams?: boolean;
+  adminId: string;
+}) {
+  const [busy, setBusy] = useState(false);
+  const info = FORMAT_INFO[format];
+
+  const change = async (next: MatchFormat, nextFormation?: string) => {
+    if (busy || !date) return;
+    const sameFormat = next === format;
+    const target = nextFormation || (sameFormat ? formation : FORMAT_INFO[next].formations[0]);
+    if (sameFormat && target === formation) return;
+    if (!sameFormat) {
+      const n = FORMAT_INFO[next].players;
+      const more = n > info.players;
+      const msg = [
+        `Passare a ${FORMAT_INFO[next].label} per ${formatItalianDate(date)}?`,
+        more
+          ? `I primi ${n} iscritti diventano titolari: chi entra dalla lista d'attesa riceve la notifica.`
+          : `Restano titolari i primi ${n} iscritti: gli altri tornano in lista d'attesa.`,
+        hasTeams ? 'Le squadre già fatte vanno rigenerate.' : '',
+        field && !fieldHostsFormat(field, next) ? `Attenzione: il campo "${field.name}" non ha il costo per il ${FORMAT_INFO[next].label}.` : '',
+      ]
+        .filter(Boolean)
+        .join('\n');
+      if (!(await askConfirm(msg))) return;
+    }
+    setBusy(true);
+    try {
+      await saveDayFormat(date, next, target, adminId);
+      if (!sameFormat) requestTeamsCheck(date); // titolari ricalcolati: notifiche a chi entra
+      notify(sameFormat ? `Modulo ${target}` : `Formato ${FORMAT_INFO[next].label} per ${formatItalianDate(date)}`);
+    } catch (err) {
+      console.warn('[Formato] salvataggio non riuscito:', err);
+      notify('Salvataggio non riuscito, riprova.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-4 gap-1.5 rounded-xl bg-slate-950/60 p-1" role="radiogroup" aria-label="Formato della partita">
+        {MATCH_FORMATS.map((f) => {
+          const active = f === format;
+          return (
+            <button
+              key={f}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              disabled={busy}
+              onClick={() => change(f)}
+              className={`rounded-lg px-1 py-2 text-center transition-colors disabled:opacity-60 ${
+                active ? 'bg-emerald-500 text-slate-950' : 'text-slate-300 hover:bg-slate-800'
+              }`}
+            >
+              <span className="block text-sm font-semibold">{FORMAT_INFO[f].label}</span>
+              <span className={`block text-[10px] tabular-nums ${active ? 'text-slate-900' : 'text-slate-500'}`}>{FORMAT_INFO[f].players} giocatori</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {info.formations.length > 1 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-slate-400">Modulo</span>
+          {info.formations.map((m) => (
+            <button
+              key={m}
+              type="button"
+              disabled={busy}
+              onClick={() => change(format, m)}
+              aria-pressed={m === formation}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold tabular-nums transition-colors ${
+                m === formation ? 'bg-slate-700 text-white' : 'border border-slate-700 text-slate-300 hover:bg-slate-800'
+              }`}
+            >
+              {m}
+            </button>
+          ))}
+          {busy && <Loader2 className="h-4 w-4 animate-spin text-slate-400" />}
+        </div>
+      )}
+
+      {field && !fieldHostsFormat(field, format) && (
+        <p className="flex items-start gap-2 text-xs text-amber-200">
+          <AlertTriangle className="h-4 w-4 flex-shrink-0 text-amber-400" />
+          Il campo &quot;{field.name}&quot; non ha il costo per il {info.label}: si usa il costo standard del club. Aggiungilo in
+          Impostazioni → Campi e costi.
+        </p>
+      )}
+    </div>
+  );
+}

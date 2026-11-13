@@ -9,7 +9,7 @@ import { manageAccountAsSuperAdmin } from '@/lib/services/accountService';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/context/AuthContext';
-import { StatCategory, Profile, Presence, SportField, GeneratedTeamRecord } from '@/types/database';
+import { AppSettings, StatCategory, Profile, Presence, SportField, GeneratedTeamRecord } from '@/types/database';
 import { TabOverviewMatch } from '@/components/admin/TabOverviewMatch';
 import { AdminsCard } from '@/components/admin/AdminsCard';
 import { TabClubConfigFields } from '@/components/admin/TabClubConfigFields';
@@ -23,6 +23,7 @@ import {
   saveOfficialMatchDateDoc,
   subscribeAppSettings,
   saveAppSettingsDoc,
+  saveStandardCostsDoc,
   subscribeGeneratedTeams
 } from '@/lib/firebase/firestoreService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
@@ -284,16 +285,18 @@ export function AdminSections({ section }: { section: AdminSection }) {
     setCategories(updated);
   };
 
-  const handleSaveEconomicConfig = (cost: number, time: string) => {
+  const handleSaveEconomicConfig = (cost: number, time: string, costs?: AppSettings['standard_costs']) => {
     const updated = saveAppSettings({
       standard_total_cost: cost,
       standard_match_time: time,
+      standard_costs: costs,
     });
     setAppSettingsState(updated);
     saveAppSettingsDoc({
       standard_total_cost: cost,
       standard_match_time: time,
     });
+    saveStandardCostsDoc(costs).catch((err) => console.warn('[Impostazioni] costi per formato non salvati:', err));
   };
 
 
@@ -308,6 +311,7 @@ export function AdminSections({ section }: { section: AdminSection }) {
     categories,
     onReset8Categories: handleReset8Categories,
     standardCost: appSettings.standard_total_cost || 80,
+    standardCosts: appSettings.standard_costs,
     standardTime: appSettings.standard_match_time || '20:30',
     onSaveEconomicConfig: handleSaveEconomicConfig,
     timelockEnabled: Boolean(appSettings.timelock_enabled),

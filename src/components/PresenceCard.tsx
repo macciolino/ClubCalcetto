@@ -21,15 +21,24 @@ interface PresenceCardProps {
   isToggling?: boolean;
   /** Day not open yet for players (next week before the admin opens voting) */
   isLocked?: boolean;
-  /** This day reached 10 starters first in its week */
+  /** This day was complete first in its week */
   isFirstToTen?: boolean;
+  /** Starters of this day (10 for 5vs5, 14 for 7vs7, 16 for 8vs8, 22 for 11vs11) */
+  maxPlayers?: number;
   /** Admin only: force a player into the starters or onto the waitlist */
   onSetOverride?: (presenceId: string, override: 'starter' | 'waitlist') => void;
   /** Admin only: remove every sign-up of the day */
   onResetDay?: (dateString: string) => void;
 }
 
-const MAX = 10;
+const DEFAULT_MAX = 10;
+
+/** Dots grid of the starters: columns and dot size by number of places (Tailwind classes written in full). */
+function dotsLayout(max: number) {
+  if (max <= 10) return { cols: 5, grid: 'grid-cols-5', dot: 'h-10 w-10 text-[11px]' };
+  if (max <= 14) return { cols: 7, grid: 'grid-cols-7', dot: 'h-10 w-10 text-[11px]' };
+  return { cols: 8, grid: 'grid-cols-8', dot: 'h-8 w-8 text-[10px]' };
+}
 
 /** Initials of first name and surname ("Marco Bianchi" → "MB") */
 const initialsOf = (name: string) => {
@@ -37,8 +46,8 @@ const initialsOf = (name: string) => {
   return ((parts[0]?.[0] || '?') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
 };
 
-/** Ring that fills up to 10 starters */
-export function CountRing({ count }: { count: number }) {
+/** Ring that fills up to the starters of the day */
+export function CountRing({ count, max: MAX = DEFAULT_MAX }: { count: number; max?: number }) {
   const r = 26;
   const c = 2 * Math.PI * r;
   const full = count >= MAX;
@@ -83,7 +92,10 @@ export function PresenceCard({
   isFirstToTen = false,
   onSetOverride,
   onResetDay,
+  maxPlayers = DEFAULT_MAX,
 }: PresenceCardProps) {
+  const MAX = maxPlayers;
+  const dots = dotsLayout(MAX);
   const [mounted, setMounted] = useState(false);
   const [showNames, setShowNames] = useState(false);
   const [showWaitlist, setShowWaitlist] = useState(false);
@@ -216,9 +228,9 @@ export function PresenceCard({
         )}
       </div>
 
-      {/* Titolari: anello e posti liberi, poi i dieci pallini su una griglia a tutta larghezza */}
+      {/* Titolari: anello e posti liberi, poi un pallino per posto (10, 14, 16 o 22) */}
       <div className="mt-5 flex items-center gap-4">
-        <CountRing count={starters.length} />
+        <CountRing count={starters.length} max={MAX} />
         <div className="text-sm min-w-0">
           <p className="font-semibold text-white">
             {isFull ? 'Al completo' : `${MAX - starters.length} ${MAX - starters.length === 1 ? 'posto libero' : 'posti liberi'}`}
@@ -226,22 +238,22 @@ export function PresenceCard({
           <p className="text-slate-400">{waitlist.length > 0 ? `${waitlist.length} in lista d’attesa` : 'Tocca un pallino per il nome'}</p>
         </div>
       </div>
-      <div className="mt-4 grid grid-cols-5 gap-y-3 justify-items-center max-w-sm">
+      <div className={`mt-4 grid ${dots.grid} gap-y-3 justify-items-center max-w-sm`}>
         {Array.from({ length: MAX }, (_, i) => {
           const p = starters[i];
           if (!p) {
             return (
               <span
                 key={`free-${i}`}
-                className="h-10 w-10 rounded-full border-2 border-dashed border-slate-700"
+                className={`${dots.dot} rounded-full border-2 border-dashed border-slate-700`}
                 aria-label="Posto libero"
               />
             );
           }
           const isMe = p.player_id === effectiveUserId;
           const open = revealedId === p.id;
-          const col = i % 5;
-          const bubblePos = col === 0 ? 'left-0' : col === 4 ? 'right-0' : 'left-1/2 -translate-x-1/2';
+          const col = i % dots.cols;
+          const bubblePos = col === 0 ? 'left-0' : col === dots.cols - 1 ? 'right-0' : 'left-1/2 -translate-x-1/2';
           return (
             <div key={p.id} className="relative">
               <button
@@ -249,7 +261,7 @@ export function PresenceCard({
                 onClick={() => setRevealedId((id) => (id === p.id ? null : p.id))}
                 aria-label={p.name}
                 aria-describedby={open ? `tip-${p.id}` : undefined}
-                className={`h-10 w-10 rounded-full flex items-center justify-center text-[11px] font-bold transition-shadow ${
+                className={`${dots.dot} rounded-full flex items-center justify-center font-bold transition-shadow ${
                   isMe ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-emerald-300'
                 } ${open ? 'ring-2 ring-white' : ''}`}
               >

@@ -55,14 +55,14 @@ function buildMessage(
 async function reconcile(date: string) {
   const db = adminDb();
   const teamsRef = db.doc(`generated_teams/${date}`);
-  const { starterIds } = await checkPromotions(date);
+  const { starterIds, players } = await checkPromotions(date);
 
   const profileSnaps = starterIds.length ? await db.getAll(...starterIds.map((id) => db.doc(`profiles/${id}`))) : [];
-  // Come nell'app: solo presenze con un profilo esistente, massimo 10
+  // Come nell'app: solo presenze con un profilo esistente, al massimo i giocatori del formato
   const starters = starterIds
     .map((id, i) => (profileSnaps[i]?.exists ? { id, name: (profileSnaps[i].data()?.full_name as string) || 'Giocatore' } : null))
     .filter((p): p is { id: string; name: string } => p !== null)
-    .slice(0, 10);
+    .slice(0, players);
 
   const result = await db.runTransaction(async (tx) => {
     const snap = await tx.get(teamsRef);

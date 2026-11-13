@@ -11,10 +11,14 @@ export interface WhatsAppShareData {
   teamBlack: Profile[];
   whiteAvg?: number;
   blackAvg?: number;
+  /** Players of the match (10 for 5vs5, 14 for 7vs7…) and "7vs7" */
+  players?: number;
+  formatLabel?: string;
 }
 
 export function generateWhatsAppMessage(data: WhatsAppShareData): string {
-  const costPerPerson = (Number(data.totalCost || 80) / 10).toFixed(2);
+  const players = data.players || data.teamWhite.length + data.teamBlack.length || 10;
+  const costPerPerson = (Number(data.totalCost || 80) / players).toFixed(2);
   const formattedDate = formatItalianDate(data.date);
 
   const whiteList = data.teamWhite
@@ -33,7 +37,8 @@ export function generateWhatsAppMessage(data: WhatsAppShareData): string {
 📅 *Data:* ${formattedDate}
 ⏰ *Orario:* ${data.time || '20:30'}
 📍 *Luogo:* ${data.location || 'Centro Sportivo Calcetto'}
-💰 *Costo a testa:* €${costPerPerson} (€${Number(data.totalCost || 80).toFixed(2)} totale / 10 giocatori)
+🏟️ *Formato:* ${data.formatLabel || `${players / 2}vs${players / 2}`}
+💰 *Costo a testa:* €${costPerPerson} (€${Number(data.totalCost || 80).toFixed(2)} totale / ${players} giocatori)
 
 ━━━━━━━━━━━━━━━━━━━
 ⚪ *SQUADRA BIANCA*${whiteAvgText}

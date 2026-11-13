@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { MatchTeamPlayer } from '@/types/database';
 import { slotLabel } from '@/lib/utils/teamUtils';
+import { slotsForTeamSize } from '@/lib/utils/matchFormat';
 import { ArrowLeftRight } from 'lucide-react';
 
 type Side = 'white' | 'black' | 'bench';
@@ -20,13 +21,16 @@ interface TeamSwapEditorProps {
   disabled?: boolean;
   /** false = goalkeeper in rotation (first slot shown as "PORTA ↻") */
   fixedKeeper?: boolean;
+  /** Formation of the match (7vs7, 8vs8…): names of the places; default from the team size */
+  formation?: string;
 }
 
 /**
  * Manual team editing made for phones: tap a player, then tap another one to swap them
  * (between the two teams or between roles). With a bench, tap a bench player and then a slot to replace.
  */
-export function TeamSwapEditor({ white, black, onChange, bench = [], disabled, fixedKeeper = true }: TeamSwapEditorProps) {
+export function TeamSwapEditor({ white, black, onChange, bench = [], disabled, fixedKeeper = true, formation }: TeamSwapEditorProps) {
+  const slots = slotsForTeamSize(Math.max(white.length, black.length), formation);
   const [selected, setSelected] = useState<Selection | null>(null);
 
   const listOf = (side: Side) => (side === 'white' ? white : side === 'black' ? black : bench);
@@ -90,7 +94,7 @@ export function TeamSwapEditor({ white, black, onChange, bench = [], disabled, f
           aria-pressed={selected?.side === side && selected.index === i}
         >
           <span className="w-12 flex-shrink-0 text-[10px] font-mono font-bold text-emerald-400">
-            {slotLabel(i, fixedKeeper)}
+            {slotLabel(i, fixedKeeper, slots)}
           </span>
           <span className="truncate">{p.name}</span>
         </button>

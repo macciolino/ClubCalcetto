@@ -12,7 +12,12 @@ import { Profile, Presence, Match, GeneratedTeamRecord, SportField } from '@/typ
 
 const EMPTY_RESULT: MatchResultValue = { scoreWhite: 0, scoreBlack: 0, mvpPlayerId: '', scorers: [] };
 import { useAuth } from '@/lib/context/AuthContext';
-import { effectiveMatchCost, fieldCostFor } from '@/lib/utils/matchUtils';
+import { effectiveMatchCost, fieldCostFor, matchField, standardCostFor } from '@/lib/utils/matchUtils';
+import { useMatchFormats } from '@/lib/hooks/useMatchFormats';
+import { FORMAT_INFO, dayFormat, maxPlayersFor } from '@/lib/utils/matchFormat';
+import { MatchFormatPicker } from '@/components/MatchFormatPicker';
+import { subscribeAppSettings } from '@/lib/firebase/firestoreService';
+import { AppSettings } from '@/types/database';
 import { subscribeMatch, subscribeMatches, saveMatchResult, subscribeMvpVotes, countMvpVotes, subscribeGeneratedTeams, subscribeTeamDatesSince } from '@/lib/firebase/firestoreService';
 import { CalendarDay, formatItalianDate, toDateString } from '@/lib/utils/dateUtils';
 import { 
@@ -69,6 +74,23 @@ export function TabOverviewMatch({
 }: TabOverviewMatchProps) {
   const { profile } = useAuth();
   const fixedKeeper = Boolean(useFormSettings().fixedKeeper);
+  // Formato di ogni giorno (5vs5, 7vs7, 8vs8, 11vs11) e costi standard per formato
+  const matchFormats = useMatchFormats();
+  const [standardCosts, setStandardCosts] = useState<AppSettings['standard_costs']>(undefined);
+  useEffect(() => {
+    const unsub = subscribeAppSettings((s) => setStandardCosts(s.standard_costs));
+    return () => unsub();
+  }, []);
+  const activeFmt = dayFormat(matchFormats, activeDate);
+  const activeInfo = FORMAT_INFO[activeFmt.format];
+  const costFor = (m: Match | null, date: string) => {
+    const f = dayFormat(matchFormats, date).format;
+    return effectiveMatchCost(
+      m,
+      standardCostFor({ standard_total_cost: standardMatchCost, standard_costs: standardCosts }, f),
+      fieldCostFor(m, fields, defaultFieldId, undefined, f)
+    );
+  };
 
   // Partita salvata in Firestore per la data attiva (fonte unica per risultato e quota)
   const [savedMatch, setSavedMatch] = useState<Match | null>(null);
@@ -105,7 +127,7 @@ export function TabOverviewMatch({
   const closingOptions = Array.from(new Set([activeDate, ...recentDates])).sort().reverse();
 
   // Quota: quella della partita se impostata, altrimenti il costo standard dell'admin
-  const totalMatchCost = effectiveMatchCost(savedMatch, standardMatchCost, fieldCostFor(savedMatch, fields, defaultFieldId));
+  const totalMatchCost = costFor(savedMatch, activeDate);
 
   // Titolari confermati per la data attiva
   const dayPresences = presences.filter((p) => p.date === activeDate);
@@ -149,9 +171,9 @@ export function TabOverviewMatch({
   const paidCount = starterProfiles.filter(
     (p) => paymentsRecord.payments[p.id] === true
   ).length;
-  const costPerPlayer = Number((totalMatchCost / 10).toFixed(2));
+  const costPerPlayer = Number((totalMatchCost / activeInfo.players).toFixed(2));
   const totalCollected = Number((paidCount * costPerPlayer).toFixed(2));
-  const progressPercent = Math.min(100, Math.round((paidCount / 10) * 100));
+  const progressPercent = Math.min(100, Math.round((paidCount / activeInfo.players) * 100));
 
   // Modulo Chiusura Match Post-Partita
   const [result, setResult] = useState<MatchResultValue>(EMPTY_RESULT);
@@ -213,8 +235,8 @@ export function TabOverviewMatch({
     setResult((r) => (r.mvpPlayerId ? r : { ...r, mvpPlayerId: mvpVotes[0].playerId }));
   }, [closingDate, mvpVotes, closingMatch?.status]);
 
-  // Per ogni settimana: il giorno che ha raggiunto PER PRIMO 10 iscritti
-  const firstToTenByWeek = computeFirstToTen(days, presences);
+  // Per ogni settimana: il giorno arrivato PER PRIMO al completo (10, 14, 16 o 22 secondo il formato)
+  const firstToTenByWeek = computeFirstToTen(days, presences, (d) => maxPlayersFor(matchFormats, d));
 
   const isAlreadyClosed = closingMatch?.status === 'completed';
 
@@ -235,7 +257,7 @@ export function TabOverviewMatch({
   };
 
   // Squadre della partita: quelle archiviate (mai più cambiate da sole), altrimenti quelle generate in Squadre
-  // con le eventuali sostituzioni (chi si è ritirato viene sostituito al suo posto). Mai "i primi 5 iscritti".
+  // con le eventuali sostituzioni (chi si è ritirato viene sostituito al suo posto). Mai "i primi iscritti".
   const teams = (() => {
     if (closingMatch?.status === 'completed' && closingMatch.team_white?.length && closingMatch.team_black?.length) {
       return { white: closingMatch.team_white, black: closingMatch.team_black, fromArchive: true };
@@ -247,7 +269,8 @@ export function TabOverviewMatch({
         return { white: record.team_white.map(toTeamPlayer), black: record.team_black.map(toTeamPlayer), fromArchive: false };
       }
       const r = reconcileTeams(record, starterProfiles.map(toTeamPlayer));
-      if (r.white.length === 5 && r.black.length === 5) return { white: r.white, black: r.black, fromArchive: false };
+      const per = FORMAT_INFO[dayFormat(matchFormats, closingDate).format].perTeam;
+      if (r.white.length === per && r.black.length === per) return { white: r.white, black: r.black, fromArchive: false };
     }
     return null;
   })();
@@ -279,7 +302,8 @@ export function TabOverviewMatch({
         mvpPlayerId: result.mvpPlayerId || null,
         scorers: result.scorers,
         penaltySaves: result.penaltySaves || [],
-        totalCost: effectiveMatchCost(closingMatch, standardMatchCost, fieldCostFor(closingMatch, fields, defaultFieldId)),
+        totalCost: costFor(closingMatch, closingDate),
+        players: teams.white.length + teams.black.length,
         closedBy: profile?.id || '',
       });
       setArchiveSuccessMessage(
@@ -296,6 +320,27 @@ export function TabOverviewMatch({
 
   return (
     <div className="space-y-6">
+      {/* Formato della partita ufficiale (e di ogni giorno, scegliendolo qui sotto come ufficiale) */}
+      <div className="bg-slate-900 p-4 sm:p-5 rounded-2xl space-y-3">
+        <div>
+          <h3 className="text-base font-semibold text-white">
+            Formato della partita · {activeInfo.label} {activeFmt.formation}
+          </h3>
+          <p className="text-sm text-slate-400 mt-0.5">
+            {formatItalianDate(activeDate)}: {activeInfo.players} titolari, {activeInfo.perTeam} per squadra. Vale solo per questo giorno; per
+            un altro giorno sceglilo come ufficiale qui sotto o cambialo in Squadre.
+          </p>
+        </div>
+        <MatchFormatPicker
+          date={activeDate}
+          format={activeFmt.format}
+          formation={activeFmt.formation}
+          field={matchField(savedMatch, fields, defaultFieldId)}
+          hasTeams={Boolean(generatedTeamRecord?.team_white?.length)}
+          adminId={profile?.id || ''}
+        />
+      </div>
+
       {/* 2. ELEZIONE GIORNO UFFICIALE (a tendina) & CTA GENERATORE SQUADRE */}
       <div className="bg-slate-900 p-4 sm:p-5 rounded-2xl space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -314,7 +359,7 @@ export function TabOverviewMatch({
                 Ufficiale: <strong className="text-emerald-300">{formatItalianDate(activeDate)}</strong>
                 {firstToTenByWeek.size > 0 && (
                   <>
-                    {' '}· 🥇 primo a 10:{' '}
+                    {' '}· 🥇 primo al completo:{' '}
                     <strong className="text-amber-300">
                       {Array.from(firstToTenByWeek).map((d) => formatItalianDate(d)).join(', ')}
                     </strong>
@@ -337,7 +382,7 @@ export function TabOverviewMatch({
         {daysOpen && (
           <div className="space-y-3 border-t border-slate-800 pt-3">
             <p className="text-xs text-slate-400">
-              Tocca un giorno per impostarlo come partita ufficiale. In evidenza (🥇) il giorno che per primo ha raggiunto 10 iscritti nella settimana.
+              Tocca un giorno per impostarlo come partita ufficiale. In evidenza (🥇) il giorno arrivato per primo al completo nella settimana.
             </p>
         {/* Card Selettore Orizzontale a Radio Button per i Giorni */}
         <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2.5">
@@ -346,7 +391,8 @@ export function TabOverviewMatch({
             const count = presences.filter(
               (p) => p.date === day.dateString && p.status === 'confirmed'
             ).length;
-            const hasQuorum = count >= 10;
+            const dayMax = maxPlayersFor(matchFormats, day.dateString);
+            const hasQuorum = count >= dayMax;
             const isFirstToTen = firstToTenByWeek.has(day.dateString);
 
             return (
@@ -376,7 +422,7 @@ export function TabOverviewMatch({
 
                 <div className="mt-2 w-full pt-1.5 border-t border-slate-800 flex items-center justify-center gap-1 font-mono text-[10px]">
                   <span className={`font-bold ${hasQuorum ? 'text-emerald-400' : 'text-slate-400'}`}>
-                    {count}/10
+                    {Math.min(count, dayMax)}/{dayMax}
                   </span>
                   {hasQuorum && (
                     <span className="text-[9px] bg-emerald-500 text-slate-950 px-1 rounded font-bold">
@@ -409,7 +455,7 @@ export function TabOverviewMatch({
               Cassa
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              €{totalCollected.toFixed(2)} di €{totalMatchCost} · {paidCount}/10 pagati · €{costPerPlayer.toFixed(2)} a testa
+              €{totalCollected.toFixed(2)} di €{totalMatchCost} · {paidCount}/{activeInfo.players} pagati · €{costPerPlayer.toFixed(2)} a testa
             </p>
           </div>
           <ChevronDown className={`h-5 w-5 text-slate-400 flex-shrink-0 transition-transform ${cashOpen ? 'rotate-180' : ''}`} />
@@ -611,7 +657,7 @@ export function TabOverviewMatch({
           <div className="rounded-2xl bg-slate-950/60 py-8 px-4 text-center space-y-3">
             <p className="text-sm font-semibold text-slate-200">Squadre non ancora pronte</p>
             <p className="text-sm text-slate-400 max-w-sm mx-auto">
-              Il risultato si salva sulle squadre: prima generale (5 contro 5) per questa partita.
+              Il risultato si salva sulle squadre: prima generale ({FORMAT_INFO[dayFormat(matchFormats, closingDate).format].label}) per questa partita.
             </p>
             <Link
               href={`/squadre?date=${closingDate}`}

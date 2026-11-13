@@ -15,7 +15,11 @@ import { notifyMatchPlayers } from '@/lib/services/notificationService';
 import { TeamSwapEditor } from '@/components/TeamSwapEditor';
 import { MvpVoteCard } from '@/components/MvpVoteCard';
 import { getStoredFields, subscribeSportFields } from '@/lib/services/fieldService';
-import { effectiveMatchCost, effectiveMatchTime, effectiveMatchLocation, fieldLabel, fieldCostFor } from '@/lib/utils/matchUtils';
+import { effectiveMatchCost, effectiveMatchTime, effectiveMatchLocation, fieldLabel, fieldCostFor, standardCostFor } from '@/lib/utils/matchUtils';
+import { useMatchFormats } from '@/lib/hooks/useMatchFormats';
+import { FORMAT_INFO, dayFormat, formationSlots, maxPlayersFor } from '@/lib/utils/matchFormat';
+import { MatchFormatPicker } from '@/components/MatchFormatPicker';
+import { AppSettings } from '@/types/database';
 import { 
   subscribeMatch, 
   saveMatchFields,
@@ -54,7 +58,8 @@ import {
   BadgeCheck,
   Pencil,
   ArrowLeftRight,
-  ArrowRight
+  ArrowRight,
+  Users
 } from 'lucide-react';
 import { btn, textLink } from '@/components/ui/buttons';
 
@@ -82,6 +87,9 @@ function SquadreContent() {
   const [totalCost, setTotalCost] = useState(80.0);
   // Valori standard decisi dall'admin (Admin > Campi & Parametri) e partita salvata per la data
   const [standardCost, setStandardCost] = useState(80);
+  const [standardCosts, setStandardCosts] = useState<AppSettings['standard_costs']>(undefined);
+  // Formato di ogni giorno (5vs5, 7vs7, 8vs8, 11vs11) e modulo
+  const matchFormats = useMatchFormats();
   const [standardTime, setStandardTime] = useState('20:30');
   const [savedMatch, setSavedMatch] = useState<Match | null>(null);
   // Campi modificati dall'admin e non ancora salvati sulla partita
@@ -193,6 +201,7 @@ function SquadreContent() {
     if (!isFirebaseConfigured) return;
     const unsubSettings = subscribeAppSettings((st) => {
       if (st.standard_total_cost) setStandardCost(Number(st.standard_total_cost));
+      setStandardCosts(st.standard_costs);
       if (st.standard_match_time) setStandardTime(st.standard_match_time);
       setDefaultFieldId(st.default_field_id);
     });
@@ -209,11 +218,13 @@ function SquadreContent() {
   useEffect(() => {
     const dirty = dirtyFields.current;
     const loc = dirty.has('location') ? matchLocation : effectiveMatchLocation(savedMatch, fields, defaultFieldId);
-    if (!dirty.has('cost')) setTotalCost(effectiveMatchCost(savedMatch, standardCost, fieldCostFor(savedMatch, fields, defaultFieldId, loc)));
+    const f = dayFormat(matchFormats, selectedDate).format;
+    const std = standardCostFor({ standard_total_cost: standardCost, standard_costs: standardCosts }, f);
+    if (!dirty.has('cost')) setTotalCost(effectiveMatchCost(savedMatch, std, fieldCostFor(savedMatch, fields, defaultFieldId, loc, f)));
     if (!dirty.has('time')) setMatchTime(effectiveMatchTime(savedMatch, standardTime));
     if (!dirty.has('location')) setMatchLocation(loc);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [savedMatch, standardCost, standardTime, fields, defaultFieldId, matchLocation]);
+  }, [savedMatch, standardCost, standardCosts, standardTime, fields, defaultFieldId, matchLocation, matchFormats, selectedDate]);
 
   // Salvataggio automatico (solo admin) dei valori personalizzati per questa partita
   useEffect(() => {
@@ -250,12 +261,17 @@ function SquadreContent() {
   };
   const hasCustomValues = Boolean(savedMatch?.cost_override || savedMatch?.time_override);
 
-  // Calcola i 10 titolari specifici per la data selezionata (già in ordine di iscrizione)
+  // Formato della partita: quanti titolari, quanti per squadra, quale modulo
+  const fmtDay = dayFormat(matchFormats, selectedDate);
+  const fmt = { ...fmtDay, ...FORMAT_INFO[fmtDay.format] };
+  const slots = formationSlots(fmt.format, fmt.formation);
+
+  // I titolari della data selezionata (già in ordine di iscrizione), tanti quanti ne chiede il formato
   const confirmedPresences = presences.filter((p) => p.date === selectedDate && p.status === 'confirmed');
   const starterProfiles: Profile[] = confirmedPresences
     .map((p) => formProfiles.find((prof) => prof.id === p.player_id || prof.user_id === p.player_id))
     .filter((prof): prof is Profile => prof !== undefined)
-    .slice(0, 10);
+    .slice(0, fmt.players);
   const starters = starterProfiles.map(toTeamPlayer);
 
   // Squadre: si generano UNA volta e restano quelle. Cambiano solo se qualcuno subentra
@@ -275,7 +291,11 @@ function SquadreContent() {
       )
     : null;
   const isConfirmed = Boolean(teamRecord?.confirmed);
-  const teamsComplete = Boolean(teams && teams.white.length === 5 && teams.black.length === 5);
+  const teamsComplete = Boolean(teams && teams.white.length === fmt.perTeam && teams.black.length === fmt.perTeam);
+  // Squadre salvate per un altro formato (es. fatte in 5vs5, ora la partita è 7vs7): vanno rigenerate
+  const teamsWrongFormat = Boolean(
+    !isCompleted && teamRecord && (teamRecord.team_white?.length || 0) > 0 && (teamRecord.team_white?.length || 0) !== fmt.perTeam
+  );
   const allTeamIds = teams ? [...teams.white, ...teams.black].map((p) => p.id) : [];
 
   // Sostituzioni: quando un admin apre la pagina vengono salvate (una sola volta) e si avvisano i giocatori
@@ -320,8 +340,8 @@ function SquadreContent() {
       setErrorMsg('La generazione delle squadre è riservata esclusivamente agli amministratori.');
       return;
     }
-    if (starterProfiles.length < 10) {
-      setErrorMsg(`Servono 10 titolari per generare le squadre. Attualmente: ${starterProfiles.length}/10.`);
+    if (starterProfiles.length < fmt.players) {
+      setErrorMsg(`Servono ${fmt.players} titolari per generare le squadre ${fmt.label}. Attualmente: ${starterProfiles.length}/${fmt.players}.`);
       return;
     }
     const isRebalance = Boolean(teamRecord);
@@ -332,7 +352,11 @@ function SquadreContent() {
     setIsGenerating(true);
     try {
       const current = teams ? splitKey(teams.white.map((p) => p.id), teams.black.map((p) => p.id)) : undefined;
-      const result = balanceTeams(starterProfiles, isRebalance ? { excludeSplitKey: current, fixedKeeper } : { fixedKeeper });
+      const shape = fmt.perTeam === 5 ? {} : { slots };
+      const result = balanceTeams(
+        starterProfiles,
+        isRebalance && !teamsWrongFormat ? { excludeSplitKey: current, fixedKeeper, ...shape } : { fixedKeeper, ...shape }
+      );
       await saveTeams(selectedDate, result.teamWhite.map(toTeamPlayer), result.teamBlack.map(toTeamPlayer), {
         manual: false,
         whiteAvg: result.whiteStats.overallAvg,
@@ -425,6 +449,8 @@ function SquadreContent() {
         teamBlack: balancedResult.teamBlack,
         whiteAvg: balancedResult.whiteStats.overallAvg,
         blackAvg: balancedResult.blackStats.overallAvg,
+        players: fmt.players,
+        formatLabel: fmt.label,
       });
 
       // 2. Copia negli appunti
@@ -497,7 +523,7 @@ function SquadreContent() {
   const officialDate = mounted ? getOfficialMatchDate() : '';
   const pillDays = Array.from(new Set([...calendarDays.map((d) => d.dateString), ...(selectedDate ? [selectedDate] : [])])).sort();
 
-  const costPerPerson = (Number(totalCost || 80) / 10).toFixed(2);
+  const costPerPerson = (Number(totalCost || 80) / fmt.players).toFixed(2);
   const selectedField = fields.find((f) => fieldLabel(f) === matchLocation || f.name === matchLocation);
 
   // Stato della partita in una frase (barra di stato)
@@ -511,16 +537,18 @@ function SquadreContent() {
         title: isClientAdmin ? 'Squadre pronte, da confermare' : 'Squadre provvisorie',
         detail: isClientAdmin ? 'Controlla il campo e conferma: i giocatori ricevono l’avviso.' : 'Un admin deve ancora confermare la partita.',
       }
-    : starterProfiles.length >= 10
+    : starterProfiles.length >= fmt.players
     ? {
         tone: 'todo',
         title: isClientAdmin ? 'Pronti per generare le squadre' : 'Squadre in arrivo',
-        detail: isClientAdmin ? '10 titolari su 10: l’app li divide in due squadre equilibrate.' : '10 titolari su 10: un admin genera a breve le squadre.',
+        detail: isClientAdmin
+          ? `${fmt.players} titolari su ${fmt.players}: l’app li divide in due squadre ${fmt.label} equilibrate.`
+          : `${fmt.players} titolari su ${fmt.players}: un admin genera a breve le squadre.`,
       }
     : {
         tone: 'wait',
-        title: `In attesa dei titolari (${starterProfiles.length}/10)`,
-        detail: `Mancano ${10 - starterProfiles.length} giocatori: le squadre si generano a quota 10.`,
+        title: `In attesa dei titolari (${starterProfiles.length}/${fmt.players})`,
+        detail: `Mancano ${fmt.players - starterProfiles.length} giocatori: le squadre ${fmt.label} si generano a quota ${fmt.players}.`,
       };
   const statusIcon =
     status.tone === 'done' ? (
@@ -533,7 +561,7 @@ function SquadreContent() {
       <AlertCircle className="h-5 w-5 text-slate-400" />
     );
 
-  const generateLabel = teamRecord ? 'Ribilancia' : 'Genera squadre';
+  const generateLabel = teamRecord && !teamsWrongFormat ? 'Ribilancia' : `Genera squadre ${fmt.label}`;
   const primaryBtn = btn.primary;
   const secondaryBtn = btn.secondary;
 
@@ -562,7 +590,9 @@ function SquadreContent() {
           const f = forms.get(p.id) || 0;
           return (
             <li key={p.id} className="flex flex-col sm:flex-row sm:items-center sm:gap-2 min-w-0">
-              <span className="sm:w-12 flex-shrink-0 text-[10px] font-semibold text-slate-500">{slotLabel(i, fixedKeeper)}</span>
+              <span className="sm:w-12 flex-shrink-0 text-[10px] font-semibold text-slate-500">
+                {slotLabel(i, fixedKeeper, team.length === slots.length ? slots : undefined)}
+              </span>
               <span className="truncate text-slate-200">
                 {p.full_name}
                 {f ? (
@@ -595,6 +625,8 @@ function SquadreContent() {
             </>
           )}
           <span className="text-slate-600" aria-hidden="true">·</span>
+          <span className="font-semibold text-white">{fmt.label}</span>
+          <span className="text-slate-600" aria-hidden="true">·</span>
           <span className="text-emerald-300 font-semibold tabular-nums">€{costPerPerson.replace('.', ',')} a testa</span>
         </p>
         {selectedField?.address && (
@@ -621,6 +653,7 @@ function SquadreContent() {
             const dt = new Date(y, m - 1, dd);
             const selected = d === selectedDate;
             const count = d === selectedDate ? confirmedPresences.length : dayCounts.get(d) || 0;
+            const dayMax = maxPlayersFor(matchFormats, d);
             const official = d === officialDate;
             return (
               <button
@@ -645,10 +678,10 @@ function SquadreContent() {
                 <span className="text-xl font-bold leading-tight">{dd}</span>
                 <span
                   className={`text-xs font-semibold tabular-nums ${
-                    selected ? 'text-slate-900' : count >= 10 ? 'text-emerald-400' : 'text-slate-500'
+                    selected ? 'text-slate-900' : count >= dayMax ? 'text-emerald-400' : 'text-slate-500'
                   }`}
                 >
-                  {count}/10
+                  {Math.min(count, dayMax)}/{dayMax}
                 </span>
               </button>
             );
@@ -694,8 +727,8 @@ function SquadreContent() {
             <button
               type="button"
               onClick={handleGenerateTeams}
-              disabled={isGenerating || starterProfiles.length < 10}
-              className={teamRecord ? secondaryBtn : primaryBtn}
+              disabled={isGenerating || starterProfiles.length < fmt.players}
+              className={teamRecord && !teamsWrongFormat ? secondaryBtn : primaryBtn}
             >
               {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shuffle className="h-4 w-4" />}
               {generateLabel}
@@ -709,6 +742,35 @@ function SquadreContent() {
           </div>
         )}
       </section>
+
+      {/* Squadre fatte per un altro formato: vanno rigenerate */}
+      {teamsWrongFormat && (
+        <div className="rounded-xl bg-amber-500/10 px-4 py-3 text-sm text-amber-100 flex items-start gap-2" role="status">
+          <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5 text-amber-400" />
+          <span>
+            Le squadre salvate sono da {teamRecord?.team_white?.length} giocatori, ma la partita ora è {fmt.label}.
+            {isClientAdmin ? ` Premi "Genera squadre ${fmt.label}" per rifarle.` : ' Un admin deve rigenerarle.'}
+          </span>
+        </div>
+      )}
+
+      {/* Formato e modulo della partita: solo admin */}
+      {isClientAdmin && !isCompleted && (
+        <CollapsibleCard
+          title={`Formato: ${fmt.label} · ${fmt.formation}`}
+          icon={<Users className="h-4 w-4 text-slate-400" />}
+          summary={`${fmt.players} titolari, ${fmt.perTeam} per squadra`}
+        >
+          <MatchFormatPicker
+            date={selectedDate}
+            format={fmt.format}
+            formation={fmt.formation}
+            field={selectedField}
+            hasTeams={Boolean(teamRecord)}
+            adminId={profile?.id || ''}
+          />
+        </CollapsibleCard>
+      )}
 
       {/* 2. Dettagli modificabili: solo admin, chiusi di default */}
       {isClientAdmin && (
@@ -864,6 +926,7 @@ function SquadreContent() {
           </div>
           <TeamSwapEditor
             fixedKeeper={fixedKeeper}
+            formation={fmt.formation}
             white={manualDraft.white}
             black={manualDraft.black}
             onChange={(white, black) => setManualDraft({ white, black })}
@@ -884,6 +947,9 @@ function SquadreContent() {
           <section className="space-y-3">
             <VirtualPitch
               fixedKeeper={fixedKeeper}
+              slots={balancedResult.teamWhite.length === slots.length ? slots : undefined}
+              formatLabel={balancedResult.teamWhite.length === fmt.perTeam ? fmt.label : undefined}
+              players={balancedResult.teamWhite.length === fmt.perTeam ? fmt.players : undefined}
               ref={pitchRef}
               teamWhite={balancedResult.teamWhite}
               teamBlack={balancedResult.teamBlack}
@@ -1032,10 +1098,10 @@ function SquadreContent() {
             <Trophy className="h-7 w-7" />
           </div>
           <h3 className="text-base font-semibold text-white">Nessuna squadra per questa data</h3>
-          {isClientAdmin && starterProfiles.length >= 10 ? (
+          {isClientAdmin && starterProfiles.length >= fmt.players ? (
             <>
               <p className="text-sm text-slate-400 max-w-md mx-auto">
-                Ci sono 10 titolari: genera le squadre, restano quelle finché non le cambi.
+                Ci sono {fmt.players} titolari: genera le squadre {fmt.label}, restano quelle finché non le cambi.
               </p>
               <button
                 type="button"
@@ -1044,13 +1110,13 @@ function SquadreContent() {
                 className={`${primaryBtn} mx-auto`}
               >
                 {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shuffle className="h-4 w-4" />}
-                Genera squadre
+                Genera squadre {fmt.label}
               </button>
             </>
           ) : (
             <>
               <p className="text-sm text-slate-400 max-w-md mx-auto">
-                Le squadre arrivano quando ci sono 10 titolari (ora {starterProfiles.length}/10).
+                Le squadre {fmt.label} arrivano quando ci sono {fmt.players} titolari (ora {starterProfiles.length}/{fmt.players}).
               </p>
               <Link
                 href="/presenze"

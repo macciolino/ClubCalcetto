@@ -17,10 +17,12 @@ import {
   runTransaction,
   increment,
   FieldPath,
+  deleteField,
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './config';
 import { Profile, Presence, StatCategory, Match, GeneratedTeamRecord, AppSettings, CalendarSettings, MatchOutcome, MatchScorer, MatchTeamPlayer, TeamSubstitution, MvpVote, MatchPenaltySave } from '@/types/database';
 import { rankDayPresences, rankPresencesByDate } from '@/lib/services/presenceService';
+import { DayFormats, MatchFormat, maxPlayersFor } from '@/lib/utils/matchFormat';
 import { requestTeamsCheck, requestFirstMatchCheck } from '@/lib/services/notificationService';
 
 // ==========================================
@@ -105,7 +107,69 @@ function toPresence(docSnap: QueryDocumentSnapshot<DocumentData>): Presence {
   return { ...rest, id: rest.id || docSnap.id, joined_ms };
 }
 
-/** Realtime presences of ONE day, already ranked (titolari 1..10, then waitlist). Always calls back, also with []. */
+// ---------- formato di ogni giorno di partita (settings/match_formats, `days[date]`) ----------
+
+/** Realtime formats of the match days (admins choose them; a day without a choice is 5vs5). */
+export function subscribeMatchFormats(callback: (days: DayFormats) => void): Unsubscribe | (() => void) {
+  if (!isFirebaseConfigured || typeof window === 'undefined') return () => {};
+  try {
+    return onSnapshot(
+      doc(db, 'settings', 'match_formats'),
+      (snap) => callback(((snap.data()?.days as DayFormats) || {}) as DayFormats),
+      (err) => {
+        console.warn('[Firestore] subscribeMatchFormats warning:', err.message);
+        callback({});
+      }
+    );
+  } catch {
+    return () => {};
+  }
+}
+
+/** Admin: format (and formation) of a match day. */
+export async function saveDayFormat(date: string, format: MatchFormat, formation: string, by: string): Promise<void> {
+  if (!isFirebaseConfigured) return;
+  await setDoc(
+    doc(db, 'settings', 'match_formats'),
+    { days: { [date]: { format, formation, updated_at: new Date().toISOString(), updated_by: by } } },
+    { merge: true }
+  );
+}
+
+/**
+ * Presences + formats together: the ranking (starters vs waitlist) depends on the day's format, so it is
+ * recomputed when either changes. `rank` gets the presences and the formats.
+ */
+function subscribeRanked(
+  q: ReturnType<typeof query>,
+  rank: (list: Presence[], formats: DayFormats) => Presence[],
+  callback: (presences: Presence[]) => void,
+  label: string
+): () => void {
+  let docs: Presence[] | null = null;
+  let formats: DayFormats | null = null;
+  const emit = () => {
+    if (docs !== null && formats !== null) callback(rank(docs, formats));
+  };
+  const unsubP = onSnapshot(
+    q,
+    (snapshot) => {
+      docs = snapshot.docs.map((d) => toPresence(d as QueryDocumentSnapshot<DocumentData>));
+      emit();
+    },
+    (err) => console.warn(`[Firestore] ${label} warning:`, err.message)
+  );
+  const unsubF = subscribeMatchFormats((f) => {
+    formats = f;
+    emit();
+  });
+  return () => {
+    unsubP();
+    unsubF();
+  };
+}
+
+/** Realtime presences of ONE day, already ranked (starters = players of the day's format, then waitlist). */
 export function subscribePresences(
   date: string,
   callback: (presences: Presence[]) => void
@@ -115,11 +179,7 @@ export function subscribePresences(
   }
   try {
     const q = query(collection(db, 'presences'), where('date', '==', date));
-    return onSnapshot(
-      q,
-      (snapshot) => callback(rankDayPresences(snapshot.docs.map(toPresence))),
-      (err) => console.warn('[Firestore] subscribePresences warning:', err.message)
-    );
+    return subscribeRanked(q, (list, f) => rankDayPresences(list, maxPlayersFor(f, date)), callback, 'subscribePresences');
   } catch (err) {
     console.warn('[Firestore] subscribePresences exception:', err);
     return () => {};
@@ -137,10 +197,11 @@ export function subscribePresencesRange(
   }
   try {
     const q = query(collection(db, 'presences'), where('date', '>=', fromDate), where('date', '<=', toDate));
-    return onSnapshot(
+    return subscribeRanked(
       q,
-      (snapshot) => callback(rankPresencesByDate(snapshot.docs.map(toPresence))),
-      (err) => console.warn('[Firestore] subscribePresencesRange warning:', err.message)
+      (list, f) => rankPresencesByDate(list, (d) => maxPlayersFor(f, d)),
+      callback,
+      'subscribePresencesRange'
     );
   } catch (err) {
     console.warn('[Firestore] subscribePresencesRange exception:', err);
@@ -453,6 +514,8 @@ export interface MatchResultInput {
   /** Penalties saved by the goalkeeper (fixed goalkeeper only) */
   penaltySaves?: MatchPenaltySave[];
   totalCost: number;
+  /** Players of the match (10 for 5vs5, 14 for 7vs7…): quota a testa = totalCost / players */
+  players?: number;
   closedBy: string;
 }
 
@@ -532,7 +595,7 @@ export async function saveMatchResult(input: MatchResultInput): Promise<void> {
         scorers: input.scorers,
         penalty_saves: (input.penaltySaves || []).filter((p) => p.count > 0),
         total_cost: input.totalCost,
-        cost_per_player: Number((input.totalCost / 10).toFixed(2)),
+        cost_per_player: Number((input.totalCost / (input.players || teamWhite.length + teamBlack.length || 10)).toFixed(2)),
         profile_effects: appliedEffects,
         closed_at: existing?.closed_at || now,
         closed_by: input.closedBy,
@@ -779,6 +842,17 @@ export function subscribeAppSettings(
     console.warn('[Firestore] subscribeAppSettings exception:', err);
     return () => {};
   }
+}
+
+/** Club standard cost of 7vs7 / 8vs8 / 11vs11 (empty = proportional to the 5vs5 standard). Emptied values are removed. */
+export async function saveStandardCostsDoc(costs: AppSettings['standard_costs']): Promise<void> {
+  if (!isFirebaseConfigured) return;
+  const out: Record<string, unknown> = {};
+  (['7v7', '8v8', '11v11'] as const).forEach((f) => {
+    const v = costs?.[f];
+    out[f] = Number(v) > 0 ? Number(v) : deleteField();
+  });
+  await setDoc(doc(db, 'settings', 'app_config'), { standard_costs: out }, { merge: true });
 }
 
 export async function saveAppSettingsDoc(settings: Partial<AppSettings>): Promise<void> {

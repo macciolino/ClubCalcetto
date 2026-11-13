@@ -10,11 +10,13 @@ export type Json =
 export type UserRole = 'admin' | 'player';
 
 // Posizioni Tattiche in Campo (Field Positions per il campetto e l'algoritmo)
-export type FieldPosition = 'Portiere' | 'Difensore' | 'Esterno' | 'Punta';
+// 'Centrocampista' (2026-11-13): serve nei formati 7, 8 e 11; nel 5vs5 vale come Esterno.
+export type FieldPosition = 'Portiere' | 'Difensore' | 'Centrocampista' | 'Esterno' | 'Punta';
 
 export const FIELD_POSITIONS: FieldPosition[] = [
   'Portiere',
   'Difensore',
+  'Centrocampista',
   'Esterno',
   'Punta',
 ];
@@ -22,9 +24,13 @@ export const FIELD_POSITIONS: FieldPosition[] = [
 export const FIELD_POSITION_ABBR: Record<FieldPosition, string> = {
   Portiere: 'POR',
   Difensore: 'DIF',
+  Centrocampista: 'CEN',
   Esterno: 'EST',
   Punta: 'PUN',
 };
+
+// Formati di gioco: 5vs5, 7vs7, 8vs8, 11vs11 (dettagli in lib/utils/matchFormat.ts)
+export type MatchFormat = '5v5' | '7v7' | '8v8' | '11v11';
 
 // ==========================================
 // 8 PARAMETRI OTTAGONO OTTIMIZZATI PER CALCETTO 5v5
@@ -167,8 +173,10 @@ export interface SportField {
   phone?: string;
   court_type?: string; // es. 'Sintetico 4G Outdoor', 'Indoor Parquet', ecc.
   notes?: string;
-  /** Total cost of a match on this field (€). Empty = the club's standard cost. */
+  /** Total cost of a 5vs5 match on this field (€). Empty = the club's standard cost. */
   cost?: number;
+  /** Total cost for the other formats (€). Empty = this field does NOT host that format. */
+  costs?: Partial<Record<Exclude<MatchFormat, '5v5'>, number>>;
   created_at?: string;
 }
 
@@ -322,6 +330,8 @@ export interface AppSettings {
   timelock_hours_before?: number; // es. 2, 4, 12, 24
   standard_match_time?: string;
   standard_total_cost?: number;
+  /** Club standard cost for the bigger formats (5vs5 = standard_total_cost) */
+  standard_costs?: Partial<Record<Exclude<MatchFormat, '5v5'>, number>>;
   default_field_id?: string;
   /** "Stato forma": goals (3+ in a match) raise the player's form. Default off. */
   form_goals?: boolean;
@@ -349,12 +359,17 @@ export function sortStatsByCanonicalOrder(statKeys: string[]): string[] {
 /** Notification centre of the admins (collection admin_requests, written only by the server). */
 export interface AdminRequest {
   id: string;
-  type: 'new_signup' | 'restore' | 'account_closed';
+  type: 'new_signup' | 'restore' | 'account_closed' | 'format_proposal';
   status: 'open' | 'done';
   profile_id: string;
   name: string;
   email?: string | null;
   mode?: 'deactivate' | 'delete';
   reason?: string;
+  /** format_proposal: match day, proposed format, format at that moment, sign-ups */
+  date?: string;
+  format?: MatchFormat;
+  from_format?: MatchFormat;
+  count?: number;
   created_at: string;
 }
