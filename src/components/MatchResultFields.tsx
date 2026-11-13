@@ -116,7 +116,7 @@ export function MatchResultFields({ value, onChange, white, black, mvpVotes = []
                 –
               </span>
             ) : (
-              <label key={team[0]} className="min-w-0 flex flex-col items-center gap-1.5">
+              <div key={team[0]} className="min-w-0 flex flex-col items-center gap-1.5">
                 <span className="text-xs font-semibold text-white">{team[0]}</span>
                 <span className={`block rounded-full ${team[2]}`} aria-hidden="true" />
                 <NumberInput
@@ -127,7 +127,27 @@ export function MatchResultFields({ value, onChange, white, black, mvpVotes = []
                   aria-label={`Gol ${team[0]}`}
                   className="w-12 h-12 sm:w-16 sm:h-14 bg-slate-900 border-2 border-slate-700 text-center text-xl sm:text-2xl font-bold text-white tabular-nums rounded-xl focus:border-emerald-500 focus:outline-none"
                 />
-              </label>
+                {/* − / + comodi per il pollice */}
+                <span className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => set({ [team[1]]: Math.max(0, value[team[1]] - 1) } as Partial<typeof value>)}
+                    disabled={value[team[1]] <= 0}
+                    aria-label={`Un gol in meno ai ${team[0]}`}
+                    className="h-8 w-8 rounded-full bg-slate-800 text-slate-200 flex items-center justify-center hover:bg-slate-700 disabled:opacity-40"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => set({ [team[1]]: Math.min(50, value[team[1]] + 1) } as Partial<typeof value>)}
+                    aria-label={`Un gol in più ai ${team[0]}`}
+                    className="h-8 w-8 rounded-full bg-emerald-500/15 text-emerald-300 flex items-center justify-center hover:bg-emerald-500/25"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </span>
+              </div>
             )
           )}
         </div>

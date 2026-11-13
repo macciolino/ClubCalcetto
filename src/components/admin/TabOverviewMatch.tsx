@@ -1,294 +1,287 @@
 'use client';
 
-import { notify, askConfirm } from '@/components/ui/Feedback';
-
-import { useFormSettings } from '@/lib/hooks/useForms';
-import { MatchResultFields, MatchResultValue, validateScorers } from '@/components/MatchResultFields';
-import { reconcileTeams, toTeamPlayer } from '@/lib/utils/teamUtils';
-import { firstToTenByWeek as computeFirstToTen } from '@/lib/utils/presenceRanking';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Profile, Presence, Match, GeneratedTeamRecord, SportField } from '@/types/database';
+import { notify, askConfirm } from '@/components/ui/Feedback';
+import { useFormSettings } from '@/lib/hooks/useForms';
+import { useAuth } from '@/lib/context/AuthContext';
+import { useMatchFormats } from '@/lib/hooks/useMatchFormats';
+import { MatchResultFields, MatchResultValue, validateScorers } from '@/components/MatchResultFields';
+import { MatchFormatPicker } from '@/components/MatchFormatPicker';
+import { reconcileTeams, toTeamPlayer } from '@/lib/utils/teamUtils';
+import { FORMAT_INFO, dayFormat, maxPlayersFor, perHead } from '@/lib/utils/matchFormat';
+import {
+  effectiveMatchCost,
+  effectiveMatchLocation,
+  effectiveMatchTime,
+  fieldCostFor,
+  fieldLabel,
+  matchField,
+  standardCostFor,
+} from '@/lib/utils/matchUtils';
+import { CalendarDay, formatItalianDate, toDateString } from '@/lib/utils/dateUtils';
+import { copyToClipboard, getWhatsAppShareUrl } from '@/lib/utils/whatsapp';
+import { initialsOf } from '@/lib/utils/playerUtils';
+import {
+  countMvpVotes,
+  saveMatchFields,
+  saveMatchResult,
+  subscribeAppSettings,
+  subscribeGeneratedTeams,
+  subscribeMatch,
+  subscribeMatches,
+  subscribeMvpVotes,
+  subscribePresencesRange,
+  subscribeTeamDatesSince,
+} from '@/lib/firebase/firestoreService';
+import { getMatchPayments, resetMatchPayments, setAllPayments, subscribeMatchPayments, togglePlayerPayment } from '@/lib/services/paymentService';
+import { AppSettings, GeneratedTeamRecord, Match, MatchPaymentRecord, Presence, Profile, SportField } from '@/types/database';
+import { btn, btnInline, textLink } from '@/components/ui/buttons';
+import { ArrowRight, Check, Clock, Coins, Loader2, RotateCcw, Send, Settings2, Share2, Star, Trophy } from 'lucide-react';
 
 const EMPTY_RESULT: MatchResultValue = { scoreWhite: 0, scoreBlack: 0, mvpPlayerId: '', scorers: [] };
-import { useAuth } from '@/lib/context/AuthContext';
-import { effectiveMatchCost, fieldCostFor, matchField, standardCostFor } from '@/lib/utils/matchUtils';
-import { useMatchFormats } from '@/lib/hooks/useMatchFormats';
-import { FORMAT_INFO, dayFormat, maxPlayersFor } from '@/lib/utils/matchFormat';
-import { MatchFormatPicker } from '@/components/MatchFormatPicker';
-import { subscribeAppSettings } from '@/lib/firebase/firestoreService';
-import { AppSettings } from '@/types/database';
-import { subscribeMatch, subscribeMatches, saveMatchResult, subscribeMvpVotes, countMvpVotes, subscribeGeneratedTeams, subscribeTeamDatesSince } from '@/lib/firebase/firestoreService';
-import { CalendarDay, formatItalianDate, toDateString } from '@/lib/utils/dateUtils';
-import { 
-  getMatchPayments, 
-  togglePlayerPayment, 
-  setAllPayments, 
-  resetMatchPayments,
-  subscribeMatchPayments 
-} from '@/lib/services/paymentService';
-import {
-  Trophy,
-  Coins,
-  Clock,
-  Check,
-  ArrowRight,
-  RotateCcw,
-  Loader2,
-  Calendar,
-  ChevronDown,
-} from 'lucide-react';
-import { btn, textLink } from '@/components/ui/buttons';
+
+type DayStatus = 'Ufficiale' | 'In programma' | 'Da chiudere' | 'Archiviata';
+type TabId = 'org' | 'cash' | 'result';
+
+const STATUS_TONE: Record<DayStatus, string> = {
+  Ufficiale: 'bg-emerald-500/15 text-emerald-300',
+  'In programma': 'bg-slate-800 text-slate-400',
+  'Da chiudere': 'bg-amber-500/15 text-amber-300',
+  Archiviata: 'bg-slate-700/70 text-slate-200',
+};
+
+const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
+  { id: 'org', label: 'Organizzazione', icon: Settings2 },
+  { id: 'cash', label: 'Cassa', icon: Coins },
+  { id: 'result', label: 'Risultato', icon: Trophy },
+];
 
 interface TabOverviewMatchProps {
+  /** Days of the presences calendar (this week and next) */
   days: CalendarDay[];
+  /** Official match day (the one shown in Home, Presenze, Squadre) */
   activeDate: string;
+  /** Makes a day the official one */
   onSelectDate: (dateString: string) => void;
   players: Profile[];
-  presences: Presence[];
+  /** Not used anymore: this page reads the presences of every day it shows */
+  presences?: Presence[];
   generatedTeamRecord?: GeneratedTeamRecord | null;
+  /** Club standard cost of a 5vs5 */
   totalMatchCost?: number;
-  /** Fields of the club and the default one: a field can have its own cost */
   fields?: SportField[];
   defaultFieldId?: string;
 }
 
+/**
+ * Impostazioni → Partita della settimana. One day at a time:
+ *  - on top the day selector (recent and coming matches, with status and sign-ups): everything below is ONLY that match;
+ *  - three tabs (phone) = the life of a match: Organizzazione (official day, field, time, notes, format),
+ *    Cassa (who paid), Risultato (score, scorers, MVP, archive). On a computer the panels sit side by side.
+ */
 export function TabOverviewMatch({
   days,
   activeDate,
   onSelectDate,
   players,
-  presences,
-  generatedTeamRecord,
   totalMatchCost: standardMatchCost = 80,
   fields = [],
   defaultFieldId,
 }: TabOverviewMatchProps) {
   const { profile } = useAuth();
   const fixedKeeper = Boolean(useFormSettings().fixedKeeper);
-  // Formato di ogni giorno (5vs5, 7vs7, 8vs8, 11vs11) e costi standard per formato
   const matchFormats = useMatchFormats();
-  const [standardCosts, setStandardCosts] = useState<AppSettings['standard_costs']>(undefined);
-  useEffect(() => {
-    const unsub = subscribeAppSettings((s) => setStandardCosts(s.standard_costs));
-    return () => unsub();
-  }, []);
-  const activeFmt = dayFormat(matchFormats, activeDate);
-  const activeInfo = FORMAT_INFO[activeFmt.format];
-  const costFor = (m: Match | null, date: string) => {
-    const f = dayFormat(matchFormats, date).format;
-    return effectiveMatchCost(
-      m,
-      standardCostFor({ standard_total_cost: standardMatchCost, standard_costs: standardCosts }, f),
-      fieldCostFor(m, fields, defaultFieldId, undefined, f)
-    );
-  };
+  const today = toDateString(new Date());
 
-  // Partita salvata in Firestore per la data attiva (fonte unica per risultato e quota)
-  const [savedMatch, setSavedMatch] = useState<Match | null>(null);
+  // ---------- giorni del selettore: calendario + partite degli ultimi 30 giorni ----------
+  const [recentDates, setRecentDates] = useState<string[]>([]);
+  const [matches, setMatches] = useState<Match[]>([]);
   useEffect(() => {
-    setSavedMatch(null);
-    const unsub = subscribeMatch(activeDate, (m) => setSavedMatch(m));
-    return () => unsub();
-  }, [activeDate]);
-
-  // Partita da chiudere: di default il giorno ufficiale, ma si può scegliere una partita già giocata
-  // (es. quella di ieri, che non è più nel calendario delle presenze)
-  const [closingDate, setClosingDate] = useState(activeDate);
-  useEffect(() => setClosingDate(activeDate), [activeDate]);
-  const [closingMatch, setClosingMatch] = useState<Match | null>(null);
-  const [closingTeams, setClosingTeams] = useState<GeneratedTeamRecord | null>(null);
-  useEffect(() => {
-    setClosingMatch(null);
-    setClosingTeams(null);
-    const u1 = subscribeMatch(closingDate, (m) => setClosingMatch(m));
-    const u2 = subscribeGeneratedTeams(closingDate, (r) => setClosingTeams(r));
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    const u1 = subscribeTeamDatesSince(toDateString(d), setRecentDates);
+    const u2 = subscribeMatches(setMatches);
     return () => {
       u1();
       u2();
     };
-  }, [closingDate]);
-  const [recentDates, setRecentDates] = useState<string[]>([]);
-  useEffect(() => {
+  }, []);
+  const archived = useMemo(() => {
+    const m = new Map<string, Match>();
+    matches.filter((x) => x.status === 'completed').forEach((x) => m.set(x.match_date || x.id, x));
+    return m;
+  }, [matches]);
+  const allDays = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() - 30);
     const from = toDateString(d);
-    const unsub = subscribeTeamDatesSince(from, (dates) => setRecentDates(dates));
+    const archivedRecent = Array.from(archived.keys()).filter((x) => x >= from);
+    return Array.from(new Set([...archivedRecent, ...recentDates, ...days.map((x) => x.dateString), activeDate].filter(Boolean))).sort();
+  }, [archived, recentDates, days, activeDate]);
+
+  // Iscritti di tutti i giorni mostrati (una sola lettura in tempo reale)
+  const [presences, setPresences] = useState<Presence[]>([]);
+  const rangeFrom = allDays[0] || activeDate;
+  const rangeTo = allDays[allDays.length - 1] || activeDate;
+  useEffect(() => {
+    if (!rangeFrom || !rangeTo) return;
+    const unsub = subscribePresencesRange(rangeFrom, rangeTo, setPresences);
+    return () => unsub();
+  }, [rangeFrom, rangeTo]);
+
+  // ---------- giorno scelto: tutta la pagina parla solo di lui ----------
+  const [date, setDate] = useState(activeDate);
+  const lastActive = useRef(activeDate);
+  useEffect(() => {
+    // Se cambia il giorno ufficiale da fuori e stavi guardando il vecchio, segui il nuovo
+    setDate((cur) => (cur === lastActive.current || !cur ? activeDate : cur));
+    lastActive.current = activeDate;
+  }, [activeDate]);
+
+  const statusOf = (d: string): DayStatus =>
+    archived.has(d) ? 'Archiviata' : d === activeDate ? 'Ufficiale' : d < today ? 'Da chiudere' : 'In programma';
+  const status = statusOf(date);
+  const [tab, setTab] = useState<TabId>('org');
+  const chooseDay = (d: string) => {
+    setDate(d);
+    const st = statusOf(d);
+    setTab(st === 'Da chiudere' || st === 'Archiviata' ? 'result' : 'org');
+  };
+  const selectorRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    selectorRef.current?.querySelector('[aria-checked="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest' });
+  }, [date, allDays.length]);
+
+  const fmt = dayFormat(matchFormats, date);
+  const info = FORMAT_INFO[fmt.format];
+
+  // Partita, squadre e voti MVP del giorno scelto
+  const [match, setMatch] = useState<Match | null>(null);
+  const [teamRecord, setTeamRecord] = useState<GeneratedTeamRecord | null>(null);
+  const [mvpVotes, setMvpVotes] = useState<{ playerId: string; count: number }[]>([]);
+  useEffect(() => {
+    setMatch(null);
+    setTeamRecord(null);
+    setMvpVotes([]);
+    const u1 = subscribeMatch(date, setMatch);
+    const u2 = subscribeGeneratedTeams(date, setTeamRecord);
+    const u3 = subscribeMvpVotes(date, (v) => setMvpVotes(countMvpVotes(v)));
+    return () => {
+      u1();
+      u2();
+      u3();
+    };
+  }, [date]);
+
+  // Valori standard del club (orario, costi per formato)
+  const [settings, setSettings] = useState<AppSettings>({});
+  useEffect(() => {
+    const unsub = subscribeAppSettings((s) => setSettings(s || {}));
     return () => unsub();
   }, []);
-  const closingOptions = Array.from(new Set([activeDate, ...recentDates])).sort().reverse();
 
-  // Quota: quella della partita se impostata, altrimenti il costo standard dell'admin
-  const totalMatchCost = costFor(savedMatch, activeDate);
+  const location = effectiveMatchLocation(match, fields, defaultFieldId);
+  const field = matchField(match, fields, defaultFieldId);
+  const time = effectiveMatchTime(match, settings.standard_match_time);
+  const totalCost = effectiveMatchCost(
+    match,
+    standardCostFor({ standard_total_cost: standardMatchCost, standard_costs: settings.standard_costs }, fmt.format),
+    fieldCostFor(match, fields, defaultFieldId, undefined, fmt.format)
+  );
+  const isArchived = status === 'Archiviata';
 
-  // Titolari confermati per la data attiva
-  const dayPresences = presences.filter((p) => p.date === activeDate);
-  const starterPresences = dayPresences
+  // Titolari del giorno (in ordine di iscrizione)
+  const dayPresences = presences.filter((p) => p.date === date);
+  const starterProfiles = dayPresences
     .filter((p) => p.status === 'confirmed')
-    .sort((a, b) => (a.order_index ?? 99) - (b.order_index ?? 99));
-  const starterProfiles = starterPresences
+    .sort((a, b) => (a.order_index ?? 99) - (b.order_index ?? 99))
     .map((pr) => players.find((p) => p.id === pr.player_id) || pr.profile)
     .filter((p): p is Profile => Boolean(p));
 
-  const starterIds = starterProfiles.map((p) => p.id);
-
-  // Stato Cassa e Pagamenti per la data attiva
-  const [paymentsRecord, setPaymentsRecord] = useState(() =>
-    getMatchPayments(activeDate, starterIds, totalMatchCost)
-  );
-
-  useEffect(() => {
-    setPaymentsRecord(getMatchPayments(activeDate, starterIds, totalMatchCost));
-
-    const unsub = subscribeMatchPayments(activeDate, (remote) => {
-      if (remote) setPaymentsRecord(remote);
-    });
-
-    const handlePaymentsChanged = (e: any) => {
-      if (e.detail?.date === activeDate) {
-        setPaymentsRecord(e.detail);
-      } else {
-        setPaymentsRecord(getMatchPayments(activeDate, starterIds, totalMatchCost));
-      }
-    };
-
-    window.addEventListener('clubcalcetto_payments_changed', handlePaymentsChanged);
-    return () => {
-      unsub();
-      window.removeEventListener('clubcalcetto_payments_changed', handlePaymentsChanged);
-    };
-    // Basta il numero dei titolari: l'elenco è un array nuovo a ogni render e farebbe riascoltare all'infinito
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeDate, starterIds.length, totalMatchCost]);
-
-  // Conteggio Pagamenti
-  const paidCount = starterProfiles.filter(
-    (p) => paymentsRecord.payments[p.id] === true
-  ).length;
-  const costPerPlayer = Number((totalMatchCost / activeInfo.players).toFixed(2));
-  const totalCollected = Number((paidCount * costPerPlayer).toFixed(2));
-  const progressPercent = Math.min(100, Math.round((paidCount / activeInfo.players) * 100));
-
-  // Modulo Chiusura Match Post-Partita
-  const [result, setResult] = useState<MatchResultValue>(EMPTY_RESULT);
-  const [isArchiving, setIsArchiving] = useState(false);
-  const [archiveSuccessMessage, setArchiveSuccessMessage] = useState('');
-  const [cashOpen, setCashOpen] = useState(true);
-  const [daysOpen, setDaysOpen] = useState(true);
-
-  // Partite archiviate totali
-  const [archivedMatchesCount, setArchivedMatchesCount] = useState(0);
-  const [archivedDates, setArchivedDates] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    const unsub = subscribeMatches((list) =>
-      {
-        const done = list.filter((m) => m.status === 'completed');
-        setArchivedMatchesCount(done.length);
-        setArchivedDates(new Set(done.map((m) => m.match_date || m.id)));
-      }
-    );
-    return () => unsub();
-  }, []);
-
-  // Ricarica nel modulo il tabellino già salvato (una volta per data, senza cancellare ciò che stai scrivendo)
-  const prefilledFor = useRef<string | null>(null);
-  useEffect(() => {
-    // Cambio data: modulo vuoto, poi eventualmente ricaricato dalla partita salvata
-    prefilledFor.current = null;
-    setResult(EMPTY_RESULT);
-  }, [closingDate]);
-  useEffect(() => {
-    if (
-      closingMatch?.status === 'completed' &&
-      closingMatch.match_date === closingDate &&
-      prefilledFor.current !== closingDate
-    ) {
-      prefilledFor.current = closingDate;
-      setResult({
-        scoreWhite: closingMatch.score_white ?? 0,
-        scoreBlack: closingMatch.score_black ?? 0,
-        mvpPlayerId: closingMatch.mvp_player_id || '',
-        scorers: closingMatch.scorers || [],
-        penaltySaves: closingMatch.penalty_saves || [],
-      });
-    }
-  }, [closingDate, closingMatch]);
-
-  // Voti MVP dei giocatori per questa partita: il più votato viene proposto (l'admin può scegliere chiunque)
-  const [mvpVotes, setMvpVotes] = useState<{ playerId: string; count: number }[]>([]);
-  useEffect(() => {
-    setMvpVotes([]);
-    const unsub = subscribeMvpVotes(closingDate, (votes) => setMvpVotes(countMvpVotes(votes)));
-    return () => unsub();
-  }, [closingDate]);
-  const proposedFor = useRef<string | null>(null);
-  useEffect(() => {
-    if (proposedFor.current === closingDate || closingMatch?.status === 'completed' || !mvpVotes[0]) return;
-    proposedFor.current = closingDate;
-    setResult((r) => (r.mvpPlayerId ? r : { ...r, mvpPlayerId: mvpVotes[0].playerId }));
-  }, [closingDate, mvpVotes, closingMatch?.status]);
-
-  // Per ogni settimana: il giorno arrivato PER PRIMO al completo (10, 14, 16 o 22 secondo il formato)
-  const firstToTenByWeek = computeFirstToTen(days, presences, (d) => maxPlayersFor(matchFormats, d));
-
-  const isAlreadyClosed = closingMatch?.status === 'completed';
-
-  // Handlers Cassa
-  const handleTogglePayment = (playerId: string) => {
-    const updated = togglePlayerPayment(activeDate, playerId, starterIds, totalMatchCost);
-    setPaymentsRecord(updated);
-  };
-
-  const handleSetAllPaid = () => {
-    const updated = setAllPayments(activeDate, starterIds, true, totalMatchCost);
-    setPaymentsRecord(updated);
-  };
-
-  const handleResetPayments = () => {
-    const updated = resetMatchPayments(activeDate, starterIds, totalMatchCost);
-    setPaymentsRecord(updated);
-  };
-
-  // Squadre della partita: quelle archiviate (mai più cambiate da sole), altrimenti quelle generate in Squadre
-  // con le eventuali sostituzioni (chi si è ritirato viene sostituito al suo posto). Mai "i primi iscritti".
+  // Squadre: archiviate così come sono; prima della partita quelle di Squadre con le sostituzioni
   const teams = (() => {
-    if (closingMatch?.status === 'completed' && closingMatch.team_white?.length && closingMatch.team_black?.length) {
-      return { white: closingMatch.team_white, black: closingMatch.team_black, fromArchive: true };
-    }
-    const record = closingDate === activeDate ? generatedTeamRecord || closingTeams : closingTeams;
-    if (record?.team_white?.length && record?.team_black?.length) {
-      // Giorno ufficiale: con le sostituzioni dalle presenze; partita passata: le squadre salvate così come sono
-      if (closingDate !== activeDate) {
-        return { white: record.team_white.map(toTeamPlayer), black: record.team_black.map(toTeamPlayer), fromArchive: false };
-      }
-      const r = reconcileTeams(record, starterProfiles.map(toTeamPlayer));
-      const per = FORMAT_INFO[dayFormat(matchFormats, closingDate).format].perTeam;
-      if (r.white.length === per && r.black.length === per) return { white: r.white, black: r.black, fromArchive: false };
+    const arch = archived.get(date);
+    if (arch?.team_white?.length && arch?.team_black?.length) return { white: arch.team_white, black: arch.team_black, fromArchive: true };
+    if (teamRecord?.team_white?.length && teamRecord?.team_black?.length) {
+      if (date < today) return { white: teamRecord.team_white.map(toTeamPlayer), black: teamRecord.team_black.map(toTeamPlayer), fromArchive: false };
+      const r = reconcileTeams(teamRecord, starterProfiles.map(toTeamPlayer));
+      if (r.white.length === info.perTeam && r.black.length === info.perTeam) return { white: r.white, black: r.black, fromArchive: false };
     }
     return null;
   })();
+
+  // ---------- cassa: chi paga = chi gioca (squadre, altrimenti i titolari) ----------
+  const payers: { id: string; name: string }[] = teams
+    ? [...teams.white, ...teams.black].map((p) => ({ id: p.id, name: p.name }))
+    : starterProfiles.map((p) => ({ id: p.id, name: p.full_name }));
+  const payerIds = payers.map((p) => p.id);
+  const headCount = teams ? payers.length : info.players;
+  const quota = totalCost / Math.max(1, headCount);
+  const [payments, setPayments] = useState<MatchPaymentRecord>(() => getMatchPayments(date, payerIds, totalCost));
+  useEffect(() => {
+    setPayments(getMatchPayments(date, payerIds, totalCost));
+    const unsub = subscribeMatchPayments(date, (remote) => remote && setPayments(remote));
+    const onChange = (e: Event) => {
+      const rec = (e as CustomEvent<MatchPaymentRecord>).detail;
+      if (rec?.date === date) setPayments(rec);
+    };
+    window.addEventListener('clubcalcetto_payments_changed', onChange);
+    return () => {
+      unsub();
+      window.removeEventListener('clubcalcetto_payments_changed', onChange);
+    };
+    // Basta il numero di chi paga: l'elenco è un array nuovo a ogni render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [date, payerIds.length, totalCost]);
+  const paidCount = payers.filter((p) => payments.payments[p.id] === true).length;
+  const unpaid = payers.filter((p) => !payments.payments[p.id]);
+  const collected = paidCount * quota;
+  const progress = payers.length ? Math.round((paidCount / Math.max(headCount, payers.length)) * 100) : 0;
+  const [onlyUnpaid, setOnlyUnpaid] = useState(false);
+
+  // ---------- risultato ----------
+  const [result, setResult] = useState<MatchResultValue>(EMPTY_RESULT);
+  const [isArchiving, setIsArchiving] = useState(false);
+  const prefilledFor = useRef<string | null>(null);
+  const proposedFor = useRef<string | null>(null);
+  useEffect(() => {
+    prefilledFor.current = null;
+    proposedFor.current = null;
+    setResult(EMPTY_RESULT);
+  }, [date]);
+  useEffect(() => {
+    if (match?.status === 'completed' && (match.match_date || match.id) === date && prefilledFor.current !== date) {
+      prefilledFor.current = date;
+      setResult({
+        scoreWhite: match.score_white ?? 0,
+        scoreBlack: match.score_black ?? 0,
+        mvpPlayerId: match.mvp_player_id || '',
+        scorers: match.scorers || [],
+        penaltySaves: match.penalty_saves || [],
+      });
+    }
+  }, [date, match]);
+  useEffect(() => {
+    // Il più votato dai giocatori viene proposto come MVP (l'admin può scegliere chiunque)
+    if (proposedFor.current === date || match?.status === 'completed' || !mvpVotes[0]) return;
+    proposedFor.current = date;
+    setResult((r) => (r.mvpPlayerId ? r : { ...r, mvpPlayerId: mvpVotes[0].playerId }));
+  }, [date, mvpVotes, match?.status]);
   const validation = teams ? validateScorers(result, teams.white, teams.black) : { error: null, warnings: [] };
-  const canArchive = Boolean(teams) && !validation.error;
 
-  const handleArchiveMatch = async () => {
-    if (!teams) {
-      notify('Prima genera le squadre nella sezione Squadre: il risultato viene salvato sulle squadre generate.');
+  const handleArchive = async () => {
+    if (!teams) return notify('Prima genera le squadre nella sezione Squadre.');
+    if (validation.error) return notify(validation.error);
+    if (
+      isArchived &&
+      !(await askConfirm('Questa partita è già archiviata. Aggiornare il risultato? Vittorie, pareggi e sconfitte vengono corretti, non sommati di nuovo.'))
+    )
       return;
-    }
-    if (validation.error) {
-      notify(validation.error);
-      return;
-    }
-    if (isAlreadyClosed && !(await askConfirm('Questa partita è già archiviata. Vuoi aggiornare il risultato? Le squadre restano quelle archiviate; vittorie/pareggi/sconfitte vengono corretti, non sommati di nuovo.'))) {
-      return;
-    }
-
     setIsArchiving(true);
-    setArchiveSuccessMessage('');
     try {
       await saveMatchResult({
-        date: closingDate,
+        date,
         scoreWhite: result.scoreWhite,
         scoreBlack: result.scoreBlack,
         teamWhite: teams.white,
@@ -296,390 +289,467 @@ export function TabOverviewMatch({
         mvpPlayerId: result.mvpPlayerId || null,
         scorers: result.scorers,
         penaltySaves: result.penaltySaves || [],
-        totalCost: costFor(closingMatch, closingDate),
+        totalCost,
         players: teams.white.length + teams.black.length,
         closedBy: profile?.id || '',
       });
-      setArchiveSuccessMessage(
-        `Partita del ${formatItalianDate(closingDate)} salvata! V/P/S aggiornati nei profili. La trovi nella pagina Storico.`
-      );
-      setTimeout(() => setArchiveSuccessMessage(''), 8000);
+      notify(`Partita del ${formatItalianDate(date)} archiviata: la trovi nello Storico.`);
     } catch (err) {
       console.error('Archiviazione fallita:', err);
-      notify('Errore durante il salvataggio della partita. Controlla la connessione e riprova.');
+      notify('Salvataggio non riuscito. Controlla la connessione e riprova.');
     } finally {
       setIsArchiving(false);
     }
   };
 
-  return (
-    <div className="space-y-6">
-      {/* Formato della partita ufficiale (e di ogni giorno, scegliendolo qui sotto come ufficiale) */}
-      <div className="bg-slate-900 p-4 sm:p-5 rounded-2xl space-y-3">
-        <div>
-          <h3 className="text-base font-semibold text-white">
-            Formato della partita · {activeInfo.label} {activeFmt.formation}
-          </h3>
-          <p className="text-sm text-slate-400 mt-0.5">
-            {formatItalianDate(activeDate)}: {activeInfo.players} titolari, {activeInfo.perTeam} per squadra. Vale solo per questo giorno; per
-            un altro giorno sceglilo come ufficiale qui sotto o cambialo in Squadre.
+  // ---------- organizzazione: campo, orario, note, costo ----------
+  const [timeInput, setTimeInput] = useState(time);
+  const [notesInput, setNotesInput] = useState('');
+  const [costInput, setCostInput] = useState('');
+  useEffect(() => setTimeInput(time), [time, date]);
+  useEffect(() => setNotesInput(match?.notes || ''), [match?.notes, date]);
+  useEffect(
+    () => setCostInput(match?.cost_override && !isArchived ? String(match.total_cost) : ''),
+    [match?.cost_override, match?.total_cost, date, isArchived]
+  );
+  const save = (patch: Partial<Match>, done?: string) =>
+    saveMatchFields(date, patch)
+      .then(() => done && notify(done))
+      .catch(() => notify('Salvataggio non riuscito, riprova.'));
+
+  const shareInfo = async () => {
+    const text = [
+      `⚽ *Partita del ${formatItalianDate(date)}*`,
+      `⏰ Ore ${time}`,
+      `📍 ${location}${field?.maps_url ? `\n🗺️ ${field.maps_url}` : ''}`,
+      `🏟️ ${info.label} · ${info.players} giocatori`,
+      `💰 €${perHead(totalCost, info.players)} a testa`,
+      notesInput.trim() ? `📝 ${notesInput.trim()}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
+    await copyToClipboard(text);
+    window.open(getWhatsAppShareUrl(text), '_blank');
+  };
+
+  const remindUnpaid = async () => {
+    if (unpaid.length === 0) return;
+    const text = [
+      `💰 *Quota partita del ${formatItalianDate(date)}*: €${perHead(totalCost, headCount)} a testa.`,
+      `Mancano ancora: ${unpaid.map((p) => p.name).join(', ')}.`,
+      'Grazie! ⚽',
+    ].join('\n');
+    await copyToClipboard(text);
+    window.open(getWhatsAppShareUrl(text), '_blank');
+  };
+
+  // ---------- pannelli ----------
+  const panel = 'bg-slate-900 rounded-2xl p-4 sm:p-5 space-y-4';
+  const inputCls =
+    'w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500 disabled:opacity-60';
+  const visible = (t: TabId) => (tab === t ? '' : 'hidden lg:block');
+  const official = date === activeDate;
+
+  const orgPanel = (
+    <section className={`${panel} ${visible('org')}`} aria-label="Organizzazione e campo">
+      <h3 className="hidden lg:flex items-center gap-2 text-base font-semibold text-white">
+        <Settings2 className="h-4 w-4 text-emerald-400" /> Organizzazione e campo
+      </h3>
+
+      {/* Giorno ufficiale */}
+      <div className="flex items-center justify-between gap-3 rounded-xl bg-slate-950/60 px-4 py-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-white flex items-center gap-1.5">
+            <Star className={`h-4 w-4 ${official ? 'text-amber-400 fill-amber-400' : 'text-slate-500'}`} /> Giorno ufficiale
+          </p>
+          <p className="text-xs text-slate-400">
+            {official ? 'È la partita mostrata a tutti in Home, Presenze e Squadre.' : `Ora è ${formatItalianDate(activeDate)}.`}
           </p>
         </div>
-        <MatchFormatPicker
-          date={activeDate}
-          format={activeFmt.format}
-          formation={activeFmt.formation}
-          field={matchField(savedMatch, fields, defaultFieldId)}
-          hasTeams={Boolean(generatedTeamRecord?.team_white?.length)}
-          adminId={profile?.id || ''}
-        />
-      </div>
-
-      {/* 2. ELEZIONE GIORNO UFFICIALE (a tendina) & CTA GENERATORE SQUADRE */}
-      <div className="bg-slate-900 p-4 sm:p-5 rounded-2xl space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={() => setDaysOpen((o) => !o)}
-            aria-expanded={daysOpen}
-            className="flex-1 min-w-0 flex items-center justify-between gap-3 text-left"
-          >
-            <div className="min-w-0">
-              <h2 className="text-base font-semibold text-white flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-emerald-400 flex-shrink-0" />
-                Giorno ufficiale
-              </h2>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Ufficiale: <strong className="text-emerald-300">{formatItalianDate(activeDate)}</strong>
-                {firstToTenByWeek.size > 0 && (
-                  <>
-                    {' '}· 🥇 primo al completo:{' '}
-                    <strong className="text-amber-300">
-                      {Array.from(firstToTenByWeek).map((d) => formatItalianDate(d)).join(', ')}
-                    </strong>
-                  </>
-                )}
-              </p>
-            </div>
-            <ChevronDown className={`h-5 w-5 text-slate-400 flex-shrink-0 transition-transform ${daysOpen ? 'rotate-180' : ''}`} />
-          </button>
-
-          <Link
-            href={`/squadre?date=${activeDate}`}
-            className={btn.primary}
-          >
-            <span>Vai alle squadre</span>
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
-
-        {daysOpen && (
-          <div className="space-y-3 border-t border-slate-800 pt-3">
-            <p className="text-xs text-slate-400">
-              Tocca un giorno per impostarlo come partita ufficiale. In evidenza (🥇) il giorno arrivato per primo al completo nella settimana.
-            </p>
-        {/* Card Selettore Orizzontale a Radio Button per i Giorni */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2.5">
-          {days.map((day) => {
-            const isOfficial = activeDate === day.dateString;
-            const count = presences.filter(
-              (p) => p.date === day.dateString && p.status === 'confirmed'
-            ).length;
-            const dayMax = maxPlayersFor(matchFormats, day.dateString);
-            const hasQuorum = count >= dayMax;
-            const isFirstToTen = firstToTenByWeek.has(day.dateString);
-
-            return (
-              <button
-                key={day.dateString}
-                type="button"
-                onClick={() => onSelectDate(day.dateString)}
-                className={`flex flex-col items-center justify-between p-3 rounded-2xl border text-center transition-all cursor-pointer ${
-                  isOfficial
-                    ? 'bg-emerald-500/15 border-emerald-500 text-white ring-2 ring-emerald-500/60'
-                    : isFirstToTen
-                    ? 'bg-amber-500/10 border-amber-400 text-white ring-2 ring-amber-400/50'
-                    : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-white'
-                }`}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <span className="text-[10px] font-bold uppercase tracking-wider">
-                    {day.dayName.slice(0, 3)}
-                  </span>
-                  {isOfficial && (
-                    <span className="text-[10px] text-amber-400 font-bold">★</span>
-                  )}
-                </div>
-
-                <div className="text-xl font-bold my-1 text-white">{day.dayNumber}</div>
-                <div className="text-[10px] text-slate-400">{day.monthName}</div>
-
-                <div className="mt-2 w-full pt-1.5 border-t border-slate-800 flex items-center justify-center gap-1 font-mono text-[10px]">
-                  <span className={`font-bold ${hasQuorum ? 'text-emerald-400' : 'text-slate-400'}`}>
-                    {Math.min(count, dayMax)}/{dayMax}
-                  </span>
-                  {hasQuorum && (
-                    <span className="text-[9px] bg-emerald-500 text-slate-950 px-1 rounded font-bold">
-                      OK
-                    </span>
-                  )}
-                </div>
-                {isFirstToTen && (
-                  <div className="mt-1 text-[9px] font-bold uppercase text-amber-300 leading-tight">🥇 Primo a 10</div>
-                )}
-              </button>
-            );
-          })}
-        </div>
-          </div>
-        )}
-      </div>
-
-      {/* 3. TRACCIAMENTO CASSA & PAGAMENTI QUOTA CAMPO (a tendina) */}
-      <div className="bg-slate-900 p-4 sm:p-5 rounded-2xl space-y-4">
         <button
           type="button"
-          onClick={() => setCashOpen((o) => !o)}
-          aria-expanded={cashOpen}
-          className="w-full flex items-center justify-between gap-3 text-left"
+          role="switch"
+          aria-checked={official}
+          aria-label="Giorno ufficiale"
+          disabled={official || isArchived}
+          onClick={async () => {
+            if (await askConfirm(`Rendere ${formatItalianDate(date)} il giorno ufficiale della settimana?`)) onSelectDate(date);
+          }}
+          className={`relative h-7 w-12 flex-shrink-0 rounded-full transition-colors disabled:cursor-default ${
+            official ? 'bg-emerald-500' : 'bg-slate-700'
+          } ${isArchived && !official ? 'opacity-40' : ''}`}
         >
-          <div className="min-w-0">
-            <h2 className="text-base font-semibold text-white flex items-center gap-2">
-              <Coins className="h-4 w-4 text-emerald-400 flex-shrink-0" />
-              Cassa
-            </h2>
-            <p className="text-xs text-slate-400 mt-0.5">
-              €{totalCollected.toFixed(2)} di €{totalMatchCost} · {paidCount}/{activeInfo.players} pagati · €{costPerPlayer.toFixed(2)} a testa
-            </p>
-          </div>
-          <ChevronDown className={`h-5 w-5 text-slate-400 flex-shrink-0 transition-transform ${cashOpen ? 'rotate-180' : ''}`} />
+          <span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-all ${official ? 'left-6' : 'left-1'}`} />
         </button>
+      </div>
 
-        {cashOpen && (
-          <>
-            <div className="flex flex-wrap items-center gap-2 border-t border-slate-800 pt-3">
-              <button
-                type="button"
-                onClick={handleSetAllPaid}
-                className="flex items-center gap-1 px-3 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 font-bold rounded-xl text-xs border border-emerald-500/30 transition-all cursor-pointer"
-              >
-                <Check className="h-3.5 w-3.5 text-emerald-400" />
-                <span>Segna Tutti Pagati</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleResetPayments}
-                className="flex items-center gap-1 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-rose-400 font-bold rounded-xl text-xs transition-colors cursor-pointer"
-              >
-                <RotateCcw className="h-3.5 w-3.5" />
-                <span>Reset Cassa</span>
-              </button>
-            </div>
+      {/* Campo e orario */}
+      <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_8rem] gap-3">
+        <label className="block min-w-0">
+          <span className="block text-xs font-medium text-slate-300 mb-1.5">Campo</span>
+          <select
+            value={field?.id || ''}
+            disabled={isArchived}
+            onChange={(e) => {
+              const f = fields.find((x) => x.id === e.target.value);
+              if (f) save({ location: fieldLabel(f) }, `Campo: ${f.name}`);
+            }}
+            className={inputCls}
+          >
+            {!field && <option value="">{location}</option>}
+            {fields.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className="block text-xs font-medium text-slate-300 mb-1.5">Orario</span>
+          <input
+            type="time"
+            value={timeInput}
+            disabled={isArchived}
+            onChange={(e) => setTimeInput(e.target.value)}
+            onBlur={() => timeInput && timeInput !== time && save({ match_time: timeInput, time_override: true }, `Orario: ${timeInput}`)}
+            className={`${inputCls} tabular-nums`}
+          />
+        </label>
+      </div>
 
-        {/* Progress Bar Finanziaria */}
-        <div className="space-y-1.5">
-          <div className="flex justify-between text-xs font-mono">
-            <span className="text-slate-400">
-              Incassato: <strong className="text-white">€{totalCollected.toFixed(2)}</strong> di €{totalMatchCost}.00
-            </span>
-            <span className="text-emerald-400 font-bold">{progressPercent}% saldato</span>
-          </div>
-          <div className="w-full bg-slate-950 h-3 rounded-full overflow-hidden border border-slate-800">
-            <div
-              className="h-full bg-gradient-to-r from-emerald-500 to-green-400 transition-all duration-500"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Griglia 10 Titolari con Badge Toggle Pagato/Da Saldare */}
-        {starterProfiles.length === 0 ? (
-          <div className="py-8 text-center text-xs text-slate-500 italic bg-slate-950/50 rounded-2xl border border-dashed border-slate-800">
-            Nessun titolare iscritto per questa giornata. Le quote appariranno man mano che i giocatori si iscrivono.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-5 gap-2.5">
-            {starterProfiles.map((player, idx) => {
-              const isPaid = Boolean(paymentsRecord.payments[player.id]);
-              return (
-                <div
-                  key={player.id}
-                  onClick={() => handleTogglePayment(player.id)}
-                  className={`p-3 rounded-2xl border flex flex-col justify-between gap-2 transition-all cursor-pointer select-none ${
-                    isPaid
-                      ? 'bg-emerald-950/40 border-emerald-500/50 text-white'
-                      : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 truncate">
-                    <span className="font-mono text-[10px] text-slate-500 w-4">{idx + 1}.</span>
-                    <div className="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center font-bold text-xs text-emerald-400">
-                      {player.full_name.charAt(0).toUpperCase()}
-                    </div>
-                    <span className="font-bold text-xs truncate flex-1">{player.full_name}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-1 border-t border-slate-800/80">
-                    <span className="text-[11px] font-mono text-slate-400">€{costPerPlayer.toFixed(2)}</span>
-                    <span
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${
-                        isPaid
-                          ? 'bg-emerald-500 text-slate-950'
-                          : 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
-                      }`}
-                    >
-                      {isPaid ? (
-                        <>
-                          <Check className="h-3 w-3" /> Pagato
-                        </>
-                      ) : (
-                        <>
-                          <Clock className="h-3 w-3" /> Da Saldare
-                        </>
-                      )}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-          </>
+      {/* Costo */}
+      <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
+        <label className="block flex-1 min-w-[10rem]">
+          <span className="block text-xs font-medium text-slate-300 mb-1.5">Costo della partita (€)</span>
+          <input
+            type="text"
+            inputMode="decimal"
+            value={costInput}
+            disabled={isArchived}
+            placeholder={`${String(totalCost).replace('.', ',')} · dal campo`}
+            onChange={(e) => setCostInput(e.target.value.replace(/[^0-9.,]/g, ''))}
+            onBlur={() => {
+              const v = Number(costInput.replace(',', '.'));
+              if (v > 0 && v !== totalCost) save({ total_cost: v, cost_override: true }, 'Costo personalizzato per questa partita');
+            }}
+            className={`${inputCls} tabular-nums`}
+          />
+        </label>
+        <div className="pb-2.5 text-sm text-slate-300 tabular-nums">€{perHead(totalCost, headCount)} a testa</div>
+        {match?.cost_override && !isArchived && (
+          <button type="button" onClick={() => save({ cost_override: false }, 'Costo del campo ripristinato')} className={`${textLink} pb-2.5`}>
+            Usa il costo del campo
+          </button>
         )}
       </div>
 
-      {/* 4. MODULO CHIUSURA MATCH POST-PARTITA */}
-      <div className="bg-slate-900 p-4 sm:p-5 rounded-2xl space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="text-base font-semibold text-white flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-amber-400 flex-shrink-0" /> Chiusura partita
-            </h2>
-            <p className="text-sm text-slate-400 mt-0.5">
-              Risultato, marcatori e MVP: al salvataggio si aggiornano vittorie, pareggi e sconfitte.
-            </p>
-          </div>
-        </div>
+      {/* Note */}
+      <label className="block">
+        <span className="block text-xs font-medium text-slate-300 mb-1.5">Note e info utili</span>
+        <textarea
+          rows={2}
+          value={notesInput}
+          disabled={isArchived}
+          placeholder="Es. portare maglia bianca e nera, ingresso dal retro…"
+          onChange={(e) => setNotesInput(e.target.value)}
+          onBlur={() => notesInput.trim() !== (match?.notes || '') && save({ notes: notesInput.trim() }, 'Note salvate')}
+          className={`${inputCls} resize-none`}
+        />
+      </label>
+      <button type="button" onClick={shareInfo} className={btn.secondary}>
+        <Share2 className="h-4 w-4" /> Condividi info su WhatsApp
+      </button>
 
-        {/* Quale partita chiudere: pillole con la data e lo stato (ultimi 30 giorni + giorno ufficiale) */}
-        <div className="space-y-2">
-          <p className="text-xs font-semibold text-slate-300">Partita</p>
-          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none" role="radiogroup" aria-label="Partita da chiudere">
-            {closingOptions.map((d) => {
-              const [y, m, dd] = d.split('-').map(Number);
-              const dt = new Date(y, m - 1, dd);
-              const selected = d === closingDate;
-              const archived = archivedDates.has(d);
-              const status = archived ? 'Archiviata' : d === activeDate ? 'Ufficiale' : 'Da chiudere';
+      {/* Formato e modulo */}
+      <div className="space-y-3 pt-4 border-t border-slate-800">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm font-semibold text-white">
+            Formato · {info.label} {fmt.formation}
+          </p>
+          <Link href={`/squadre?date=${date}`} className={textLink}>
+            Vai alle squadre <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+        {isArchived ? (
+          <p className="text-sm text-slate-400">Partita archiviata: il formato non si cambia più.</p>
+        ) : (
+          <MatchFormatPicker
+            date={date}
+            format={fmt.format}
+            formation={fmt.formation}
+            field={field}
+            hasTeams={Boolean(teamRecord?.team_white?.length)}
+            adminId={profile?.id || ''}
+          />
+        )}
+      </div>
+    </section>
+  );
+
+  const cashPanel = (
+    <section className={`${panel} ${visible('cash')} lg:sticky lg:top-36`} aria-label="Cassa e quote">
+      <h3 className="hidden lg:flex items-center gap-2 text-base font-semibold text-white">
+        <Coins className="h-4 w-4 text-emerald-400" /> Cassa e quote
+      </h3>
+      {/* Riepilogo */}
+      <div className="space-y-2">
+        <div className="flex items-baseline justify-between gap-3">
+          <p className="text-2xl font-bold text-white tabular-nums">
+            €{perHead(collected, 1)} <span className="text-sm font-medium text-slate-400">di €{perHead(totalCost, 1)}</span>
+          </p>
+          <p className="text-sm text-slate-300 tabular-nums">€{perHead(totalCost, headCount)} a testa</p>
+        </div>
+        <div className="h-2.5 rounded-full bg-slate-950 overflow-hidden" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
+          <div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{ width: `${progress}%` }} />
+        </div>
+        <p className="text-xs text-slate-400 tabular-nums">
+          {paidCount} su {payers.length} hanno pagato{unpaid.length ? ` · mancano ${unpaid.length}` : payers.length ? ' · tutto saldato' : ''}
+        </p>
+      </div>
+
+      {payers.length === 0 ? (
+        <p className="rounded-xl bg-slate-950/60 py-6 px-4 text-center text-sm text-slate-400">
+          Nessun titolare per questo giorno: le quote compaiono quando i giocatori si iscrivono.
+        </p>
+      ) : (
+        <>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setPayments(setAllPayments(date, payerIds, true, totalCost))}
+              disabled={unpaid.length === 0}
+              className={`${btnInline.primary} flex-1 sm:flex-none`}
+            >
+              <Check className="h-4 w-4" /> Tutti pagati
+            </button>
+            <button type="button" onClick={remindUnpaid} disabled={unpaid.length === 0} className={`${btnInline.secondary} flex-1 sm:flex-none`}>
+              <Send className="h-4 w-4" /> Sollecita
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                if (await askConfirm('Azzerare la cassa di questa partita? Tutti tornano "da saldare".')) {
+                  setPayments(resetMatchPayments(date, payerIds, totalCost));
+                }
+              }}
+              aria-label="Azzera la cassa"
+              title="Azzera la cassa"
+              className="p-2.5 rounded-xl text-slate-400 hover:text-rose-300 hover:bg-slate-800"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-950/60 p-1" role="radiogroup" aria-label="Filtro">
+            {(
+              [
+                [false, `Tutti (${payers.length})`],
+                [true, `Da saldare (${unpaid.length})`],
+              ] as const
+            ).map(([v, label]) => (
+              <button
+                key={String(v)}
+                type="button"
+                role="radio"
+                aria-checked={onlyUnpaid === v}
+                onClick={() => setOnlyUnpaid(v)}
+                className={`rounded-lg py-1.5 text-xs font-semibold transition-colors ${onlyUnpaid === v ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <ul className="rounded-xl bg-slate-950/50 divide-y divide-slate-800 overflow-hidden">
+            {(onlyUnpaid ? unpaid : payers).map((p) => {
+              const paid = payments.payments[p.id] === true;
               return (
-                <button
-                  key={d}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  onClick={() => setClosingDate(d)}
-                  className={`flex-shrink-0 flex flex-col items-center w-[4.75rem] py-2.5 rounded-2xl transition-colors ${
-                    selected ? 'bg-emerald-500 text-slate-950' : 'bg-slate-950/70 text-slate-300 hover:bg-slate-800'
-                  }`}
-                >
-                  <span className={`text-xs font-medium capitalize ${selected ? 'text-slate-900' : 'text-slate-400'}`}>
-                    {dt.toLocaleDateString('it-IT', { weekday: 'short' }).replace('.', '')}
-                  </span>
-                  <span className="text-xl font-bold leading-tight">{dd}</span>
-                  <span className={`text-[11px] ${selected ? 'text-slate-900' : 'text-slate-400'}`}>
-                    {dt.toLocaleDateString('it-IT', { month: 'short' }).replace('.', '')}
-                  </span>
-                  <span
-                    className={`mt-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
-                      selected
-                        ? 'bg-slate-950/15 text-slate-950'
-                        : archived
-                        ? 'bg-emerald-500/15 text-emerald-300'
-                        : d === activeDate
-                        ? 'bg-slate-700 text-white'
-                        : 'bg-amber-500/15 text-amber-300'
-                    }`}
+                <li key={p.id}>
+                  <button
+                    type="button"
+                    onClick={() => setPayments(togglePlayerPayment(date, p.id, payerIds, totalCost))}
+                    aria-pressed={paid}
+                    className="w-full flex items-center gap-3 px-3.5 py-2.5 text-left hover:bg-slate-800/60 transition-colors"
                   >
-                    {status}
-                  </span>
-                </button>
+                    <span className="h-8 w-8 flex-shrink-0 rounded-full bg-slate-800 flex items-center justify-center text-[11px] font-bold text-emerald-300">
+                      {initialsOf(p.name)}
+                    </span>
+                    <span className="flex-1 min-w-0 truncate text-sm text-slate-100">{p.name}</span>
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                        paid ? 'bg-emerald-500 text-slate-950' : 'bg-amber-500/15 text-amber-300'
+                      }`}
+                    >
+                      {paid ? <Check className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+                      {paid ? 'Pagato' : 'Da saldare'}
+                    </span>
+                  </button>
+                </li>
               );
             })}
-          </div>
-          <p className="text-[11px] text-slate-500">Il giorno ufficiale e le partite degli ultimi 30 giorni con squadre salvate.</p>
-        </div>
+            {onlyUnpaid && unpaid.length === 0 && <li className="px-4 py-4 text-center text-sm text-emerald-300">Hanno pagato tutti 🎉</li>}
+          </ul>
+        </>
+      )}
+    </section>
+  );
 
-        {isAlreadyClosed && !archiveSuccessMessage && (
-          <div className="p-3 bg-slate-800/60 border border-slate-700 text-slate-300 rounded-2xl text-xs font-semibold flex items-center gap-2">
-            <Check className="h-4 w-4 text-emerald-400" />
-            <span>
-              Partita già archiviata ({closingMatch?.score_white ?? 0} - {closingMatch?.score_black ?? 0}). Puoi correggere i dati e risalvare.{' '}
-              <Link href="/history" className={textLink}>Vai allo Storico <ArrowRight className="h-4 w-4" /></Link>
-            </span>
-          </div>
-        )}
-
-        {archiveSuccessMessage && (
-          <div className="p-3.5 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 rounded-2xl text-xs font-bold flex items-center gap-2 animate-in fade-in">
-            <Check className="h-4 w-4 text-emerald-400" />
-            <span>{archiveSuccessMessage}</span>
-          </div>
-        )}
-
-        {teams ? (
-          <>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              {([['⚪ Bianchi', teams.white], ['⚫ Neri', teams.black]] as const).map(([title, list]) => (
-                <div key={title} className="bg-slate-950 border border-slate-800 rounded-2xl p-3 space-y-1">
-                  <div className="text-xs font-bold text-slate-300">{title}</div>
-                  {list.map((p) => (
-                    <div key={p.id} className="truncate text-slate-200">{p.name}</div>
-                  ))}
-                </div>
-              ))}
-            </div>
-            <p className="text-xs text-slate-400">
-              {teams.fromArchive ? (
-                <>Squadre archiviate: per correggerle usa la matita nello <Link href="/history" className="text-emerald-400 underline">Storico</Link>.</>
-              ) : (
-                <>Squadre prese dalla sezione <Link href={`/squadre?date=${closingDate}`} className="text-emerald-400 underline">Squadre</Link>: se sono sbagliate correggile lì prima di salvare.</>
-              )}
-            </p>
-            <MatchResultFields fixedKeeper={fixedKeeper} value={result} onChange={setResult} white={teams.white} black={teams.black} mvpVotes={mvpVotes} />
-          </>
-        ) : (
-          <div className="rounded-2xl bg-slate-950/60 py-8 px-4 text-center space-y-3">
-            <p className="text-sm font-semibold text-slate-200">Squadre non ancora pronte</p>
-            <p className="text-sm text-slate-400 max-w-sm mx-auto">
-              Il risultato si salva sulle squadre: prima generale ({FORMAT_INFO[dayFormat(matchFormats, closingDate).format].label}) per questa partita.
-            </p>
-            <Link
-              href={`/squadre?date=${closingDate}`}
-              className={btn.primary}
-            >
-              Vai alle squadre <ArrowRight className="h-4 w-4" />
+  const resultPanel = (
+    <section className={`${panel} ${visible('result')}`} aria-label="Risultato e chiusura">
+      <h3 className="hidden lg:flex items-center gap-2 text-base font-semibold text-white">
+        <Trophy className="h-4 w-4 text-amber-400" /> Risultato e chiusura
+      </h3>
+      {isArchived && (
+        <p className="flex items-start gap-2 rounded-xl bg-slate-950/60 px-3.5 py-2.5 text-sm text-slate-300">
+          <Check className="h-4 w-4 flex-shrink-0 text-emerald-400 mt-0.5" />
+          <span>
+            Archiviata {archived.get(date)?.score_white ?? 0} – {archived.get(date)?.score_black ?? 0}: puoi correggere e risalvare.{' '}
+            <Link href="/history" className={textLink}>
+              Storico <ArrowRight className="h-4 w-4" />
             </Link>
+          </span>
+        </p>
+      )}
+      {teams ? (
+        <>
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            {(
+              [
+                ['Bianchi', teams.white, 'h-[9px] w-[33px] bg-white'],
+                ['Neri', teams.black, 'h-2.5 w-9 bg-slate-950 border border-slate-500'],
+              ] as const
+            ).map(([title, list, oval]) => (
+              <div key={title} className="rounded-xl bg-slate-950/60 p-3 space-y-1 min-w-0">
+                <p className="flex items-center gap-2 text-xs font-semibold text-slate-300">
+                  <span className={`rounded-full ${oval}`} aria-hidden="true" /> {title}
+                </p>
+                {list.map((p) => (
+                  <p key={p.id} className="truncate text-slate-200">
+                    {p.name}
+                  </p>
+                ))}
+              </div>
+            ))}
           </div>
-        )}
-
-        {/* CTA Salva & Archivia Partita (solo quando le squadre ci sono) */}
-        {teams && (
-        <div className="pt-2 flex justify-end">
-          <button
-            type="button"
-            onClick={handleArchiveMatch}
-            disabled={isArchiving || !canArchive}
-            className={btn.primary}
-          >
-            {isArchiving ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+          <p className="text-xs text-slate-500">
+            {teams.fromArchive ? (
+              <>Squadre archiviate: si correggono con la matita nello Storico.</>
             ) : (
-              <Trophy className="h-4 w-4" />
+              <>
+                Squadre prese da{' '}
+                <Link href={`/squadre?date=${date}`} className="text-emerald-400 underline">
+                  Squadre
+                </Link>
+                : se sono sbagliate correggile lì prima di salvare.
+              </>
             )}
-            <span>{isAlreadyClosed ? 'Aggiorna risultato' : 'Salva e archivia partita'}</span>
+          </p>
+          <MatchResultFields fixedKeeper={fixedKeeper} value={result} onChange={setResult} white={teams.white} black={teams.black} mvpVotes={mvpVotes} />
+          <button type="button" onClick={handleArchive} disabled={isArchiving || Boolean(validation.error)} className={`${btn.primary} sm:w-full`}>
+            {isArchiving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trophy className="h-4 w-4" />}
+            {isArchived ? 'Aggiorna risultato' : 'Salva e archivia partita'}
           </button>
+        </>
+      ) : (
+        <div className="rounded-xl bg-slate-950/60 py-8 px-4 text-center space-y-3">
+          <p className="text-sm font-semibold text-slate-200">Squadre non ancora pronte</p>
+          <p className="text-sm text-slate-400 max-w-sm mx-auto">Il risultato si salva sulle squadre: prima generale ({info.label}) per questa partita.</p>
+          <Link href={`/squadre?date=${date}`} className={btn.primary}>
+            Vai alle squadre <ArrowRight className="h-4 w-4" />
+          </Link>
         </div>
-        )}
+      )}
+    </section>
+  );
+
+  return (
+    <div className="space-y-4">
+      {/* 1. Selettore del giorno: tutto ciò che c'è sotto riguarda solo il giorno scelto */}
+      <div ref={selectorRef} className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none" role="radiogroup" aria-label="Partita">
+        {allDays.map((d) => {
+          const [, m, dd] = d.split('-').map(Number);
+          const dt = new Date(Number(d.slice(0, 4)), m - 1, dd);
+          const st = statusOf(d);
+          const selected = d === date;
+          const arch = archived.get(d);
+          const count = arch
+            ? (arch.team_white?.length || 0) + (arch.team_black?.length || 0)
+            : presences.filter((p) => p.date === d && p.status === 'confirmed').length;
+          const max = arch ? count : maxPlayersFor(matchFormats, d);
+          return (
+            <button
+              key={d}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              aria-label={`${formatItalianDate(d)}: ${st}, ${count} su ${max}`}
+              onClick={() => chooseDay(d)}
+              className={`flex-shrink-0 w-[5.25rem] rounded-2xl px-2 py-2.5 text-center transition-colors ${
+                selected ? 'bg-slate-800 ring-2 ring-emerald-500' : 'bg-slate-900 hover:bg-slate-800'
+              }`}
+            >
+              <span className="block text-xs font-medium capitalize text-slate-400">
+                {dt.toLocaleDateString('it-IT', { weekday: 'short' }).replace('.', '')}
+              </span>
+              <span className="block text-xl font-bold leading-tight text-white">{dd}</span>
+              <span className="block text-[11px] capitalize text-slate-500">{dt.toLocaleDateString('it-IT', { month: 'short' }).replace('.', '')}</span>
+              <span className={`mt-1.5 block rounded-full px-1.5 py-0.5 text-[10px] font-semibold whitespace-nowrap ${STATUS_TONE[st]}`}>{st}</span>
+              <span className={`mt-1 block text-[11px] font-semibold tabular-nums ${count >= max && max > 0 ? 'text-emerald-400' : 'text-slate-500'}`}>
+                {count}/{max}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Il giorno scelto in una riga */}
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+        <h2 className="text-lg font-semibold text-white capitalize">{formatItalianDate(date)}</h2>
+        <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${STATUS_TONE[status]}`}>{status}</span>
+        <span className="text-slate-400">
+          · {time} · {field?.name || location} · {info.label}
+        </span>
+      </div>
+
+      {/* 2. Le tre schede (telefono e tablet); su PC i pannelli sono affiancati */}
+      <div className="lg:hidden grid grid-cols-3 gap-1 rounded-2xl bg-slate-900 p-1" role="tablist" aria-label="Sezioni della partita">
+        {TABS.map((t) => {
+          const Icon = t.icon;
+          const active = tab === t.id;
+          const badge = t.id === 'cash' && unpaid.length > 0 ? unpaid.length : null;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setTab(t.id)}
+              className={`relative flex flex-col items-center gap-0.5 rounded-xl py-2 text-xs font-semibold transition-colors ${
+                active ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              {t.label}
+              {badge !== null && (
+                <span
+                  className={`absolute top-1 right-2 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold flex items-center justify-center ${
+                    active ? 'bg-slate-950 text-emerald-300' : 'bg-amber-500 text-slate-950'
+                  }`}
+                >
+                  {badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] lg:gap-6 lg:items-start space-y-4 lg:space-y-0">
+        <div className="space-y-4 lg:space-y-6 min-w-0">
+          {orgPanel}
+          {resultPanel}
+        </div>
+        {cashPanel}
       </div>
     </div>
   );

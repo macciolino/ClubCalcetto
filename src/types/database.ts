@@ -223,6 +223,8 @@ export interface Match {
   team_black?: MatchTeamPlayer[];
   /** Result already applied to each player's W/D/L counters (makes re-saving a result safe) */
   profile_effects?: Record<string, MatchOutcome>;
+  /** Useful info for this match (e.g. "portare maglia bianca e nera", "cancello sul retro"), shared on WhatsApp */
+  notes?: string;
   /** true only when an admin set a custom cost / time for THIS match (otherwise the standard settings apply) */
   cost_override?: boolean;
   time_override?: boolean;

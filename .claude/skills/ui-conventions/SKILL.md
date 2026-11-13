@@ -75,6 +75,15 @@ description: ClubCalcetto UI conventions - theme, shared components (tables, dro
 - Dropdown menus ("⋯", account menu): `menu.panel`, `menu.item`, `menu.danger`, `menu.divider`.
 - Never hand-write a new green CTA class string.
 
+## Partita della settimana (`TabOverviewMatch.tsx`, Impostazioni → Partita)
+- Day selector on top (calendar days + matches of the last 30 days): status badge Ufficiale / In programma / Da chiudere /
+  Archiviata and sign-ups X/N. Everything below is ONLY the chosen day (no other date pickers on the page).
+- Phone/tablet: 3 tabs Organizzazione (official-day switch, field, time, cost, notes + WhatsApp share, format/formation),
+  Cassa (summary bar, Tutti pagati, Sollecita on WhatsApp, reset, filter Tutti/Da saldare, whole row toggles paid),
+  Risultato (teams, MatchResultFields with −/+ steppers, Salva e archivia). Choosing a past/archived day opens Risultato.
+- ≥1024px: no tabs; Organizzazione + Risultato on the left, Cassa sticky on the right.
+- Match `notes` field (shared in the WhatsApp info).
+
 ## Settings layout (`/impostazioni`)
 
 - md+: sticky sidebar (`grid-cols-[240px_1fr]`) grouped Personali / Amministrazione, active item emerald; content on the right.

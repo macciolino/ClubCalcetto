@@ -33,7 +33,7 @@ interface SectionDef {
 const SECTIONS: SectionDef[] = [
   { id: 'notifiche', label: 'Notifiche', description: 'Le notifiche su questo dispositivo', icon: Bell, access: 'all', group: 'Tuo account' },
   { id: 'account', label: 'Account', description: 'Esci da tutti i dispositivi, disattiva o elimina l’account', icon: UserCog, access: 'all', group: 'Tuo account' },
-  { id: 'partita', label: 'Partita della settimana', description: 'Giorno ufficiale, cassa, chiusura partita', icon: Trophy, access: 'admin', group: 'Gestione partita' },
+  { id: 'partita', label: 'Partita della settimana', description: 'Un giorno alla volta: organizzazione, cassa e risultato', icon: Trophy, access: 'admin', group: 'Gestione partita' },
   { id: 'campi', label: 'Campi e costi', description: 'Campi, costo di ogni campo, orario e costo standard', icon: MapPin, access: 'admin', group: 'Club' },
   { id: 'regole', label: 'Regole di gioco', description: 'Blocco ritiri e portiere', icon: Ruler, access: 'admin', group: 'Club' },
   { id: 'parametri', label: 'Parametri e forma', description: 'Parametri dell’ottagono e stato forma', icon: BarChart3, access: 'admin', group: 'Club' },
