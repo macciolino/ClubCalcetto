@@ -132,3 +132,22 @@ export function getVisibleHistoryYear(now: Date = new Date()): number {
   const year = get('year');
   return get('month') === 12 && get('day') === 31 && get('hour') % 24 >= 22 ? year + 1 : year;
 }
+
+/** Long date in the app language: "Giovedì 12 Novembre 2026" / "Thursday 12 November 2026". */
+export function formatLongDate(dateStr: string, locale: string = 'it'): string {
+  if (!dateStr) return '';
+  if (locale !== 'en') return formatItalianDate(dateStr);
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+/** Short weekday / month for date cards in the app language ("gio" / "Thu", "nov" / "Nov"). */
+export function shortDayParts(dateStr: string, locale: string = 'it'): { weekday: string; month: string } {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const d = new Date(year, month - 1, day);
+  const tag = locale === 'en' ? 'en-GB' : 'it-IT';
+  return {
+    weekday: d.toLocaleDateString(tag, { weekday: 'short' }).replace('.', ''),
+    month: d.toLocaleDateString(tag, { month: 'short' }).replace('.', ''),
+  };
+}

@@ -6,7 +6,9 @@ import { saveDayFormat } from '@/lib/firebase/firestoreService';
 import { requestTeamsCheck } from '@/lib/services/notificationService';
 import { askConfirm, notify } from '@/components/ui/Feedback';
 import { FORMAT_INFO, MATCH_FORMATS, MatchFormat, fieldHostsFormat } from '@/lib/utils/matchFormat';
-import { formatItalianDate } from '@/lib/utils/dateUtils';
+import { formatLongDate } from '@/lib/utils/dateUtils';
+import { useTranslations } from 'next-intl';
+import { useLocaleSetting } from '@/i18n/I18nProvider';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 
 /**
@@ -33,6 +35,9 @@ export function MatchFormatPicker({
 }) {
   const [busy, setBusy] = useState(false);
   const info = FORMAT_INFO[format];
+  const t = useTranslations('format');
+  const { locale } = useLocaleSetting();
+  const fmtDate = (d: string) => formatLongDate(d, locale);
 
   const change = async (next: MatchFormat, nextFormation?: string) => {
     if (busy || !date) return;
@@ -43,12 +48,10 @@ export function MatchFormatPicker({
       const n = FORMAT_INFO[next].players;
       const more = n > info.players;
       const msg = [
-        `Passare a ${FORMAT_INFO[next].label} per ${formatItalianDate(date)}?`,
-        more
-          ? `I primi ${n} iscritti diventano titolari: chi entra dalla lista d'attesa riceve la notifica.`
-          : `Restano titolari i primi ${n} iscritti: gli altri tornano in lista d'attesa.`,
-        hasTeams ? 'Le squadre già fatte vanno rigenerate.' : '',
-        field && !fieldHostsFormat(field, next) ? `Attenzione: il campo "${field.name}" non ha il costo per il ${FORMAT_INFO[next].label}.` : '',
+        t('confirmSwitch', { label: FORMAT_INFO[next].label, date: fmtDate(date) }),
+        more ? t('moreStarters', { n }) : t('fewerStarters', { n }),
+        hasTeams ? t('regenerate') : '',
+        field && !fieldHostsFormat(field, next) ? t('fieldMissing', { name: field.name, label: FORMAT_INFO[next].label }) : '',
       ]
         .filter(Boolean)
         .join('\n');
@@ -58,10 +61,10 @@ export function MatchFormatPicker({
     try {
       await saveDayFormat(date, next, target, adminId);
       if (!sameFormat) requestTeamsCheck(date); // titolari ricalcolati: notifiche a chi entra
-      notify(sameFormat ? `Modulo ${target}` : `Formato ${FORMAT_INFO[next].label} per ${formatItalianDate(date)}`);
+      notify(sameFormat ? t('formationSaved', { formation: target }) : t('formatSaved', { label: FORMAT_INFO[next].label, date: fmtDate(date) }));
     } catch (err) {
       console.warn('[Formato] salvataggio non riuscito:', err);
-      notify('Salvataggio non riuscito, riprova.');
+      notify(t('saveFailed'));
     } finally {
       setBusy(false);
     }
@@ -69,7 +72,7 @@ export function MatchFormatPicker({
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-4 gap-1.5 rounded-xl bg-app/60 p-1" role="radiogroup" aria-label="Formato della partita">
+      <div className="grid grid-cols-4 gap-1.5 rounded-xl bg-app/60 p-1" role="radiogroup" aria-label={t('radioAria')}>
         {MATCH_FORMATS.map((f) => {
           const active = f === format;
           return (
@@ -85,7 +88,7 @@ export function MatchFormatPicker({
               }`}
             >
               <span className="block text-sm font-semibold">{FORMAT_INFO[f].label}</span>
-              <span className={`block text-[10px] tabular-nums ${active ? 'text-slate-900' : 'text-muted'}`}>{FORMAT_INFO[f].players} giocatori</span>
+              <span className={`block text-[10px] tabular-nums ${active ? 'text-slate-900' : 'text-muted'}`}>{t('players', { count: FORMAT_INFO[f].players })}</span>
             </button>
           );
         })}
@@ -93,7 +96,7 @@ export function MatchFormatPicker({
 
       {info.formations.length > 1 && (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-secondary">Modulo</span>
+          <span className="text-xs text-secondary">{t('formation')}</span>
           {info.formations.map((m) => (
             <button
               key={m}
@@ -115,8 +118,7 @@ export function MatchFormatPicker({
       {field && !fieldHostsFormat(field, format) && (
         <p className="flex items-start gap-2 text-xs text-warning">
           <AlertTriangle className="h-4 w-4 flex-shrink-0 text-warning" />
-          Il campo &quot;{field.name}&quot; non ha il costo per il {info.label}: si usa il costo standard del club. Aggiungilo in
-          Impostazioni → Campi e costi.
+          {t('fieldWarning', { name: field.name, label: info.label })}
         </p>
       )}
     </div>

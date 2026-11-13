@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { PLAYERS, loginAsAdmin, seedMatchDay, waitForDoc } from './seed';
+import { PLAYERS, db, loginAsAdmin, seedMatchDay, waitForDoc } from './seed';
 
 /**
  * Admin journeys in Impostazioni → Partita della settimana (phone layout: master day selector + 3 tabs).
@@ -69,5 +69,28 @@ test.describe('Partita della settimana (admin, telefono)', () => {
     // la pagina mostra la partita come archiviata
     await expect(page.getByRole('button', { name: 'Aggiorna risultato' })).toBeVisible();
     await expect(page.getByRole('radio', { name: /Archiviata/ })).toBeVisible();
+  });
+});
+
+test.describe('Partita della settimana in inglese', () => {
+  test('stati, schede, cassa e chiusura tradotti', async ({ page }) => {
+    const { date } = await seedMatchDay();
+    await db.doc('profiles/p-1').update({ locale: 'en' });
+    await loginAsAdmin(page);
+    await page.goto('/settings?sezione=partita');
+    await page.getByRole('radio', { name: /To close, 10 of 10/ }).click();
+    await expect(page.getByRole('tab', { name: /Result/ })).toHaveAttribute('aria-selected', 'true');
+    await page.getByRole('tab', { name: /Cash/ }).click();
+    const row = page.getByRole('button', { name: new RegExp(PLAYERS[1].name) });
+    await expect(row).toContainText('To pay');
+    await row.click();
+    await expect(row).toContainText('Paid');
+    await expect(page.getByText(/1 of 10 have paid/)).toBeVisible();
+    await page.getByRole('tab', { name: /Result/ }).click();
+    await page.getByRole('button', { name: 'One goal more for the Whites' }).click();
+    await expect(page.getByText('Whites win')).toBeVisible();
+    await page.getByLabel('Match MVP').selectOption(PLAYERS[0].id);
+    await page.getByRole('button', { name: 'Save and archive match' }).click();
+    await waitForDoc(`matches/${date}`, (d) => d?.status === 'completed' && d?.score_white === 1);
   });
 });

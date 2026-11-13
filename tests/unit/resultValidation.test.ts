@@ -13,7 +13,7 @@ const result = (scoreWhite: number, scoreBlack: number, scorers: MatchResultValu
 describe('Risultato e marcatori', () => {
   it('marcatori che tornano con il risultato: nessun errore né avviso', () => {
     const v = validateScorers(result(3, 2, [{ player_id: 'w1', goals: 2 }, { player_id: 'w2', goals: 1 }, { player_id: 'b1', goals: 2 }]), white, black);
-    expect(v).toEqual({ error: null, warnings: [] });
+    expect(v).toMatchObject({ error: null, warnings: [], issues: { error: null, warnings: [] } });
   });
 
   it('risultato senza marcatori: si può salvare', () => {
@@ -29,6 +29,7 @@ describe('Risultato e marcatori', () => {
   it('più gol dei marcatori che nel risultato: salvataggio bloccato', () => {
     const v = validateScorers(result(1, 0, [{ player_id: 'w1', goals: 2 }]), white, black);
     expect(v.error).toMatch(/superano i gol del risultato finale/);
+    expect(v.issues.error).toEqual({ kind: 'tooMany', scorerGoals: 2, totalGoals: 1 });
   });
 
   it('marcatori dei Bianchi oltre i gol dei Bianchi (es. autogol): avviso, non errore', () => {
@@ -36,6 +37,7 @@ describe('Risultato e marcatori', () => {
     expect(v.error).toBeNull();
     expect(v.warnings).toHaveLength(1);
     expect(v.warnings[0]).toMatch(/Bianchi/);
+    expect(v.issues.warnings).toEqual([{ kind: 'teamExcess', team: 'white', scorerGoals: 2, teamGoals: 1 }]);
   });
 
   it('marcatori dei Neri oltre i gol dei Neri: avviso sui Neri', () => {
