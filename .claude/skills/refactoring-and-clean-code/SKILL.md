@@ -29,7 +29,7 @@ description: Architectural and code quality guidelines for Next.js, TypeScript, 
 - **UI primitives:** `src/components/ui/` — `buttons.ts` (`btn`, `btnInline`, `textLink`, `menu`), `Sheet.tsx` (every modal),
   `Feedback.tsx` (`notify`, `askConfirm`), `Skeleton.tsx`; plus `FormDots`, `CollapsibleCard`, `StatRatingFields`. Add new badges / cards / footers here.
 - **Known monoliths to split gradually** (only when touching them, never as a risky big-bang rewrite on real data):
-  `src/app/squadre/page.tsx` (~1100 lines), `src/app/login/page.tsx` (~830), `src/components/admin/TabOverviewMatch.tsx` (~650),
-  `src/app/giocatori/page.tsx`, `src/components/admin/AdminSections.tsx`.
+  `src/app/squadre/page.tsx` (~1060 lines), `src/app/login/page.tsx` (~830), `src/components/admin/TabOverviewMatch.tsx` (~775),
+  `src/app/giocatori/page.tsx` (~740), `src/components/admin/AdminSections.tsx` (~350).
 - **Refactoring safety:** behaviour must stay identical (production data is real). Before splitting, make sure tests cover the
   logic being moved; then follow the `pre-commit-testing-gate` skill.
