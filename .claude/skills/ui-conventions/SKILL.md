@@ -23,6 +23,16 @@ description: ClubCalcetto UI conventions - theme, shared components (tables, dro
   drag bar (`h-1.5 w-10 rounded-full bg-slate-700`), title + X; backdrop `animate-fade`.
 - Older cards were `rounded-3xl shadow-xl` with `font-black uppercase` titles: replaced by the style below (keep it that way).
 
+
+### Light / Dark (2026-11-13, in progress)
+- `next-themes` (`src/components/theme/ThemeProvider.tsx`): class `light`/`dark` on <html>, default = system, saved in
+  localStorage `cc_theme`. Semantic tokens in `globals.css` (`:root` = light, `.dark` = dark, R G B channels) mapped in Tailwind:
+  `bg-app`, `bg-card`, `bg-card-hover`, `text-primary`, `text-secondary`, `border-line`, `bg-accent`, `text-on-accent`
+  (text on green, dark in both themes), `text-accent-text` (green for small text/links: #047857 light, #34D399 dark).
+  Contrasts checked by `tests/unit/themeTokens.test.ts`.
+- New/converted components use the tokens, never fixed slate colors. Until Step 3 · Block 1 the app still LOOKS dark for
+  everyone (html/body background and `color-scheme: dark` fixed in globals.css, `enableColorScheme={false}`).
+
 ## Current style (approved 2026-11-11, applied to every page)
 
 - Font Inter (next/font, `--font-inter`, global). Page title on the page, no header card: `h1 text-2xl sm:text-3xl font-bold`,

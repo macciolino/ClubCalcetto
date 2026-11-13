@@ -7,6 +7,38 @@
   --foreground: #f8fafc;
 }
 
+/*
+ * Semantic design tokens (Light / Dark). Values are R G B channels so Tailwind can add opacity:
+ * bg-card, bg-card/60, text-primary, border-line… (see tailwind.config.ts).
+ * Light = :root (default when the system is light), Dark = .dark (class set by next-themes).
+ * The components still use the fixed dark palette: they move to these tokens in Step 3.
+ */
+:root {
+  --bg-app: 248 250 252;          /* #F8FAFC */
+  --bg-card: 255 255 255;         /* #FFFFFF */
+  --bg-card-hover: 241 245 249;   /* #F1F5F9 */
+  --text-primary: 15 23 42;       /* #0F172A */
+  --text-secondary: 71 85 105;    /* #475569 — 7.6:1 su bianco */
+  --border-color: 226 232 240;    /* #E2E8F0 */
+  --accent-primary: 5 150 105;    /* #059669 */
+  --accent-contrast: 15 23 42;    /* testo sopra il verde: #0F172A (4.8:1; il bianco sarebbe 3.8:1, non basta) */
+  --accent-text: 4 120 87;        /* #047857 — verde per testi piccoli e link su sfondo chiaro (5.5:1) */
+}
+
+.dark {
+  --bg-app: 11 15 25;             /* #0B0F19 */
+  --bg-card: 19 28 46;            /* #131C2E */
+  --bg-card-hover: 30 41 59;      /* #1E293B */
+  --text-primary: 241 245 249;    /* #F1F5F9 */
+  --text-secondary: 148 163 184;  /* #94A3B8 */
+  --border-color: 30 41 59;       /* #1E293B */
+  --accent-primary: 16 185 129;   /* #10B981 */
+  --accent-contrast: 11 15 25;    /* #0B0F19 */
+  --accent-text: 52 211 153;      /* #34D399 */
+}
+
+/* TEMPORANEO fino alla conversione dei componenti (Step 3 · Blocco 1): sfondo e controlli nativi restano scuri
+   anche con il tema chiaro, così nessuno vede pagine a metà. Poi diventeranno var(--bg-app) e color-scheme per tema. */
 html {
   background-color: #0B0F19 !important;
   color-scheme: dark;

@@ -7,6 +7,7 @@ import { AuthProvider } from '@/lib/context/AuthContext';
 import { Navbar } from '@/components/Navbar';
 import { FeedbackHost } from '@/components/ui/Feedback';
 import { I18nProvider } from '@/i18n/I18nProvider';
+import { ThemeProvider } from '@/components/theme/ThemeProvider';
 
 import { SplashScreen, SPLASH_GUARD } from '@/components/SplashScreen';
 export const metadata: Metadata = {
@@ -34,21 +35,24 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="it" className={`dark ${inter.variable}`} suppressHydrationWarning style={{ backgroundColor: '#0B0F19', colorScheme: 'dark' }}>
+    // La classe "dark" / "light" su <html> la mette next-themes prima del primo disegno (niente lampo)
+    <html lang="it" className={inter.variable} suppressHydrationWarning style={{ backgroundColor: '#0B0F19', colorScheme: 'dark' }}>
       <body className="min-h-screen bg-slate-950 text-slate-100 flex flex-col antialiased selection:bg-emerald-500 selection:text-slate-950 body-safe-bottom px-safe" suppressHydrationWarning style={{ backgroundColor: '#0B0F19' }}>
         {/* Schermata di avvio: nascosta subito se già vista in questa sessione o sul login */}
         <script dangerouslySetInnerHTML={{ __html: SPLASH_GUARD }} />
         <SplashScreen />
-        {/* Lingua (italiano / inglese) scelta nel browser: URL puliti, pagine statiche */}
-        <I18nProvider>
-          <AuthProvider>
-            <Navbar />
-            <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-6">
-              {children}
-            </main>
-            <FeedbackHost />
-          </AuthProvider>
-        </I18nProvider>
+        {/* Tema (sistema / chiaro / scuro) e lingua (italiano / inglese), scelti nel browser */}
+        <ThemeProvider>
+          <I18nProvider>
+            <AuthProvider>
+              <Navbar />
+              <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-6">
+                {children}
+              </main>
+              <FeedbackHost />
+            </AuthProvider>
+          </I18nProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

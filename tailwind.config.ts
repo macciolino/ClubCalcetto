@@ -16,6 +16,21 @@ const config: Config = {
         },
         background: "var(--background)",
         foreground: "var(--foreground)",
+        // Token semantici Light / Dark (globals.css): bg-app, bg-card, bg-card-hover, text-primary, text-secondary,
+        // border-line, bg-accent / text-accent, text-on-accent (testo sopra il verde), text-accent-text (link e testi verdi piccoli)
+        app: "rgb(var(--bg-app) / <alpha-value>)",
+        card: {
+          DEFAULT: "rgb(var(--bg-card) / <alpha-value>)",
+          hover: "rgb(var(--bg-card-hover) / <alpha-value>)",
+        },
+        primary: "rgb(var(--text-primary) / <alpha-value>)",
+        secondary: "rgb(var(--text-secondary) / <alpha-value>)",
+        line: "rgb(var(--border-color) / <alpha-value>)",
+        accent: {
+          DEFAULT: "rgb(var(--accent-primary) / <alpha-value>)",
+          text: "rgb(var(--accent-text) / <alpha-value>)",
+        },
+        "on-accent": "rgb(var(--accent-contrast) / <alpha-value>)",
         pitch: {
           dark: "#14532d",
           DEFAULT: "#15803d",
