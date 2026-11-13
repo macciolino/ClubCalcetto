@@ -7,31 +7,28 @@ import { DeletionFeedbackCard } from '@/components/admin/DeletionFeedbackCard';
 import { DeactivatedAccountsList } from '@/components/admin/DeactivatedAccountsList';
 import { manageAccountAsSuperAdmin } from '@/lib/services/accountService';
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { useAuth } from '@/lib/context/AuthContext';
 import { AppSettings, StatCategory, Profile, Presence, SportField, GeneratedTeamRecord } from '@/types/database';
 import { TabOverviewMatch } from '@/components/admin/TabOverviewMatch';
 import { AdminsCard } from '@/components/admin/AdminsCard';
 import { TabClubConfigFields } from '@/components/admin/TabClubConfigFields';
 import { NotificationSettingsCard } from '@/components/admin/NotificationSettingsCard';
-import { 
-  subscribeProfiles, 
-  subscribeStatCategories, 
+import {
+  subscribeProfiles,
+  subscribeStatCategories,
   subscribePresencesRange,
-  saveProfileDoc, 
-  deleteProfileDoc, 
+  saveProfileDoc,
   saveOfficialMatchDateDoc,
   subscribeAppSettings,
   saveAppSettingsDoc,
   saveStandardCostsDoc,
-  subscribeGeneratedTeams
+  subscribeGeneratedTeams,
 } from '@/lib/firebase/firestoreService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
-import { 
-  getStoredPlayers, 
-  removeStoredPlayer, 
-  updateStoredPlayer, 
-  saveStoredPlayers 
+import {
+  getStoredPlayers,
+  updateStoredPlayer,
+  saveStoredPlayers,
 } from '@/lib/services/playerService';
 import { 
   getOfficialMatchDate, 
@@ -52,18 +49,6 @@ import {
   subscribeSportFields 
 } from '@/lib/services/fieldService';
 import { getCalendarDays } from '@/lib/utils/dateUtils';
-import { 
-  ShieldAlert, 
-  LayoutDashboard, 
-  Users, 
-  Settings, 
-  Loader2, 
-  ArrowLeft,
-  Sparkles,
-  Trophy,
-  Coins
-} from 'lucide-react';
-
 
 /** Admin sections shown in Impostazioni (each one was a part of the old /admin page). */
 export type AdminSection = 'partita' | 'campi' | 'regole' | 'parametri' | 'notifiche-club' | 'accessi';
@@ -71,7 +56,6 @@ export type AdminSection = 'partita' | 'campi' | 'regole' | 'parametri' | 'notif
 export function AdminSections({ section }: { section: AdminSection }) {
   const { user, profile, isAdmin, isSuperAdmin, isLoading } = useAuth();
   const [mounted, setMounted] = useState(false);
-
 
   // Stato Dati Globali
   const [upcomingDays] = useState(() => getCalendarDays());
@@ -83,12 +67,10 @@ export function AdminSections({ section }: { section: AdminSection }) {
   const [appSettings, setAppSettingsState] = useState(() => getAppSettings());
   const [generatedTeams, setGeneratedTeams] = useState<GeneratedTeamRecord | null>(null);
 
-
   // Email Test State
 
   // 1. ISOLAMENTO RIGIDO: Controllo autorizzazione amministratore
   const isStrictAdmin = Boolean(mounted && !isLoading && user && (profile?.role === 'admin' || isAdmin));
-
 
   // 2. Sottoscrizioni e Caricamento Iniziale
   useEffect(() => {
@@ -178,6 +160,8 @@ export function AdminSections({ section }: { section: AdminSection }) {
       unsubPres();
       unsubTeams();
     };
+    // Si riascolta solo quando cambia la data: i giorni del calendario derivano da oggi e non cambiano durante l'uso
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeDate]);
 
   // Se non admin o in caricamento, mostra esclusivamente spinner
@@ -298,8 +282,6 @@ export function AdminSections({ section }: { section: AdminSection }) {
     });
     saveStandardCostsDoc(costs).catch((err) => console.warn('[Impostazioni] costi per formato non salvati:', err));
   };
-
-
 
   const configProps = {
     fields,

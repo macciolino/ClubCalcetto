@@ -1,8 +1,6 @@
 'use client';
 
-import { StatCategory, Profile, STAT_DETAILS } from '@/types/database';
-import { getStoredPlayers, saveStoredPlayers } from './playerService';
-import { saveStatCategoryDoc, deleteStatCategoryDoc } from '@/lib/firebase/firestoreService';
+import { StatCategory } from '@/types/database';
 
 export const DEFAULT_BASE_CATEGORIES: StatCategory[] = [
   { id: '1', name: 'Velocità', label: 'Velocità / Scatto breve', default_value: 7 },

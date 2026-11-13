@@ -66,3 +66,8 @@ The menu item "Admin" points to `/impostazioni?sezione=partita`.
 - `src/proxy.ts` - middleware (cookie-based routing only; real security is in `firestore.rules`)
 - `firestore.rules` + `scripts/test-rules.mjs`; `scripts/make-icons.mjs` (icons generated from `assets/`)
 - `public/firebase-messaging-sw.js` - push service worker
+
+## Checks before pushing
+- `npx tsc --noEmit`, `npm run lint` (ESLint 9 flat config `eslint.config.mjs` = Next core-web-vitals + TypeScript;
+  must stay at 0 errors — set-state-in-effect and `any` are warnings on purpose), `npm run build`,
+  `npm run test:rules` (Firestore emulator).

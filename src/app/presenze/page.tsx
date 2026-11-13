@@ -34,10 +34,6 @@ import {
 } from '@/lib/utils/dateUtils';
 import { PresenceCard } from '@/components/PresenceCard';
 import {
-  CalendarDays,
-  Trophy,
-  Users,
-  Sparkles,
   ArrowRight,
   Crown,
   Lock,

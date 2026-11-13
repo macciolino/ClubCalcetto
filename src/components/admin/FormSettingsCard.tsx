@@ -5,7 +5,6 @@ import { saveAppSettingsDoc } from '@/lib/firebase/firestoreService';
 import { useFormSettings } from '@/lib/hooks/useForms';
 import {
   FORM_GOALS_MIN,
-  FORM_GOALS_MIN_DEFENDER,
   FORM_PENALTY_SAVE_POINTS,
   FORM_PENALTY_SAVE_MAX,
   FORM_GOALS_POINTS,
@@ -216,7 +215,7 @@ export function FormSettingsCard({ show = 'form' }: { show?: 'form' | 'keeper' }
                 </li>
                 <li>
                   Sopra zero il giocatore è <strong>🔥 in forma</strong> (i valori salgono), sotto zero è <strong>❄️ fuori forma</strong>{' '}
-                  (i valori scendono un po').
+                  (i valori scendono un po&apos;).
                 </li>
                 <li>
                   Si aggiunge (o si toglie) a <strong>tutti i parametri</strong> e all&apos;<strong>OVR</strong>, sempre tra 1 e 10,

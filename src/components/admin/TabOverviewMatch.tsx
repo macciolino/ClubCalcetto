@@ -27,24 +27,16 @@ import {
   resetMatchPayments,
   subscribeMatchPayments 
 } from '@/lib/services/paymentService';
-import { 
-  Trophy, 
-  Users, 
-  CheckCircle2, 
-  Coins, 
-  Clock, 
-  Check, 
-  AlertCircle, 
-  ChevronRight, 
-  Star, 
-  ArrowRight, 
-  Plus, 
-  Trash2, 
-  RotateCcw, 
+import {
+  Trophy,
+  Coins,
+  Clock,
+  Check,
+  ArrowRight,
+  RotateCcw,
   Loader2,
   Calendar,
-  DollarSign,
-  ChevronDown
+  ChevronDown,
 } from 'lucide-react';
 import { btn, textLink } from '@/components/ui/buttons';
 
@@ -165,6 +157,8 @@ export function TabOverviewMatch({
       unsub();
       window.removeEventListener('clubcalcetto_payments_changed', handlePaymentsChanged);
     };
+    // Basta il numero dei titolari: l'elenco è un array nuovo a ogni render e farebbe riascoltare all'infinito
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeDate, starterIds.length, totalMatchCost]);
 
   // Conteggio Pagamenti

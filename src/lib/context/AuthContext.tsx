@@ -276,6 +276,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Sessione scaduta (30 giorni): esce e torna al login con un avviso
+  const expireSession = async () => {
+    try {
+      await firebaseSignOut(firebaseAuth);
+    } catch (e) {
+      console.warn('Firebase signOut error:', e);
+    }
+    setUser(null);
+    setProfile(null);
+    setRoutingCookies(null);
+    setIsLoading(false);
+    if (!window.location.pathname.startsWith('/login')) window.location.href = '/login?expired=1';
+  };
+
   useEffect(() => {
     if (!isFirebaseConfigured) {
       setIsLoading(false);
@@ -312,7 +326,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       clearInterval(timer);
       document.removeEventListener('visibilitychange', onVisible);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   // Keep the profile in sync when the local players cache changes (e.g. an admin edits stats)
@@ -425,19 +439,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Sessione scaduta (30 giorni): esce e torna al login con un avviso
-  const expireSession = async () => {
-    try {
-      await firebaseSignOut(firebaseAuth);
-    } catch (e) {
-      console.warn('Firebase signOut error:', e);
-    }
-    setUser(null);
-    setProfile(null);
-    setRoutingCookies(null);
-    setIsLoading(false);
-    if (!window.location.pathname.startsWith('/login')) window.location.href = '/login?expired=1';
-  };
 
   // Logout: esce da TUTTI i dispositivi (il server revoca le sessioni e lo segnala agli altri, che tornano al login)
   const signOut = async () => {

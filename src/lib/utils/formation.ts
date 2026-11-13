@@ -23,37 +23,4 @@ export function getShortPlayerName(fullName: string): string {
   return `${first} ${second.charAt(0).toUpperCase()}.`;
 }
 
-/**
- * Coordinate ottimizzate rigorosamente per la visualizzazione mobile (smartphone):
- * Formazione A ROMBO (1-1-2-1):
- * - Portiere vicino alla riga di porta
- * - Difensore centrale a debita distanza
- * - Due Esterni larghi sulle fasce (SX e DX)
- * - Punta al centro (x = 50), come portiere e difensore
- * Tutto è simmetrico rispetto all'asse centrale verticale del campo (x = 50) e le due squadre sono
- * speculari rispetto alla linea di metà campo (y bianca + y nera = 100). Le punte restano distanziate
- * in verticale (42 e 58) perché le due card non si sovrappongano a centrocampo.
- */
-export const WHITE_TEAM_COORDINATES: PlayerPitchPosition[] = [
-  { x: 50, y: 7.5, roleLabel: 'POR' },    // Portiere (in alto vicino alla porta)
-  { x: 50, y: 22, roleLabel: 'DIF' },     // Difensore centrale
-  { x: 19, y: 33, roleLabel: 'EST SX' }, // Esterno Sinistro largo
-  { x: 81, y: 33, roleLabel: 'EST DX' }, // Esterno Destro largo
-  { x: 50, y: 42, roleLabel: 'PUN' },     // Punta centrale
-];
-
-export const BLACK_TEAM_COORDINATES: PlayerPitchPosition[] = [
-  { x: 50, y: 92.5, roleLabel: 'POR' },   // Portiere (in basso vicino alla porta)
-  { x: 50, y: 78, roleLabel: 'DIF' },     // Difensore centrale
-  { x: 19, y: 67, roleLabel: 'EST SX' }, // Esterno Sinistro largo
-  { x: 81, y: 67, roleLabel: 'EST DX' }, // Esterno Destro largo
-  { x: 50, y: 58, roleLabel: 'PUN' },     // Punta centrale
-];
-
-/**
- * Ritorna le coordinate rigide della formazione a rombo 1-1-2-1
- * senza jitter casuali che possono provocare sovrapposizioni visive
- */
-export function getOrganicCoordinates(base: PlayerPitchPosition[], _seed = 0): PlayerPitchPosition[] {
-  return base;
-}
+// Le posizioni in campo di ogni formato e modulo sono in lib/utils/matchFormat.ts (FORMATIONS).

@@ -31,7 +31,6 @@ import { btnInline } from '@/components/ui/buttons';
 
 const DEFAULT_CATEGORIES: StatCategory[] = DEFAULT_BASE_CATEGORIES;
 
-
 export default function GiocatoriPage() {
   const { user, profile, isAdmin, isSuperAdmin } = useAuth();
   const [mounted, setMounted] = useState(false);
@@ -122,7 +121,7 @@ export default function GiocatoriPage() {
     setIsModalOpen(true);
   };
 
-  const handlePlayerSaved = (saved: Profile) => {
+  const handlePlayerSaved = () => {
     setPlayers(getStoredPlayers());
   };
 
@@ -245,8 +244,8 @@ ${link}`;
       { key: 'played', icon: '📅', title: 'Più presenze', titleShort: 'Presenze', ...best((p) => matchStats.get(p.id)?.played || 0), unitShort: 'partite' },
     ].filter((l) => l.p);
   })();
-  const SortHeader = ({ k, label, title, className = '' }: { k: string; label: string; title?: string; className?: string }) => (
-    <th className={`p-0 ${className}`} aria-sort={tableSort.key === k ? (tableSort.dir === 'desc' ? 'descending' : 'ascending') : 'none'}>
+  const sortHeader = ({ k, label, title, className = '' }: { k: string; label: string; title?: string; className?: string }) => (
+    <th key={k} className={`p-0 ${className}`} aria-sort={tableSort.key === k ? (tableSort.dir === 'desc' ? 'descending' : 'ascending') : 'none'}>
       <button
         type="button"
         onClick={() => handleTableSort(k)}
@@ -506,21 +505,18 @@ ${link}`;
               <thead>
                 <tr className="border-b border-slate-800 bg-slate-950/70 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                   <th className="py-3.5 px-4 w-12 text-center">#</th>
-                  <SortHeader k="name" label="Giocatore" title="nome" />
-                  <SortHeader k="position" label="Ruolo" />
-                  <SortHeader k="ovr" label="OVR" />
-                  {isClientAdmin && <SortHeader k="wins" label="V-P-S" title="vittorie" />}
+                  {sortHeader({ k: 'name', label: 'Giocatore', title: 'nome' })}
+                  {sortHeader({ k: 'position', label: 'Ruolo' })}
+                  {sortHeader({ k: 'ovr', label: 'OVR' })}
+                  {isClientAdmin && sortHeader({ k: 'wins', label: 'V-P-S', title: 'vittorie' })}
                   {isClientAdmin && sortedCategories.map((cat) => {
                     const shortName = cat.name.length > 5 ? cat.name.slice(0, 3).toUpperCase() : cat.name;
-                    return (
-                      <SortHeader
-                        key={cat.id || cat.name}
-                        k={`stat:${cat.name}`}
-                        label={shortName}
-                        title={cat.label || cat.name}
-                        className="w-14 min-w-[54px]"
-                      />
-                    );
+                    return sortHeader({
+                      k: `stat:${cat.name}`,
+                      label: shortName,
+                      title: cat.label || cat.name,
+                      className: 'w-14 min-w-[54px]',
+                    });
                   })}
                   {isClientAdmin && (
                     <th className="sticky right-0 z-30 py-3.5 px-4 text-center bg-slate-950 border-l border-slate-800 shadow-[-8px_0_12px_rgba(0,0,0,0.8)] min-w-[100px]">

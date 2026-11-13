@@ -171,7 +171,7 @@ export default function HomePage() {
   const { opensAt, closesAt } = mvpVotingWindow(date, time);
   const voteOpen = !isArchived && now >= opensAt.getTime() && now < closesAt.getTime();
   const hasVoted = votes.some((v) => v.voter_id === user.uid);
-  const playedRecently = date < today && date >= toDateString(new Date(Date.now() - 7 * 86400000));
+  const playedRecently = date < today && date >= toDateString(new Date(now - 7 * 86400000));
   const closedForPlayers = !isDateOpenForPlayers(date, openUntil);
   const amStarter = myStarterIdx >= 0;
   const closesLabel = `${closesAt.toDateString() === new Date(now).toDateString() ? 'oggi' : 'domani'} alle ${closesAt

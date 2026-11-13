@@ -17,22 +17,16 @@ import { subscribeMatches } from '@/lib/firebase/firestoreService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { Match } from '@/types/database';
 import { photoToAvatarDataUrl } from '@/lib/utils/imageUtils';
-import { 
-  User, 
-  Upload, 
-  Save, 
-  Trophy, 
-  Swords, 
-  Check, 
-  Sparkles, 
-  ShieldCheck, 
-  Mail, 
-  ArrowLeft,
+import {
+  User,
+  Save,
+  Trophy,
+  Check,
+  Sparkles,
+  Mail,
   ArrowRight,
   Camera,
-  Percent,
-  Flame,
-  Loader2
+  Loader2,
 } from 'lucide-react';
 import { btn, textLink } from '@/components/ui/buttons';
 
@@ -69,7 +63,6 @@ export default function ProfiloPage() {
       setPosition(profile.position || 'Esterno');
     }
   }, [profile]);
-
 
   if (!mounted) return <PageSkeleton />;
 
@@ -144,7 +137,7 @@ export default function ProfiloPage() {
       });
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 4000);
-    } catch (err) {
+    } catch {
       setErrorMsg('Errore durante il salvataggio.');
     } finally {
       setIsSaving(false);

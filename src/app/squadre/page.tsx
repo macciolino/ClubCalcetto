@@ -191,7 +191,7 @@ function SquadreContent() {
     if (!dirty.has('cost')) setTotalCost(effectiveMatchCost(savedMatch, std, fieldCostFor(savedMatch, fields, defaultFieldId, loc, f)));
     if (!dirty.has('time')) setMatchTime(effectiveMatchTime(savedMatch, standardTime));
     if (!dirty.has('location')) setMatchLocation(loc);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [savedMatch, standardCost, standardCosts, standardTime, fields, defaultFieldId, matchLocation, matchFormats, selectedDate]);
 
   // Salvataggio automatico (solo admin) dei valori personalizzati per questa partita

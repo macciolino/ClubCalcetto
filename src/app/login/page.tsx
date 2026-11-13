@@ -71,6 +71,7 @@ export default function LoginPage() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   // Arrivo dal logout automatico (sessione di 30 giorni scaduta)
   // Il login occupa esattamente lo schermo: niente scroll della pagina sotto
   useEffect(() => {
@@ -102,7 +103,6 @@ export default function LoginPage() {
         .catch(() => undefined);
     }
   }, []);
-  const [successMessage, setSuccessMessage] = useState('');
   const [isCheckingVerification, setIsCheckingVerification] = useState(false);
 
   useEffect(() => {
@@ -185,7 +185,7 @@ export default function LoginPage() {
     `w-full ${withIcon ? 'pl-9' : 'pl-3'} pr-3 py-3 bg-slate-950 border rounded-xl text-white text-sm placeholder:text-slate-600 focus:outline-none transition-colors ${
       showError(field) ? 'border-rose-500 focus:border-rose-400' : 'border-slate-800 focus:border-emerald-500'
     }`;
-  const FieldError = ({ field }: { field: string }) =>
+  const fieldError = (field: string) =>
     showError(field) ? (
       <p id={`${field}-error`} className="mt-1 text-xs text-rose-400">
         {fieldErrors[field]}
@@ -646,7 +646,7 @@ export default function LoginPage() {
                           className={inputClass('firstName')}
                         />
                       </div>
-                      <FieldError field="firstName" />
+                      {fieldError("firstName")}
                     </div>
                     <div>
                       <label htmlFor="signup-last-name" className={labelClass}>
@@ -668,7 +668,7 @@ export default function LoginPage() {
                           className={inputClass('lastName')}
                         />
                       </div>
-                      <FieldError field="lastName" />
+                      {fieldError("lastName")}
                     </div>
                   </div>
 
@@ -714,7 +714,7 @@ export default function LoginPage() {
                     className={inputClass('email')}
                   />
                 </div>
-                <FieldError field="email" />
+                {fieldError("email")}
               </div>
 
               <div>
@@ -749,7 +749,7 @@ export default function LoginPage() {
                     className={inputClass('password')}
                   />
                 </div>
-                <FieldError field="password" />
+                {fieldError("password")}
                 {isSignup && (
                   <ul id="password-rules" className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1" aria-label="Requisiti della password">
                     {passwordRules.map((r) => (
@@ -789,7 +789,7 @@ export default function LoginPage() {
                       className={inputClass('confirmPassword')}
                     />
                   </div>
-                  <FieldError field="confirmPassword" />
+                  {fieldError("confirmPassword")}
                   {confirmPassword && confirmPassword === password && (
                     <p className="mt-1 text-xs text-emerald-400">✓ Le password coincidono</p>
                   )}

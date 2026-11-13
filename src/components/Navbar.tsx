@@ -6,18 +6,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/context/AuthContext';
-import { 
-  CalendarDays, 
-  Users, 
-  ShieldAlert, 
-  LogOut, 
-  Sparkles,
+import {
+  CalendarDays,
+  Users,
+  LogOut,
   Trophy,
   User,
   History,
   Home,
   Settings,
-  ChevronDown
+  ChevronDown,
 } from 'lucide-react';
 import { menu } from '@/components/ui/buttons';
 import { RequestsBell } from '@/components/admin/RequestsCenter';

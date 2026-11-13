@@ -2,7 +2,7 @@
 
 import { MatchPaymentRecord } from '@/types/database';
 import { db, isFirebaseConfigured } from '@/lib/firebase/config';
-import { doc, getDoc, setDoc, onSnapshot, Unsubscribe } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, Unsubscribe } from 'firebase/firestore';
 
 const PAYMENTS_KEY_PREFIX = 'clubcalcetto_payments_';
 

@@ -60,6 +60,11 @@ export function FeedbackHost() {
     };
   }, []);
 
+  const close = (ok: boolean) => {
+    request?.resolve(ok);
+    setRequest(null);
+  };
+
   useEffect(() => {
     if (!request) return;
     confirmBtn.current?.focus();
@@ -70,11 +75,6 @@ export function FeedbackHost() {
     return () => window.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [request]);
-
-  const close = (ok: boolean) => {
-    request?.resolve(ok);
-    setRequest(null);
-  };
 
   return (
     <>
