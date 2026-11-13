@@ -49,7 +49,7 @@ The menu item "Admin" points to `/impostazioni?sezione=partita`.
 - `notify` - push notifications + server reconcile of teams/promotions (Bearer Firebase ID token)
 - `cron/mvp-vote` - called every 10 min by `.github/workflows/mvp-vote-notify.yml` (Bearer `CRON_SECRET`)
 - `account/delete` (mode deactivate | delete | reactivate), `account/feedback` - closing accounts and the reasons given (super admin)
-- `push-config` - public VAPID key; `ai/tactical-preview` - Gemini hook; `presence/toggle` - unused stub
+- `push-config` - public VAPID key; `presence/toggle` - unused stub
 
 ## Library (`src/lib/`)
 

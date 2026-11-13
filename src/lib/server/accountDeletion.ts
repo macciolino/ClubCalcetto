@@ -110,5 +110,5 @@ export async function saveDeletionFeedback(entry: {
     title: entry.mode === 'deactivate' ? '⏸️ Account disattivato' : '🗑️ Account eliminato',
     body: `${who}. Motivo: ${entry.reason}${entry.details ? ` — "${entry.details.slice(0, 120)}"` : ''}`,
     url: '/impostazioni?sezione=accessi',
-  }).catch(() => 0);
+  }, { inbox: entry.deletedBy !== 'self' }).catch(() => 0); // chiuso dal giocatore: nella campanella c'è già l'avviso "account chiuso"
 }

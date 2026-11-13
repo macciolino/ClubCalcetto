@@ -128,3 +128,15 @@ Production data is REAL: never rewrite stats, no paid services, never print secr
 - Proposals: `checkPromotions` → `proposeBiggerFormat`: future day, sign-ups (starters + waitlist) ≥ next format's
   players → `admin_requests/format_<date>_<format>` (type `format_proposal`, created once ever) + push to admins.
   Bell: "Passa al …" (`apply_format`, writes the day's format and re-checks promotions) or "Resta …" (`dismiss`).
+
+## In-app bell for everyone (2026-11-13)
+- Every push sent with `sendToProfiles` (so also `deliver` / `deliverToAdmins`) is ALSO saved in
+  `profiles/{id}/notifications/{auto}` = { title, body, url, created_at, read } by `addToInbox` (server only),
+  even for profiles without a registered device. Admin requests use `{ inbox: false }` (they already show in "Da gestire").
+- `registeredProfileIds()` = all active non-guest accounts (+ any profile with a device): "iscrizioni aperte" and
+  "voto MVP" reach everyone's bell. The notification mode (off / admins-test / all) applies to the bell too.
+- Rules: each person reads / marks read (`read: true` only) / deletes only their own; nobody writes from the app.
+- Bell (`RequestsCenter.tsx` → `RequestsBell`, in the Navbar): last 30, unread badge, opening marks them read,
+  tap = go to the notification's page. Admins also see "Da gestire" on top.
+- Cleanup: the cron (`/api/cron/mvp-vote`) deletes notifications older than 60 days once a day (~4:00 Rome; `?clean=1` forces it).
+- Gemini tactical preview removed (route, lib, dependency) on 2026-11-13.

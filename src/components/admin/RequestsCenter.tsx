@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { collection, doc, onSnapshot, query, updateDoc, where } from 'firebase/firestore';
+import { collection, doc, limit, onSnapshot, orderBy, query, updateDoc, where, writeBatch } from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
 import { db, auth as firebaseAuth, isFirebaseConfigured } from '@/lib/firebase/config';
 import { subscribeProfiles } from '@/lib/firebase/firestoreService';
 import { useAuth } from '@/lib/context/AuthContext';
-import { AdminRequest, Profile, StatCategory } from '@/types/database';
+import { AdminRequest, InboxNotification, Profile, StatCategory } from '@/types/database';
 import { Sheet } from '@/components/ui/Sheet';
 import { askConfirm, notify } from '@/components/ui/Feedback';
 import { btn, btnInline } from '@/components/ui/buttons';
@@ -159,14 +160,31 @@ function StatReviewCard({ player, categories, reviewerId }: { player: Profile; c
   );
 }
 
+/** "5 min fa", "ieri alle 21:40", "12 nov" */
+function ago(iso: string): string {
+  const t = Date.parse(iso);
+  if (!t) return '';
+  const min = Math.round((Date.now() - t) / 60000);
+  if (min < 1) return 'adesso';
+  if (min < 60) return `${min} min fa`;
+  if (min < 24 * 60) return `${Math.round(min / 60)} h fa`;
+  return new Date(t).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }).replace(/\./g, '');
+}
+
 /**
- * Admins only: bell in the header with the number of pending requests, and the sheet to handle them
- * (new sign-up to link to a guest, closed account that wants to come back, account closed by a player).
- * The push notification for a request opens the app with ?richieste=1, which opens the sheet.
+ * The bell in the header, for EVERYONE: the notifications of the app (the same ones that arrive as push:
+ * match confirmed, teams changed, substitution, you are a starter, sign-ups open, MVP vote, …) with the
+ * number of unread ones. Admins also see "Da gestire" on top: requests (new sign-up, coming back, account closed,
+ * format proposal) and parameters to review. A request's push opens the app with ?richieste=1 → opens the sheet.
  */
 export function RequestsBell() {
   const { profile, isAdmin } = useAuth();
+  const router = useRouter();
   const admin = Boolean(isAdmin || profile?.role === 'admin');
+  const profileId = profile?.id;
+  // Notifiche personali (ultime 30) e quelle non lette al momento dell'apertura (restano evidenziate)
+  const [inbox, setInbox] = useState<InboxNotification[]>([]);
+  const [freshIds, setFreshIds] = useState<Set<string>>(new Set());
   const [requests, setRequests] = useState<AdminRequest[]>([]);
   const [players, setPlayers] = useState<Profile[]>([]);
   const [open, setOpen] = useState(false);
@@ -203,6 +221,36 @@ export function RequestsBell() {
   }, [admin]);
 
   useEffect(() => {
+    if (!profileId || !isFirebaseConfigured) return;
+    const unsub = onSnapshot(
+      query(collection(db, 'profiles', profileId, 'notifications'), orderBy('created_at', 'desc'), limit(30)),
+      (snap) => setInbox(snap.docs.map((d) => ({ ...(d.data() as InboxNotification), id: d.id }))),
+      (err) => {
+        console.warn('notifiche:', err?.code || err);
+        setInbox([]);
+      }
+    );
+    return () => unsub();
+  }, [profileId]);
+
+  // Aperta la campanella: le non lette diventano lette (restano evidenziate finché è aperta)
+  useEffect(() => {
+    if (!open || !profileId) return;
+    const unread = inbox.filter((n) => !n.read);
+    if (unread.length === 0) return;
+    setFreshIds((prev) => new Set([...Array.from(prev), ...unread.map((n) => n.id)]));
+    const t = setTimeout(() => {
+      const batch = writeBatch(db);
+      unread.forEach((n) => batch.update(doc(db, 'profiles', profileId, 'notifications', n.id), { read: true }));
+      batch.commit().catch((err) => console.warn('notifiche lette:', err?.code || err));
+    }, 800);
+    return () => clearTimeout(t);
+  }, [open, inbox, profileId]);
+  useEffect(() => {
+    if (!open) setFreshIds(new Set());
+  }, [open]);
+
+  useEffect(() => {
     if (!admin) return;
     try {
       const url = new URL(window.location.href);
@@ -226,8 +274,10 @@ export function RequestsBell() {
     [players]
   );
 
-  if (!admin) return null;
-  const count = requests.length + reviews.length;
+  if (!profile) return null;
+  const todo = admin ? requests.length + reviews.length : 0;
+  const unreadCount = inbox.filter((n) => !n.read).length;
+  const count = todo + unreadCount;
 
   const run = async (key: string, fn: () => Promise<boolean>, done: string) => {
     setBusy(key);
@@ -419,11 +469,11 @@ export function RequestsBell() {
         type="button"
         onClick={() => setOpen(true)}
         className="relative p-2 rounded-full text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
-        aria-label={count ? `Richieste da gestire: ${count}` : 'Centro notifiche'}
-        title="Richieste e avvisi"
+        aria-label={count ? `Notifiche: ${count} nuove o da gestire` : 'Notifiche'}
+        title="Notifiche"
       >
         <Bell className="h-5 w-5" />
-        {denied && count === 0 && (
+        {admin && denied && count === 0 && (
           <span className="absolute top-1 right-1 h-2.5 w-2.5 rounded-full bg-amber-400 ring-2 ring-slate-950" aria-hidden="true" />
         )}
         {count > 0 && (
@@ -436,12 +486,19 @@ export function RequestsBell() {
       {open && (
         <Sheet
           onClose={() => setOpen(false)}
-          title="Richieste e avvisi"
-          subtitle={count ? `${count} da gestire` : 'Tutto in ordine'}
+          title="Notifiche"
+          subtitle={
+            todo
+              ? `${todo} da gestire${unreadCount ? ` · ${unreadCount} nuove` : ''}`
+              : unreadCount
+              ? `${unreadCount} ${unreadCount === 1 ? 'nuova' : 'nuove'}`
+              : 'Tutto in ordine'
+          }
           size="lg"
           locked={busy !== null}
         >
-          {reviews.length > 0 && (
+          {admin && (todo > 0 || denied) && <h3 className="px-1 -mb-3 text-xs font-semibold text-slate-500">Da gestire</h3>}
+          {admin && reviews.length > 0 && (
             <section className="space-y-2" aria-label="Valutazioni da rivedere">
               <h3 className="px-1 text-xs font-semibold text-slate-500">Valutazioni da rivedere · dopo la prima partita</h3>
               <ul className="space-y-3">
@@ -451,20 +508,12 @@ export function RequestsBell() {
               </ul>
             </section>
           )}
-          {denied ? (
+          {!admin ? null : denied ? (
             <div className="rounded-2xl bg-amber-500/10 border border-amber-500/25 p-4 text-sm text-amber-200 leading-relaxed">
               Non riesco a leggere le richieste: le regole Firestore aggiornate non risultano pubblicate. Pubblica il file firestore.rules
               dalla console Firebase (Firestore → Regole) e riapri questa finestra.
             </div>
-          ) : sorted.length === 0 && reviews.length > 0 ? null : sorted.length === 0 ? (
-            <div className="py-10 text-center space-y-2">
-              <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-800 text-emerald-400">
-                <Check className="h-6 w-6" />
-              </span>
-              <p className="text-sm font-semibold text-white">Nessuna richiesta in sospeso</p>
-              <p className="text-sm text-slate-400">Qui arrivano nuovi iscritti da collegare, valutazioni da rivedere, richieste di rientro e account chiusi.</p>
-            </div>
-          ) : (
+          ) : sorted.length === 0 ? null : (
             <ul className="space-y-3">
               {sorted.map((r) => {
                 const m = META[r.type];
@@ -495,6 +544,56 @@ export function RequestsBell() {
               })}
             </ul>
           )}
+
+          {/* Notifiche personali: le stesse che arrivano sul telefono */}
+          <section className="space-y-2" aria-label="Notifiche">
+            {admin && todo > 0 && <h3 className="px-1 text-xs font-semibold text-slate-500">Notifiche</h3>}
+            {inbox.length === 0 ? (
+              todo > 0 ? (
+                <p className="px-1 text-sm text-slate-500">Nessuna notifica.</p>
+              ) : (
+                <div className="py-10 text-center space-y-2">
+                  <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-800 text-emerald-400">
+                    <Check className="h-6 w-6" />
+                  </span>
+                  <p className="text-sm font-semibold text-white">Nessuna notifica</p>
+                  <p className="text-sm text-slate-400">
+                    Qui trovi gli avvisi del club: partita confermata, squadre, sostituzioni, iscrizioni aperte, voto MVP.
+                  </p>
+                </div>
+              )
+            ) : (
+              <ul className="rounded-2xl bg-slate-950/50 divide-y divide-slate-800 overflow-hidden">
+                {inbox.map((n) => {
+                  const isNew = !n.read || freshIds.has(n.id);
+                  return (
+                    <li key={n.id}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpen(false);
+                          if (n.url) router.push(n.url);
+                        }}
+                        className={`w-full text-left flex items-start gap-3 px-4 py-3 transition-colors hover:bg-slate-800/60 ${isNew ? 'bg-emerald-500/[0.06]' : ''}`}
+                      >
+                        <span
+                          className={`mt-1.5 h-2 w-2 flex-shrink-0 rounded-full ${isNew ? 'bg-emerald-400' : 'bg-transparent'}`}
+                          aria-label={isNew ? 'Nuova' : undefined}
+                        />
+                        <span className="flex-1 min-w-0">
+                          <span className="flex items-baseline justify-between gap-3">
+                            <span className={`text-sm truncate ${isNew ? 'font-semibold text-white' : 'font-medium text-slate-200'}`}>{n.title}</span>
+                            <span className="flex-shrink-0 text-[11px] text-slate-500 tabular-nums">{ago(n.created_at)}</span>
+                          </span>
+                          <span className="block text-sm text-slate-400 leading-snug mt-0.5">{n.body}</span>
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
         </Sheet>
       )}
     </>

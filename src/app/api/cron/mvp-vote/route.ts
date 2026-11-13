@@ -90,7 +90,23 @@ async function run(request: Request) {
     promotionsChecked += 1;
   }
 
-  return NextResponse.json({ ok: true, report, promotionsChecked });
+  // Una volta al giorno (verso le 4 di notte): via dalla campanella le notifiche più vecchie di 60 giorni
+  let inboxCleaned = 0;
+  const romeHour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Rome', hour: '2-digit', hour12: false }).format(now));
+  if ((romeHour === 4 && now.getUTCMinutes() < 10) || new URL(request.url).searchParams.get('clean') === '1') {
+    const cutoff = new Date(now.getTime() - 60 * 24 * 3600 * 1000).toISOString();
+    const profiles = await db.collection('profiles').select().get();
+    for (const p of profiles.docs) {
+      const old = await p.ref.collection('notifications').where('created_at', '<', cutoff).limit(200).get();
+      if (old.empty) continue;
+      const batch = db.batch();
+      old.docs.forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+      inboxCleaned += old.size;
+    }
+  }
+
+  return NextResponse.json({ ok: true, report, promotionsChecked, inboxCleaned });
 }
 
 export const GET = run;

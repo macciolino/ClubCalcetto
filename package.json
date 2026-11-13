@@ -13,7 +13,6 @@
     "test:rules": "firebase emulators:exec --config firebase.test.json --only auth,firestore --project demo-clubcalcetto \"node scripts/test-rules.mjs\""
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
     "clsx": "^2.1.1",
     "firebase": "^9.14.0",
     "firebase-admin": "^13.10.0",

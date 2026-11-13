@@ -373,3 +373,13 @@ export interface AdminRequest {
   count?: number;
   created_at: string;
 }
+
+/** A notification in the in-app bell (profiles/{id}/notifications, written only by the server). */
+export interface InboxNotification {
+  id: string;
+  title: string;
+  body: string;
+  url: string;
+  created_at: string;
+  read: boolean;
+}

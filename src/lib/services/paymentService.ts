@@ -140,7 +140,11 @@ export function subscribeMatchPayments(
           callback(data);
           // Aggiorna cache locale
           if (typeof window !== 'undefined') {
-            localStorage.setItem(`${PAYMENTS_KEY_PREFIX}${date}`, JSON.stringify(data));
+            try {
+              localStorage.setItem(`${PAYMENTS_KEY_PREFIX}${date}`, JSON.stringify(data));
+            } catch {
+              /* memoria del browser piena o bloccata (es. navigazione privata): basta Firestore */
+            }
           }
         } else {
           callback(null);

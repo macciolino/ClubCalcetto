@@ -42,10 +42,8 @@ import Link from 'next/link';
 import { CollapsibleCard } from '@/components/CollapsibleCard';
 import { generateWhatsAppMessage, getWhatsAppShareUrl, copyToClipboard } from '@/lib/utils/whatsapp';
 import { toPng } from 'html-to-image';
-import { TacticalAnalysisResult } from '@/lib/gemini/client';
 import { 
   Trophy, 
-  Sparkles, 
   Share2, 
   Download, 
   MapPin, 
@@ -62,7 +60,6 @@ import {
   Users
 } from 'lucide-react';
 import { btn, textLink } from '@/components/ui/buttons';
-
 
 function SquadreContent() {
   const searchParams = useSearchParams();
@@ -116,37 +113,8 @@ function SquadreContent() {
   const [isSharing, setIsSharing] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [aiAnalysis, setAiAnalysis] = useState<TacticalAnalysisResult | null>(null);
-  const [isAiLoading, setIsAiLoading] = useState(false);
 
   const pitchRef = useRef<HTMLDivElement>(null);
-
-  const handleGenerateAiAnalysis = async () => {
-    if (!balancedResult) return;
-    setIsAiLoading(true);
-    try {
-      const res = await fetch('/api/ai/tactical-preview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          teamWhite: balancedResult.teamWhite,
-          teamBlack: balancedResult.teamBlack,
-          matchInfo: {
-            date: selectedDate,
-            time: matchTime,
-            location: matchLocation,
-            totalCost,
-          },
-        }),
-      });
-      const data = await res.json();
-      setAiAnalysis(data);
-    } catch (err) {
-      console.error('AI preview error:', err);
-    } finally {
-      setIsAiLoading(false);
-    }
-  };
 
   // Inizializza data di default se non impostata da query param
   useEffect(() => {
@@ -980,15 +948,6 @@ function SquadreContent() {
                 <Download className="h-4 w-4" />
                 Scarica immagine
               </button>
-              <button
-                type="button"
-                onClick={handleGenerateAiAnalysis}
-                disabled={isAiLoading}
-                className="w-full sm:w-auto sm:ml-auto flex items-center justify-center gap-2 px-4 py-2.5 text-slate-400 hover:text-white rounded-xl text-sm transition-colors disabled:opacity-40"
-              >
-                {isAiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                Analisi AI
-              </button>
             </div>
           </section>
 
@@ -1049,47 +1008,6 @@ function SquadreContent() {
             />
           )}
 
-          {/* Report AI: stesso stile delle altre schede */}
-          {aiAnalysis && (
-            <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 animate-in">
-              <div>
-                <p className="text-xs text-slate-500 flex items-center gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5" /> Analisi AI
-                </p>
-                <h3 className="text-base font-semibold text-white mt-1 leading-snug">{aiAnalysis.headline}</h3>
-                <p className="text-sm text-amber-200 mt-1">{aiAnalysis.prediction}</p>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                <div className="rounded-xl bg-slate-950/60 p-3">
-                  <span className="font-semibold text-white block mb-1">Bianchi</span>
-                  <p className="text-slate-300 leading-relaxed">{aiAnalysis.whiteTactics}</p>
-                </div>
-                <div className="rounded-xl bg-slate-950/60 p-3">
-                  <span className="font-semibold text-white block mb-1">Neri</span>
-                  <p className="text-slate-300 leading-relaxed">{aiAnalysis.blackTactics}</p>
-                </div>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm">
-                <div>
-                  <span className="font-semibold text-emerald-300 block">{aiAnalysis.keyDuel}</span>
-                  <p className="text-slate-400 italic text-xs mt-0.5">{aiAnalysis.funnyLockerRoomQuote}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    await copyToClipboard(aiAnalysis.epicWhatsAppText);
-                    setCopySuccess(true);
-                    setTimeout(() => setCopySuccess(false), 3000);
-                    window.open(getWhatsAppShareUrl(aiAnalysis.epicWhatsAppText), '_blank');
-                  }}
-                  className={secondaryBtn}
-                >
-                  <Share2 className="h-4 w-4" />
-                  Manda su WhatsApp
-                </button>
-              </div>
-            </section>
-          )}
         </div>
       ) : (
         /* 8. Nessuna squadra: cosa succede adesso */

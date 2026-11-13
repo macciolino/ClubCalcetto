@@ -256,6 +256,14 @@ await expectDenied('player A sets a preset SVG avatar', () =>
 await expectDenied('player A uploads a huge image', () =>
   updateDoc(doc(playerA.db, 'profiles', playerA.uid), { avatar_url: 'data:image/jpeg;base64,' + 'A'.repeat(200000), updated_at: 'x' }));
 
+console.log('\nIn-app bell (profiles/{id}/notifications)');
+await expectAllowed('player A reads own notifications', () => getDocs(collection(playerA.db, 'profiles', playerA.uid, 'notifications')));
+await expectDenied('player B reads player A notifications', () => getDocs(collection(playerB.db, 'profiles', playerA.uid, 'notifications')));
+await expectDenied('player A writes a notification', () =>
+  setDoc(doc(playerA.db, 'profiles', playerA.uid, 'notifications', 'n1'), { title: 'x', read: false }));
+await expectDenied('admin C writes a notification for player A', () =>
+  setDoc(doc(adminC.db, 'profiles', playerA.uid, 'notifications', 'n2'), { title: 'x', read: false }));
+
 console.log('\nAdmin requests and invites (server only)');
 await expectAllowed('admin C reads the admin requests', () => getDoc(doc(adminC.db, 'admin_requests', 'signup_x')));
 await expectDenied('player B reads the admin requests', () => getDoc(doc(playerB.db, 'admin_requests', 'signup_x')));

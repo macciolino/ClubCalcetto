@@ -35,9 +35,35 @@ export async function adminProfileIds(): Promise<string[]> {
   return Array.from(new Set([SUPER_ADMIN_PROFILE_ID, ...snap.docs.map((d) => d.id)]));
 }
 
-/** Sends to every device registered by these profiles; removes tokens that no longer work. */
-export async function sendToProfiles(profileIds: string[], msg: Message): Promise<number> {
+/**
+ * In-app bell: every notification sent to a profile is also saved in `profiles/{id}/notifications`
+ * (written only by the server; each person reads and marks as read only their own). Profiles without a
+ * registered device get it too, so nobody misses a notification because push is off on their phone.
+ */
+export async function addToInbox(profileIds: string[], msg: Message): Promise<void> {
   const ids = Array.from(new Set(profileIds.filter(Boolean)));
+  if (ids.length === 0) return;
+  const db = adminDb();
+  const created_at = new Date().toISOString();
+  for (let i = 0; i < ids.length; i += 400) {
+    const batch = db.batch();
+    ids.slice(i, i + 400).forEach((id) =>
+      batch.set(db.collection(`profiles/${id}/notifications`).doc(), {
+        title: msg.title,
+        body: msg.body,
+        url: msg.url || '/',
+        created_at,
+        read: false,
+      })
+    );
+    await batch.commit();
+  }
+}
+
+/** Sends to every device registered by these profiles (and to their in-app bell); removes tokens that no longer work. */
+export async function sendToProfiles(profileIds: string[], msg: Message, opts: { inbox?: boolean } = {}): Promise<number> {
+  const ids = Array.from(new Set(profileIds.filter(Boolean)));
+  if (opts.inbox !== false) await addToInbox(ids, msg).catch((err) => console.warn('[campanella] non salvata:', err?.message || err));
   const tokens: string[] = [];
   for (let i = 0; i < ids.length; i += 30) {
     const snap = await adminDb().collection('push_tokens').where('profile_id', 'in', ids.slice(i, i + 30)).get();
@@ -78,10 +104,17 @@ export async function deliver(playerIds: string[], msg: Message): Promise<{ sent
   return { sent, mode };
 }
 
-/** Everyone who registered at least one device (only real accounts can: guests have no login). */
+/**
+ * Every registered account (not guests, not closed accounts): they all get the in-app notification,
+ * and those with a registered device also the push.
+ */
 export async function registeredProfileIds(): Promise<string[]> {
-  const snap = await adminDb().collection('push_tokens').get();
-  return Array.from(new Set(snap.docs.map((d) => d.data().profile_id as string).filter(Boolean)));
+  const [profiles, tokens] = await Promise.all([adminDb().collection('profiles').get(), adminDb().collection('push_tokens').get()]);
+  const active = profiles.docs
+    .filter((d) => !d.data().is_guest && !d.data().deactivated_at && !d.data().archived_at)
+    .map((d) => d.id);
+  const withDevice = tokens.docs.map((d) => d.data().profile_id as string).filter(Boolean);
+  return Array.from(new Set([...active, ...withDevice]));
 }
 
 /** 'YYYY-MM-DD' + 'HH:mm' in Italian time → exact instant (handles summer/winter time). */

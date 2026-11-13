@@ -43,7 +43,8 @@ export async function openRequest(
   if (prev.exists && prev.data()?.status === 'open') return; // già in attesa: niente doppioni né notifiche ripetute
   await ref.set({ ...data, status: 'open', created_at: new Date().toISOString() });
   const admins = await adminProfileIds().catch(() => [] as string[]);
-  await sendToProfiles(admins, { ...push, url: '/?richieste=1' }).catch(() => 0);
+  // Nella campanella la richiesta c'è già (sezione "Da gestire"): qui solo la notifica sul telefono
+  await sendToProfiles(admins, { ...push, url: '/?richieste=1' }, { inbox: false }).catch(() => 0);
 }
 
 export async function closeRequest(id: string, by: string, resolution: string): Promise<void> {

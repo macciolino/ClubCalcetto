@@ -90,6 +90,17 @@ service cloud.firestore {
         && (isSuperAdmin() || (isAdmin() && resource.data.get('is_guest', false) == true));
     }
 
+    // ---------- in-app bell (profiles/{id}/notifications) ----------
+    // Written only by the server (Admin SDK). Each person reads, marks as read and deletes ONLY their own.
+    function isOwnProfile(profileId) {
+      return signedIn() && (profileId == request.auth.uid || (profileId == 'p-1' && isSuperAdmin()));
+    }
+    match /profiles/{profileId}/notifications/{notificationId} {
+      allow read, delete: if isOwnProfile(profileId);
+      allow update: if isOwnProfile(profileId) && onlyChanges(['read']) && request.resource.data.read == true;
+      allow create: if false;
+    }
+
     // ---------- presences ----------
     // Titolari / waitlist are COMPUTED by the app from the sign-up order (joined_at = server time),
     // so a player only ever creates or deletes their OWN presence, never edits anyone else's.
