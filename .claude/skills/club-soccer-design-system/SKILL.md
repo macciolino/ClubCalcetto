@@ -11,6 +11,11 @@ You are an expert UI/UX designer and full-stack developer collaborating on "Club
 - Theme: Dark mode professional sports dashboard (deep dark navy/slate backgrounds, glowing green primary accents #10B981, semantic status colors).
 - Typography & Spacing: Clean, touch-first, optimized for mobile ergonomics with desktop "command center" adaptations.
 
+## Multi-Theme & Semantic Tokens (Light / Dark Mode)
+- *No Hardcoded Theme Colors:* Never use hardcoded dark-only background or text colors (e.g., bg-slate-900, text-white on main surfaces) for layout containers, cards, modals, or inputs. Always use the centralized semantic CSS/Tailwind design tokens (bg-app, bg-card, bg-card-hover, text-primary, text-secondary, border-subtle, accent-primary) so every component adapts seamlessly to both Light and Dark themes.
+- *Contrast & Semantic Badges:* Ensure semantic status badges (Win/Green, Draw/Yellow, Loss/Red, Paid/Unpaid) maintain accessible contrast ratios against both #FFFFFF (Light cards) and dark slate backgrounds (Dark cards).
+- *Internationalization (next-intl):* Never hardcode UI strings in Italian or English inside JSX components; always use next-intl translation keys (messages/it.json and messages/en.json).
+
 ## 2. Global Component Standards (Strict Consistency)
 - *Primary Buttons & CTAs:*
   - Must strictly follow a unified style across ALL pages.
@@ -36,4 +41,6 @@ You are an expert UI/UX designer and full-stack developer collaborating on "Club
 - Match day page: `src/components/admin/TabOverviewMatch.tsx` (day selector + 3 tabs, panels side by side ≥1024px).
 - Roles: `useAuth()` (`isAdmin`, `isSuperAdmin`); server checks in `src/lib/server/adminRequests.ts`; Firestore rules in `firestore.rules`.
 - Lifecycle flows: `src/lib/server/profileMerge.ts`, `src/app/api/admin/requests`, bell `src/components/admin/RequestsCenter.tsx`.
+- Theme tokens: `src/app/globals.css` (`:root` light, `.dark` dark) and `tailwind.config` — real class names: `bg-app`, `bg-card`, `bg-card-hover`, `text-primary`, `text-secondary`, `text-muted`, `border-line` / `border-line-strong` (= border-subtle), `bg-accent` / `text-accent-text` / `text-on-accent` (= accent-primary), `text-danger`, `text-warning`.
+- Translations: `messages/it.json`, `messages/en.json` (same keys, checked by `tests/unit/i18n.test.ts`); `useTranslations()` from `next-intl`, `useLocaleSetting()` from `src/i18n/I18nProvider.tsx`; positions, stat names and pitch places via `src/i18n/usePlayerLabels.ts` (data stays Italian in Firestore).
 - More detail: skills `ui-conventions`, `data-and-roles`, `project-map`.
