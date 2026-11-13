@@ -74,7 +74,7 @@ async function run(request: Request) {
     const result = await deliver(await registeredProfileIds(), {
       title: '⭐ Vota l’MVP',
       body: `La partita di ${italianDate(date)} è finita: vota il migliore in campo entro le ${romeTimeLabel(closesAt)} di domani.`,
-      url: `/squadre?date=${date}`,
+      url: `/teams?date=${date}`,
     });
     report[date] = `inviata (${result.mode}, ${result.sent} dispositivi)`;
   }

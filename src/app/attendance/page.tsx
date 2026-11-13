@@ -303,7 +303,7 @@ export default function PresenzePage() {
             </p>
           </div>
           <Link
-            href={`/squadre?date=${selectedDayString}`}
+            href={`/teams?date=${selectedDayString}`}
             className={btn.primary}
           >
             Vai alle squadre

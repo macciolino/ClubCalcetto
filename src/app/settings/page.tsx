@@ -144,7 +144,7 @@ function SettingsContent() {
     return (
       <Link
         key={s.id}
-        href={`/impostazioni?sezione=${s.id}`}
+        href={`/settings?sezione=${s.id}`}
         aria-current={active ? 'page' : undefined}
         className={`flex items-center gap-3 px-3.5 py-3 text-sm transition-colors ${
           active ? 'bg-slate-800 text-white' : 'text-slate-200 hover:bg-slate-800/60'
@@ -199,7 +199,7 @@ function SettingsContent() {
 
           <section className="space-y-4 min-w-0" aria-labelledby="settings-section-title">
             <Link
-              href="/impostazioni"
+              href="/settings"
               className="inline-flex items-center gap-1 text-sm font-medium text-emerald-400 hover:text-emerald-300"
               aria-label="Torna alla schermata generale delle impostazioni"
             >

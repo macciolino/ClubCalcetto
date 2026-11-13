@@ -378,7 +378,7 @@ export default function ProfiloPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Link
-          href="/impostazioni?sezione=notifiche"
+          href="/settings?sezione=notifiche"
           className="flex items-center justify-between gap-3 bg-slate-900 hover:bg-slate-800/80 rounded-2xl p-4 text-sm"
         >
           <span>
@@ -388,7 +388,7 @@ export default function ProfiloPage() {
           <span className="text-slate-500" aria-hidden="true">›</span>
         </Link>
         <Link
-          href="/impostazioni?sezione=account"
+          href="/settings?sezione=account"
           className="flex items-center justify-between gap-3 bg-slate-900 hover:bg-slate-800/80 rounded-2xl p-4 text-sm"
         >
           <span>

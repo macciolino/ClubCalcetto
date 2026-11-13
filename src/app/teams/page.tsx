@@ -1037,7 +1037,7 @@ function SquadreContent() {
                 Le squadre {fmt.label} arrivano quando ci sono {fmt.players} titolari (ora {starterProfiles.length}/{fmt.players}).
               </p>
               <Link
-                href="/presenze"
+                href="/attendance"
                 className={textLink}
               >
                 Vai alle presenze <ArrowRight className="h-4 w-4" />

@@ -478,7 +478,7 @@ export function TabOverviewMatch({
           <p className="text-sm font-semibold text-white">
             Formato · {info.label} {fmt.formation}
           </p>
-          <Link href={`/squadre?date=${date}`} className={textLink}>
+          <Link href={`/teams?date=${date}`} className={textLink}>
             Vai alle squadre <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
@@ -656,7 +656,7 @@ export function TabOverviewMatch({
             ) : (
               <>
                 Squadre prese da{' '}
-                <Link href={`/squadre?date=${date}`} className="text-emerald-400 underline">
+                <Link href={`/teams?date=${date}`} className="text-emerald-400 underline">
                   Squadre
                 </Link>
                 : se sono sbagliate correggile lì prima di salvare.
@@ -673,7 +673,7 @@ export function TabOverviewMatch({
         <div className="rounded-xl bg-slate-950/60 py-8 px-4 text-center space-y-3">
           <p className="text-sm font-semibold text-slate-200">Squadre non ancora pronte</p>
           <p className="text-sm text-slate-400 max-w-sm mx-auto">Il risultato si salva sulle squadre: prima generale ({info.label}) per questa partita.</p>
-          <Link href={`/squadre?date=${date}`} className={btn.primary}>
+          <Link href={`/teams?date=${date}`} className={btn.primary}>
             Vai alle squadre <ArrowRight className="h-4 w-4" />
           </Link>
         </div>

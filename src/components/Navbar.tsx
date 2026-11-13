@@ -67,9 +67,9 @@ export function Navbar() {
 
   const navItems = [
     { href: '/', label: 'Home', icon: Home },
-    { href: '/presenze', label: 'Presenze', icon: CalendarDays },
-    { href: '/giocatori', label: 'Giocatori', icon: Users },
-    { href: '/squadre', label: 'Squadre', icon: Trophy },
+    { href: '/attendance', label: 'Presenze', icon: CalendarDays },
+    { href: '/players', label: 'Giocatori', icon: Users },
+    { href: '/teams', label: 'Squadre', icon: Trophy },
     { href: '/history', label: 'Storico', icon: History },
     // Profilo: si apre dal menu dell'utente (icona in alto a destra), non serve nella barra
     // Admin: non è più nella barra. Si entra da Impostazioni (menu dell'icona), che per gli admin apre la partita della settimana
@@ -164,7 +164,7 @@ export function Navbar() {
                     <User className="h-4 w-4 text-emerald-400" /> Profilo
                   </Link>
                   <Link
-                    href="/impostazioni"
+                    href="/settings"
                     role="menuitem"
                     onClick={() => setMenuOpen(false)}
                     className={menu.item}

@@ -6,6 +6,7 @@ const inter = Inter({ subsets: ['latin'], display: 'swap', variable: '--font-int
 import { AuthProvider } from '@/lib/context/AuthContext';
 import { Navbar } from '@/components/Navbar';
 import { FeedbackHost } from '@/components/ui/Feedback';
+import { I18nProvider } from '@/i18n/I18nProvider';
 
 import { SplashScreen, SPLASH_GUARD } from '@/components/SplashScreen';
 export const metadata: Metadata = {
@@ -38,13 +39,16 @@ export default function RootLayout({
         {/* Schermata di avvio: nascosta subito se già vista in questa sessione o sul login */}
         <script dangerouslySetInnerHTML={{ __html: SPLASH_GUARD }} />
         <SplashScreen />
-        <AuthProvider>
-          <Navbar />
-          <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-6">
-            {children}
-          </main>
-          <FeedbackHost />
-        </AuthProvider>
+        {/* Lingua (italiano / inglese) scelta nel browser: URL puliti, pagine statiche */}
+        <I18nProvider>
+          <AuthProvider>
+            <Navbar />
+            <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-6">
+              {children}
+            </main>
+            <FeedbackHost />
+          </AuthProvider>
+        </I18nProvider>
       </body>
     </html>
   );

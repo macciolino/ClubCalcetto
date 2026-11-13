@@ -180,7 +180,7 @@ export default function HomePage() {
     .slice(0, 5)}`;
   type Head = { title: string; detail: string; action?: { href: string; label: string } };
   const head: Head = (() => {
-    const squadre = `/squadre?date=${date}`;
+    const squadre = `/teams?date=${date}`;
     if (isArchived)
       return { title: `Partita del ${shortDate(date)} conclusa`, detail: 'Risultato, marcatori e MVP sono nello Storico.', action: { href: '/history', label: 'Vai allo Storico' } };
     if (voteOpen)
@@ -191,13 +191,13 @@ export default function HomePage() {
       return {
         title: `Partita del ${shortDate(date)} giocata`,
         detail: 'Il risultato sarà pubblicato a breve.',
-        action: admin ? { href: '/impostazioni?sezione=partita', label: 'Chiudi la partita' } : undefined,
+        action: admin ? { href: '/settings?sezione=partita', label: 'Chiudi la partita' } : undefined,
       };
     if (!hasMatch)
       return {
         title: 'Nessuna partita in programma',
         detail: 'Il calendario delle presenze si apre a breve.',
-        action: admin ? { href: '/presenze', label: 'Apri le iscrizioni' } : undefined,
+        action: admin ? { href: '/attendance', label: 'Apri le iscrizioni' } : undefined,
       };
     if (teamRecord?.confirmed)
       return amStarter
@@ -231,7 +231,7 @@ export default function HomePage() {
       return {
         title: 'Iscrizioni non ancora aperte',
         detail: admin ? 'I giocatori non possono ancora iscriversi.' : `La partita di ${day} sarà disponibile a breve.`,
-        action: admin ? { href: '/presenze', label: 'Apri la settimana' } : undefined,
+        action: admin ? { href: '/attendance', label: 'Apri la settimana' } : undefined,
       };
     const missing = fmt.players - starters.length;
     return mine
@@ -352,7 +352,7 @@ export default function HomePage() {
                   <p className="font-semibold text-white">
                     {myTeam === 'white' ? 'Giochi con i Bianchi ⚪' : myTeam === 'black' ? 'Giochi con i Neri ⚫' : 'Squadre pronte'}
                   </p>
-                  <Link href={`/squadre?date=${date}`} className={textLink}>
+                  <Link href={`/teams?date=${date}`} className={textLink}>
                     Vedi le squadre <ArrowRight className="h-4 w-4" />
                   </Link>
                 </>
@@ -368,7 +368,7 @@ export default function HomePage() {
       ) : (
         <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center space-y-3">
           <p className="text-sm text-slate-300">Segna i giorni in cui puoi giocare: la partita si decide quando si arriva al completo.</p>
-          <Link href="/presenze" className={btn.primary}>
+          <Link href="/attendance" className={btn.primary}>
             Vai alle presenze <ArrowRight className="h-4 w-4" />
           </Link>
         </section>

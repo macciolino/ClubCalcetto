@@ -33,7 +33,7 @@ function buildMessage(
   req: Exclude<NotifyRequest, { type: 'test' } | { type: 'reconcile' } | { type: 'voting_open' } | { type: 'admin_devices' } | { type: 'test_admins' }>
 ): Message {
   const when = italianDate(req.date);
-  const url = `/squadre?date=${req.date}`;
+  const url = `/teams?date=${req.date}`;
   if (req.type === 'match_confirmed') {
     return { title: '⚽ Partita confermata', body: `La partita di ${when} è confermata: guarda le squadre!`, url };
   }
@@ -148,7 +148,7 @@ export async function POST(request: Request) {
         if (body.type === 'test_admins' && tokens.size > 0) {
           sent += await sendToTokens(
             tokens.docs.map((d) => d.id),
-            { title: '🔔 Prova per gli admin', body: 'Notifica di prova inviata a tutti gli amministratori.', url: '/impostazioni?sezione=notifiche-club' }
+            { title: '🔔 Prova per gli admin', body: 'Notifica di prova inviata a tutti gli amministratori.', url: '/settings?sezione=notifiche-club' }
           );
         }
       }
@@ -202,7 +202,7 @@ export async function POST(request: Request) {
       const result = await deliver(await registeredProfileIds(), {
         title: '📅 Iscrizioni aperte',
         body: `Sono aperte le iscrizioni della settimana prossima (fino a ${italianDate(body.until)}): segna le tue presenze!`,
-        url: '/presenze?da=notifica',
+        url: '/attendance?da=notifica',
       });
       return NextResponse.json({ ok: true, ...result });
     }

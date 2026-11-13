@@ -88,7 +88,7 @@ export function SplashScreen() {
  * Inline script (runs before paint):
  * - splash only on the app (installed, or screen < 1024px) or right after login; never on /login;
  * - the installed app that starts on the old address /presenze (phones keep the start address they had when the app
- *   was added to the home screen) goes to the Home instead. Only on a fresh launch: not on reload, not when a
- *   notification opens /presenze?da=notifica, not when navigating inside the app.
+ *   was added to the home screen; the server redirects it to /attendance) goes to the Home instead. Only on a fresh
+ *   launch: not on reload, not when a notification opens /attendance?da=notifica, not when navigating inside the app.
  */
-export const SPLASH_GUARD = `try{var d=document.documentElement;var sa=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;var app=sa||(window.matchMedia&&matchMedia('(max-width: 1023px)').matches);var just=false;try{just=sessionStorage.getItem('${JUST_SIGNED_IN}')==='1'}catch(e){}if(location.pathname.indexOf('/login')===0||(!app&&!just))d.classList.add('no-splash');var nav=performance.getEntriesByType&&performance.getEntriesByType('navigation')[0];if(sa&&location.pathname==='/presenze'&&!location.search&&!document.referrer&&(!nav||nav.type==='navigate'))location.replace('/')}catch(e){}`;
+export const SPLASH_GUARD = `try{var d=document.documentElement;var sa=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;var app=sa||(window.matchMedia&&matchMedia('(max-width: 1023px)').matches);var just=false;try{just=sessionStorage.getItem('${JUST_SIGNED_IN}')==='1'}catch(e){}if(location.pathname.indexOf('/login')===0||(!app&&!just))d.classList.add('no-splash');var nav=performance.getEntriesByType&&performance.getEntriesByType('navigation')[0];if(sa&&location.pathname==='/attendance'&&!location.search&&!document.referrer&&(!nav||nav.type==='navigate'))location.replace('/')}catch(e){}`;

@@ -10,7 +10,7 @@ test.describe('Partita della settimana (admin, telefono)', () => {
   test.beforeEach(async ({ page }) => {
     ({ date } = await seedMatchDay());
     await loginAsAdmin(page);
-    await page.goto('/impostazioni?sezione=partita');
+    await page.goto('/settings?sezione=partita');
     // Selettore master: il giorno di ieri, con le squadre fatte e ancora da chiudere
     await page.getByRole('radio', { name: /Da chiudere, 10 su 10/ }).click();
   });

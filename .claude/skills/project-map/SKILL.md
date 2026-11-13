@@ -9,7 +9,7 @@ Brand shown to users: **Club Soccer** (renamed 2026-11-10). Code, repo, Vercel d
 Header (`Navbar.tsx`): logo + "Club Soccer" on the left; on the right icon, name and role open a dropdown menu
 (Profilo, Impostazioni, Logout; closes on outside tap, Esc, page change). Profilo is NOT in the page menu / bottom bar
 (Home, Presenze, Giocatori, Squadre, Storico). Admins reach the admin sections from the user menu → Impostazioni
-(no "Admin" item in the bar). `/impostazioni` without `?sezione=` = overview: grouped borderless rows with the CURRENT
+(no "Admin" item in the bar). `/settings` without `?sezione=` = overview: grouped borderless rows with the CURRENT
 VALUE on the right (e.g. "mer 11 nov", "ritiri bloccati 4h prima"); a section shows the grouped list as sidebar (lg+) and
 "← Impostazioni". Profilo links `?sezione=notifiche` and `?sezione=account`. On md+ the page menu is a
 separate bar BELOW the header, as wide as the cards (same `max-w-6xl px-4 sm:px-6` container); header and menu
@@ -25,14 +25,14 @@ Checks: `npx tsc --noEmit -p .`, `npx next build`, `npm run test:rules` (Firesto
 | Route | Page | Notes |
 |---|---|---|
 | `/` | Home "Prossima partita" | dynamic header ("Ciao Nome" + status title + detail + optional action link; `head` in page.tsx, first true condition wins: archived → MVP vote open → played not archived → no match → confirmed → teams ready → 10/10 → closed → open), match card (when/where/cost, "Ci sono"/"Ritirati", ring, own team); right column on lg (below on phone): "Il tuo rendimento" + "Ultima partita". No shortcut boxes (they duplicated the nav) and no admin note. After login users land here |
-| `/presenze` | Sign-ups | day strip (status dots) + ONE `PresenceCard` for the selected day (no "Tutti i giorni" view any more); card: ring, 10 initials dots (tap → name tooltip), "Ritirati" with confirm; admin "Gestisci": list rows → bottom sheet (Fai titolare / Sposta in attesa / Rimuovi), add player, "Azzera presenze del giorno"; "Primo a 10" badge |
-| `/giocatori` | Players (minimal): title (+ "Nuovo ospite" ≥ lg, admin); 3 leader cards in one row (same style as player cards, informative); controls = search (admin "+" inside < lg) then Ruolo · Ordina · Confronta (icon, text ≥ lg) · Card/Elenco icons (phone 2 rows, ≥ sm one row). Cards: `PlayerCardFifa` = borderless compact button (avatar, full name up to 2 lines, role + small `FormDots`, OVR by band), grid 1/2/3/4 cols. Tap card / Elenco row / table name → `PlayerDetailSheet` (Sheet: OVR + last 5, radar + stats as tabs < lg, side by side ≥ lg; admin actions as header icons: pencil = Modifica, "⋯" menu = Rendi/Togli admin (super admin), Elimina; no footer). Elenco < lg: columns name | role badge | V·P·S | OVR; ≥ lg: full table |
-| `/giocatori` (cont.) | Players | card view (`PlayerCardFifa`, tabs radar / Statistiche) or table view (players see only name, role column and OVR; admins also V-P-S and parameters); admin edit via `PlayerModal` |
-| `/squadre` | Teams. Top to bottom: summary line (date · time · field · €/person), date pills (calendar days + "Altra data"), status bar with ONE primary admin button (Genera → Conferma partita; Ribilancia secondary), admin-only collapsible "Modifica dettagli partita" (time/field/cost), tab Campo / "Modifica manuale" (`TeamSwapEditor`), `VirtualPitch` + share row (WhatsApp, Scarica immagine, Analisi AI), "Equilibrio" card (Bianchi/Neri bars + lists), `MvpVoteCard`, AI report (if asked), empty state with Genera (admin) or link to Presenze |
+| `/attendance` | Sign-ups | day strip (status dots) + ONE `PresenceCard` for the selected day (no "Tutti i giorni" view any more); card: ring, 10 initials dots (tap → name tooltip), "Ritirati" with confirm; admin "Gestisci": list rows → bottom sheet (Fai titolare / Sposta in attesa / Rimuovi), add player, "Azzera presenze del giorno"; "Primo a 10" badge |
+| `/players` | Players (minimal): title (+ "Nuovo ospite" ≥ lg, admin); 3 leader cards in one row (same style as player cards, informative); controls = search (admin "+" inside < lg) then Ruolo · Ordina · Confronta (icon, text ≥ lg) · Card/Elenco icons (phone 2 rows, ≥ sm one row). Cards: `PlayerCardFifa` = borderless compact button (avatar, full name up to 2 lines, role + small `FormDots`, OVR by band), grid 1/2/3/4 cols. Tap card / Elenco row / table name → `PlayerDetailSheet` (Sheet: OVR + last 5, radar + stats as tabs < lg, side by side ≥ lg; admin actions as header icons: pencil = Modifica, "⋯" menu = Rendi/Togli admin (super admin), Elimina; no footer). Elenco < lg: columns name | role badge | V·P·S | OVR; ≥ lg: full table |
+| `/players` (cont.) | Players | card view (`PlayerCardFifa`, tabs radar / Statistiche) or table view (players see only name, role column and OVR; admins also V-P-S and parameters); admin edit via `PlayerModal` |
+| `/teams` | Teams. Top to bottom: summary line (date · time · field · €/person), date pills (calendar days + "Altra data"), status bar with ONE primary admin button (Genera → Conferma partita; Ribilancia secondary), admin-only collapsible "Modifica dettagli partita" (time/field/cost), tab Campo / "Modifica manuale" (`TeamSwapEditor`), `VirtualPitch` + share row (WhatsApp, Scarica immagine, Analisi AI), "Equilibrio" card (Bianchi/Neri bars + lists), `MvpVoteCard`, AI report (if asked), empty state with Genera (admin) or link to Presenze |
 | `/history` | Storico (minimal): title + season pill select + admin "⋯" menu (Cancella tutto lo storico); number strip (partite · gol · giocatori) + Classifica/Partite pill. Classifica: < lg rows (index, top 3 bold, name, partite + V P S, value of the "Ordina per" select) ; ≥ lg borderless table with sortable headers, sorted column highlighted, zeros grey, top 3 numbers bold white (no medals). Tap player → `PlayerDetailSheet`. Partite: `HistoryCalendar` (left on lg) + thin rows (date · score · ⭐ MVP) → `MatchDetailSheet` (score, line-ups with ⚽/⭐/🧤, cost; admin Modifica → `MatchEditModal`, Cancella) |
 | `/profilo` | Own profile | photo, name, position, radar, global stats, two links: Notifiche and Account (both in Impostazioni) |
-| `/impostazioni` | Settings (+ admin panel) | groups: Tuo account = notifiche (`NotificationGuide`), account (`AccountSettings`: logout everywhere + `DeleteAccountSection`) · Gestione partita = partita · Club = campi, regole, parametri, notifiche-club · Accessi (super admin) = accessi. Old `?sezione=rosa` → accessi (super) or /giocatori (admin). Admin sections rendered by `components/admin/AdminSections.tsx` |
-| `/admin` | old admin panel | now only redirects to `/impostazioni?sezione=partita` (old links keep working) |
+| `/settings` | Settings (+ admin panel) | groups: Tuo account = notifiche (`NotificationGuide`), account (`AccountSettings`: logout everywhere + `DeleteAccountSection`) · Gestione partita = partita · Club = campi, regole, parametri, notifiche-club · Accessi (super admin) = accessi. Old `?sezione=rosa` → accessi (super) or /players (admin). Admin sections rendered by `components/admin/AdminSections.tsx` |
+| `/admin` | old admin panel | now only redirects to `/settings?sezione=partita` (old links keep working) |
 | `/login` | Google login | |
 
 Admin sections (`src/components/admin/AdminSections.tsx`, shown in Impostazioni): partita = `TabOverviewMatch` (Giorno
@@ -41,8 +41,8 @@ ufficiale, Cassa, Chiusura partita; no KPI boxes); campi / regole / parametri = 
 `FormSettingsCard show="keeper"`), `part="params"` (`FormSettingsCard show="form"` + `StatParametersCard`); blocks use
 `SettingsBlock` (borderless); notifiche-club = `NotificationSettingsCard`; accessi (super admin) = `AdminsCard` (admins with
 email, Togli admin, Rendi admin) + `DeactivatedAccountsList` + `DeletionFeedbackCard`. "Rosa giocatori" was removed:
-players are managed in /giocatori (super admin: "Rendi admin" in the player detail; admins see emails).
-The menu item "Admin" points to `/impostazioni?sezione=partita`.
+players are managed in /players (super admin: "Rendi admin" in the player detail; admins see emails).
+The menu item "Admin" points to `/settings?sezione=partita`.
 
 ## API routes (`src/app/api/`, Node runtime, firebase-admin)
 
@@ -84,3 +84,13 @@ The menu item "Admin" points to `/impostazioni?sezione=partita`.
   + `next dev -p 3100`, seeds fake data (`tests/e2e/seed.ts`), logs in with email/password as the fake super admin.
 - `npm run test:all` — all of them. Vitest is started through `scripts/vitest.mjs` (Windows drive-letter fix).
 - Pure logic used by the UI lives in `lib/utils/cashUtils.ts` and `lib/utils/resultValidation.ts` (tested), not in components.
+
+## Routes & languages (2026-11-13)
+- Canonical routes are English: `/attendance` (Presenze), `/players` (Giocatori), `/teams` (Squadre), `/history` (Storico),
+  `/settings` (Impostazioni); `/profilo` and `/login` unchanged. Old Italian addresses (`/presenze`, `/giocatori`, `/squadre`,
+  `/impostazioni`, `/storico`, also with sub-paths) → 301 in `next.config.mjs`, query string kept. Query param names stay Italian
+  (`?sezione=`, `?date=`, `?da=notifica`).
+- i18n: `next-intl` used CLIENT-SIDE only (no plugin, no /it /en prefixes, pages stay static): `src/i18n/I18nProvider.tsx`
+  (saved choice in localStorage `cc_locale` + cookie `NEXT_LOCALE` → `navigator.languages` → Italian; first render Italian),
+  `useLocaleSetting()` to change it, dictionaries `messages/it.json` / `messages/en.json` (same keys, checked by `tests/unit/i18n.test.ts`).
+  The next-intl plugin is NOT used: it loads `@swc/core`, blocked by Windows application control on the dev PC.

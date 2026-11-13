@@ -65,14 +65,14 @@ async function notifyPromoted(date: string, starterIds: string[], waitlistIds: s
     await deliverToAdmins({
       title: `✅ Raggiunti ${players} iscritti`,
       body: `La partita di ${italianDate(date)} ha ${players} titolari: potete generare e confermare le squadre.`,
-      url: `/squadre?date=${date}`,
+      url: `/teams?date=${date}`,
     });
   }
   if (promoted.length === 0) return;
   await deliver(promoted, {
     title: '✅ Sei titolare!',
     body: `Si è liberato un posto: sei tra i ${players} titolari della partita di ${italianDate(date)}.`,
-    url: '/presenze?da=notifica',
+    url: '/attendance?da=notifica',
   });
 }
 

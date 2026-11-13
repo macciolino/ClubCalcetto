@@ -1,0 +1,26 @@
+{
+  "common": {
+    "appName": "Club Soccer",
+    "loading": "Loading…",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "close": "Close",
+    "back": "Back"
+  },
+  "nav": {
+    "home": "Home",
+    "attendance": "Attendance",
+    "players": "Players",
+    "teams": "Teams",
+    "history": "History",
+    "settings": "Settings",
+    "profile": "Profile",
+    "logout": "Log out"
+  },
+  "language": {
+    "label": "Language",
+    "it": "Italiano",
+    "en": "English"
+  }
+}
