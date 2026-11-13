@@ -182,12 +182,12 @@ export default function LoginPage() {
   else if (isSignup && confirmPassword !== password) fieldErrors.confirmPassword = 'Le password non coincidono.';
   const showError = (field: string) => (submitted || touched[field]) && Boolean(fieldErrors[field]);
   const inputClass = (field: string, withIcon = true) =>
-    `w-full ${withIcon ? 'pl-9' : 'pl-3'} pr-3 py-3 bg-slate-950 border rounded-xl text-white text-sm placeholder:text-slate-600 focus:outline-none transition-colors ${
-      showError(field) ? 'border-rose-500 focus:border-rose-400' : 'border-slate-800 focus:border-emerald-500'
+    `w-full ${withIcon ? 'pl-9' : 'pl-3'} pr-3 py-3 bg-app border rounded-xl text-primary text-sm placeholder:text-muted focus:outline-none transition-colors ${
+      showError(field) ? 'border-rose-500 focus:border-rose-400' : 'border-line focus:border-accent'
     }`;
   const fieldError = (field: string) =>
     showError(field) ? (
-      <p id={`${field}-error`} className="mt-1 text-xs text-rose-400">
+      <p id={`${field}-error`} className="mt-1 text-xs text-danger">
         {fieldErrors[field]}
       </p>
     ) : null;
@@ -291,29 +291,30 @@ export default function LoginPage() {
     setErrorMessage('');
     setSuccessMessage('');
   };
-  const labelClass = 'block text-xs font-medium text-slate-300 mb-1.5';
+  const labelClass = 'block text-xs font-medium text-secondary mb-1.5';
 
 
   return (
-    <div className="fixed inset-0 z-10 overflow-y-auto overscroll-contain bg-slate-950">
+    <div className="fixed inset-0 z-10 overflow-y-auto overscroll-contain bg-app">
       <div className="relative min-h-full max-w-6xl mx-auto grid lg:grid-cols-2 gap-10 items-center px-4 sm:px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] animate-in">
-      {/* Lato sinistro (solo schermi grandi): un campo da calcio visto dall'alto, con le linee che si disegnano */}
-      <section className="hidden lg:block relative h-[calc(100dvh-3rem)] max-h-[880px] aspect-[2/3] justify-self-center rounded-3xl overflow-hidden border border-slate-800 bg-slate-900">
+      {/* Lato sinistro (solo schermi grandi): un campo da calcio visto dall'alto, con le linee che si disegnano.
+          Classe "dark": è un'illustrazione notturna, resta scura anche con il tema chiaro. */}
+      <section className="dark hidden lg:block relative h-[calc(100dvh-3rem)] max-h-[880px] aspect-[2/3] justify-self-center rounded-3xl overflow-hidden border border-line bg-card">
         <PitchLines className="absolute inset-0 h-full w-full" />
-        <div className="absolute -top-24 left-1/2 -translate-x-1/2 h-72 w-72 rounded-full bg-emerald-500/15 blur-3xl pointer-events-none" aria-hidden="true" />
+        <div className="absolute -top-24 left-1/2 -translate-x-1/2 h-72 w-72 rounded-full bg-accent/15 blur-3xl pointer-events-none" aria-hidden="true" />
 
         {/* Marchio: al centro della metà campo superiore */}
         <div className="absolute inset-x-0 top-[25%] -translate-y-1/2 flex items-center justify-center gap-3 animate-in">
           <BrandLogo size="lg" />
-          <span className="text-3xl font-bold tracking-tight text-white">
-            Club <span className="text-emerald-400">Soccer</span>
+          <span className="text-3xl font-bold tracking-tight text-primary">
+            Club <span className="text-accent-text">Soccer</span>
           </span>
         </div>
 
         {/* Messaggio e punti forti: nella metà campo inferiore, centrati */}
         <div className="absolute inset-x-0 top-[52%] px-10 flex flex-col items-center text-center gap-4">
-          <h2 className="text-3xl xl:text-[2.1rem] font-bold tracking-tight text-white leading-tight">
-            Il tuo calcetto, <span className="text-emerald-400">senza chat infinite.</span>
+          <h2 className="text-3xl xl:text-[2.1rem] font-bold tracking-tight text-primary leading-tight">
+            Il tuo calcetto, <span className="text-accent-text">senza chat infinite.</span>
           </h2>
           <ul className="w-full max-w-sm space-y-2.5 text-left">
             {[
@@ -325,12 +326,12 @@ export default function LoginPage() {
                 key={title}
                 className="flex items-center gap-3 rounded-2xl bg-white/[0.03] backdrop-blur-[2px] border border-white/[0.06] px-3.5 py-2.5"
               >
-                <span className="flex-shrink-0 h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                <span className="flex-shrink-0 h-9 w-9 rounded-xl bg-accent/10 text-accent-text flex items-center justify-center">
                   <Icon className="h-[18px] w-[18px]" />
                 </span>
                 <span className="min-w-0">
-                  <span className="block text-sm font-semibold text-white">{title}</span>
-                  <span className="block text-xs text-slate-400">{text}</span>
+                  <span className="block text-sm font-semibold text-primary">{title}</span>
+                  <span className="block text-xs text-secondary">{text}</span>
                 </span>
               </li>
             ))}
@@ -344,12 +345,12 @@ export default function LoginPage() {
         <div className="text-center space-y-3 lg:text-left">
           <div className="inline-flex lg:hidden items-center gap-3 pb-3">
             <BrandLogo size="lg" />
-            <span className="text-2xl font-bold tracking-tight text-white">
-              Club <span className="text-emerald-400">Soccer</span>
+            <span className="text-2xl font-bold tracking-tight text-primary">
+              Club <span className="text-accent-text">Soccer</span>
             </span>
           </div>
           <div className="space-y-1">
-            <h1 className="text-3xl font-bold tracking-tight text-white">
+            <h1 className="text-3xl font-bold tracking-tight text-primary">
               {returning
                 ? `Bentornato${returning.name ? ` ${returning.name}` : ''}!`
                 : user && !isEmailVerified
@@ -360,7 +361,7 @@ export default function LoginPage() {
                 ? 'Bentornato in campo'
                 : 'Entra nel club'}
             </h1>
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-secondary">
               {returning?.askEmail
                 ? 'Il tuo account era stato chiuso.'
                 : returning
@@ -378,12 +379,12 @@ export default function LoginPage() {
 
         {/* Link di invito valido: di chi è il profilo che si collega */}
         {mounted && inviteName && !returning && !profile && (
-          <div className="flex items-start gap-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 p-4 animate-in" role="status">
-            <span className="flex-shrink-0 h-9 w-9 rounded-xl bg-emerald-500/15 text-emerald-300 flex items-center justify-center">
+          <div className="flex items-start gap-3 rounded-2xl bg-accent/10 border border-accent/25 p-4 animate-in" role="status">
+            <span className="flex-shrink-0 h-9 w-9 rounded-xl bg-accent/15 text-accent-text flex items-center justify-center">
               <Link2 className="h-[18px] w-[18px]" />
             </span>
-            <p className="text-sm text-slate-200 leading-relaxed">
-              Stai collegando il tuo account al profilo di <span className="font-semibold text-white">{inviteName}</span>: le tue partite e
+            <p className="text-sm text-primary leading-relaxed">
+              Stai collegando il tuo account al profilo di <span className="font-semibold text-primary">{inviteName}</span>: le tue partite e
               statistiche verranno mantenute.
             </p>
           </div>
@@ -391,13 +392,13 @@ export default function LoginPage() {
 
         {!mounted ? (
           <div className="py-12 flex flex-col items-center justify-center gap-3">
-            <Loader2 className="h-7 w-7 text-emerald-400 animate-spin" />
-            <p className="text-sm text-slate-400">Caricamento…</p>
+            <Loader2 className="h-7 w-7 text-accent-text animate-spin" />
+            <p className="text-sm text-secondary">Caricamento…</p>
           </div>
         ) : returning?.askEmail ? (
           /* Account chiuso con Google, email sconosciuta: la chiediamo per avvisare l'admin */
           <form
-            className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 animate-in"
+            className="bg-card border border-line rounded-2xl p-6 space-y-4 animate-in"
             onSubmit={async (e) => {
               e.preventDefault();
               setReturnError('');
@@ -407,11 +408,11 @@ export default function LoginPage() {
               if (!ok) setReturnError('Non troviamo un account chiuso con questa email. Controllala o contatta l’amministratore del club.');
             }}
           >
-            <p className="text-sm text-slate-300 leading-relaxed">
+            <p className="text-sm text-secondary leading-relaxed">
               Scrivi l&apos;email con cui accedevi: avvisiamo l&apos;amministratore, che configura il tuo rientro.
             </p>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
               <input
                 type="email"
                 required
@@ -420,10 +421,10 @@ export default function LoginPage() {
                 onChange={(e) => setReturnEmail(e.target.value)}
                 placeholder="nome@gmail.com"
                 aria-label="Email dell'account"
-                className="w-full pl-9 pr-3 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-emerald-500"
+                className="w-full pl-9 pr-3 py-3 bg-app border border-line rounded-xl text-primary text-sm placeholder:text-muted focus:outline-none focus:border-accent"
               />
             </div>
-            {returnError && <p className="text-xs text-rose-400">{returnError}</p>}
+            {returnError && <p className="text-xs text-danger">{returnError}</p>}
             <div className="flex flex-col sm:flex-row gap-2">
               <button type="submit" disabled={returnBusy || !returnEmail.trim()} className={`${btn.primary} sm:flex-1`}>
                 {returnBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
@@ -443,14 +444,14 @@ export default function LoginPage() {
           </form>
         ) : returning ? (
           /* Account chiuso che torna: attesa ripristino, decide l'admin */
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5 animate-in" role="status">
+          <div className="bg-card border border-line rounded-2xl p-6 space-y-5 animate-in" role="status">
             <div className="flex items-start gap-3">
-              <span className="flex-shrink-0 h-10 w-10 rounded-full bg-emerald-500/15 flex items-center justify-center">
-                <Hourglass className="h-5 w-5 text-emerald-400" />
+              <span className="flex-shrink-0 h-10 w-10 rounded-full bg-accent/15 flex items-center justify-center">
+                <Hourglass className="h-5 w-5 text-accent-text" />
               </span>
               <div className="space-y-2 text-sm leading-relaxed">
-                <p className="text-slate-200">L&apos;amministratore del gruppo sta configurando il tuo rientro.</p>
-                <p className="text-slate-400">
+                <p className="text-primary">L&apos;amministratore del gruppo sta configurando il tuo rientro.</p>
+                <p className="text-secondary">
                   Non devi fare altro: appena conferma, entri con il tuo solito account (Google o email e password).
                 </p>
               </div>
@@ -469,26 +470,26 @@ export default function LoginPage() {
           </div>
         ) : user && !isEmailVerified ? (
           /* STATO 1: EMAIL DA VERIFICARE */
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5 animate-in">
+          <div className="bg-card border border-line rounded-2xl p-6 space-y-5 animate-in">
             <div className="flex items-start gap-3">
               <span className="flex-shrink-0 h-10 w-10 rounded-full bg-amber-500/15 flex items-center justify-center">
-                <Mail className="h-5 w-5 text-amber-400" />
+                <Mail className="h-5 w-5 text-warning" />
               </span>
-              <p className="text-sm text-slate-300 leading-relaxed">
-                Ti abbiamo inviato un link a <span className="font-semibold text-white break-all">{user.email}</span>. Aprilo per
+              <p className="text-sm text-secondary leading-relaxed">
+                Ti abbiamo inviato un link a <span className="font-semibold text-primary break-all">{user.email}</span>. Aprilo per
                 attivare l&apos;account, poi torna qui.
               </p>
             </div>
 
-            {errorMessage && <div className="rounded-xl bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{errorMessage}</div>}
-            {successMessage && <div className="rounded-xl bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">{successMessage}</div>}
+            {errorMessage && <div className="rounded-xl bg-rose-500/10 px-4 py-3 text-sm text-danger">{errorMessage}</div>}
+            {successMessage && <div className="rounded-xl bg-accent/10 px-4 py-3 text-sm text-accent-text">{successMessage}</div>}
 
             <div className="space-y-2">
               <button
                 type="button"
                 onClick={handleCheckVerification}
                 disabled={isCheckingVerification}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-xl text-sm transition-colors disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-accent hover:bg-accent/90 text-on-accent font-semibold rounded-xl text-sm transition-colors disabled:opacity-50"
               >
                 <RefreshCw className={`h-4 w-4 ${isCheckingVerification ? 'animate-spin' : ''}`} />
                 Ho verificato l&apos;email
@@ -496,7 +497,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={handleResendVerification}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-slate-700 text-slate-200 hover:bg-slate-800 font-semibold rounded-xl text-sm transition-colors"
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-line-strong text-primary hover:bg-card-hover font-semibold rounded-xl text-sm transition-colors"
               >
                 <Send className="h-4 w-4" />
                 Reinvia l&apos;email
@@ -504,7 +505,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => signOut()}
-                className="w-full flex items-center justify-center gap-1.5 py-2.5 text-slate-400 hover:text-white text-sm transition-colors"
+                className="w-full flex items-center justify-center gap-1.5 py-2.5 text-secondary hover:text-primary text-sm transition-colors"
               >
                 <LogOut className="h-4 w-4" />
                 Usa un altro account
@@ -513,9 +514,9 @@ export default function LoginPage() {
           </div>
         ) : profile ? (
           /* STATO 2: GIÀ COLLEGATO */
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5 animate-in">
+          <div className="bg-card border border-line rounded-2xl p-6 space-y-5 animate-in">
             <div className="flex items-center gap-3 min-w-0">
-              <span className="flex-shrink-0 h-11 w-11 rounded-full bg-emerald-500/15 text-emerald-300 flex items-center justify-center text-sm font-bold">
+              <span className="flex-shrink-0 h-11 w-11 rounded-full bg-accent/15 text-accent-text flex items-center justify-center text-sm font-bold">
                 {profile.full_name
                   .trim()
                   .split(/\s+/)
@@ -525,8 +526,8 @@ export default function LoginPage() {
                   .toUpperCase()}
               </span>
               <div className="min-w-0">
-                <p className="text-base font-semibold text-white truncate">{profile.full_name}</p>
-                <p className="text-xs text-slate-400">
+                <p className="text-base font-semibold text-primary truncate">{profile.full_name}</p>
+                <p className="text-xs text-secondary">
                   {isStrictAdmin ? 'Amministratore' : 'Giocatore'}
                   {profile.position ? ` · ${profile.position}` : ''}
                 </p>
@@ -535,14 +536,14 @@ export default function LoginPage() {
             <div className="space-y-2">
               <Link
                 href="/"
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-xl text-sm transition-colors"
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-accent hover:bg-accent/90 text-on-accent font-semibold rounded-xl text-sm transition-colors"
               >
                 Vai alla Home <ArrowRight className="h-4 w-4" />
               </Link>
               <button
                 type="button"
                 onClick={() => signOut()}
-                className="w-full flex items-center justify-center gap-1.5 py-2.5 text-slate-400 hover:text-rose-300 text-sm transition-colors"
+                className="w-full flex items-center justify-center gap-1.5 py-2.5 text-secondary hover:text-danger text-sm transition-colors"
               >
                 <LogOut className="h-4 w-4" />
                 Esci
@@ -553,7 +554,7 @@ export default function LoginPage() {
           /* STATO 3: ACCESSO / REGISTRAZIONE */
           <div className="space-y-5">
             {/* Accedi / Registrati */}
-            <div className="flex bg-slate-900 border border-slate-800 p-1 rounded-xl text-sm" role="tablist" aria-label="Accesso">
+            <div className="flex bg-card border border-line p-1 rounded-xl text-sm" role="tablist" aria-label="Accesso">
               {(
                 [
                   ['signin', 'Accedi'],
@@ -567,7 +568,7 @@ export default function LoginPage() {
                   aria-selected={authMode === mode}
                   onClick={() => switchMode(mode)}
                   className={`flex-1 py-2 rounded-lg font-semibold transition-colors ${
-                    authMode === mode ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'
+                    authMode === mode ? 'bg-line-strong text-primary' : 'text-secondary hover:text-primary'
                   }`}
                 >
                   {label}
@@ -576,12 +577,12 @@ export default function LoginPage() {
             </div>
 
             {errorMessage && (
-              <div role="alert" className="rounded-xl bg-rose-500/10 px-4 py-3 text-sm text-rose-200 animate-in">
+              <div role="alert" className="rounded-xl bg-rose-500/10 px-4 py-3 text-sm text-danger animate-in">
                 {errorMessage}
               </div>
             )}
             {successMessage && (
-              <div className="rounded-xl bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200 animate-in">{successMessage}</div>
+              <div className="rounded-xl bg-accent/10 px-4 py-3 text-sm text-accent-text animate-in">{successMessage}</div>
             )}
 
             {/* Google */}
@@ -589,7 +590,7 @@ export default function LoginPage() {
               type="button"
               onClick={handleGoogleLogin}
               disabled={isLoading}
-              className="w-full flex items-center justify-center gap-3 py-3 px-5 bg-white hover:bg-slate-100 text-slate-900 font-semibold rounded-xl text-sm transition-colors active:scale-[0.99] disabled:opacity-60"
+              className="w-full flex items-center justify-center gap-3 py-3 px-5 bg-white hover:bg-slate-100 text-slate-900 border border-line-strong font-semibold rounded-xl text-sm transition-colors active:scale-[0.99] disabled:opacity-60"
             >
               {isLoading ? (
                 <Loader2 className="h-5 w-5 animate-spin text-slate-700" />
@@ -617,9 +618,9 @@ export default function LoginPage() {
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="flex-1 border-t border-slate-800" />
-              <span className="text-xs text-slate-500">oppure con email</span>
-              <div className="flex-1 border-t border-slate-800" />
+              <div className="flex-1 border-t border-line" />
+              <span className="text-xs text-muted">oppure con email</span>
+              <div className="flex-1 border-t border-line" />
             </div>
 
             <form onSubmit={handleEmailPasswordSubmit} noValidate className="space-y-4">
@@ -631,7 +632,7 @@ export default function LoginPage() {
                         Nome
                       </label>
                       <div className="relative">
-                        <User className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                        <User className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
                         <input
                           id="signup-first-name"
                           type="text"
@@ -653,7 +654,7 @@ export default function LoginPage() {
                         Cognome
                       </label>
                       <div className="relative">
-                        <User className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                        <User className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
                         <input
                           id="signup-last-name"
                           type="text"
@@ -681,7 +682,7 @@ export default function LoginPage() {
                       required
                       value={position}
                       onChange={(e) => setPosition(e.target.value as FieldPosition)}
-                      className="w-full px-3 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500 transition-colors"
+                      className="w-full px-3 py-3 bg-app border border-line rounded-xl text-primary text-sm focus:outline-none focus:border-accent transition-colors"
                     >
                       {FIELD_POSITIONS.map((pos) => (
                         <option key={pos} value={pos}>
@@ -689,7 +690,7 @@ export default function LoginPage() {
                         </option>
                       ))}
                     </select>
-                    <p className="text-xs text-slate-500 mt-1">Serve per comporre squadre equilibrate. Puoi cambiarlo dopo.</p>
+                    <p className="text-xs text-muted mt-1">Serve per comporre squadre equilibrate. Puoi cambiarlo dopo.</p>
                   </div>
                 </>
               )}
@@ -699,7 +700,7 @@ export default function LoginPage() {
                   Email
                 </label>
                 <div className="relative">
-                  <Mail className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <Mail className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
                   <input
                     id="auth-email"
                     type="email"
@@ -727,14 +728,14 @@ export default function LoginPage() {
                       type="button"
                       onClick={handleForgotPassword}
                       disabled={resetBusy}
-                      className="mb-1.5 text-xs font-semibold text-emerald-300 hover:text-emerald-200 disabled:opacity-50"
+                      className="mb-1.5 text-xs font-semibold text-accent-text hover:text-accent-text disabled:opacity-50"
                     >
                       {resetBusy ? 'Invio…' : 'Password dimenticata?'}
                     </button>
                   )}
                 </div>
                 <div className="relative">
-                  <Lock className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <Lock className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
                   <input
                     id="auth-password"
                     type="password"
@@ -756,7 +757,7 @@ export default function LoginPage() {
                       <li
                         key={r.label}
                         className={`text-xs flex items-center gap-1.5 ${
-                          r.ok ? 'text-emerald-400' : showError('password') ? 'text-rose-400' : 'text-slate-500'
+                          r.ok ? 'text-accent-text' : showError('password') ? 'text-danger' : 'text-muted'
                         }`}
                       >
                         <span aria-hidden="true">{r.ok ? '✓' : '•'}</span>
@@ -774,7 +775,7 @@ export default function LoginPage() {
                     Conferma password
                   </label>
                   <div className="relative">
-                    <Lock className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <Lock className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
                     <input
                       id="auth-confirm-password"
                       type="password"
@@ -791,7 +792,7 @@ export default function LoginPage() {
                   </div>
                   {fieldError("confirmPassword")}
                   {confirmPassword && confirmPassword === password && (
-                    <p className="mt-1 text-xs text-emerald-400">✓ Le password coincidono</p>
+                    <p className="mt-1 text-xs text-accent-text">✓ Le password coincidono</p>
                   )}
                 </div>
               )}
@@ -799,21 +800,21 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3 px-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-xl text-sm transition-colors active:scale-[0.99] disabled:opacity-60 flex items-center justify-center gap-2"
+                className="w-full py-3 px-4 bg-accent hover:bg-accent/90 text-on-accent font-semibold rounded-xl text-sm transition-colors active:scale-[0.99] disabled:opacity-60 flex items-center justify-center gap-2"
               >
                 {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : authMode === 'signin' ? 'Login' : 'Registrati'}
               </button>
               {isSignup && (
-                <p className="text-xs text-slate-500 text-center">Ti invieremo un&apos;email per confermare l&apos;indirizzo.</p>
+                <p className="text-xs text-muted text-center">Ti invieremo un&apos;email per confermare l&apos;indirizzo.</p>
               )}
             </form>
 
-            <p className="text-sm text-slate-400 text-center">
+            <p className="text-sm text-secondary text-center">
               {authMode === 'signin' ? 'Non hai un account? ' : 'Hai già un account? '}
               <button
                 type="button"
                 onClick={() => switchMode(authMode === 'signin' ? 'signup' : 'signin')}
-                className="font-semibold text-emerald-300 hover:text-emerald-200"
+                className="font-semibold text-accent-text hover:text-accent-text"
               >
                 {authMode === 'signin' ? 'Registrati' : 'Accedi'}
               </button>

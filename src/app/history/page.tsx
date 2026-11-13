@@ -36,9 +36,9 @@ type SortKey = 'played' | 'won' | 'drawn' | 'lost' | 'goals' | 'mvp';
 /** Sortable columns of the leaderboard, in table order */
 const SORT_COLUMNS: { key: SortKey; label: string; title: string; cell: string }[] = [
   { key: 'played', label: 'PG', title: 'Presenze', cell: '' },
-  { key: 'won', label: 'V', title: 'Partite vinte', cell: 'text-emerald-400' },
-  { key: 'drawn', label: 'P', title: 'Pareggi', cell: 'text-amber-400' },
-  { key: 'lost', label: 'S', title: 'Sconfitte', cell: 'text-red-400' },
+  { key: 'won', label: 'V', title: 'Partite vinte', cell: 'text-accent-text' },
+  { key: 'drawn', label: 'P', title: 'Pareggi', cell: 'text-warning' },
+  { key: 'lost', label: 'S', title: 'Sconfitte', cell: 'text-danger' },
   { key: 'goals', label: 'Gol', title: 'Gol segnati', cell: '' },
   { key: 'mvp', label: 'MVP', title: 'Premi MVP', cell: '' },
 ];
@@ -195,7 +195,7 @@ export default function HistoryPage() {
   const detailMatch = matches.find((m) => m.id === detailMatchId) || null;
 
   const UNIT: Record<SortKey, string> = { played: 'partite', won: 'vinte', drawn: 'pari', lost: 'perse', goals: 'gol', mvp: 'MVP' };
-  const zeroTone = (v: number, tone: string) => (v === 0 ? 'text-slate-600' : tone);
+  const zeroTone = (v: number, tone: string) => (v === 0 ? 'text-muted' : tone);
   const shortDate = (d: string) => {
     const [y, mo, dd] = d.split('-').map(Number);
     return new Date(y, mo - 1, dd).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '');
@@ -209,7 +209,7 @@ export default function HistoryPage() {
     <div className="space-y-5 pb-12">
       {/* Titolo + stagione (e menu admin) sulla stessa riga */}
       <header className="flex items-center justify-between gap-3 min-h-[2.5rem]">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Storico</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-primary">Storico</h1>
         <div className="flex items-center gap-2">
           {seasons.length > 0 && (
             <select
@@ -219,7 +219,7 @@ export default function HistoryPage() {
                 setPickedDate(null);
               }}
               aria-label="Stagione"
-              className="bg-slate-900 border border-slate-800 rounded-full pl-3.5 pr-8 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+              className="bg-card border border-line rounded-full pl-3.5 pr-8 py-2 text-sm text-primary focus:outline-none focus:border-accent"
             >
               <option value="all">Tutte le stagioni</option>
               {seasons.map((y) => (
@@ -236,7 +236,7 @@ export default function HistoryPage() {
                 onClick={() => setMenuOpen((o) => !o)}
                 aria-label="Altre azioni"
                 aria-expanded={menuOpen}
-                className="h-9 w-9 flex items-center justify-center rounded-full text-slate-400 hover:text-white hover:bg-slate-800"
+                className="h-9 w-9 flex items-center justify-center rounded-full text-secondary hover:text-primary hover:bg-card-hover"
               >
                 <MoreHorizontal className="h-5 w-5" />
               </button>
@@ -274,12 +274,12 @@ export default function HistoryPage() {
               [leaderboard.length, 'giocatori'],
             ] as const
           ).map(([v, label]) => (
-            <span key={label} className="flex-shrink-0 rounded-full bg-slate-900 px-3.5 py-1.5 text-sm text-slate-400 whitespace-nowrap">
-              <span className="font-semibold text-white tabular-nums">{v}</span> {label}
+            <span key={label} className="flex-shrink-0 rounded-full bg-card px-3.5 py-1.5 text-sm text-secondary whitespace-nowrap">
+              <span className="font-semibold text-primary tabular-nums">{v}</span> {label}
             </span>
           ))}
         </div>
-        <div className="flex items-center bg-slate-900 p-1 rounded-full border border-slate-800 text-sm self-stretch sm:self-auto" role="radiogroup" aria-label="Vista">
+        <div className="flex items-center bg-card p-1 rounded-full border border-line text-sm self-stretch sm:self-auto" role="radiogroup" aria-label="Vista">
           {(
             [
               ['leaderboard', 'Classifica', ListOrdered],
@@ -293,7 +293,7 @@ export default function HistoryPage() {
               aria-checked={view === key}
               onClick={() => setView(key)}
               className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-full font-semibold transition-colors ${
-                view === key ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:text-white'
+                view === key ? 'bg-accent text-on-accent' : 'text-secondary hover:text-primary'
               }`}
             >
               <Icon className="h-4 w-4" /> {label}
@@ -308,17 +308,17 @@ export default function HistoryPage() {
           <Skeleton className="h-64 w-full rounded-2xl" />
         </div>
       ) : visibleMatches.length === 0 ? (
-        <div className="rounded-2xl bg-slate-900/60 p-8 text-center space-y-2">
-          <Trophy className="h-8 w-8 text-slate-600 mx-auto" />
-          <p className="text-sm text-slate-300 font-semibold">Nessuna partita archiviata</p>
-          <p className="text-sm text-slate-500">Dopo ogni partita un admin inserisce risultato, marcatori e MVP.</p>
+        <div className="rounded-2xl bg-card/60 p-8 text-center space-y-2">
+          <Trophy className="h-8 w-8 text-muted mx-auto" />
+          <p className="text-sm text-secondary font-semibold">Nessuna partita archiviata</p>
+          <p className="text-sm text-muted">Dopo ogni partita un admin inserisce risultato, marcatori e MVP.</p>
         </div>
       ) : view === 'leaderboard' ? (
         <>
           {/* Telefono e tablet: righe, ordinamento dalla tendina */}
           <div className="lg:hidden space-y-2">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs text-slate-500">Tocca un giocatore per la sua scheda</span>
+              <span className="text-xs text-muted">Tocca un giocatore per la sua scheda</span>
               <select
                 value={sortBy}
                 onChange={(e) => {
@@ -326,7 +326,7 @@ export default function HistoryPage() {
                   setSortDir('desc');
                 }}
                 aria-label="Ordina per"
-                className="bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                className="bg-card border border-line rounded-xl px-2.5 py-2 text-sm text-primary focus:outline-none focus:border-accent"
               >
                 <option value="won">Per vittorie</option>
                 <option value="goals">Per gol</option>
@@ -336,29 +336,29 @@ export default function HistoryPage() {
                 <option value="lost">Per sconfitte</option>
               </select>
             </div>
-            <ul className="bg-slate-900 rounded-2xl divide-y divide-slate-800 overflow-hidden">
+            <ul className="bg-card rounded-2xl divide-y divide-line overflow-hidden">
               {leaderboard.map((l, idx) => (
                 <li key={l.id}>
                   <button
                     type="button"
                     onClick={() => profiles.some((p) => p.id === l.id) && setDetailPlayerId(l.id)}
-                    className="w-full flex items-center gap-3 px-3.5 py-2.5 text-left hover:bg-slate-800/60"
+                    className="w-full flex items-center gap-3 px-3.5 py-2.5 text-left hover:bg-card-hover/60"
                   >
-                    <span className={`w-6 flex-shrink-0 text-center text-sm tabular-nums ${idx < 3 ? 'font-bold text-white' : 'text-slate-500'}`}>{idx + 1}</span>
+                    <span className={`w-6 flex-shrink-0 text-center text-sm tabular-nums ${idx < 3 ? 'font-bold text-primary' : 'text-muted'}`}>{idx + 1}</span>
                     <span className="flex-1 min-w-0">
-                      <span className="block truncate text-sm font-semibold text-white">{l.name}</span>
-                      <span className="block text-xs text-slate-400 tabular-nums">
+                      <span className="block truncate text-sm font-semibold text-primary">{l.name}</span>
+                      <span className="block text-xs text-secondary tabular-nums">
                         {l.played} {l.played === 1 ? 'partita' : 'partite'} ·{' '}
-                        <span className={zeroTone(l.won, 'text-emerald-400')}>{l.won}V</span>{' '}
-                        <span className={zeroTone(l.drawn, 'text-amber-400')}>{l.drawn}P</span>{' '}
-                        <span className={zeroTone(l.lost, 'text-red-400')}>{l.lost}S</span>
+                        <span className={zeroTone(l.won, 'text-accent-text')}>{l.won}V</span>{' '}
+                        <span className={zeroTone(l.drawn, 'text-warning')}>{l.drawn}P</span>{' '}
+                        <span className={zeroTone(l.lost, 'text-danger')}>{l.lost}S</span>
                       </span>
                     </span>
                     <span className="flex-shrink-0 text-right">
-                      <span className={`block text-lg font-bold tabular-nums leading-none ${l[sortBy] === 0 ? 'text-slate-600' : 'text-white'}`}>
+                      <span className={`block text-lg font-bold tabular-nums leading-none ${l[sortBy] === 0 ? 'text-muted' : 'text-primary'}`}>
                         {l[sortBy]}
                       </span>
-                      <span className="block text-[11px] text-slate-500 mt-0.5">{UNIT[sortBy]}</span>
+                      <span className="block text-[11px] text-muted mt-0.5">{UNIT[sortBy]}</span>
                     </span>
                   </button>
                 </li>
@@ -367,23 +367,23 @@ export default function HistoryPage() {
           </div>
 
           {/* PC: tabella pulita, intestazioni ordinabili */}
-          <div className="hidden lg:block bg-slate-900 rounded-2xl overflow-hidden">
+          <div className="hidden lg:block bg-card rounded-2xl overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-xs text-slate-400 border-b border-slate-800">
+                <tr className="text-xs text-secondary border-b border-line">
                   <th className="text-left pl-5 pr-2 py-3 w-14">#</th>
                   <th className="text-left px-2 py-3">Giocatore</th>
                   {SORT_COLUMNS.map((c) => (
                     <th
                       key={c.key}
-                      className={`p-0 w-20 ${sortBy === c.key ? 'bg-slate-800/40' : ''}`}
+                      className={`p-0 w-20 ${sortBy === c.key ? 'bg-card-hover/40' : ''}`}
                       aria-sort={sortBy === c.key ? (sortDir === 'desc' ? 'descending' : 'ascending') : 'none'}
                     >
                       <button
                         type="button"
                         onClick={() => handleSort(c.key)}
                         title={`Ordina per ${c.title}`}
-                        className={`w-full px-2 py-3 font-semibold whitespace-nowrap ${sortBy === c.key ? 'text-white' : 'hover:text-white'}`}
+                        className={`w-full px-2 py-3 font-semibold whitespace-nowrap ${sortBy === c.key ? 'text-primary' : 'hover:text-primary'}`}
                       >
                         {c.label}
                         <span className="inline-block w-3 text-[9px]" aria-hidden="true">
@@ -396,13 +396,13 @@ export default function HistoryPage() {
               </thead>
               <tbody>
                 {leaderboard.map((l, idx) => (
-                  <tr key={l.id} className="border-b border-slate-800/60 last:border-0 hover:bg-slate-800/30">
-                    <td className={`pl-5 pr-2 py-2.5 tabular-nums ${idx < 3 ? 'font-bold text-white' : 'text-slate-500'}`}>{idx + 1}</td>
+                  <tr key={l.id} className="border-b border-line/60 last:border-0 hover:bg-card-hover/30">
+                    <td className={`pl-5 pr-2 py-2.5 tabular-nums ${idx < 3 ? 'font-bold text-primary' : 'text-muted'}`}>{idx + 1}</td>
                     <td className="px-2 py-2.5">
                       <button
                         type="button"
                         onClick={() => profiles.some((p) => p.id === l.id) && setDetailPlayerId(l.id)}
-                        className="font-semibold text-white hover:text-emerald-300 text-left"
+                        className="font-semibold text-primary hover:text-accent-text text-left"
                       >
                         {l.name}
                       </button>
@@ -410,7 +410,7 @@ export default function HistoryPage() {
                     {SORT_COLUMNS.map((c) => (
                       <td
                         key={c.key}
-                        className={`px-2 py-2.5 text-center tabular-nums ${sortBy === c.key ? 'bg-slate-800/40 font-semibold' : ''} ${zeroTone(l[c.key], c.cell || 'text-slate-200')}`}
+                        className={`px-2 py-2.5 text-center tabular-nums ${sortBy === c.key ? 'bg-card-hover/40 font-semibold' : ''} ${zeroTone(l[c.key], c.cell || 'text-primary')}`}
                       >
                         {l[c.key]}
                       </td>
@@ -429,7 +429,7 @@ export default function HistoryPage() {
             onSelect={setPickedDate}
             maxYear={visibleYear}
           />
-          <ul className="bg-slate-900 rounded-2xl divide-y divide-slate-800 overflow-hidden">
+          <ul className="bg-card rounded-2xl divide-y divide-line overflow-hidden">
             {visibleMatches
               .filter((m) => !pickedDate || (m.match_date || m.id) === pickedDate)
               .sort((a, b) => (b.match_date || b.id).localeCompare(a.match_date || a.id))
@@ -441,17 +441,17 @@ export default function HistoryPage() {
                     <button
                       type="button"
                       onClick={() => setDetailMatchId(m.id)}
-                      className="w-full grid grid-cols-[5.5rem_1fr_minmax(0,7rem)] sm:grid-cols-[7rem_1fr_minmax(0,10rem)] items-center gap-2 px-3.5 py-3 text-left hover:bg-slate-800/60"
+                      className="w-full grid grid-cols-[5.5rem_1fr_minmax(0,7rem)] sm:grid-cols-[7rem_1fr_minmax(0,10rem)] items-center gap-2 px-3.5 py-3 text-left hover:bg-card-hover/60"
                     >
-                      <span className="text-sm text-slate-400 capitalize">{shortDate(m.match_date || m.id)}</span>
+                      <span className="text-sm text-secondary capitalize">{shortDate(m.match_date || m.id)}</span>
                       <span className="flex items-center justify-center gap-2 text-sm">
-                        <span className="hidden sm:inline text-slate-400">Bianchi</span>
-                        <span className={`text-lg font-bold tabular-nums ${w > b ? 'text-emerald-400' : 'text-white'}`}>{w}</span>
-                        <span className="text-slate-600">–</span>
-                        <span className={`text-lg font-bold tabular-nums ${b > w ? 'text-emerald-400' : 'text-white'}`}>{b}</span>
-                        <span className="hidden sm:inline text-slate-400">Neri</span>
+                        <span className="hidden sm:inline text-secondary">Bianchi</span>
+                        <span className={`text-lg font-bold tabular-nums ${w > b ? 'text-accent-text' : 'text-primary'}`}>{w}</span>
+                        <span className="text-muted">–</span>
+                        <span className={`text-lg font-bold tabular-nums ${b > w ? 'text-accent-text' : 'text-primary'}`}>{b}</span>
+                        <span className="hidden sm:inline text-secondary">Neri</span>
                       </span>
-                      <span className="truncate text-right text-xs text-amber-300">
+                      <span className="truncate text-right text-xs text-warning">
                         {m.mvp_player_id ? `⭐ ${shortName(nameOf(m.mvp_player_id))}` : ''}
                       </span>
                     </button>

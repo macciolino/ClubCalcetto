@@ -204,18 +204,18 @@ export function PlayerModal({
     >
       <form id="player-form" onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
         {errorMsg && (
-          <div className="lg:col-span-2 rounded-xl bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{errorMsg}</div>
+          <div className="lg:col-span-2 rounded-xl bg-rose-500/10 px-4 py-3 text-sm text-danger">{errorMsg}</div>
         )}
 
         {/* Colonna 1: chi è */}
         <div className="space-y-6">
           <section className="flex items-center gap-4">
             <div className="relative group flex-shrink-0">
-              <div className="w-20 h-20 rounded-2xl bg-slate-800 border-2 border-dashed border-slate-700 flex items-center justify-center overflow-hidden">
+              <div className="w-20 h-20 rounded-2xl bg-card-hover border-2 border-dashed border-line-strong flex items-center justify-center overflow-hidden">
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
-                  <span className="text-2xl font-bold text-emerald-400">{fullName.charAt(0).toUpperCase() || '⚽'}</span>
+                  <span className="text-2xl font-bold text-accent-text">{fullName.charAt(0).toUpperCase() || '⚽'}</span>
                 )}
               </div>
               <label
@@ -223,11 +223,11 @@ export function PlayerModal({
                 className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity cursor-pointer rounded-2xl"
               >
                 {uploadingAvatar ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-emerald-400" />
+                  <Loader2 className="h-5 w-5 animate-spin text-accent-text" />
                 ) : (
                   <>
-                    <Upload className="h-5 w-5 text-emerald-400" />
-                    <span className="text-[10px] text-white mt-1">Carica</span>
+                    <Upload className="h-5 w-5 text-accent-text" />
+                    <span className="text-[10px] text-primary mt-1">Carica</span>
                   </>
                 )}
               </label>
@@ -235,31 +235,31 @@ export function PlayerModal({
             </div>
             <div className="flex-1 min-w-0 space-y-2">
               <label className="block">
-                <span className="block text-xs font-medium text-slate-300 mb-1.5">Nome e cognome</span>
+                <span className="block text-xs font-medium text-secondary mb-1.5">Nome e cognome</span>
                 <input
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="Es. Mario Rossi"
-                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500 transition-colors"
+                  className="w-full px-3.5 py-2.5 bg-app border border-line rounded-xl text-primary text-sm focus:outline-none focus:border-accent transition-colors"
                   required
                 />
               </label>
-              <p className="text-xs text-slate-400">
-                OVR <span className="ml-1 text-base font-bold text-white tabular-nums">{currentOvr}</span>
+              <p className="text-xs text-secondary">
+                OVR <span className="ml-1 text-base font-bold text-primary tabular-nums">{currentOvr}</span>
               </p>
             </div>
           </section>
 
           <section className="space-y-1.5">
-            <label htmlFor="player-position" className="block text-xs font-medium text-slate-300">
+            <label htmlFor="player-position" className="block text-xs font-medium text-secondary">
               Ruolo in campo
             </label>
             <select
               id="player-position"
               value={position}
               onChange={(e) => setPosition(e.target.value as FieldPosition)}
-              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500 transition-colors"
+              className="w-full px-3.5 py-2.5 bg-app border border-line rounded-xl text-primary text-sm focus:outline-none focus:border-accent transition-colors"
             >
               {FIELD_POSITIONS.map((pos) => (
                 <option key={pos} value={pos}>
@@ -267,31 +267,31 @@ export function PlayerModal({
                 </option>
               ))}
             </select>
-            <p className="text-xs text-slate-500">Serve al bilanciamento e alla posizione sul campo.</p>
+            <p className="text-xs text-muted">Serve al bilanciamento e alla posizione sul campo.</p>
           </section>
 
           <section className="space-y-2">
             <div className="flex items-baseline justify-between">
-              <h3 className="text-xs font-medium text-slate-300">Partite</h3>
-              <span className="text-xs text-slate-500">
+              <h3 className="text-xs font-medium text-secondary">Partite</h3>
+              <span className="text-xs text-muted">
                 Totale {Number(matchesWon || 0) + Number(matchesDrawn || 0) + Number(matchesLost || 0)}
               </span>
             </div>
             <div className="grid grid-cols-3 gap-2">
               {(
                 [
-                  ['Vinte', matchesWon, setMatchesWon, 'text-emerald-300'],
-                  ['Pari', matchesDrawn, setMatchesDrawn, 'text-amber-300'],
-                  ['Perse', matchesLost, setMatchesLost, 'text-rose-300'],
+                  ['Vinte', matchesWon, setMatchesWon, 'text-accent-text'],
+                  ['Pari', matchesDrawn, setMatchesDrawn, 'text-warning'],
+                  ['Perse', matchesLost, setMatchesLost, 'text-danger'],
                 ] as const
               ).map(([label, value, set, color]) => (
-                <label key={label} className="block rounded-xl bg-slate-950/60 border border-slate-800 p-2.5 text-center">
+                <label key={label} className="block rounded-xl bg-app/60 border border-line p-2.5 text-center">
                   <span className={`block text-xs font-medium mb-1 ${color}`}>{label}</span>
                   <NumberInput
                     min={0}
                     value={value}
                     onValueChange={set}
-                    className="w-full text-center bg-slate-900 border border-slate-800 rounded-lg py-1.5 text-white font-semibold text-base tabular-nums focus:outline-none focus:border-emerald-500"
+                    className="w-full text-center bg-card border border-line rounded-lg py-1.5 text-primary font-semibold text-base tabular-nums focus:outline-none focus:border-accent"
                   />
                 </label>
               ))}
@@ -302,15 +302,15 @@ export function PlayerModal({
         {/* Colonna 2: parametri */}
         <section className="space-y-3">
           <div className="flex items-baseline justify-between">
-            <h3 className="text-xs font-medium text-slate-300">Parametri (1-10)</h3>
-            <span className="text-xs text-slate-500">Trascina il cursore</span>
+            <h3 className="text-xs font-medium text-secondary">Parametri (1-10)</h3>
+            <span className="text-xs text-muted">Trascina il cursore</span>
           </div>
-          <div className="space-y-4 rounded-xl bg-slate-950/60 border border-slate-800 p-4">
+          <div className="space-y-4 rounded-xl bg-app/60 border border-line p-4">
             {sortedCategories.map((cat) => {
               const val = stats[cat.name] ?? cat.default_value ?? 6;
               return (
                 <label key={cat.id || cat.name} className="flex items-center gap-3">
-                  <span className="w-24 text-sm text-slate-300 truncate">{cat.label || cat.name}</span>
+                  <span className="w-24 text-sm text-secondary truncate">{cat.label || cat.name}</span>
                   <input
                     type="range"
                     min="1"
@@ -320,7 +320,7 @@ export function PlayerModal({
                     onChange={(e) => handleStatChange(cat.name, parseInt(e.target.value, 10))}
                     className="flex-1 accent-emerald-500 h-2 cursor-pointer"
                   />
-                  <span className="w-7 text-right font-semibold text-sm text-white tabular-nums">{val}</span>
+                  <span className="w-7 text-right font-semibold text-sm text-primary tabular-nums">{val}</span>
                 </label>
               );
             })}

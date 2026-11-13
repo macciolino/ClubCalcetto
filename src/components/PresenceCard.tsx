@@ -54,7 +54,7 @@ export function CountRing({ count, max: MAX = DEFAULT_MAX }: { count: number; ma
   return (
     <div className="relative h-16 w-16 flex-shrink-0" role="img" aria-label={`${count} titolari su ${MAX}`}>
       <svg viewBox="0 0 64 64" className="h-16 w-16 -rotate-90">
-        <circle cx="32" cy="32" r={r} fill="none" strokeWidth="6" className="stroke-slate-800" />
+        <circle cx="32" cy="32" r={r} fill="none" strokeWidth="6" className="stroke-line" />
         <circle
           cx="32"
           cy="32"
@@ -67,7 +67,7 @@ export function CountRing({ count, max: MAX = DEFAULT_MAX }: { count: number; ma
           className={`transition-all duration-500 ${full ? 'stroke-emerald-400' : 'stroke-emerald-600'}`}
         />
       </svg>
-      <span className={`absolute inset-0 flex items-center justify-center font-mono font-black text-sm ${full ? 'text-emerald-300' : 'text-white'}`}>
+      <span className={`absolute inset-0 flex items-center justify-center font-mono font-black text-sm ${full ? 'text-accent-text' : 'text-primary'}`}>
         {Math.min(count, MAX)}/{MAX}
       </span>
     </div>
@@ -148,23 +148,23 @@ export function PresenceCard({
 
   return (
     <div
-      className={`relative flex flex-col bg-slate-900 border rounded-2xl p-5 transition-colors ${
-        day.isToday ? 'border-emerald-500/50' : 'border-slate-800'
+      className={`relative flex flex-col bg-card border rounded-2xl p-5 transition-colors ${
+        day.isToday ? 'border-accent/50' : 'border-line'
       }`}
     >
       {/* Giorno */}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-lg font-semibold text-white capitalize">{day.dayName}</h3>
+            <h3 className="text-lg font-semibold text-primary capitalize">{day.dayName}</h3>
             {day.isToday && (
-              <span className="bg-emerald-500/15 text-emerald-300 text-xs font-medium px-2 py-0.5 rounded-full">Oggi</span>
+              <span className="bg-accent/15 text-accent-text text-xs font-medium px-2 py-0.5 rounded-full">Oggi</span>
             )}
             {isFirstToTen && (
-              <span className="bg-amber-500/15 text-amber-300 text-xs font-medium px-2 py-0.5 rounded-full">🥇 Primo a 10</span>
+              <span className="bg-amber-500/15 text-warning text-xs font-medium px-2 py-0.5 rounded-full">🥇 Primo a 10</span>
             )}
           </div>
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-secondary">
             {day.dayNumber} {day.monthName} {day.dateObj.getFullYear()}
           </p>
         </div>
@@ -174,7 +174,7 @@ export function PresenceCard({
             onClick={() => setShowManage((o) => !o)}
             aria-expanded={showManage}
             className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              showManage ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              showManage ? 'bg-card-hover text-primary' : 'text-secondary hover:text-primary hover:bg-card-hover'
             }`}
           >
             <MoreHorizontal className="h-4 w-4" /> Gestisci
@@ -187,15 +187,15 @@ export function PresenceCard({
         {mine ? (
           <div
             className={`w-full rounded-xl border px-4 py-3 flex items-center justify-between gap-3 ${
-              myStarterIdx >= 0 ? 'bg-emerald-500/10 border-emerald-500/40' : 'bg-amber-500/10 border-amber-500/40'
+              myStarterIdx >= 0 ? 'bg-accent/10 border-accent/40' : 'bg-amber-500/10 border-amber-500/40'
             }`}
           >
-            <span className={`text-sm font-semibold flex items-center gap-2 ${myStarterIdx >= 0 ? 'text-emerald-300' : 'text-amber-300'}`}>
+            <span className={`text-sm font-semibold flex items-center gap-2 ${myStarterIdx >= 0 ? 'text-accent-text' : 'text-warning'}`}>
               <Check className="h-4 w-4" />
               {myStarterIdx >= 0 ? `Sei titolare (n° ${myStarterIdx + 1})` : `In attesa (${myWaitIdx + 1}°)`}
             </span>
             {cancelLocked ? (
-              <span className="text-[11px] text-slate-400 flex items-center gap-1">
+              <span className="text-[11px] text-secondary flex items-center gap-1">
                 <Lock className="h-3 w-3" /> Ritiri bloccati
               </span>
             ) : (
@@ -203,18 +203,18 @@ export function PresenceCard({
                 type="button"
                 onClick={handleWithdraw}
                 disabled={isToggling}
-                className="flex-shrink-0 flex items-center gap-1.5 min-h-[36px] px-3 rounded-lg border border-slate-700 text-xs font-medium text-slate-300 hover:text-rose-300 hover:border-rose-500/40 disabled:opacity-50"
+                className="flex-shrink-0 flex items-center gap-1.5 min-h-[36px] px-3 rounded-lg border border-line-strong text-xs font-medium text-secondary hover:text-danger hover:border-rose-500/40 disabled:opacity-50"
               >
                 <LogOut className="h-3.5 w-3.5" /> Ritirati
               </button>
             )}
           </div>
         ) : isLocked ? (
-          <div className="w-full rounded-xl border border-slate-700 bg-slate-800/60 px-4 py-3 text-center">
-            <span className="text-sm font-semibold text-slate-300 flex items-center justify-center gap-2">
+          <div className="w-full rounded-xl border border-line-strong bg-card-hover/60 px-4 py-3 text-center">
+            <span className="text-sm font-semibold text-secondary flex items-center justify-center gap-2">
               <Lock className="h-4 w-4" /> Iscrizioni chiuse
             </span>
-            <span className="block text-xs text-slate-400 mt-0.5">L&apos;admin le apre per la settimana prossima.</span>
+            <span className="block text-xs text-secondary mt-0.5">L&apos;admin le apre per la settimana prossima.</span>
           </div>
         ) : (
           <button
@@ -232,10 +232,10 @@ export function PresenceCard({
       <div className="mt-5 flex items-center gap-4">
         <CountRing count={starters.length} max={MAX} />
         <div className="text-sm min-w-0">
-          <p className="font-semibold text-white">
+          <p className="font-semibold text-primary">
             {isFull ? 'Al completo' : `${MAX - starters.length} ${MAX - starters.length === 1 ? 'posto libero' : 'posti liberi'}`}
           </p>
-          <p className="text-slate-400">{waitlist.length > 0 ? `${waitlist.length} in lista d’attesa` : 'Tocca un pallino per il nome'}</p>
+          <p className="text-secondary">{waitlist.length > 0 ? `${waitlist.length} in lista d’attesa` : 'Tocca un pallino per il nome'}</p>
         </div>
       </div>
       <div className={`mt-4 grid ${dots.grid} gap-y-3 justify-items-center max-w-sm`}>
@@ -245,7 +245,7 @@ export function PresenceCard({
             return (
               <span
                 key={`free-${i}`}
-                className={`${dots.dot} rounded-full border-2 border-dashed border-slate-700`}
+                className={`${dots.dot} rounded-full border-2 border-dashed border-line-strong`}
                 aria-label="Posto libero"
               />
             );
@@ -262,7 +262,7 @@ export function PresenceCard({
                 aria-label={p.name}
                 aria-describedby={open ? `tip-${p.id}` : undefined}
                 className={`${dots.dot} rounded-full flex items-center justify-center font-bold transition-shadow ${
-                  isMe ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-emerald-300'
+                  isMe ? 'bg-accent text-on-accent' : 'bg-card-hover text-accent-text'
                 } ${open ? 'ring-2 ring-white' : ''}`}
               >
                 {initialsOf(p.name)}
@@ -271,7 +271,7 @@ export function PresenceCard({
                 <span
                   id={`tip-${p.id}`}
                   role="tooltip"
-                  className={`absolute bottom-full mb-2 z-20 whitespace-nowrap rounded-lg bg-white px-2.5 py-1 text-xs font-semibold text-slate-950 shadow-lg animate-in ${bubblePos}`}
+                  className={`absolute bottom-full mb-2 z-20 whitespace-nowrap rounded-lg bg-white ring-1 ring-line-strong px-2.5 py-1 text-xs font-semibold text-slate-950 shadow-lg animate-in ${bubblePos}`}
                 >
                   {p.name}
                 </span>
@@ -288,7 +288,7 @@ export function PresenceCard({
             type="button"
             onClick={() => setShowNames((o) => !o)}
             aria-expanded={showNames}
-            className="text-sm font-medium text-slate-400 hover:text-white flex items-center gap-1"
+            className="text-sm font-medium text-secondary hover:text-primary flex items-center gap-1"
           >
             Vedi nomi <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showNames ? 'rotate-180' : ''}`} />
           </button>
@@ -297,11 +297,11 @@ export function PresenceCard({
               {starters.map((p, i) => (
                 <li
                   key={p.id}
-                  className={`truncate ${p.player_id === effectiveUserId ? 'text-emerald-300 font-bold' : 'text-slate-300'}`}
+                  className={`truncate ${p.player_id === effectiveUserId ? 'text-accent-text font-bold' : 'text-secondary'}`}
                 >
-                  <span className="tabular-nums text-slate-500 mr-1.5">{i + 1}.</span>
+                  <span className="tabular-nums text-muted mr-1.5">{i + 1}.</span>
                   {p.name}
-                  {p.profile?.is_guest && <span className="text-[10px] text-slate-500"> · ospite</span>}
+                  {p.profile?.is_guest && <span className="text-[10px] text-muted"> · ospite</span>}
                 </li>
               ))}
             </ol>
@@ -315,7 +315,7 @@ export function PresenceCard({
           type="button"
           onClick={() => setShowWaitlist((o) => !o)}
           aria-expanded={showWaitlist}
-          className="mt-3 w-full text-left text-sm text-amber-300/90 hover:text-amber-200"
+          className="mt-3 w-full text-left text-sm text-warning/90 hover:text-warning"
         >
           <span className="font-semibold">In attesa:</span>{' '}
           {showWaitlist
@@ -329,10 +329,10 @@ export function PresenceCard({
 
       {/* Strumenti admin, solo su richiesta */}
       {showAdminActions && showManage && (
-        <div className="mt-4 pt-4 border-t border-slate-800 space-y-3">
-          <p className="text-xs font-semibold text-slate-400">Gestione admin · tocca un giocatore per le azioni</p>
-          {enriched.length === 0 && <p className="text-xs text-slate-500">Nessun iscritto.</p>}
-          <ul className="divide-y divide-slate-800 rounded-xl bg-slate-950/50">
+        <div className="mt-4 pt-4 border-t border-line space-y-3">
+          <p className="text-xs font-semibold text-secondary">Gestione admin · tocca un giocatore per le azioni</p>
+          {enriched.length === 0 && <p className="text-xs text-muted">Nessun iscritto.</p>}
+          <ul className="divide-y divide-line rounded-xl bg-app/50">
             {enriched.map((p, i) => {
               const isStarter = p.status === 'confirmed';
               return (
@@ -340,19 +340,19 @@ export function PresenceCard({
                   <button
                     type="button"
                     onClick={() => setActionsFor(p.id)}
-                    className="w-full flex items-center gap-3 px-3 py-3 text-left text-sm hover:bg-slate-800/60 first:rounded-t-xl last:rounded-b-xl"
+                    className="w-full flex items-center gap-3 px-3 py-3 text-left text-sm hover:bg-card-hover/60 first:rounded-t-xl last:rounded-b-xl"
                     aria-haspopup="dialog"
                   >
-                    <span className="w-5 text-right tabular-nums text-xs text-slate-500">{i + 1}</span>
-                    <span className="flex-1 min-w-0 truncate text-slate-200">{p.name}</span>
+                    <span className="w-5 text-right tabular-nums text-xs text-muted">{i + 1}</span>
+                    <span className="flex-1 min-w-0 truncate text-primary">{p.name}</span>
                     <span
                       className={`flex-shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full ${
-                        isStarter ? 'bg-emerald-500/15 text-emerald-300' : 'bg-amber-500/15 text-amber-300'
+                        isStarter ? 'bg-accent/15 text-accent-text' : 'bg-amber-500/15 text-warning'
                       }`}
                     >
                       {isStarter ? 'Titolare' : 'In attesa'}
                     </span>
-                    <ChevronRight className="h-4 w-4 text-slate-500 flex-shrink-0" />
+                    <ChevronRight className="h-4 w-4 text-muted flex-shrink-0" />
                   </button>
                 </li>
               );
@@ -360,7 +360,7 @@ export function PresenceCard({
           </ul>
           {onAddGuestPresence && (
             <select
-              className="w-full min-w-0 text-xs bg-slate-950 border border-slate-800 text-slate-300 rounded-lg px-2 py-2 focus:outline-none focus:border-slate-500"
+              className="w-full min-w-0 text-xs bg-app border border-line text-secondary rounded-lg px-2 py-2 focus:outline-none focus:border-slate-500"
               defaultValue=""
               aria-label="Aggiungi un giocatore a questo giorno"
               onChange={(e) => {
@@ -385,7 +385,7 @@ export function PresenceCard({
             <button
               type="button"
               onClick={() => onResetDay(day.dateString)}
-              className="text-[11px] text-rose-400/80 hover:text-rose-300 underline"
+              className="text-[11px] text-rose-400/80 hover:text-danger underline"
             >
               Azzera presenze del giorno
             </button>
@@ -411,15 +411,15 @@ export function PresenceCard({
                   onSetOverride(actionTarget.id, actionTarget.status === 'confirmed' ? 'waitlist' : 'starter');
                   setActionsFor(null);
                 }}
-                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-slate-950/60 hover:bg-slate-800 text-sm font-medium text-white"
+                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-app/60 hover:bg-card-hover text-sm font-medium text-primary"
               >
                 {actionTarget.status === 'confirmed' ? (
                   <>
-                    <ArrowDown className="h-4 w-4 text-amber-300" /> Sposta in lista d&apos;attesa
+                    <ArrowDown className="h-4 w-4 text-warning" /> Sposta in lista d&apos;attesa
                   </>
                 ) : (
                   <>
-                    <ArrowUp className="h-4 w-4 text-emerald-300" /> Fai titolare
+                    <ArrowUp className="h-4 w-4 text-accent-text" /> Fai titolare
                   </>
                 )}
               </button>
@@ -432,7 +432,7 @@ export function PresenceCard({
                   setActionsFor(null);
                   if (await askConfirm(`Rimuovere ${target.name} da ${day.dayName} ${day.dayNumber} ${day.monthName}?`)) onRemovePresence(target.id);
                 }}
-                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-slate-950/60 hover:bg-slate-800 text-sm font-medium text-rose-300"
+                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-app/60 hover:bg-card-hover text-sm font-medium text-danger"
               >
                 <UserX className="h-4 w-4" /> Rimuovi dal giorno
               </button>

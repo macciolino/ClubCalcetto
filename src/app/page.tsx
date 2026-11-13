@@ -242,9 +242,9 @@ export default function HomePage() {
   return (
     <div className="space-y-8 pb-12 animate-in">
       <header className="space-y-1.5">
-        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white">Ciao {firstName}</h1>
-        <p className="pt-1 text-lg sm:text-xl font-semibold text-slate-100 first-letter:uppercase">{presences === null ? '\u00a0' : head.title}</p>
-        <p className="text-sm text-slate-400">{presences === null ? '\u00a0' : head.detail}</p>
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-primary">Ciao {firstName}</h1>
+        <p className="pt-1 text-lg sm:text-xl font-semibold text-primary first-letter:uppercase">{presences === null ? '\u00a0' : head.title}</p>
+        <p className="text-sm text-secondary">{presences === null ? '\u00a0' : head.detail}</p>
         {presences !== null && head.action && (
           <Link
             href={head.action.href}
@@ -258,29 +258,29 @@ export default function HomePage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
       <div className="lg:col-span-2">
       {hasMatch ? (
-        <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 space-y-6" aria-labelledby="next-match">
+        <section className="bg-card border border-line rounded-2xl p-5 sm:p-6 space-y-6" aria-labelledby="next-match">
           {/* Quando e dove */}
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
             <div className="space-y-2 min-w-0">
-              <p className="text-xs font-semibold text-emerald-400">Prossima partita</p>
-              <h2 id="next-match" className="text-xl sm:text-2xl font-bold text-white">
+              <p className="text-xs font-semibold text-accent-text">Prossima partita</p>
+              <h2 id="next-match" className="text-xl sm:text-2xl font-bold text-primary">
                 {formatItalianDate(date)}
               </h2>
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-300">
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-secondary">
                 <span className="flex items-center gap-1.5">
-                  <Clock className="h-4 w-4 text-slate-400" /> Ore {time}
+                  <Clock className="h-4 w-4 text-secondary" /> Ore {time}
                 </span>
                 <span className="flex items-start gap-1.5 min-w-0">
-                  <MapPin className="h-4 w-4 text-slate-400 flex-shrink-0 mt-0.5" />
+                  <MapPin className="h-4 w-4 text-secondary flex-shrink-0 mt-0.5" />
                   <span className="break-words">{location}</span>
                 </span>
-                <span className="text-slate-400">
+                <span className="text-secondary">
                   {fmt.label} · €{perHead(cost, fmt.players)} a testa
                 </span>
               </div>
             </div>
             {teamRecord?.confirmed && (
-              <span className="self-start bg-emerald-500/15 text-emerald-300 text-xs font-medium px-2.5 py-1 rounded-full">
+              <span className="self-start bg-accent/15 text-accent-text text-xs font-medium px-2.5 py-1 rounded-full">
                 Partita confermata
               </span>
             )}
@@ -288,19 +288,19 @@ export default function HomePage() {
 
           {/* Il tuo stato */}
           {presences === null ? (
-            <div className="h-14 rounded-xl bg-slate-800/70 animate-pulse" aria-hidden="true" />
+            <div className="h-14 rounded-xl bg-card-hover/70 animate-pulse" aria-hidden="true" />
           ) : mine ? (
             <div
               className={`rounded-xl border px-4 py-3.5 flex items-center justify-between gap-3 ${
-                myStarterIdx >= 0 ? 'bg-emerald-500/10 border-emerald-500/40' : 'bg-amber-500/10 border-amber-500/40'
+                myStarterIdx >= 0 ? 'bg-accent/10 border-accent/40' : 'bg-amber-500/10 border-amber-500/40'
               }`}
             >
-              <span className={`text-base font-semibold flex items-center gap-2 ${myStarterIdx >= 0 ? 'text-emerald-300' : 'text-amber-300'}`}>
+              <span className={`text-base font-semibold flex items-center gap-2 ${myStarterIdx >= 0 ? 'text-accent-text' : 'text-warning'}`}>
                 <Check className="h-5 w-5" />
                 {myStarterIdx >= 0 ? `Sei titolare (n° ${myStarterIdx + 1})` : `In attesa (${myWaitIdx + 1}°)`}
               </span>
               {cancelLocked ? (
-                <span className="text-xs text-slate-400 flex items-center gap-1">
+                <span className="text-xs text-secondary flex items-center gap-1">
                   <Lock className="h-3.5 w-3.5" /> Ritiri bloccati
                 </span>
               ) : (
@@ -314,15 +314,15 @@ export default function HomePage() {
                     if (await askConfirm(msg)) handleToggle();
                   }}
                   disabled={busy}
-                  className="flex-shrink-0 flex items-center gap-1.5 min-h-[36px] px-3 rounded-lg border border-slate-700 text-sm font-medium text-slate-300 hover:text-rose-300 hover:border-rose-500/40 disabled:opacity-50"
+                  className="flex-shrink-0 flex items-center gap-1.5 min-h-[36px] px-3 rounded-lg border border-line-strong text-sm font-medium text-secondary hover:text-danger hover:border-rose-500/40 disabled:opacity-50"
                 >
                   <LogOut className="h-4 w-4" /> Ritirati
                 </button>
               )}
             </div>
           ) : locked ? (
-            <div className="rounded-xl border border-slate-700 bg-slate-800/60 px-4 py-3.5 text-center">
-              <span className="text-base font-semibold text-slate-300 flex items-center justify-center gap-2">
+            <div className="rounded-xl border border-line-strong bg-card-hover/60 px-4 py-3.5 text-center">
+              <span className="text-base font-semibold text-secondary flex items-center justify-center gap-2">
                 <Lock className="h-4 w-4" /> Iscrizioni chiuse
               </span>
             </div>
@@ -339,17 +339,17 @@ export default function HomePage() {
 
           {/* Posti e squadra */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="flex items-center gap-4 rounded-xl bg-slate-950/50 p-4">
+            <div className="flex items-center gap-4 rounded-xl bg-app/50 p-4">
               <CountRing count={starters.length} max={fmt.players} />
               <div className="text-sm">
-                <p className="font-semibold text-white">{isFull ? 'Al completo' : `${fmt.players - starters.length} posti liberi`}</p>
-                <p className="text-slate-400">{waitlist.length > 0 ? `${waitlist.length} in lista d’attesa` : 'Nessuno in attesa'}</p>
+                <p className="font-semibold text-primary">{isFull ? 'Al completo' : `${fmt.players - starters.length} posti liberi`}</p>
+                <p className="text-secondary">{waitlist.length > 0 ? `${waitlist.length} in lista d’attesa` : 'Nessuno in attesa'}</p>
               </div>
             </div>
-            <div className="rounded-xl bg-slate-950/50 p-4 text-sm flex flex-col justify-center gap-1">
+            <div className="rounded-xl bg-app/50 p-4 text-sm flex flex-col justify-center gap-1">
               {teams && teams.white.length > 0 ? (
                 <>
-                  <p className="font-semibold text-white">
+                  <p className="font-semibold text-primary">
                     {myTeam === 'white' ? 'Giochi con i Bianchi ⚪' : myTeam === 'black' ? 'Giochi con i Neri ⚫' : 'Squadre pronte'}
                   </p>
                   <Link href={`/teams?date=${date}`} className={textLink}>
@@ -358,16 +358,16 @@ export default function HomePage() {
                 </>
               ) : (
                 <>
-                  <p className="font-semibold text-white">Squadre non ancora fatte</p>
-                  <p className="text-slate-400">Le prepara un admin quando ci sono {fmt.players} titolari.</p>
+                  <p className="font-semibold text-primary">Squadre non ancora fatte</p>
+                  <p className="text-secondary">Le prepara un admin quando ci sono {fmt.players} titolari.</p>
                 </>
               )}
             </div>
           </div>
         </section>
       ) : (
-        <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center space-y-3">
-          <p className="text-sm text-slate-300">Segna i giorni in cui puoi giocare: la partita si decide quando si arriva al completo.</p>
+        <section className="bg-card border border-line rounded-2xl p-6 text-center space-y-3">
+          <p className="text-sm text-secondary">Segna i giorni in cui puoi giocare: la partita si decide quando si arriva al completo.</p>
           <Link href="/attendance" className={btn.primary}>
             Vai alle presenze <ArrowRight className="h-4 w-4" />
           </Link>
@@ -378,8 +378,8 @@ export default function HomePage() {
 
       {/* Colonna destra (sotto su telefono): rendimento personale e ultima partita */}
       <aside className="space-y-4">
-        <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4" aria-labelledby="my-form">
-          <h2 id="my-form" className="text-base font-semibold text-white">Il tuo rendimento</h2>
+        <section className="bg-card border border-line rounded-2xl p-5 space-y-4" aria-labelledby="my-form">
+          <h2 id="my-form" className="text-base font-semibold text-primary">Il tuo rendimento</h2>
           {myStats && myStats.played > 0 ? (
             <>
               <div className="grid grid-cols-3 text-center">
@@ -391,40 +391,40 @@ export default function HomePage() {
                   ] as const
                 ).map(([label, v]) => (
                   <div key={label}>
-                    <span className="block text-2xl font-bold text-white tabular-nums leading-none">{v}</span>
-                    <span className="block text-xs text-slate-400 mt-1">{label}</span>
+                    <span className="block text-2xl font-bold text-primary tabular-nums leading-none">{v}</span>
+                    <span className="block text-xs text-secondary mt-1">{label}</span>
                   </div>
                 ))}
               </div>
-              <div className="flex items-center justify-between gap-3 text-sm pt-3 border-t border-slate-800">
+              <div className="flex items-center justify-between gap-3 text-sm pt-3 border-t border-line">
                 <span className="flex items-center gap-2">
-                  <span className="text-xs text-slate-400">Ultime 5</span>
+                  <span className="text-xs text-secondary">Ultime 5</span>
                   <FormDots playerId={profile.id} matches={recentMatches} size="sm" />
                 </span>
                 {forms.get(profile.id) ? (
-                  <span className={`text-xs font-semibold ${(forms.get(profile.id) || 0) > 0 ? 'text-orange-300' : 'text-sky-300'}`}>
+                  <span className={`text-xs font-semibold ${(forms.get(profile.id) || 0) > 0 ? 'text-orange-700 dark:text-orange-300' : 'text-sky-700 dark:text-sky-300'}`}>
                     Forma {(forms.get(profile.id) || 0) > 0 ? '🔥' : '❄️'} {formatForm(forms.get(profile.id) || 0)}
                   </span>
                 ) : null}
               </div>
             </>
           ) : (
-            <p className="text-sm text-slate-400">Le tue statistiche compaiono dopo la prima partita archiviata.</p>
+            <p className="text-sm text-secondary">Le tue statistiche compaiono dopo la prima partita archiviata.</p>
           )}
         </section>
 
         {lastMatch && (
-          <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3" aria-labelledby="last-match">
+          <section className="bg-card border border-line rounded-2xl p-5 space-y-3" aria-labelledby="last-match">
             <div className="flex items-baseline justify-between gap-2">
-              <h2 id="last-match" className="text-base font-semibold text-white">Ultima partita</h2>
-              <span className="text-xs text-slate-400 capitalize">{shortDate(lastMatch.match_date || lastMatch.id)}</span>
+              <h2 id="last-match" className="text-base font-semibold text-primary">Ultima partita</h2>
+              <span className="text-xs text-secondary capitalize">{shortDate(lastMatch.match_date || lastMatch.id)}</span>
             </div>
             <div className="flex items-center justify-center gap-4 py-1">
-              <span className="text-sm text-slate-300">Bianchi</span>
-              <span className="text-2xl font-bold text-white tabular-nums">
+              <span className="text-sm text-secondary">Bianchi</span>
+              <span className="text-2xl font-bold text-primary tabular-nums">
                 {lastMatch.score_white ?? 0} – {lastMatch.score_black ?? 0}
               </span>
-              <span className="text-sm text-slate-300">Neri</span>
+              <span className="text-sm text-secondary">Neri</span>
             </div>
             {(() => {
               const inWhite = lastMatch.team_white?.some((p) => p.id === profile.id);
@@ -433,9 +433,9 @@ export default function HomePage() {
               const b = lastMatch.score_black ?? 0;
               const mineRes = !inWhite && !inBlack ? null : w === b ? 'Pareggiata' : (inWhite ? w > b : b > w) ? 'Vinta' : 'Persa';
               return (
-                <p className="text-sm text-slate-400 text-center">
-                  {lastMatch.mvp_player_id ? <>MVP <span className="text-white font-medium">{nameOf(lastMatch.mvp_player_id)}</span></> : 'MVP non assegnato'}
-                  {mineRes && <> · La tua: <span className={mineRes === 'Vinta' ? 'text-emerald-300' : mineRes === 'Persa' ? 'text-rose-300' : 'text-slate-300'}>{mineRes.toLowerCase()}</span></>}
+                <p className="text-sm text-secondary text-center">
+                  {lastMatch.mvp_player_id ? <>MVP <span className="text-primary font-medium">{nameOf(lastMatch.mvp_player_id)}</span></> : 'MVP non assegnato'}
+                  {mineRes && <> · La tua: <span className={mineRes === 'Vinta' ? 'text-accent-text' : mineRes === 'Persa' ? 'text-danger' : 'text-secondary'}>{mineRes.toLowerCase()}</span></>}
                 </p>
               );
             })()}

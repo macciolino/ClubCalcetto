@@ -41,8 +41,13 @@ description: ClubCalcetto UI conventions - theme, shared components (tables, dro
   (top bar, desktop tabs, bottom nav, user menu), `ui/Sheet`, `ui/Feedback` (toasts + confirm), `ui/buttons` (btn, menu,
   textLink, presenceBtn), `settings/ThemeSetting`. Block 2: `/settings`, all `components/admin/*` (Partita della settimana,
   Cassa, campi, regole, parametri, notifiche club, accessi, campanella), AccountSettings, DeleteAccountSection, NotificationGuide,
-  MatchFormatPicker, MatchResultFields, CollapsibleCard, StatRatingFields. NOT yet (Block 3): players, teams, attendance, history,
-  home, profile and their components.
+  MatchFormatPicker, MatchResultFields, CollapsibleCard, StatRatingFields. Block 3: home, attendance, players, teams, history,
+  profile, login and their components (PresenceCard, PlayerCardFifa, PlayerModal, PlayerCompare, RadarChart grid via
+  `stroke-line`/`fill-*` classes, MvpVoteCard, TeamSwapEditor, MatchDetailSheet, MatchEditModal, HistoryCalendar, StatBars,
+  StatBadge, SelfRatingPrompt, POSITION_BADGE). The whole app follows the theme.
+- Stay dark on purpose in both themes: `VirtualPitch` (the pitch board, also exported as image), `SplashScreen`, `BrandLogo`,
+  the desktop pitch panel of the login (class `dark` on the section: tokens inside use dark values), form-tracker dots
+  (#334155 absent, per the design-system rule). Use the same `dark` class trick for any future "always dark" illustration.
 - Theme exceptions: team ovals — Bianchi `bg-white ring-1 ring-line-strong`, Neri always `bg-slate-950`; white text on filled
   red; amber/rose text → `text-warning` / `text-danger`; other hues `text-X-700 dark:text-X-300`. Don't push a light theme to users before Block 3.
 

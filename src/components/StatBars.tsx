@@ -25,15 +25,15 @@ export function StatBars({ stats, form = 0, compact = false }: StatBarsProps) {
         const label = STAT_DETAILS[name]?.name || name;
         return (
           <li key={name} className="flex items-center gap-2.5">
-            <span className={`w-20 flex-shrink-0 truncate text-slate-300 ${compact ? 'text-[11px]' : 'text-xs'}`} title={label}>
+            <span className={`w-20 flex-shrink-0 truncate text-secondary ${compact ? 'text-[11px]' : 'text-xs'}`} title={label}>
               {label}
             </span>
             <span
-              className="relative flex-1 h-1.5 rounded-full bg-slate-800 overflow-hidden"
+              className="relative flex-1 h-1.5 rounded-full bg-card-hover overflow-hidden"
               role="img"
               aria-label={`${label}: ${fmt(final)} su 10`}
             >
-              <span className="absolute inset-y-0 left-0 rounded-full bg-emerald-500" style={{ width: `${low * 10}%` }} />
+              <span className="absolute inset-y-0 left-0 rounded-full bg-accent" style={{ width: `${low * 10}%` }} />
               {high > low && (
                 <span
                   className={`absolute inset-y-0 rounded-r-full ${form > 0 ? 'bg-emerald-300' : 'bg-sky-400/30'}`}
@@ -41,7 +41,7 @@ export function StatBars({ stats, form = 0, compact = false }: StatBarsProps) {
                 />
               )}
             </span>
-            <span className={`w-7 text-right tabular-nums font-semibold text-white ${compact ? 'text-[11px]' : 'text-xs'}`}>
+            <span className={`w-7 text-right tabular-nums font-semibold text-primary ${compact ? 'text-[11px]' : 'text-xs'}`}>
               {fmt(final)}
             </span>
           </li>

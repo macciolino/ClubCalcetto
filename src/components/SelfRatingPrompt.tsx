@@ -90,11 +90,11 @@ export function SelfRatingPrompt() {
         </>
       }
     >
-      <div className="flex items-center justify-between rounded-xl bg-slate-950/60 px-4 py-3">
-        <span className="text-sm text-slate-400">Il tuo OVR di partenza</span>
-        <span className="text-2xl font-bold text-white tabular-nums">{Math.round(ovrOf(values) * 10)}</span>
+      <div className="flex items-center justify-between rounded-xl bg-app/60 px-4 py-3">
+        <span className="text-sm text-secondary">Il tuo OVR di partenza</span>
+        <span className="text-2xl font-bold text-primary tabular-nums">{Math.round(ovrOf(values) * 10)}</span>
       </div>
-      <p className="text-xs text-slate-500 leading-relaxed">
+      <p className="text-xs text-muted leading-relaxed">
         Sii sincero: dopo la tua prima partita un admin rivede i voti in base a quello che ha visto in campo.
       </p>
       <StatRatingFields categories={categories} values={values} onChange={setValues} showHelp disabled={saving} />

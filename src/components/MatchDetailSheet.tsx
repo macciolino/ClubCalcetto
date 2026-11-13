@@ -39,9 +39,9 @@ export function MatchDetailSheet({
     const players = (team === 'white' ? match.team_white : match.team_black) || [];
     return (
       <div className="min-w-0 space-y-2">
-        <p className="flex items-center gap-2 text-xs font-semibold text-slate-400">
+        <p className="flex items-center gap-2 text-xs font-semibold text-secondary">
           <span
-            className={`block rounded-full ${team === 'white' ? 'h-[9px] w-[33px] bg-white' : 'h-2.5 w-9 bg-slate-950 border border-slate-500'}`}
+            className={`block rounded-full ${team === 'white' ? 'h-[9px] w-[33px] bg-white ring-1 ring-line-strong' : 'h-2.5 w-9 bg-slate-950 border border-slate-500'}`}
             aria-hidden="true"
           />
           {team === 'white' ? 'Bianchi' : 'Neri'}
@@ -53,15 +53,15 @@ export function MatchDetailSheet({
             const mvp = match.mvp_player_id === p.id;
             return (
               <li key={p.id} className="flex items-center gap-1.5 min-w-0">
-                <span className={`truncate ${mvp ? 'text-amber-300 font-semibold' : 'text-slate-200'}`}>{nameOf(p.id, p.name)}</span>
+                <span className={`truncate ${mvp ? 'text-warning font-semibold' : 'text-primary'}`}>{nameOf(p.id, p.name)}</span>
                 {mvp && <span title="MVP">⭐</span>}
                 {g > 0 && (
-                  <span className="flex-shrink-0 text-xs text-slate-300" title={`${g} gol`}>
+                  <span className="flex-shrink-0 text-xs text-secondary" title={`${g} gol`}>
                     ⚽{g > 1 ? `×${g}` : ''}
                   </span>
                 )}
                 {sv > 0 && (
-                  <span className="flex-shrink-0 text-xs text-slate-300" title={`${sv} rigori parati`}>
+                  <span className="flex-shrink-0 text-xs text-secondary" title={`${sv} rigori parati`}>
                     🧤{sv > 1 ? `×${sv}` : ''}
                   </span>
                 )}
@@ -106,11 +106,11 @@ export function MatchDetailSheet({
       {/* Risultato */}
       <div className="text-center space-y-1">
         <div className="flex items-center justify-center gap-5">
-          <span className={`text-5xl font-bold tabular-nums ${w > b ? 'text-emerald-400' : 'text-white'}`}>{w}</span>
-          <span className="text-2xl text-slate-600">–</span>
-          <span className={`text-5xl font-bold tabular-nums ${b > w ? 'text-emerald-400' : 'text-white'}`}>{b}</span>
+          <span className={`text-5xl font-bold tabular-nums ${w > b ? 'text-accent-text' : 'text-primary'}`}>{w}</span>
+          <span className="text-2xl text-muted">–</span>
+          <span className={`text-5xl font-bold tabular-nums ${b > w ? 'text-accent-text' : 'text-primary'}`}>{b}</span>
         </div>
-        <p className="text-sm text-slate-400">{outcome}</p>
+        <p className="text-sm text-secondary">{outcome}</p>
       </div>
 
       {/* Formazioni */}
@@ -120,10 +120,10 @@ export function MatchDetailSheet({
           {lineup('black')}
         </div>
       ) : (
-        <p className="text-sm text-slate-500 text-center">Formazioni non salvate.</p>
+        <p className="text-sm text-muted text-center">Formazioni non salvate.</p>
       )}
       {!match.mvp_player_id && !(match.scorers || []).length && (
-        <p className="text-sm text-slate-500 text-center">Nessun marcatore o MVP inserito.</p>
+        <p className="text-sm text-muted text-center">Nessun marcatore o MVP inserito.</p>
       )}
     </Sheet>
   );

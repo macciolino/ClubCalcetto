@@ -91,18 +91,18 @@ export function MvpVoteCard({ date, matchTime, white, black, voterUid, isAdmin =
   const opensLabel = `${formatItalianDate(toYmd(opensAt))} alle ${timeLabel(opensAt)}`;
 
   return (
-    <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4" aria-labelledby="mvp-vote-title">
-      <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-3">
-        <h3 id="mvp-vote-title" className="text-sm font-bold text-white flex items-center gap-2">
-          <Star className="h-4 w-4 text-amber-400" /> Vota l&apos;MVP della giornata
+    <section className="bg-card border border-line rounded-2xl p-5 space-y-4" aria-labelledby="mvp-vote-title">
+      <div className="flex items-center justify-between gap-2 border-b border-line pb-3">
+        <h3 id="mvp-vote-title" className="text-sm font-bold text-primary flex items-center gap-2">
+          <Star className="h-4 w-4 text-warning" /> Vota l&apos;MVP della giornata
         </h3>
-        <span className="text-xs font-mono text-slate-400">{votes.length} voti</span>
+        <span className="text-xs font-mono text-secondary">{votes.length} voti</span>
       </div>
 
       {isAdmin && (
-        <div className={`rounded-2xl border p-3 space-y-2 ${testMode ? 'border-violet-400/50 bg-violet-500/10' : 'border-slate-800 bg-slate-950/60'}`}>
-          <p className="text-xs text-slate-300 flex items-start gap-1.5">
-            <FlaskConical className="h-4 w-4 text-violet-300 flex-shrink-0" />
+        <div className={`rounded-2xl border p-3 space-y-2 ${testMode ? 'border-violet-400/50 bg-violet-500/10' : 'border-line bg-app/60'}`}>
+          <p className="text-xs text-secondary flex items-start gap-1.5">
+            <FlaskConical className="h-4 w-4 text-violet-700 dark:text-violet-300 flex-shrink-0" />
             {testMode === 'all'
               ? 'PROVA CON TUTTI attiva: ogni giocatore vede il voto aperto e può votare adesso. A fine prova premi "Termina prova" e poi "Azzera voti".'
               : testMode
@@ -132,7 +132,7 @@ export function MvpVoteCard({ date, matchTime, white, black, voterUid, isAdmin =
               <button
                 type="button"
                 onClick={() => changeTest(false)}
-                className="px-3 py-2 rounded-xl text-xs font-bold border border-slate-600 text-slate-200 hover:bg-slate-800"
+                className="px-3 py-2 rounded-xl text-xs font-bold border border-slate-600 text-primary hover:bg-card-hover"
               >
                 Termina prova
               </button>
@@ -141,7 +141,7 @@ export function MvpVoteCard({ date, matchTime, white, black, voterUid, isAdmin =
               <button
                 type="button"
                 onClick={handleClearVotes}
-                className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold border border-rose-500/40 text-rose-300 hover:bg-rose-500/15"
+                className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold border border-rose-500/40 text-danger hover:bg-rose-500/15"
               >
                 <Trash2 className="h-3.5 w-3.5" /> Azzera voti
               </button>
@@ -158,18 +158,18 @@ export function MvpVoteCard({ date, matchTime, white, black, voterUid, isAdmin =
       )}
 
       {!isOpen && !isClosed && (
-        <p className="text-sm text-slate-300 flex items-center gap-2">
-          <Clock className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+        <p className="text-sm text-secondary flex items-center gap-2">
+          <Clock className="h-4 w-4 text-accent-text flex-shrink-0" />
           Il voto si apre a fine partita: {opensLabel}.
         </p>
       )}
 
       {isClosed && (
-        <p className="text-sm text-slate-300">
+        <p className="text-sm text-secondary">
           Voto chiuso.{' '}
           {leader ? (
             <>
-              Il più votato è <strong className="text-amber-300">{leader.name}</strong> ({tally[0].count} voti).
+              Il più votato è <strong className="text-warning">{leader.name}</strong> ({tally[0].count} voti).
             </>
           ) : (
             'Nessun voto ricevuto.'
@@ -179,7 +179,7 @@ export function MvpVoteCard({ date, matchTime, white, black, voterUid, isAdmin =
 
       {isOpen && (
         <>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-secondary">
             {voterUid
               ? myVote
                 ? 'Hai votato. Puoi cambiare il voto fino alla chiusura.'
@@ -190,7 +190,7 @@ export function MvpVoteCard({ date, matchTime, white, black, voterUid, isAdmin =
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {([['⚪ Bianchi', white], ['⚫ Neri', black]] as const).map(([title, list]) => (
               <div key={title} className="space-y-1.5">
-                <div className="text-xs font-bold text-slate-300">{title}</div>
+                <div className="text-xs font-bold text-secondary">{title}</div>
                 {list.map((p) => {
                   const mine = myVote === p.id;
                   return (
@@ -202,20 +202,20 @@ export function MvpVoteCard({ date, matchTime, white, black, voterUid, isAdmin =
                       aria-pressed={mine}
                       className={`w-full min-h-[44px] flex items-center gap-2 px-3 py-2 rounded-xl border text-left text-sm font-semibold transition-all disabled:opacity-70 ${
                         mine
-                          ? 'border-amber-400 bg-amber-400/15 text-white'
-                          : 'border-slate-800 bg-slate-950 text-slate-200 hover:border-slate-600'
+                          ? 'border-amber-400 bg-amber-400/15 text-primary'
+                          : 'border-line bg-app text-primary hover:border-slate-600'
                       }`}
                     >
                       {saving === p.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin text-amber-400" />
+                        <Loader2 className="h-4 w-4 animate-spin text-warning" />
                       ) : mine ? (
-                        <Check className="h-4 w-4 text-amber-400" />
+                        <Check className="h-4 w-4 text-warning" />
                       ) : (
-                        <Star className="h-4 w-4 text-slate-600" />
+                        <Star className="h-4 w-4 text-muted" />
                       )}
                       <span className="flex-1 truncate">{p.name}</span>
                       {countOf(p.id) > 0 && (
-                        <span className="text-xs font-mono font-bold text-amber-300">{countOf(p.id)}</span>
+                        <span className="text-xs font-mono font-bold text-warning">{countOf(p.id)}</span>
                       )}
                     </button>
                   );
@@ -226,7 +226,7 @@ export function MvpVoteCard({ date, matchTime, white, black, voterUid, isAdmin =
         </>
       )}
 
-      {error && <p className="text-xs text-rose-300">{error}</p>}
+      {error && <p className="text-xs text-danger">{error}</p>}
     </section>
   );
 }

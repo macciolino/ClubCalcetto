@@ -118,21 +118,21 @@ export function MatchEditModal({ match, profiles, closedBy, onClose }: MatchEdit
       }
     >
           <section className="space-y-2">
-            <h3 className="text-xs font-bold text-slate-400">Squadre</h3>
+            <h3 className="text-xs font-bold text-secondary">Squadre</h3>
             <TeamSwapEditor white={white} black={black} onChange={handleTeamsChange} bench={bench} />
             {duplicate && (
-              <p className="text-xs text-rose-300 flex items-center gap-1.5">
+              <p className="text-xs text-danger flex items-center gap-1.5">
                 <AlertCircle className="h-4 w-4" /> Lo stesso giocatore compare due volte.
               </p>
             )}
           </section>
 
           <section className="space-y-2">
-            <h3 className="text-xs font-bold text-slate-400">Risultato, MVP e marcatori</h3>
+            <h3 className="text-xs font-bold text-secondary">Risultato, MVP e marcatori</h3>
             <MatchResultFields fixedKeeper={fixedKeeper} value={result} onChange={setResult} white={white} black={black} />
           </section>
 
-          {error && <p className="text-sm text-rose-300">{error}</p>}
+          {error && <p className="text-sm text-danger">{error}</p>}
     </Sheet>
   );
 }

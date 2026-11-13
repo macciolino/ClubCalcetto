@@ -251,7 +251,7 @@ ${link}`;
         onClick={() => handleTableSort(k)}
         title={`Ordina per ${title || label}`}
         className={`w-full py-3.5 px-3 font-bold whitespace-nowrap ${k === 'name' ? 'text-left px-4' : 'text-center'} ${
-          tableSort.key === k ? 'text-emerald-300' : 'hover:text-white'
+          tableSort.key === k ? 'text-accent-text' : 'hover:text-primary'
         }`}
       >
         {label}
@@ -276,7 +276,7 @@ ${link}`;
     <div className="space-y-6 pb-12">
       {/* Titolo della pagina (senza riquadro) */}
       <header className="flex items-center justify-between gap-4 min-h-[2.5rem]">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Giocatori</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-primary">Giocatori</h1>
 
         {/* PC: "Nuovo ospite" in alto a destra, solo admin (su telefono è il "+" nella ricerca) */}
         {isClientAdmin && (
@@ -298,17 +298,17 @@ ${link}`;
             const [first, ...rest] = (l.p?.full_name || '').trim().split(/\s+/);
             const short = rest.length ? `${first} ${rest[rest.length - 1][0]}.` : first;
             return (
-              <div key={l.key} className="min-w-0 rounded-2xl bg-slate-900 px-3 py-3 sm:px-4">
-                <span className="flex items-center gap-1.5 text-xs text-slate-400 min-w-0">
+              <div key={l.key} className="min-w-0 rounded-2xl bg-card px-3 py-3 sm:px-4">
+                <span className="flex items-center gap-1.5 text-xs text-secondary min-w-0">
                   <span aria-hidden="true">{l.icon}</span>
                   <span className="truncate sm:hidden">{l.titleShort}</span>
                   <span className="truncate hidden sm:inline">{l.title}</span>
                 </span>
-                <span className="block mt-1.5 text-2xl font-bold text-white tabular-nums leading-none">
+                <span className="block mt-1.5 text-2xl font-bold text-primary tabular-nums leading-none">
                   {l.v}
-                  <span className="ml-1 text-xs font-normal text-slate-400">{l.unitShort}</span>
+                  <span className="ml-1 text-xs font-normal text-secondary">{l.unitShort}</span>
                 </span>
-                <span className="block mt-1.5 text-sm text-slate-300 truncate" title={l.p?.full_name}>
+                <span className="block mt-1.5 text-sm text-secondary truncate" title={l.p?.full_name}>
                   <span className="sm:hidden">{short}</span>
                   <span className="hidden sm:inline">{l.p?.full_name}</span>
                 </span>
@@ -321,13 +321,13 @@ ${link}`;
       {/* Comandi. Telefono: ricerca, poi Ruolo · Ordina · Confronta · Card/Elenco. Da tablet in su: una riga. */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-2">
         <div className="relative flex-1 min-w-0">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
           <input
             type="search"
             placeholder="Cerca giocatore"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className={`w-full pl-10 ${isClientAdmin ? 'pr-12 lg:pr-4' : 'pr-4'} py-2.5 bg-slate-900 border border-slate-800 rounded-full text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-emerald-500 transition-colors`}
+            className={`w-full pl-10 ${isClientAdmin ? 'pr-12 lg:pr-4' : 'pr-4'} py-2.5 bg-card border border-line rounded-full text-primary text-sm placeholder:text-muted focus:outline-none focus:border-accent transition-colors`}
           />
           {isClientAdmin && (
             <button
@@ -335,7 +335,7 @@ ${link}`;
               onClick={handleOpenNewGuestModal}
               aria-label="Nuovo ospite"
               title="Nuovo ospite"
-              className="lg:hidden absolute right-1.5 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 flex items-center justify-center"
+              className="lg:hidden absolute right-1.5 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-accent hover:bg-accent/90 text-on-accent flex items-center justify-center"
             >
               <Plus className="h-4 w-4" />
             </button>
@@ -347,7 +347,7 @@ ${link}`;
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value as typeof roleFilter)}
             aria-label="Filtro ruolo"
-            className="flex-1 sm:flex-none sm:w-32 min-w-0 bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+            className="flex-1 sm:flex-none sm:w-32 min-w-0 bg-card border border-line rounded-xl px-2.5 py-2.5 text-sm text-primary focus:outline-none focus:border-accent"
           >
             <option value="all">Tutti</option>
             <option value="Portiere">Portieri</option>
@@ -363,7 +363,7 @@ ${link}`;
               setSortSource('menu');
             }}
             aria-label="Ordina per"
-            className="flex-1 sm:flex-none sm:w-36 min-w-0 bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+            className="flex-1 sm:flex-none sm:w-36 min-w-0 bg-card border border-line rounded-xl px-2.5 py-2.5 text-sm text-primary focus:outline-none focus:border-accent"
           >
             <option value="ovr">Per OVR</option>
             <option value="goals">Per gol</option>
@@ -378,12 +378,12 @@ ${link}`;
             disabled={players.length < 2}
             aria-label="Confronta due giocatori"
             title="Confronta due giocatori"
-            className="flex-shrink-0 h-[42px] flex items-center justify-center gap-1.5 px-3 rounded-xl text-sm font-semibold border border-slate-800 bg-slate-900 text-slate-200 hover:bg-slate-800 disabled:opacity-40"
+            className="flex-shrink-0 h-[42px] flex items-center justify-center gap-1.5 px-3 rounded-xl text-sm font-semibold border border-line bg-card text-primary hover:bg-card-hover disabled:opacity-40"
           >
             <GitCompare className="h-4 w-4" />
             <span className="hidden lg:inline">Confronta</span>
           </button>
-          <div className="flex-shrink-0 flex items-center bg-slate-900 p-1 rounded-xl border border-slate-800" role="radiogroup" aria-label="Vista">
+          <div className="flex-shrink-0 flex items-center bg-card p-1 rounded-xl border border-line" role="radiogroup" aria-label="Vista">
             {(
               [
                 ['cards', 'Card', LayoutGrid],
@@ -399,7 +399,7 @@ ${link}`;
                 title={label}
                 onClick={() => setViewMode(mode)}
                 className={`h-8 w-9 flex items-center justify-center rounded-lg transition-colors ${
-                  viewMode === mode ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:text-white'
+                  viewMode === mode ? 'bg-accent text-on-accent' : 'text-secondary hover:text-primary'
                 }`}
               >
                 <Icon className="h-4 w-4" />
@@ -418,7 +418,7 @@ ${link}`;
         /* GRIGLIA DI CARD CON OTTAGONO E STATISTICHE V-P-S */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3 animate-in">
           {filteredPlayers.length === 0 ? (
-            <p className="col-span-full py-12 text-center text-sm text-slate-500">Nessun giocatore trovato con questi filtri.</p>
+            <p className="col-span-full py-12 text-center text-sm text-muted">Nessun giocatore trovato con questi filtri.</p>
           ) : (
             filteredPlayers.map((player) => (
               <PlayerCardFifa
@@ -438,16 +438,16 @@ ${link}`;
         {/* Telefono e tablet: elenco a colonne (giocatore | ruolo | V·P·S | OVR) */}
         <div className="lg:hidden animate-in">
           {filteredPlayers.length === 0 ? (
-            <p className="py-8 text-center text-sm text-slate-500">Nessun giocatore trovato con questi filtri.</p>
+            <p className="py-8 text-center text-sm text-muted">Nessun giocatore trovato con questi filtri.</p>
           ) : (
-            <div className="bg-slate-900 rounded-2xl overflow-hidden">
-              <div className="grid grid-cols-[minmax(0,1fr)_3rem_4.5rem_2.25rem] items-center gap-2 px-3 py-2 border-b border-slate-800 text-[11px] font-medium text-slate-500">
+            <div className="bg-card rounded-2xl overflow-hidden">
+              <div className="grid grid-cols-[minmax(0,1fr)_3rem_4.5rem_2.25rem] items-center gap-2 px-3 py-2 border-b border-line text-[11px] font-medium text-muted">
                 <span>{filteredPlayers.length} giocatori</span>
                 <span className="text-center">Ruolo</span>
                 <span className="text-center">V · P · S</span>
                 <span className="text-right">OVR</span>
               </div>
-              <ul className="divide-y divide-slate-800">
+              <ul className="divide-y divide-line">
                 {filteredPlayers.map((player) => {
                   const isCurrent = player.id === profile?.id;
                   const photo = uploadedPhoto(player.avatar_url);
@@ -460,21 +460,21 @@ ${link}`;
                       <button
                         type="button"
                         onClick={() => setDetailId(player.id)}
-                        className="w-full grid grid-cols-[minmax(0,1fr)_3rem_4.5rem_2.25rem] items-center gap-2 px-3 py-2 min-h-[52px] text-left hover:bg-slate-800/60 focus:outline-none focus-visible:bg-slate-800"
+                        className="w-full grid grid-cols-[minmax(0,1fr)_3rem_4.5rem_2.25rem] items-center gap-2 px-3 py-2 min-h-[52px] text-left hover:bg-card-hover/60 focus:outline-none focus-visible:bg-card-hover"
                       >
                       <span className="flex items-center gap-2.5 min-w-0">
                         {photo ? (
                           <img src={photo} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
                         ) : (
-                          <span className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center font-bold text-emerald-300 text-[10px] flex-shrink-0">
+                          <span className="w-8 h-8 rounded-full bg-card-hover flex items-center justify-center font-bold text-accent-text text-[10px] flex-shrink-0">
                             {initialsOf(player.full_name)}
                           </span>
                         )}
                         <span className="min-w-0">
-                          <span className={`block truncate text-sm font-medium ${isCurrent ? 'text-emerald-300' : 'text-white'}`}>
+                          <span className={`block truncate text-sm font-medium ${isCurrent ? 'text-accent-text' : 'text-primary'}`}>
                             {player.full_name}
                           </span>
-                          {player.is_guest && <span className="block text-[11px] text-slate-500">ospite</span>}
+                          {player.is_guest && <span className="block text-[11px] text-muted">ospite</span>}
                         </span>
                       </span>
                       <span className="flex justify-center">
@@ -483,11 +483,11 @@ ${link}`;
                         </span>
                       </span>
                       <span className="text-center text-xs font-semibold tabular-nums" aria-label={`${ms?.won || 0} vinte, ${ms?.drawn || 0} pareggiate, ${ms?.lost || 0} perse`}>
-                        <span className={ms?.won ? 'text-emerald-400' : 'text-slate-600'}>{ms?.won || 0}</span>
-                        <span className="text-slate-600"> · </span>
-                        <span className={ms?.drawn ? 'text-amber-400' : 'text-slate-600'}>{ms?.drawn || 0}</span>
-                        <span className="text-slate-600"> · </span>
-                        <span className={ms?.lost ? 'text-red-400' : 'text-slate-600'}>{ms?.lost || 0}</span>
+                        <span className={ms?.won ? 'text-accent-text' : 'text-muted'}>{ms?.won || 0}</span>
+                        <span className="text-muted"> · </span>
+                        <span className={ms?.drawn ? 'text-warning' : 'text-muted'}>{ms?.drawn || 0}</span>
+                        <span className="text-muted"> · </span>
+                        <span className={ms?.lost ? 'text-danger' : 'text-muted'}>{ms?.lost || 0}</span>
                       </span>
                       <span className={`text-right text-base font-bold tabular-nums ${ovrTone(ovr)}`}>{ovr}</span>
                       </button>
@@ -499,11 +499,11 @@ ${link}`;
           )}
         </div>
 
-        <div className="hidden lg:block bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden animate-in fade-in duration-200">
+        <div className="hidden lg:block bg-card border border-line rounded-2xl overflow-hidden animate-in fade-in duration-200">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-800 bg-slate-950/70 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                <tr className="border-b border-line bg-app/70 text-[11px] font-bold text-secondary uppercase tracking-wider">
                   <th className="py-3.5 px-4 w-12 text-center">#</th>
                   {sortHeader({ k: 'name', label: 'Giocatore', title: 'nome' })}
                   {sortHeader({ k: 'position', label: 'Ruolo' })}
@@ -519,18 +519,18 @@ ${link}`;
                     });
                   })}
                   {isClientAdmin && (
-                    <th className="sticky right-0 z-30 py-3.5 px-4 text-center bg-slate-950 border-l border-slate-800 shadow-[-8px_0_12px_rgba(0,0,0,0.8)] min-w-[100px]">
+                    <th className="sticky right-0 z-30 py-3.5 px-4 text-center bg-app border-l border-line shadow-[-8px_0_12px_rgba(0,0,0,0.8)] min-w-[100px]">
                       Azioni
                     </th>
                   )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 text-xs">
+              <tbody className="divide-y divide-line/60 text-xs">
                 {filteredPlayers.length === 0 ? (
                   <tr>
                     <td
                       colSpan={isClientAdmin ? 6 + sortedCategories.length : 4}
-                      className="py-8 text-center text-slate-500 italic"
+                      className="py-8 text-center text-muted italic"
                     >
                       Nessun giocatore trovato con questi filtri.
                     </td>
@@ -548,11 +548,11 @@ ${link}`;
                       <tr
                         key={player.id}
                         className={`hover:bg-slate-850/50 transition-colors ${
-                          isCurrent ? 'bg-emerald-500/5 shadow-[inset_3px_0_0_0_rgb(52,211,153)]' : ''
+                          isCurrent ? 'bg-accent/5 shadow-[inset_3px_0_0_0_rgb(52,211,153)]' : ''
                         }`}
                       >
                         {/* Rank */}
-                        <td className="py-3 px-4 text-center font-mono font-bold text-slate-500">
+                        <td className="py-3 px-4 text-center font-mono font-bold text-muted">
                           {idx + 1}
                         </td>
 
@@ -564,16 +564,16 @@ ${link}`;
                                 <img
                                   src={uploadedPhoto(player.avatar_url) as string}
                                   alt={player.full_name}
-                                  className="w-9 h-9 rounded-full object-cover ring-1 ring-slate-700"
+                                  className="w-9 h-9 rounded-full object-cover ring-1 ring-line-strong"
                                 />
                               ) : (
-                                <div className="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-emerald-400 text-xs">
+                                <div className="w-9 h-9 rounded-full bg-card-hover border border-line-strong flex items-center justify-center font-bold text-accent-text text-xs">
                                   {initialsOf(player.full_name)}
                                 </div>
                               )}
                               {player.role === 'admin' && (
                                 <span
-                                  className="absolute -bottom-1 -right-1 bg-amber-500 text-slate-950 text-[8px] font-bold rounded-full h-3.5 w-3.5 flex items-center justify-center ring-1 ring-slate-950"
+                                  className="absolute -bottom-1 -right-1 bg-amber-500 text-on-accent text-[8px] font-bold rounded-full h-3.5 w-3.5 flex items-center justify-center ring-1 ring-app"
                                   title="Admin"
                                 >
                                   ★
@@ -581,35 +581,35 @@ ${link}`;
                               )}
                             </div>
                             <div>
-                              <div className="font-bold text-white flex items-center gap-1.5">
+                              <div className="font-bold text-primary flex items-center gap-1.5">
                                 <button
                                   type="button"
                                   onClick={() => setDetailId(player.id)}
-                                  className="leading-tight text-left hover:text-emerald-300"
+                                  className="leading-tight text-left hover:text-accent-text"
                                 >
                                   <span className="block">{firstName}</span>
                                   {surname && <span className="block">{surname}</span>}
                                   {isClientAdmin && player.email && (
-                                    <span className="block text-[11px] font-normal text-slate-500 mt-0.5">{player.email}</span>
+                                    <span className="block text-[11px] font-normal text-muted mt-0.5">{player.email}</span>
                                   )}
                                 </button>
                                 {isClientAdmin && (
                                   <button
                                     type="button"
                                     onClick={() => handleOpenEditModal(player)}
-                                    className="p-1 text-slate-500 hover:text-emerald-400 hover:bg-slate-800 rounded transition-colors cursor-pointer"
+                                    className="p-1 text-muted hover:text-accent-text hover:bg-card-hover rounded transition-colors cursor-pointer"
                                     title="Modifica rapida giocatore"
                                   >
                                     <Edit3 className="h-3 w-3" />
                                   </button>
                                 )}
                                 {player.is_guest && (
-                                  <span className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.2 rounded font-medium">
+                                  <span className="text-[10px] bg-card-hover text-secondary px-1.5 py-0.2 rounded font-medium">
                                     Ospite
                                   </span>
                                 )}
                                 {isCurrent && (
-                                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.2 rounded font-bold">
+                                  <span className="text-[10px] bg-accent/20 text-accent-text px-1.5 py-0.2 rounded font-bold">
                                     Tu
                                   </span>
                                 )}
@@ -636,11 +636,11 @@ ${link}`;
                         {/* Record Partite V-P-S (solo admin) */}
                         {isClientAdmin && (
                         <td className="py-3 px-3 text-center tabular-nums text-xs whitespace-nowrap">
-                          <span className={rec.won ? 'text-emerald-400 font-semibold' : 'text-slate-600'}>{rec.won}V</span>
-                          <span className="text-slate-500 mx-1">-</span>
-                          <span className={rec.drawn ? 'text-amber-400 font-semibold' : 'text-slate-600'}>{rec.drawn}P</span>
-                          <span className="text-slate-500 mx-1">-</span>
-                          <span className={rec.lost ? 'text-red-400 font-semibold' : 'text-slate-600'}>{rec.lost}S</span>
+                          <span className={rec.won ? 'text-accent-text font-semibold' : 'text-muted'}>{rec.won}V</span>
+                          <span className="text-muted mx-1">-</span>
+                          <span className={rec.drawn ? 'text-warning font-semibold' : 'text-muted'}>{rec.drawn}P</span>
+                          <span className="text-muted mx-1">-</span>
+                          <span className={rec.lost ? 'text-danger font-semibold' : 'text-muted'}>{rec.lost}S</span>
                         </td>
                         )}
 
@@ -653,9 +653,9 @@ ${link}`;
                               className="py-3 px-2 text-center font-mono font-semibold w-14 min-w-[54px]"
                               title={`${cat.label || cat.name}: ${val}`}
                             >
-                              <span className="block text-xs tabular-nums text-slate-200">{val}</span>
-                              <span className="mt-1 mx-auto block h-1 w-8 rounded-full bg-slate-800 overflow-hidden" aria-hidden="true">
-                                <span className="block h-full rounded-full bg-emerald-500/80" style={{ width: `${Number(val) * 10}%` }} />
+                              <span className="block text-xs tabular-nums text-primary">{val}</span>
+                              <span className="mt-1 mx-auto block h-1 w-8 rounded-full bg-card-hover overflow-hidden" aria-hidden="true">
+                                <span className="block h-full rounded-full bg-accent/80" style={{ width: `${Number(val) * 10}%` }} />
                               </span>
                             </td>
                           );
@@ -663,12 +663,12 @@ ${link}`;
 
                         {/* Azioni Admin (PINNED STICKY RIGHT - MAI NASCOSTE) */}
                         {isClientAdmin && (
-                          <td className="sticky right-0 z-20 py-3 px-4 text-center border-l border-slate-800 bg-slate-900 shadow-[-8px_0_12px_rgba(0,0,0,0.8)] min-w-[100px]">
+                          <td className="sticky right-0 z-20 py-3 px-4 text-center border-l border-line bg-card shadow-[-8px_0_12px_rgba(0,0,0,0.8)] min-w-[100px]">
                             <div className="flex items-center justify-center gap-1.5">
                               <button
                                 type="button"
                                 onClick={() => handleOpenEditModal(player)}
-                                className="p-1.5 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 rounded-lg transition-all cursor-pointer"
+                                className="p-1.5 bg-accent/10 text-accent-text hover:bg-accent hover:text-on-accent rounded-lg transition-all cursor-pointer"
                                 title="Modifica voti e dettagli"
                               >
                                 <Edit3 className="h-4 w-4" />
@@ -677,7 +677,7 @@ ${link}`;
                                 <button
                                   type="button"
                                   onClick={() => handleDeletePlayer(player.id, player.full_name)}
-                                  className="p-1.5 bg-slate-800 text-slate-400 hover:text-rose-400 hover:bg-rose-500/15 rounded-lg transition-all cursor-pointer"
+                                  className="p-1.5 bg-card-hover text-secondary hover:text-danger hover:bg-rose-500/15 rounded-lg transition-all cursor-pointer"
                                   title={player.is_guest ? 'Elimina ospite' : 'Elimina account'}
                                   aria-label={player.is_guest ? 'Elimina ospite' : 'Elimina account'}
                                 >

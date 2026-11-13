@@ -109,8 +109,8 @@ export function RadarChart({
             <polygon
               key={`grid-${idx}`}
               points={ringPoints}
-              fill={level === 1.0 ? 'rgba(15, 23, 42, 0.5)' : 'none'}
-              stroke="rgba(255, 255, 255, 0.08)"
+              // Griglia nei colori del tema (le classi CSS leggono i token; gli attributi SVG no)
+              className={level === 1.0 ? 'fill-app/50 stroke-line' : 'fill-none stroke-line'}
               strokeWidth="1"
             />
           );
@@ -126,7 +126,7 @@ export function RadarChart({
               y1={center}
               x2={x}
               y2={y}
-              stroke="rgba(255, 255, 255, 0.06)"
+              className="stroke-line"
               strokeWidth="1"
             />
           );
@@ -178,8 +178,7 @@ export function RadarChart({
                 <text
                   textAnchor="middle"
                   dominantBaseline="central"
-                  className="text-[9px] font-semibold fill-slate-400"
-                  style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}
+                  className="text-[9px] font-semibold fill-secondary"
                 >
                   {abbr}
                 </text>
@@ -188,7 +187,7 @@ export function RadarChart({
                   y="10"
                   textAnchor="middle"
                   dominantBaseline="central"
-                  className="text-[9px] font-semibold fill-slate-200"
+                  className="text-[9px] font-semibold fill-primary"
                 >
                   {val}
                 </text>

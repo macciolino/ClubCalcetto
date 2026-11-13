@@ -520,13 +520,13 @@ function SquadreContent() {
       };
   const statusIcon =
     status.tone === 'done' ? (
-      <Lock className="h-5 w-5 text-slate-300" />
+      <Lock className="h-5 w-5 text-secondary" />
     ) : status.tone === 'ok' ? (
-      <BadgeCheck className="h-5 w-5 text-emerald-400" />
+      <BadgeCheck className="h-5 w-5 text-accent-text" />
     ) : status.tone === 'todo' ? (
-      <Shield className="h-5 w-5 text-amber-300" />
+      <Shield className="h-5 w-5 text-warning" />
     ) : (
-      <AlertCircle className="h-5 w-5 text-slate-400" />
+      <AlertCircle className="h-5 w-5 text-secondary" />
     );
 
   const generateLabel = teamRecord && !teamsWrongFormat ? 'Ribilancia' : `Genera squadre ${fmt.label}`;
@@ -548,7 +548,7 @@ function SquadreContent() {
   const teamList = (team: Profile[], label: string, dot: string) => (
     <div className="min-w-0">
       <div className="flex items-center justify-between gap-2 mb-2">
-        <span className="text-sm font-semibold text-white flex items-center gap-1.5 min-w-0">
+        <span className="text-sm font-semibold text-primary flex items-center gap-1.5 min-w-0">
           <span className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${dot}`} aria-hidden="true" />
           <span className="truncate">{label}</span>
         </span>
@@ -558,13 +558,13 @@ function SquadreContent() {
           const f = forms.get(p.id) || 0;
           return (
             <li key={p.id} className="flex flex-col sm:flex-row sm:items-center sm:gap-2 min-w-0">
-              <span className="sm:w-12 flex-shrink-0 text-[10px] font-semibold text-slate-500">
+              <span className="sm:w-12 flex-shrink-0 text-[10px] font-semibold text-muted">
                 {slotLabel(i, fixedKeeper, team.length === slots.length ? slots : undefined)}
               </span>
-              <span className="truncate text-slate-200">
+              <span className="truncate text-primary">
                 {p.full_name}
                 {f ? (
-                  <span className={`ml-1.5 text-[11px] font-semibold ${f > 0 ? 'text-orange-300' : 'text-sky-300'}`}>
+                  <span className={`ml-1.5 text-[11px] font-semibold ${f > 0 ? 'text-orange-700 dark:text-orange-300' : 'text-sky-700 dark:text-sky-300'}`}>
                     {f > 0 ? '🔥' : '❄️'}
                     {formatForm(f)}
                   </span>
@@ -581,21 +581,21 @@ function SquadreContent() {
     <div className="space-y-6 pb-16">
       {/* 1. Titolo + riepilogo della partita in una riga */}
       <header className="space-y-2">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Squadre</h1>
-        <p className="text-sm text-slate-300 flex flex-wrap items-center gap-x-2 gap-y-1">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-primary">Squadre</h1>
+        <p className="text-sm text-secondary flex flex-wrap items-center gap-x-2 gap-y-1">
           <span className="capitalize">{formatItalianDate(selectedDate)}</span>
-          <span className="text-slate-600" aria-hidden="true">·</span>
+          <span className="text-muted" aria-hidden="true">·</span>
           <span className="tabular-nums">{matchTime}</span>
           {matchLocation && (
             <>
-              <span className="text-slate-600" aria-hidden="true">·</span>
+              <span className="text-muted" aria-hidden="true">·</span>
               <span>{selectedField?.name || matchLocation}</span>
             </>
           )}
-          <span className="text-slate-600" aria-hidden="true">·</span>
-          <span className="font-semibold text-white">{fmt.label}</span>
-          <span className="text-slate-600" aria-hidden="true">·</span>
-          <span className="text-emerald-300 font-semibold tabular-nums">€{costPerPerson.replace('.', ',')} a testa</span>
+          <span className="text-muted" aria-hidden="true">·</span>
+          <span className="font-semibold text-primary">{fmt.label}</span>
+          <span className="text-muted" aria-hidden="true">·</span>
+          <span className="text-accent-text font-semibold tabular-nums">€{costPerPerson.replace('.', ',')} a testa</span>
         </p>
         {selectedField?.address && (
           <a
@@ -605,7 +605,7 @@ function SquadreContent() {
             }
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-start gap-1 text-xs text-slate-400 hover:text-emerald-300"
+            className="inline-flex items-start gap-1 text-xs text-secondary hover:text-accent-text"
           >
             <MapPin className="h-3.5 w-3.5 flex-shrink-0 mt-px" />
             <span>{selectedField.address}</span>
@@ -630,23 +630,23 @@ function SquadreContent() {
                 onClick={() => setSelectedDate(d)}
                 aria-pressed={selected}
                 className={`relative flex-shrink-0 flex flex-col items-center w-[4.5rem] py-2.5 rounded-2xl transition-colors ${
-                  selected ? 'bg-emerald-500 text-slate-950' : 'bg-slate-900 text-slate-300 hover:bg-slate-800'
+                  selected ? 'bg-accent text-on-accent' : 'bg-card text-secondary hover:bg-card-hover'
                 }`}
               >
                 {official && (
                   <span
-                    className={`absolute top-1.5 right-1.5 h-2 w-2 rounded-full ${selected ? 'bg-slate-950' : 'bg-emerald-400'}`}
+                    className={`absolute top-1.5 right-1.5 h-2 w-2 rounded-full ${selected ? 'bg-app' : 'bg-accent/90'}`}
                     title="Giorno ufficiale"
                     aria-label="Giorno ufficiale"
                   />
                 )}
-                <span className={`text-xs font-medium capitalize ${selected ? 'text-slate-900' : 'text-slate-400'}`}>
+                <span className={`text-xs font-medium capitalize ${selected ? 'text-slate-900' : 'text-secondary'}`}>
                   {dt.toLocaleDateString('it-IT', { weekday: 'short' }).replace('.', '')}
                 </span>
                 <span className="text-xl font-bold leading-tight">{dd}</span>
                 <span
                   className={`text-xs font-semibold tabular-nums ${
-                    selected ? 'text-slate-900' : count >= dayMax ? 'text-emerald-400' : 'text-slate-500'
+                    selected ? 'text-slate-900' : count >= dayMax ? 'text-accent-text' : 'text-muted'
                   }`}
                 >
                   {Math.min(count, dayMax)}/{dayMax}
@@ -655,9 +655,9 @@ function SquadreContent() {
             );
           })}
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-secondary">
           <span className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-emerald-400" aria-hidden="true" /> giorno ufficiale
+            <span className="h-2 w-2 rounded-full bg-accent/90" aria-hidden="true" /> giorno ufficiale
           </span>
           <label className="flex items-center gap-2">
             <span>Altra data</span>
@@ -665,24 +665,24 @@ function SquadreContent() {
               type="date"
               value={selectedDate}
               onChange={(e) => e.target.value && setSelectedDate(e.target.value)}
-              className="px-2 py-1 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:border-emerald-500"
+              className="px-2 py-1 bg-app border border-line rounded-lg text-primary focus:outline-none focus:border-accent"
             />
           </label>
         </div>
       </section>
 
       {/* 3. Stato della partita + un solo pulsante principale */}
-      <section className="rounded-2xl bg-slate-900 border border-slate-800 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <section className="rounded-2xl bg-card border border-line p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-start gap-3 min-w-0">
           <span className="mt-0.5 flex-shrink-0">{statusIcon}</span>
           <div className="min-w-0">
-            <h2 className="text-base font-semibold text-white">{status.title}</h2>
-            <p className="text-sm text-slate-400 mt-0.5">
+            <h2 className="text-base font-semibold text-primary">{status.title}</h2>
+            <p className="text-sm text-secondary mt-0.5">
               {status.detail}
               {isConfirmed && !isCompleted && isClientAdmin && (
                 <>
                   {' '}
-                  <button type="button" onClick={handleUnconfirmMatch} className="text-slate-300 underline">
+                  <button type="button" onClick={handleUnconfirmMatch} className="text-secondary underline">
                     Annulla conferma
                   </button>
                 </>
@@ -714,7 +714,7 @@ function SquadreContent() {
       {/* Squadre fatte per un altro formato: vanno rigenerate */}
       {teamsWrongFormat && (
         <div className="rounded-xl bg-amber-500/10 px-4 py-3 text-sm text-amber-100 flex items-start gap-2" role="status">
-          <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5 text-amber-400" />
+          <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5 text-warning" />
           <span>
             Le squadre salvate sono da {teamRecord?.team_white?.length} giocatori, ma la partita ora è {fmt.label}.
             {isClientAdmin ? ` Premi "Genera squadre ${fmt.label}" per rifarle.` : ' Un admin deve rigenerarle.'}
@@ -726,7 +726,7 @@ function SquadreContent() {
       {isClientAdmin && !isCompleted && (
         <CollapsibleCard
           title={`Formato: ${fmt.label} · ${fmt.formation}`}
-          icon={<Users className="h-4 w-4 text-slate-400" />}
+          icon={<Users className="h-4 w-4 text-secondary" />}
           summary={`${fmt.players} titolari, ${fmt.perTeam} per squadra`}
         >
           <MatchFormatPicker
@@ -744,12 +744,12 @@ function SquadreContent() {
       {isClientAdmin && (
         <CollapsibleCard
           title="Modifica dettagli partita"
-          icon={<Pencil className="h-4 w-4 text-slate-400" />}
+          icon={<Pencil className="h-4 w-4 text-secondary" />}
           summary={hasCustomValues ? 'Costo o orario personalizzati per questa partita' : 'Orario, campo e costo di questa partita'}
         >
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
             <label className="block">
-              <span className="block text-xs text-slate-400 font-semibold mb-1">Ora inizio</span>
+              <span className="block text-xs text-secondary font-semibold mb-1">Ora inizio</span>
               <input
                 type="time"
                 value={matchTime}
@@ -757,11 +757,11 @@ function SquadreContent() {
                   markDirty('time');
                   setMatchTime(e.target.value);
                 }}
-                className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-3 py-2.5 bg-app border border-line rounded-xl text-primary focus:outline-none focus:border-accent"
               />
             </label>
             <label className="block">
-              <span className="block text-xs text-slate-400 font-semibold mb-1">Campo</span>
+              <span className="block text-xs text-secondary font-semibold mb-1">Campo</span>
               {fields.length > 0 ? (
                 <select
                   value={matchLocation}
@@ -769,7 +769,7 @@ function SquadreContent() {
                     markDirty('location');
                     setMatchLocation(e.target.value);
                   }}
-                  className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3 py-2.5 bg-app border border-line rounded-xl text-primary focus:outline-none focus:border-accent"
                 >
                   {matchLocation && !fields.some((f) => fieldLabel(f) === matchLocation) && (
                     <option value={matchLocation}>{matchLocation}</option>
@@ -789,12 +789,12 @@ function SquadreContent() {
                     setMatchLocation(e.target.value);
                   }}
                   placeholder="Es. Centro Sportivo"
-                  className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3 py-2.5 bg-app border border-line rounded-xl text-primary focus:outline-none focus:border-accent"
                 />
               )}
             </label>
             <label className="block">
-              <span className="block text-xs text-slate-400 font-semibold mb-1">Costo totale (€)</span>
+              <span className="block text-xs text-secondary font-semibold mb-1">Costo totale (€)</span>
               <NumberInput
                 value={totalCost}
                 onValueChange={(v) => {
@@ -802,15 +802,15 @@ function SquadreContent() {
                   setTotalCost(v);
                 }}
                 decimal
-                className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-3 py-2.5 bg-app border border-line rounded-xl text-primary focus:outline-none focus:border-accent"
               />
             </label>
           </div>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-secondary">
             {hasCustomValues ? (
               <>
                 Questa partita ha costo o orario personalizzati.{' '}
-                <button type="button" onClick={handleResetToStandard} className="text-emerald-400 underline font-semibold">
+                <button type="button" onClick={handleResetToStandard} className="text-accent-text underline font-semibold">
                   Usa valori standard
                 </button>
               </>
@@ -823,19 +823,19 @@ function SquadreContent() {
 
       {/* 7. Messaggi */}
       {errorMsg && (
-        <div className="rounded-xl bg-rose-500/10 px-4 py-3 text-sm text-rose-200 flex items-start gap-2">
+        <div className="rounded-xl bg-rose-500/10 px-4 py-3 text-sm text-danger flex items-start gap-2">
           <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
           <span>{errorMsg}</span>
         </div>
       )}
       {infoMsg && (
-        <div className="rounded-xl bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200 flex items-start gap-2">
+        <div className="rounded-xl bg-accent/10 px-4 py-3 text-sm text-accent-text flex items-start gap-2">
           <Check className="h-4 w-4 flex-shrink-0 mt-0.5" />
           <span>{infoMsg}</span>
         </div>
       )}
       {copySuccess && (
-        <div className="rounded-xl bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200 flex items-start gap-2">
+        <div className="rounded-xl bg-accent/10 px-4 py-3 text-sm text-accent-text flex items-start gap-2">
           <Check className="h-4 w-4 flex-shrink-0 mt-0.5" />
           <span>Testo copiato: si apre WhatsApp per incollarlo.</span>
         </div>
@@ -844,7 +844,7 @@ function SquadreContent() {
         <div className="rounded-xl bg-amber-500/10 px-4 py-3 text-sm text-amber-100 space-y-1">
           {[...(teamRecord?.substitutions || []), ...(reconciled?.substitutions || [])].slice(-4).map((sub, i) => (
             <div key={`${sub.out_id}-${sub.in_id}-${i}`} className="flex items-start gap-2">
-              <ArrowLeftRight className="h-4 w-4 flex-shrink-0 mt-0.5 text-amber-300" />
+              <ArrowLeftRight className="h-4 w-4 flex-shrink-0 mt-0.5 text-warning" />
               <span>
                 <span className="font-semibold">{sub.in_name}</span> subentra al posto di {sub.out_name}
               </span>
@@ -853,7 +853,7 @@ function SquadreContent() {
         </div>
       ) : null}
       {reconciled && reconciled.emptySlots > 0 && !isCompleted && (
-        <div className="rounded-xl bg-rose-500/10 px-4 py-3 text-sm text-rose-200 flex items-start gap-2">
+        <div className="rounded-xl bg-rose-500/10 px-4 py-3 text-sm text-danger flex items-start gap-2">
           <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
           <span>
             {reconciled.emptySlots === 1 ? 'Manca 1 giocatore' : `Mancano ${reconciled.emptySlots} giocatori`}: il posto verrà preso dal primo che si iscrive.
@@ -863,7 +863,7 @@ function SquadreContent() {
 
       {/* Campo / modifica manuale (solo admin) */}
       {isClientAdmin && teams && !isCompleted && (
-        <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl text-sm" role="tablist">
+        <div className="flex items-center gap-1 bg-card border border-line p-1 rounded-xl text-sm" role="tablist">
           {(
             [
               ['pitch', 'Campo', <Trophy key="t" className="h-4 w-4" />],
@@ -877,7 +877,7 @@ function SquadreContent() {
               aria-selected={tab === key}
               onClick={() => (key === 'manual' ? openManualTab() : setTab('pitch'))}
               className={`flex-1 flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg font-semibold transition-colors ${
-                tab === key ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'
+                tab === key ? 'bg-line-strong text-primary' : 'text-secondary hover:text-primary'
               }`}
             >
               {icon} {label}
@@ -887,10 +887,10 @@ function SquadreContent() {
       )}
 
       {tab === 'manual' && manualDraft && isClientAdmin && !isCompleted ? (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+        <div className="bg-card border border-line rounded-2xl p-5 space-y-4">
           <div>
-            <h3 className="text-base font-semibold text-white">Modifica manuale</h3>
-            <p className="text-sm text-slate-400 mt-0.5">Scambia i giocatori tra le squadre o i ruoli, poi salva.</p>
+            <h3 className="text-base font-semibold text-primary">Modifica manuale</h3>
+            <p className="text-sm text-secondary mt-0.5">Scambia i giocatori tra le squadre o i ruoli, poi salva.</p>
           </div>
           <TeamSwapEditor
             fixedKeeper={fixedKeeper}
@@ -899,7 +899,7 @@ function SquadreContent() {
             black={manualDraft.black}
             onChange={(white, black) => setManualDraft({ white, black })}
           />
-          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-3 border-t border-slate-800">
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-3 border-t border-line">
             <button type="button" onClick={() => setTab('pitch')} className={secondaryBtn}>
               Annulla
             </button>
@@ -938,7 +938,7 @@ function SquadreContent() {
                   type="button"
                   onClick={handleShareWhatsApp}
                   disabled={isSharing}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-[#25D366] hover:bg-[#20ba59] text-slate-950 font-semibold rounded-xl text-sm transition-colors disabled:opacity-40"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-[#25D366] hover:bg-[#20ba59] text-on-accent font-semibold rounded-xl text-sm transition-colors disabled:opacity-40"
                 >
                   {isSharing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}
                   Condividi su WhatsApp
@@ -952,22 +952,22 @@ function SquadreContent() {
           </section>
 
           {/* 5. Confronto Bianchi / Neri */}
-          <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-5">
+          <section className="bg-card border border-line rounded-2xl p-5 space-y-5">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <h3 className="text-base font-semibold text-white">Equilibrio</h3>
-                <p className="text-sm text-slate-400 mt-0.5">Medie dei parametri delle due squadre</p>
+                <h3 className="text-base font-semibold text-primary">Equilibrio</h3>
+                <p className="text-sm text-secondary mt-0.5">Medie dei parametri delle due squadre</p>
               </div>
               <div className="text-right">
-                <span className="block text-2xl font-bold text-emerald-300 tabular-nums leading-none">
+                <span className="block text-2xl font-bold text-accent-text tabular-nums leading-none">
                   {balancedResult.fairnessScore}%
                 </span>
-                <span className="text-xs text-slate-400">equilibrio</span>
+                <span className="text-xs text-secondary">equilibrio</span>
               </div>
             </div>
 
             <div className="space-y-3">
-              <div className="flex justify-between text-xs font-semibold text-slate-400">
+              <div className="flex justify-between text-xs font-semibold text-secondary">
                 <span>Bianchi</span>
                 <span>Neri</span>
               </div>
@@ -976,9 +976,9 @@ function SquadreContent() {
                 return (
                   <div key={label} className="space-y-1">
                     <div className="flex items-center justify-between text-sm">
-                      <span className={`tabular-nums font-semibold ${w > b ? 'text-white' : 'text-slate-400'}`}>{fmtNum(w)}</span>
-                      <span className="text-xs text-slate-400">{label}</span>
-                      <span className={`tabular-nums font-semibold ${b > w ? 'text-white' : 'text-slate-400'}`}>{fmtNum(b)}</span>
+                      <span className={`tabular-nums font-semibold ${w > b ? 'text-primary' : 'text-secondary'}`}>{fmtNum(w)}</span>
+                      <span className="text-xs text-secondary">{label}</span>
+                      <span className={`tabular-nums font-semibold ${b > w ? 'text-primary' : 'text-secondary'}`}>{fmtNum(b)}</span>
                     </div>
                     <div className="flex h-1.5 gap-0.5 overflow-hidden rounded-full" aria-hidden="true">
                       <span className="bg-slate-200 rounded-l-full" style={{ width: `${(w / total) * 100}%` }} />
@@ -989,8 +989,8 @@ function SquadreContent() {
               })}
             </div>
 
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-800">
-              {teamList(balancedResult.teamWhite, 'Bianchi', 'bg-white')}
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-line">
+              {teamList(balancedResult.teamWhite, 'Bianchi', 'bg-white ring-1 ring-line-strong')}
               {teamList(balancedResult.teamBlack, 'Neri', 'bg-slate-950 border border-slate-500')}
             </div>
           </section>
@@ -1011,14 +1011,14 @@ function SquadreContent() {
         </div>
       ) : (
         /* 8. Nessuna squadra: cosa succede adesso */
-        <div className="rounded-2xl bg-slate-900/60 border border-dashed border-slate-800 p-8 sm:p-10 text-center space-y-3">
-          <div className="inline-flex p-3 bg-slate-800 text-emerald-400 rounded-2xl">
+        <div className="rounded-2xl bg-card/60 border border-dashed border-line p-8 sm:p-10 text-center space-y-3">
+          <div className="inline-flex p-3 bg-card-hover text-accent-text rounded-2xl">
             <Trophy className="h-7 w-7" />
           </div>
-          <h3 className="text-base font-semibold text-white">Nessuna squadra per questa data</h3>
+          <h3 className="text-base font-semibold text-primary">Nessuna squadra per questa data</h3>
           {isClientAdmin && starterProfiles.length >= fmt.players ? (
             <>
-              <p className="text-sm text-slate-400 max-w-md mx-auto">
+              <p className="text-sm text-secondary max-w-md mx-auto">
                 Ci sono {fmt.players} titolari: genera le squadre {fmt.label}, restano quelle finché non le cambi.
               </p>
               <button
@@ -1033,7 +1033,7 @@ function SquadreContent() {
             </>
           ) : (
             <>
-              <p className="text-sm text-slate-400 max-w-md mx-auto">
+              <p className="text-sm text-secondary max-w-md mx-auto">
                 Le squadre {fmt.label} arrivano quando ci sono {fmt.players} titolari (ora {starterProfiles.length}/{fmt.players}).
               </p>
               <Link

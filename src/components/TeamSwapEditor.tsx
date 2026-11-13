@@ -74,16 +74,16 @@ export function TeamSwapEditor({ white, black, onChange, bench = [], disabled, f
     const isSel = selected?.side === side && selected.index === index;
     return `w-full min-h-[44px] flex items-center gap-2 px-3 py-2 rounded-xl border text-left text-sm font-semibold transition-all ${
       isSel
-        ? 'border-amber-400 bg-amber-400/15 text-white ring-2 ring-amber-400/50'
+        ? 'border-amber-400 bg-amber-400/15 text-primary ring-2 ring-amber-400/50'
         : selected
-        ? 'border-slate-700 bg-slate-950 text-slate-200 hover:border-emerald-500'
-        : 'border-slate-800 bg-slate-950 text-slate-200 hover:border-slate-600'
+        ? 'border-line-strong bg-app text-primary hover:border-accent'
+        : 'border-line bg-app text-primary hover:border-slate-600'
     } disabled:opacity-60`;
   };
 
   const renderTeam = (side: 'white' | 'black', title: string) => (
     <div className="space-y-1.5">
-      <div className="text-xs font-bold text-slate-300">{title}</div>
+      <div className="text-xs font-bold text-secondary">{title}</div>
       {listOf(side).map((p, i) => (
         <button
           key={`${side}-${p.id}-${i}`}
@@ -93,7 +93,7 @@ export function TeamSwapEditor({ white, black, onChange, bench = [], disabled, f
           className={slotClass(side, i)}
           aria-pressed={selected?.side === side && selected.index === i}
         >
-          <span className="w-12 flex-shrink-0 text-[10px] font-mono font-bold text-emerald-400">
+          <span className="w-12 flex-shrink-0 text-[10px] font-mono font-bold text-accent-text">
             {slotLabel(i, fixedKeeper, slots)}
           </span>
           <span className="truncate">{p.name}</span>
@@ -106,8 +106,8 @@ export function TeamSwapEditor({ white, black, onChange, bench = [], disabled, f
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-slate-400 flex items-center gap-1.5">
-        <ArrowLeftRight className="h-3.5 w-3.5 text-emerald-400 flex-shrink-0" />
+      <p className="text-xs text-secondary flex items-center gap-1.5">
+        <ArrowLeftRight className="h-3.5 w-3.5 text-accent-text flex-shrink-0" />
         {selected
           ? 'Ora tocca il giocatore con cui scambiarlo (tocca di nuovo per annullare).'
           : 'Tocca un giocatore e poi un altro per scambiarli di squadra o di ruolo.'}
@@ -118,7 +118,7 @@ export function TeamSwapEditor({ white, black, onChange, bench = [], disabled, f
       </div>
       {benchPlayers.length > 0 && (
         <div className="space-y-1.5">
-          <div className="text-xs font-bold text-slate-400">
+          <div className="text-xs font-bold text-secondary">
             Altri giocatori (tocca e poi scegli chi sostituire)
           </div>
           <div className="flex flex-wrap gap-1.5">
@@ -131,8 +131,8 @@ export function TeamSwapEditor({ white, black, onChange, bench = [], disabled, f
                   onClick={() => handleTap('bench', i)}
                   className={`px-3 py-2 rounded-full border text-xs font-semibold ${
                     selected?.side === 'bench' && selected.index === i
-                      ? 'border-amber-400 bg-amber-400/15 text-white'
-                      : 'border-slate-700 text-slate-300 hover:border-slate-500'
+                      ? 'border-amber-400 bg-amber-400/15 text-primary'
+                      : 'border-line-strong text-secondary hover:border-slate-500'
                   }`}
                 >
                   {p.name}

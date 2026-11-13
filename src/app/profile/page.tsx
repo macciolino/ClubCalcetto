@@ -69,11 +69,11 @@ export default function ProfiloPage() {
   if (!profile) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center text-center p-6 space-y-4">
-        <div className="p-4 bg-emerald-500/15 text-emerald-400 rounded-2xl border border-emerald-500/30">
+        <div className="p-4 bg-accent/15 text-accent-text rounded-2xl border border-accent/30">
           <User className="h-10 w-10" />
         </div>
-        <h2 className="text-xl font-bold text-white">Effettua il Login</h2>
-        <p className="text-xs text-slate-400 max-w-sm">
+        <h2 className="text-xl font-bold text-primary">Effettua il Login</h2>
+        <p className="text-xs text-secondary max-w-sm">
           Per visualizzare e modificare il tuo profilo personale, accedi con il tuo account Google.
         </p>
         <Link
@@ -149,20 +149,20 @@ export default function ProfiloPage() {
       {/* Titolo della pagina (senza riquadro) */}
       <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div className="space-y-1.5">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Profilo</h1>
-          <p className="text-sm text-slate-400 max-w-xl leading-relaxed">I tuoi dati, le tue abilità e le tue statistiche di tutte le partite archiviate.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-primary">Profilo</h1>
+          <p className="text-sm text-secondary max-w-xl leading-relaxed">I tuoi dati, le tue abilità e le tue statistiche di tutte le partite archiviate.</p>
         </div>
 
         {saveSuccess && (
-          <div className="px-4 py-2 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 rounded-xl text-xs font-bold flex items-center gap-2 animate-in fade-in">
-            <Check className="h-4 w-4 text-emerald-400" />
+          <div className="px-4 py-2 bg-accent/20 border border-accent/40 text-accent-text rounded-xl text-xs font-bold flex items-center gap-2 animate-in fade-in">
+            <Check className="h-4 w-4 text-accent-text" />
             <span>Profilo aggiornato con successo!</span>
           </div>
         )}
       </header>
 
       {/* SCHEDA DATI PERSONALI & UPLOAD FOTO */}
-      <form onSubmit={handleSaveProfile} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6">
+      <form onSubmit={handleSaveProfile} className="bg-card border border-line rounded-2xl p-6 space-y-6">
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
           {/* Foto profilo */}
           <div className="flex flex-col items-center space-y-2">
@@ -171,10 +171,10 @@ export default function ProfiloPage() {
                 src={profile.avatar_url}
                 alt={`Foto di ${fullName}`}
                 referrerPolicy="no-referrer"
-                className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover ring-4 ring-emerald-500/40"
+                className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover ring-4 ring-accent/40"
               />
             ) : (
-              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-slate-800 border-2 border-slate-700 flex items-center justify-center font-bold text-3xl text-emerald-400">
+              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-card-hover border-2 border-line-strong flex items-center justify-center font-bold text-3xl text-accent-text">
                 {fullName.charAt(0).toUpperCase()}
               </div>
             )}
@@ -183,13 +183,13 @@ export default function ProfiloPage() {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
-              className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs border border-slate-700 disabled:opacity-60"
+              className="flex items-center gap-1.5 px-3 py-2 bg-card-hover hover:bg-line-strong text-primary font-bold rounded-xl text-xs border border-line-strong disabled:opacity-60"
             >
-              {isUploading ? <Loader2 className="h-4 w-4 animate-spin text-emerald-400" /> : <Camera className="h-4 w-4 text-emerald-400" />}
+              {isUploading ? <Loader2 className="h-4 w-4 animate-spin text-accent-text" /> : <Camera className="h-4 w-4 text-accent-text" />}
               {profile.avatar_url ? 'Cambia foto' : 'Carica la tua foto'}
             </button>
             {profile.avatar_url && (
-              <button type="button" onClick={handleRemovePhoto} className="text-[11px] text-slate-500 hover:text-rose-400 underline">
+              <button type="button" onClick={handleRemovePhoto} className="text-[11px] text-muted hover:text-danger underline">
                 Togli foto
               </button>
             )}
@@ -199,25 +199,25 @@ export default function ProfiloPage() {
           <div className="flex-1 w-full space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-slate-400 mb-1.5">
+                <label className="block text-xs font-bold text-secondary mb-1.5">
                   Nome Giocatore Visualizzato
                 </label>
                 <input
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm font-semibold focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3.5 py-2.5 bg-app border border-line rounded-xl text-primary text-sm font-semibold focus:outline-none focus:border-accent"
                   placeholder="Il tuo nome in campo"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-400 mb-1.5">
+                <label className="block text-xs font-bold text-secondary mb-1.5">
                   Email Account
                 </label>
-                <div className="px-3.5 py-2.5 bg-slate-950/60 border border-slate-800 rounded-xl text-slate-400 text-sm font-mono flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-slate-500" />
+                <div className="px-3.5 py-2.5 bg-app/60 border border-line rounded-xl text-secondary text-sm font-mono flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-muted" />
                   <span className="truncate">{profile.email || 'Nessun account Google'}</span>
                 </div>
               </div>
@@ -225,13 +225,13 @@ export default function ProfiloPage() {
 
             {/* Posizione Tattica in Campo (Separata dal ruolo applicativo) */}
             <div>
-              <label className="block text-xs font-bold text-slate-400 mb-1.5">
+              <label className="block text-xs font-bold text-secondary mb-1.5">
                 Posizione Tattica Preferita (Campetto & Rombo 1-1-2-1)
               </label>
               <select
                 value={position}
                 onChange={(e) => setPosition(e.target.value as FieldPosition)}
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm font-semibold focus:outline-none focus:border-emerald-500"
+                className="w-full px-3.5 py-2.5 bg-app border border-line rounded-xl text-primary text-sm font-semibold focus:outline-none focus:border-accent"
               >
                 {FIELD_POSITIONS.map((pos) => (
                   <option key={pos} value={pos}>
@@ -243,12 +243,12 @@ export default function ProfiloPage() {
 
             <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
               <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400">Ruolo Piattaforma:</span>
+                <span className="text-xs text-secondary">Ruolo Piattaforma:</span>
                 <span
                   className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${
                     isStrictAdmin
-                      ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
-                      : 'bg-blue-500/15 text-blue-300 border border-blue-500/30'
+                      ? 'bg-amber-500/15 text-warning border border-amber-500/30'
+                      : 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30'
                   }`}
                 >
                   {isStrictAdmin ? '★ Amministratore' : 'Giocatore'}
@@ -267,7 +267,7 @@ export default function ProfiloPage() {
             </div>
 
             {errorMsg && (
-              <div className="p-3 bg-rose-500/15 border border-rose-500/30 text-rose-300 rounded-xl text-xs">
+              <div className="p-3 bg-rose-500/15 border border-rose-500/30 text-danger rounded-xl text-xs">
                 {errorMsg}
               </div>
             )}
@@ -278,30 +278,30 @@ export default function ProfiloPage() {
       {/* SEZIONE STATISTICHE E BILANCIO PARTITE (AFFIANCATE) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* COLONNA 1: OTTAGONO ABILITÀ STILE FIFA/PES */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 flex flex-col justify-between">
+        <div className="bg-card border border-line rounded-2xl p-5 space-y-4 flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div className="flex items-center justify-between border-b border-line pb-3">
               <div className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-emerald-400" />
-                <h2 className="text-base font-bold text-white">
+                <Sparkles className="h-5 w-5 text-accent-text" />
+                <h2 className="text-base font-bold text-primary">
                   Le Mie Abilità Tecniche
                 </h2>
               </div>
-              <span className="text-xs font-mono font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md">
+              <span className="text-xs font-mono font-bold text-warning bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md">
                 OVR {Math.round(Math.max(1, Math.min(10, (profile.overall_rating || 6.0) + myForm)) * 10)}
               </span>
             </div>
-            <p className="text-xs text-slate-400 mt-2">
+            <p className="text-xs text-secondary mt-2">
               Poligono radar ottagonale generato sui tuoi attributi calcistici.
             </p>
             {myForm > 0 && (
-              <p className="mt-2 text-xs text-orange-300 bg-orange-500/10 border border-orange-400/30 rounded-xl p-2.5">
+              <p className="mt-2 text-xs text-orange-700 dark:text-orange-300 bg-orange-500/10 border border-orange-400/30 rounded-xl p-2.5">
                 🔥 <strong>In forma {formatForm(myForm)}</strong>: per le ultime 3 partite (MVP, voti, gol o vittorie) tutti i tuoi
                 valori e l&apos;OVR sono saliti di {formatForm(myForm).slice(1)}. È temporaneo.
               </p>
             )}
             {myForm < 0 && (
-              <p className="mt-2 text-xs text-sky-300 bg-sky-500/10 border border-sky-400/30 rounded-xl p-2.5">
+              <p className="mt-2 text-xs text-sky-700 dark:text-sky-300 bg-sky-500/10 border border-sky-400/30 rounded-xl p-2.5">
                 ❄️ <strong>Fuori forma {formatForm(myForm)}</strong>: per le ultime 3 partite (sconfitte) tutti i tuoi valori e
                 l&apos;OVR sono scesi di {formatForm(myForm).slice(1)}. È temporaneo: risale con vittorie, voti MVP o gol.
               </p>
@@ -313,15 +313,15 @@ export default function ProfiloPage() {
           </div>
 
           {/* Dettaglio barre statistiche in ordine canonico fisso */}
-          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800">
+          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-line">
             {sortStatsByCanonicalOrder(Object.keys(profileStats)).map((statName) => {
               const val = profileStats[statName] ?? 6;
               return (
-                <div key={statName} className="bg-slate-950/70 border border-slate-800 p-2 rounded-xl flex items-center justify-between">
-                  <span className="text-[11px] font-semibold text-slate-300">{statName}</span>
+                <div key={statName} className="bg-app/70 border border-line p-2 rounded-xl flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-secondary">{statName}</span>
                   <span
                     className={`text-xs font-mono font-bold ${
-                      val >= 8 ? 'text-emerald-400' : val >= 6 ? 'text-white' : 'text-rose-400'
+                      val >= 8 ? 'text-accent-text' : val >= 6 ? 'text-primary' : 'text-danger'
                     }`}
                   >
                     {val}/10
@@ -333,40 +333,40 @@ export default function ProfiloPage() {
         </div>
 
         {/* COLONNA 2: LE MIE STATISTICHE GLOBALI */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-5">
-          <div className="border-b border-slate-800 pb-3">
+        <div className="bg-card border border-line rounded-2xl p-5 space-y-5">
+          <div className="border-b border-line pb-3">
             <div className="flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-amber-400" />
-              <h2 className="text-base font-bold text-white">Le Mie Statistiche</h2>
+              <Trophy className="h-5 w-5 text-warning" />
+              <h2 className="text-base font-bold text-primary">Le Mie Statistiche</h2>
             </div>
-            <p className="text-xs text-slate-400 mt-2">
+            <p className="text-xs text-secondary mt-2">
               Totali di tutte le partite archiviate ({record.played} giocate).
             </p>
           </div>
 
           <div className="grid grid-cols-3 gap-3 text-center">
-            <div className="bg-emerald-500/10 border border-emerald-500/30 p-3.5 rounded-2xl space-y-1">
-              <div className="text-xs font-bold text-emerald-400">Vinte</div>
-              <div className="text-3xl font-bold text-emerald-300 font-mono">{record.won}</div>
+            <div className="bg-accent/10 border border-accent/30 p-3.5 rounded-2xl space-y-1">
+              <div className="text-xs font-bold text-accent-text">Vinte</div>
+              <div className="text-3xl font-bold text-accent-text font-mono">{record.won}</div>
             </div>
             <div className="bg-amber-500/10 border border-amber-500/30 p-3.5 rounded-2xl space-y-1">
-              <div className="text-xs font-bold text-amber-400">Pareggiate</div>
-              <div className="text-3xl font-bold text-amber-300 font-mono">{record.drawn}</div>
+              <div className="text-xs font-bold text-warning">Pareggiate</div>
+              <div className="text-3xl font-bold text-warning font-mono">{record.drawn}</div>
             </div>
             <div className="bg-rose-500/10 border border-rose-500/30 p-3.5 rounded-2xl space-y-1">
-              <div className="text-xs font-bold text-rose-400">Perse</div>
-              <div className="text-3xl font-bold text-rose-300 font-mono">{record.lost}</div>
+              <div className="text-xs font-bold text-danger">Perse</div>
+              <div className="text-3xl font-bold text-danger font-mono">{record.lost}</div>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3 text-center">
-            <div className="bg-slate-950/80 border border-slate-800 p-3.5 rounded-2xl space-y-1">
-              <div className="text-xs font-bold text-slate-300">Gol segnati</div>
-              <div className="text-3xl font-bold text-white font-mono">{record.goals}</div>
+            <div className="bg-app/80 border border-line p-3.5 rounded-2xl space-y-1">
+              <div className="text-xs font-bold text-secondary">Gol segnati</div>
+              <div className="text-3xl font-bold text-primary font-mono">{record.goals}</div>
             </div>
-            <div className="bg-slate-950/80 border border-slate-800 p-3.5 rounded-2xl space-y-1">
-              <div className="text-xs font-bold text-slate-300">MVP</div>
-              <div className="text-3xl font-bold text-amber-300 font-mono">{record.mvp}</div>
+            <div className="bg-app/80 border border-line p-3.5 rounded-2xl space-y-1">
+              <div className="text-xs font-bold text-secondary">MVP</div>
+              <div className="text-3xl font-bold text-warning font-mono">{record.mvp}</div>
             </div>
           </div>
 
@@ -379,23 +379,23 @@ export default function ProfiloPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Link
           href="/settings?sezione=notifiche"
-          className="flex items-center justify-between gap-3 bg-slate-900 hover:bg-slate-800/80 rounded-2xl p-4 text-sm"
+          className="flex items-center justify-between gap-3 bg-card hover:bg-card-hover/80 rounded-2xl p-4 text-sm"
         >
           <span>
-            <span className="block font-semibold text-white">Notifiche</span>
-            <span className="text-xs text-slate-400">Attivale su questo dispositivo</span>
+            <span className="block font-semibold text-primary">Notifiche</span>
+            <span className="text-xs text-secondary">Attivale su questo dispositivo</span>
           </span>
-          <span className="text-slate-500" aria-hidden="true">›</span>
+          <span className="text-muted" aria-hidden="true">›</span>
         </Link>
         <Link
           href="/settings?sezione=account"
-          className="flex items-center justify-between gap-3 bg-slate-900 hover:bg-slate-800/80 rounded-2xl p-4 text-sm"
+          className="flex items-center justify-between gap-3 bg-card hover:bg-card-hover/80 rounded-2xl p-4 text-sm"
         >
           <span>
-            <span className="block font-semibold text-white">Account</span>
-            <span className="text-xs text-slate-400">Esci da tutti i dispositivi, disattiva o elimina</span>
+            <span className="block font-semibold text-primary">Account</span>
+            <span className="text-xs text-secondary">Esci da tutti i dispositivi, disattiva o elimina</span>
           </span>
-          <span className="text-slate-500" aria-hidden="true">›</span>
+          <span className="text-muted" aria-hidden="true">›</span>
         </Link>
       </div>
     </div>

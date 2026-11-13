@@ -117,7 +117,7 @@ export function FormDots({
           {open === i && (
             <span
               role="tooltip"
-              className={`absolute bottom-full mb-1.5 z-30 whitespace-nowrap rounded-md bg-white px-2 py-1 text-[11px] font-semibold text-slate-950 shadow-lg animate-in pointer-events-none ${
+              className={`absolute bottom-full mb-1.5 z-30 whitespace-nowrap rounded-md bg-white ring-1 ring-line-strong px-2 py-1 text-[11px] font-semibold text-slate-950 shadow-lg animate-in pointer-events-none ${
                 i === 0 ? 'left-0' : i === slots.length - 1 ? 'right-0' : 'left-1/2 -translate-x-1/2'
               }`}
             >

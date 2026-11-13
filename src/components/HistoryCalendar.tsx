@@ -43,21 +43,21 @@ export function HistoryCalendar({ matchDates, selected, onSelect, maxYear }: His
   const monthCount = matchDates.filter((d) => d.startsWith(ymd(view.y, view.m, 1).slice(0, 7))).length;
 
   return (
-    <div className="bg-slate-900 rounded-2xl p-3 sm:p-4 space-y-3 w-full max-w-md mx-auto lg:mx-0">
+    <div className="bg-card rounded-2xl p-3 sm:p-4 space-y-3 w-full max-w-md mx-auto lg:mx-0">
       <div className="flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={() => move(-1)}
           aria-label="Mese precedente"
-          className="h-10 w-10 flex items-center justify-center rounded-xl text-slate-300 hover:bg-slate-800"
+          className="h-10 w-10 flex items-center justify-center rounded-xl text-secondary hover:bg-card-hover"
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
         <div className="text-center">
-          <div className="text-sm font-bold text-white">
+          <div className="text-sm font-bold text-primary">
             {MONTHS[view.m]} {view.y}
           </div>
-          <div className="text-[11px] text-slate-400">
+          <div className="text-[11px] text-secondary">
             {monthCount === 0 ? 'Nessuna partita' : monthCount === 1 ? '1 partita' : `${monthCount} partite`}
           </div>
         </div>
@@ -66,7 +66,7 @@ export function HistoryCalendar({ matchDates, selected, onSelect, maxYear }: His
           onClick={() => move(1)}
           disabled={atLastMonth}
           aria-label="Mese successivo"
-          className="h-10 w-10 flex items-center justify-center rounded-xl text-slate-300 hover:bg-slate-800 disabled:opacity-30"
+          className="h-10 w-10 flex items-center justify-center rounded-xl text-secondary hover:bg-card-hover disabled:opacity-30"
         >
           <ChevronRight className="h-5 w-5" />
         </button>
@@ -74,7 +74,7 @@ export function HistoryCalendar({ matchDates, selected, onSelect, maxYear }: His
 
       <div className="grid grid-cols-7 gap-1 text-center" role="grid" aria-label={`${MONTHS[view.m]} ${view.y}`}>
         {WEEKDAYS.map((w) => (
-          <div key={w} className="text-[10px] font-bold uppercase text-slate-500 py-1">
+          <div key={w} className="text-[10px] font-bold uppercase text-muted py-1">
             {w}
           </div>
         ))}
@@ -95,10 +95,10 @@ export function HistoryCalendar({ matchDates, selected, onSelect, maxYear }: His
               aria-label={hasMatch ? `Partita del ${i + 1} ${MONTHS[view.m]}` : `${i + 1} ${MONTHS[view.m]}, nessuna partita`}
               className={`h-10 rounded-xl text-sm font-bold transition-all ${
                 isSel
-                  ? 'bg-emerald-500 text-slate-950'
+                  ? 'bg-accent text-on-accent'
                   : hasMatch
-                  ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/50 hover:bg-emerald-500/25'
-                  : 'text-slate-600'
+                  ? 'bg-accent/15 text-accent-text border border-accent/50 hover:bg-accent/25'
+                  : 'text-muted'
               }`}
             >
               {i + 1}
@@ -111,7 +111,7 @@ export function HistoryCalendar({ matchDates, selected, onSelect, maxYear }: His
         <button
           type="button"
           onClick={() => onSelect(null)}
-          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold text-slate-300 border border-slate-700 hover:bg-slate-800"
+          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold text-secondary border border-line-strong hover:bg-card-hover"
         >
           <X className="h-3.5 w-3.5" /> Mostra tutte le partite
         </button>

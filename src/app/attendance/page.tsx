@@ -232,8 +232,8 @@ export default function PresenzePage() {
       {/* Titolo della pagina (senza riquadro) */}
       <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div className="space-y-1.5">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Presenze</h1>
-          <p className="text-sm text-slate-400 max-w-xl leading-relaxed">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-primary">Presenze</h1>
+          <p className="text-sm text-secondary max-w-xl leading-relaxed">
             Segna i giorni in cui puoi giocare. I primi {selectedMax} sono titolari ({FORMAT_INFO[selectedFormat].label}), gli altri
             vanno in lista d&apos;attesa e subentrano da soli.
           </p>
@@ -250,7 +250,7 @@ export default function PresenzePage() {
               {isNextWeekOpen ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
               {isNextWeekOpen ? 'Chiudi la settimana prossima' : 'Apri la settimana prossima'}
             </button>
-            <span className="text-xs text-slate-400 text-center sm:text-right">
+            <span className="text-xs text-secondary text-center sm:text-right">
               {isNextWeekOpen ? `Iscrizioni aperte fino a ${formatItalianDate(openUntil)}` : 'Settimana prossima chiusa ai giocatori'}
             </span>
           </div>
@@ -259,12 +259,12 @@ export default function PresenzePage() {
 
       {/* Admin: più giorni al completo, scegli quello ufficiale */}
       {daysWithQuorum.length > 1 && isStrictAdmin && (
-        <section className="rounded-2xl bg-slate-900 border border-slate-800 p-5 space-y-3">
+        <section className="rounded-2xl bg-card border border-line p-5 space-y-3">
           <div className="flex items-start gap-3">
-            <Crown className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
+            <Crown className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
             <div>
-              <h2 className="text-base font-semibold text-white">Scegli il giorno ufficiale</h2>
-              <p className="text-sm text-slate-400 mt-0.5">
+              <h2 className="text-base font-semibold text-primary">Scegli il giorno ufficiale</h2>
+              <p className="text-sm text-secondary mt-0.5">
                 {daysWithQuorum.length} giorni sono al completo. Il giorno scelto vale anche per Squadre e Admin.
               </p>
             </div>
@@ -279,7 +279,7 @@ export default function PresenzePage() {
                   onClick={() => handleSelectDay(day.dateString)}
                   aria-pressed={isOfficial}
                   className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
-                    isOfficial ? 'bg-emerald-500 text-slate-950' : 'border border-slate-700 text-slate-200 hover:bg-slate-800'
+                    isOfficial ? 'bg-accent text-on-accent' : 'border border-line-strong text-primary hover:bg-card-hover'
                   }`}
                 >
                   {day.dayName} {day.dayNumber} {day.monthName}
@@ -293,12 +293,12 @@ export default function PresenzePage() {
 
       {/* Giorno scelto al completo */}
       {isMatchReady && (
-        <section className="rounded-2xl bg-slate-900 border border-slate-800 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <section className="rounded-2xl bg-card border border-line p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-base font-semibold text-white flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-emerald-400" /> Partita al completo
+            <h2 className="text-base font-semibold text-primary flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-accent-text" /> Partita al completo
             </h2>
-            <p className="text-sm text-slate-400 mt-0.5">
+            <p className="text-sm text-secondary mt-0.5">
               {formatItalianDate(selectedDayString)} · {FORMAT_INFO[selectedFormat].label} · {selectedMax} titolari su {selectedMax}
             </p>
           </div>
@@ -314,7 +314,7 @@ export default function PresenzePage() {
 
       {/* Calendario: settimana corrente e prossima */}
       <section className="space-y-3" aria-labelledby="calendar-title">
-        <h2 id="calendar-title" className="text-sm font-semibold text-slate-300">
+        <h2 id="calendar-title" className="text-sm font-semibold text-secondary">
           Calendario
         </h2>
         <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-none">
@@ -329,7 +329,7 @@ export default function PresenzePage() {
 
             return (
               <React.Fragment key={day.dateString}>
-                {startsNextWeek && <div className="flex-shrink-0 w-px bg-slate-800 mx-1" aria-hidden="true" />}
+                {startsNextWeek && <div className="flex-shrink-0 w-px bg-card-hover mx-1" aria-hidden="true" />}
                 <button
                   type="button"
                   onClick={() => handleSelectDay(day.dateString)}
@@ -337,10 +337,10 @@ export default function PresenzePage() {
                   aria-label={`${day.dayName} ${day.dayNumber} ${day.monthName}: ${locked ? 'chiuso' : `${confirmedCount} su ${dayMax}`}${isFirstToTen ? ', primo al completo' : ''}`}
                   title={locked ? 'Iscrizioni non ancora aperte' : `${confirmedCount}/${dayMax}`}
                   className={`flex-shrink-0 flex flex-col items-center w-14 sm:w-16 py-2.5 rounded-2xl transition-colors ${
-                    isSelected ? 'bg-emerald-500 text-slate-950' : locked ? 'text-slate-600' : 'text-slate-300 hover:bg-slate-900'
+                    isSelected ? 'bg-accent text-on-accent' : locked ? 'text-muted' : 'text-secondary hover:bg-card'
                   }`}
                 >
-                  <span className={`text-xs font-medium capitalize ${isSelected ? 'text-slate-900' : locked ? 'text-slate-600' : 'text-slate-400'}`}>
+                  <span className={`text-xs font-medium capitalize ${isSelected ? 'text-slate-900' : locked ? 'text-muted' : 'text-secondary'}`}>
                     {day.dayName.slice(0, 3)}
                   </span>
                   <span className="text-xl font-bold leading-tight mt-0.5">{day.dayNumber}</span>
@@ -351,7 +351,7 @@ export default function PresenzePage() {
                     ) : isFirstToTen || isFull || confirmedCount > 0 ? (
                       <span
                         className={`h-1.5 w-1.5 rounded-full ${
-                          isSelected ? 'bg-slate-950' : isFirstToTen ? 'bg-amber-500' : isFull ? 'bg-emerald-500' : 'bg-slate-500'
+                          isSelected ? 'bg-app' : isFirstToTen ? 'bg-amber-500' : isFull ? 'bg-accent' : 'bg-slate-500'
                         }`}
                       />
                     ) : null}
@@ -361,12 +361,12 @@ export default function PresenzePage() {
             );
           })}
         </div>
-        <p className="text-xs text-slate-400 flex flex-wrap items-center gap-x-4 gap-y-1">
+        <p className="text-xs text-secondary flex flex-wrap items-center gap-x-4 gap-y-1">
           <span className="flex items-center gap-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-slate-500" aria-hidden="true" /> iscritti
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" /> completo
+            <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" /> completo
           </span>
           <span className="flex items-center gap-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true" /> primo al completo della settimana

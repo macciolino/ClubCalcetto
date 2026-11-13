@@ -17,11 +17,11 @@ export function initialsOf(name: string | null | undefined): string {
  * won/drawn/lost and starter/waiting: POR sky, DIF indigo, EST teal, PUN orange.
  */
 export const POSITION_BADGE: Record<string, string> = {
-  Portiere: 'bg-sky-500/15 text-sky-300',
-  Difensore: 'bg-indigo-500/15 text-indigo-300',
-  Centrocampista: 'bg-violet-500/15 text-violet-300',
-  Esterno: 'bg-teal-500/15 text-teal-300',
-  Punta: 'bg-orange-500/15 text-orange-300',
+  Portiere: 'bg-sky-500/15 text-sky-700 dark:text-sky-300',
+  Difensore: 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300',
+  Centrocampista: 'bg-violet-500/15 text-violet-700 dark:text-violet-300',
+  Esterno: 'bg-teal-500/15 text-teal-700 dark:text-teal-300',
+  Punta: 'bg-orange-500/15 text-orange-700 dark:text-orange-300',
 };
 
 /** OVR shown FIFA-style (7.9 → 79), with the "Stato forma" bonus, between 10 and 100. */
@@ -31,5 +31,5 @@ export function ovrDisplay(overall: number | undefined, form = 0): number {
 
 /** OVR colour by band, the same everywhere: 80+ green, 70-79 white, under 70 grey. */
 export function ovrTone(ovr: number): string {
-  return ovr >= 80 ? 'text-emerald-400' : ovr >= 70 ? 'text-white' : 'text-slate-400';
+  return ovr >= 80 ? 'text-accent-text' : ovr >= 70 ? 'text-primary' : 'text-secondary';
 }

@@ -21,13 +21,13 @@ function Avatar({ player, size = 'md' }: { player: Profile; size?: 'md' | 'lg' }
       {photo ? (
         <img src={photo} alt="" className={`${box} rounded-full object-cover`} />
       ) : (
-        <span className={`${box} rounded-full bg-slate-800 flex items-center justify-center font-bold text-emerald-300`}>
+        <span className={`${box} rounded-full bg-card-hover flex items-center justify-center font-bold text-accent-text`}>
           {initialsOf(player.full_name)}
         </span>
       )}
       {isSuperAdminProfile(player) && (
         <span
-          className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-bold text-slate-950 ring-2 ring-slate-900"
+          className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-bold text-on-accent ring-2 ring-card"
           title="Super Admin"
         >
           ★
@@ -60,14 +60,14 @@ export function PlayerCardFifa({
       type="button"
       onClick={() => onOpen(player)}
       aria-label={`${player.full_name}, ${player.position || 'Esterno'}, OVR ${ovr}`}
-      className="w-full h-full flex items-center gap-3 rounded-2xl bg-slate-900 hover:bg-slate-800/80 px-3.5 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+      className="w-full h-full flex items-center gap-3 rounded-2xl bg-card hover:bg-card-hover/80 px-3.5 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
     >
       <Avatar player={player} />
       <span className="flex-1 min-w-0">
-        <span className={`block text-[15px] font-semibold leading-tight line-clamp-2 break-words ${isCurrent ? 'text-emerald-300' : 'text-white'}`}>
+        <span className={`block text-[15px] font-semibold leading-tight line-clamp-2 break-words ${isCurrent ? 'text-accent-text' : 'text-primary'}`}>
           {player.full_name}
         </span>
-        <span className="mt-1 flex items-center gap-2 text-xs text-slate-400">
+        <span className="mt-1 flex items-center gap-2 text-xs text-secondary">
           <span className="truncate">
             {player.position || 'Esterno'}
             {player.is_guest ? ' · ospite' : ''}
@@ -75,7 +75,7 @@ export function PlayerCardFifa({
           {playedAny(player.id, recentMatches) ? (
             <FormDots playerId={player.id} matches={recentMatches} interactive={false} className="flex-shrink-0" />
           ) : (
-            <span className="text-[11px] text-slate-500 truncate">nessuna partita recente</span>
+            <span className="text-[11px] text-muted truncate">nessuna partita recente</span>
           )}
         </span>
       </span>
@@ -147,7 +147,7 @@ export function PlayerDetailSheet({
         showValues={false}
       />
       {form !== 0 && (
-        <p className="text-xs text-slate-400 flex items-center gap-1.5">
+        <p className="text-xs text-secondary flex items-center gap-1.5">
           <span className="inline-block w-4 border-t-2 border-dashed border-emerald-300" aria-hidden="true" /> con lo stato forma
         </p>
       )}
@@ -158,14 +158,14 @@ export function PlayerDetailSheet({
           const value = form !== 0 ? Number(displayStats[b.name] ?? b.value) : b.value;
           const code = STAT_DETAILS[b.name]?.code || b.name.slice(0, 3).toUpperCase();
           return (
-            <li key={b.name} className="rounded-xl bg-slate-950/60 px-2 pt-2 pb-2.5 text-center" title={b.name}>
-              <span className="block text-[10px] font-semibold tracking-wider text-slate-500">{code}</span>
-              <span className="block mt-0.5 text-lg font-semibold text-white tabular-nums leading-tight">
+            <li key={b.name} className="rounded-xl bg-app/60 px-2 pt-2 pb-2.5 text-center" title={b.name}>
+              <span className="block text-[10px] font-semibold tracking-wider text-muted">{code}</span>
+              <span className="block mt-0.5 text-lg font-semibold text-primary tabular-nums leading-tight">
                 {String(Math.round(value * 10) / 10).replace('.', ',')}
               </span>
-              <span className="mt-1.5 mx-auto block h-1 w-full max-w-[3rem] rounded-full bg-slate-800 overflow-hidden" aria-hidden="true">
+              <span className="mt-1.5 mx-auto block h-1 w-full max-w-[3rem] rounded-full bg-card-hover overflow-hidden" aria-hidden="true">
                 <span
-                  className={`block h-full rounded-full ${value >= 8 ? 'bg-emerald-400' : value >= 6 ? 'bg-emerald-600' : 'bg-slate-500'}`}
+                  className={`block h-full rounded-full ${value >= 8 ? 'bg-accent/90' : value >= 6 ? 'bg-emerald-600' : 'bg-slate-500'}`}
                   style={{ width: `${Math.max(0, Math.min(10, value)) * 10}%` }}
                 />
               </span>
@@ -178,31 +178,31 @@ export function PlayerDetailSheet({
 
   const stats =
     matchStats.played === 0 ? (
-      <p className="py-6 text-center text-sm text-slate-400">Le statistiche compaiono dopo la prima partita archiviata.</p>
+      <p className="py-6 text-center text-sm text-secondary">Le statistiche compaiono dopo la prima partita archiviata.</p>
     ) : (
       <div className="space-y-4">
         <div className="space-y-2">
           <div className="grid grid-cols-3 text-center">
             {(
               [
-                ['Vinte', matchStats.won, 'text-emerald-400'],
-                ['Pari', matchStats.drawn, 'text-amber-400'],
-                ['Perse', matchStats.lost, 'text-red-400'],
+                ['Vinte', matchStats.won, 'text-accent-text'],
+                ['Pari', matchStats.drawn, 'text-warning'],
+                ['Perse', matchStats.lost, 'text-danger'],
               ] as const
             ).map(([label, value, color]) => (
               <div key={label}>
                 <span className={`block text-3xl font-bold tabular-nums leading-none ${color}`}>{value}</span>
-                <span className="block text-xs text-slate-400 mt-1">{label}</span>
+                <span className="block text-xs text-secondary mt-1">{label}</span>
               </div>
             ))}
           </div>
-          <div className="flex h-1.5 overflow-hidden rounded-full bg-slate-800" aria-hidden="true">
-            <span className="bg-emerald-500" style={{ width: `${(matchStats.won / matchStats.played) * 100}%` }} />
+          <div className="flex h-1.5 overflow-hidden rounded-full bg-card-hover" aria-hidden="true">
+            <span className="bg-accent" style={{ width: `${(matchStats.won / matchStats.played) * 100}%` }} />
             <span className="bg-amber-500" style={{ width: `${(matchStats.drawn / matchStats.played) * 100}%` }} />
             <span className="bg-red-500" style={{ width: `${(matchStats.lost / matchStats.played) * 100}%` }} />
           </div>
         </div>
-        <dl className="divide-y divide-slate-800 rounded-xl bg-slate-950/50 px-3 text-sm">
+        <dl className="divide-y divide-line rounded-xl bg-app/50 px-3 text-sm">
           {(
             [
               ['Presenze', String(matchStats.played)],
@@ -213,8 +213,8 @@ export function PlayerDetailSheet({
             ] as const
           ).map(([label, value]) => (
             <div key={label} className="flex items-center justify-between py-2">
-              <dt className="text-slate-400">{label}</dt>
-              <dd className="font-semibold text-white tabular-nums">{value}</dd>
+              <dt className="text-secondary">{label}</dt>
+              <dd className="font-semibold text-primary tabular-nums">{value}</dd>
             </div>
           ))}
         </dl>
@@ -231,17 +231,17 @@ export function PlayerDetailSheet({
           <Avatar player={player} size="lg" />
           <span className="min-w-0">
             <span className="block leading-tight break-words">{player.full_name}</span>
-            <span className="block text-sm font-normal text-slate-400 mt-0.5">
+            <span className="block text-sm font-normal text-secondary mt-0.5">
               {player.position || 'Esterno'}
               {player.is_guest ? ' · ospite' : ''}
               {form !== 0 && (
-                <span className={form > 0 ? 'text-orange-300' : 'text-sky-300'}>
+                <span className={form > 0 ? 'text-orange-700 dark:text-orange-300' : 'text-sky-700 dark:text-sky-300'}>
                   {' '}
                   · {form > 0 ? '🔥 in forma' : '❄️ fuori forma'} {formatForm(form)}
                 </span>
               )}
             </span>
-            {showEmail && player.email && <span className="block text-xs font-normal text-slate-500 mt-0.5 break-all">{player.email}</span>}
+            {showEmail && player.email && <span className="block text-xs font-normal text-muted mt-0.5 break-all">{player.email}</span>}
           </span>
         </span>
       }
@@ -254,7 +254,7 @@ export function PlayerDetailSheet({
                 onClick={() => onEdit(player)}
                 aria-label="Modifica giocatore"
                 title="Modifica"
-                className="p-2 rounded-full text-slate-300 hover:text-white hover:bg-slate-800"
+                className="p-2 rounded-full text-secondary hover:text-primary hover:bg-card-hover"
               >
                 <Edit3 className="h-5 w-5" />
               </button>
@@ -266,7 +266,7 @@ export function PlayerDetailSheet({
                   onClick={() => setMenuOpen((o) => !o)}
                   aria-label="Altre azioni"
                   aria-expanded={menuOpen}
-                  className="p-2 rounded-full text-slate-300 hover:text-white hover:bg-slate-800"
+                  className="p-2 rounded-full text-secondary hover:text-primary hover:bg-card-hover"
                 >
                   <MoreHorizontal className="h-5 w-5" />
                 </button>
@@ -284,7 +284,7 @@ export function PlayerDetailSheet({
                           }}
                           className={menu.item}
                         >
-                          <MessageCircle className="h-4 w-4 text-emerald-400" /> Invita su WhatsApp
+                          <MessageCircle className="h-4 w-4 text-accent-text" /> Invita su WhatsApp
                         </button>
                       )}
                       {canToggleAdmin && (
@@ -324,20 +324,20 @@ export function PlayerDetailSheet({
       }
     >
       {/* OVR e ultime 5 */}
-      <div className="flex items-center justify-between gap-4 rounded-2xl bg-slate-950/50 px-4 py-3">
+      <div className="flex items-center justify-between gap-4 rounded-2xl bg-app/50 px-4 py-3">
         <div>
           <span className={`block text-4xl font-bold tabular-nums leading-none ${ovrTone(ovr)}`}>{ovr}</span>
-          <span className="block text-xs text-slate-400 mt-1">OVR</span>
+          <span className="block text-xs text-secondary mt-1">OVR</span>
         </div>
         <div className="text-right">
-          <span className="block text-xs text-slate-400 mb-1">Ultime 5</span>
+          <span className="block text-xs text-secondary mb-1">Ultime 5</span>
           <FormDots playerId={player.id} matches={recentMatches} size="md" />
         </div>
       </div>
 
       {/* Telefono e tablet: schede Abilità / Statistiche. PC: le due cose affiancate */}
       <div className="lg:hidden space-y-4">
-        <div className="flex bg-slate-950 p-1 rounded-xl text-sm" role="tablist">
+        <div className="flex bg-app p-1 rounded-xl text-sm" role="tablist">
           {(
             [
               ['radar', 'Abilità'],
@@ -350,7 +350,7 @@ export function PlayerDetailSheet({
               role="tab"
               aria-selected={tab === key}
               onClick={() => setTab(key)}
-              className={`flex-1 py-2 rounded-lg font-semibold transition-colors ${tab === key ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'}`}
+              className={`flex-1 py-2 rounded-lg font-semibold transition-colors ${tab === key ? 'bg-line-strong text-primary' : 'text-secondary hover:text-primary'}`}
             >
               {label}
             </button>
