@@ -108,6 +108,8 @@ export default function LoginPage() {
         })
         .catch(() => undefined);
     }
+    // Solo all'apertura della pagina (link di invito, sessione scaduta): non va ripetuto se cambia la lingua
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [isCheckingVerification, setIsCheckingVerification] = useState(false);
 
@@ -134,7 +136,7 @@ export default function LoginPage() {
       // L'animazione dopo il login la avvia il caricamento della Home (markJustSignedIn in AuthContext)
       router.replace('/');
     }
-  }, [mounted, user, profile, isEmailVerified, router, refreshProfile]);
+  }, [mounted, user, profile, isEmailVerified, router, refreshProfile, t]);
 
   const isStrictAdmin = Boolean(mounted && user && (profile?.role === 'admin' || isAdmin));
 

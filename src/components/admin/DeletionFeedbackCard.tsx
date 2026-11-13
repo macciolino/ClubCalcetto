@@ -22,7 +22,7 @@ export function DeletionFeedbackCard() {
       .then((list) => (list ? setItems(list) : setError(t('loadFailed'))))
       .catch(() => setError(t('loadFailed')))
       .finally(() => setLoading(false));
-  }, [open, items]);
+  }, [open, items, t]);
 
   return (
     <div className="bg-card p-4 sm:p-5 rounded-2xl">

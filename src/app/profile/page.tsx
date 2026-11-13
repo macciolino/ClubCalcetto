@@ -66,7 +66,7 @@ export default function ProfiloPage() {
       setFullName(profile.full_name || t('playerFallback'));
       setPosition(profile.position || 'Esterno');
     }
-  }, [profile]);
+  }, [profile, t]);
 
   if (!mounted) return <PageSkeleton />;
 
