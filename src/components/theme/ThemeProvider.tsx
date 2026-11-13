@@ -9,10 +9,7 @@ export const THEME_STORAGE_KEY = 'cc_theme';
 /**
  * Light / Dark theme (next-themes): the `dark` or `light` class on <html>, chosen before the first paint
  * (no flash). Default = the system setting.
- *
- * TEMPORARY (until the components are converted to the semantic tokens, Step 3 · Block 1):
- * `enableColorScheme` is off and globals.css keeps `color-scheme: dark`, so native controls (select, date and
- * time pickers, scrollbars) stay dark like the rest of the app even for people whose system is in light mode.
+ * `color-scheme` follows the theme too, so native controls (select, date and time pickers) match it.
  */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   return (
@@ -23,7 +20,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       disableTransitionOnChange
       storageKey={THEME_STORAGE_KEY}
       themes={['light', 'dark']}
-      enableColorScheme={false}
     >
       {children}
     </NextThemesProvider>

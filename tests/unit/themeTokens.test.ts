@@ -4,7 +4,7 @@ import path from 'node:path';
 import tailwindConfig from '../../tailwind.config';
 
 const css = fs.readFileSync(path.join(__dirname, '../../src/app/globals.css'), 'utf8');
-const TOKENS = ['--bg-app', '--bg-card', '--bg-card-hover', '--text-primary', '--text-secondary', '--border-color', '--accent-primary', '--accent-contrast', '--accent-text'];
+const TOKENS = ['--bg-app', '--bg-card', '--bg-card-hover', '--text-primary', '--text-secondary', '--border-color', '--accent-primary', '--accent-contrast', '--accent-text', '--text-muted', '--border-strong', '--danger-text', '--warning-text'];
 
 /** R G B channels of a token inside a CSS block (":root {" or ".dark {") that defines --bg-app. */
 function tokensOf(selector: string): Record<string, [number, number, number]> {
@@ -58,9 +58,16 @@ describe('Token di tema (Light / Dark)', () => {
     ['--text-secondary', '--bg-app', 4.5],
     ['--accent-contrast', '--accent-primary', 4.5],
     ['--accent-text', '--bg-card', 4.5],
+    ['--danger-text', '--bg-card', 4.5],
+    ['--warning-text', '--bg-card', 4.5],
   ])('contrasto %s su %s ≥ %f:1 in entrambi i temi (WCAG AA)', (fg, bg, min) => {
     expect(contrast(light[fg], light[bg])).toBeGreaterThanOrEqual(min);
     expect(contrast(dark[fg], dark[bg])).toBeGreaterThanOrEqual(min);
+  });
+
+  it('testo attenuato: ≥ 4.5:1 nel tema chiaro, come oggi (≥ 3.5:1) in quello scuro', () => {
+    expect(contrast(light['--text-muted'], light['--bg-card'])).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(dark['--text-muted'], dark['--bg-card'])).toBeGreaterThanOrEqual(3.5);
   });
 
   it('Tailwind espone i token con opacità (bg-card/60 ecc.)', () => {
@@ -69,7 +76,10 @@ describe('Token di tema (Light / Dark)', () => {
     expect(colors.card).toMatchObject({ DEFAULT: 'rgb(var(--bg-card) / <alpha-value>)', hover: 'rgb(var(--bg-card-hover) / <alpha-value>)' });
     expect(colors.primary).toBe('rgb(var(--text-primary) / <alpha-value>)');
     expect(colors.secondary).toBe('rgb(var(--text-secondary) / <alpha-value>)');
-    expect(colors.line).toBe('rgb(var(--border-color) / <alpha-value>)');
+    expect(colors.line).toMatchObject({ DEFAULT: 'rgb(var(--border-color) / <alpha-value>)', strong: 'rgb(var(--border-strong) / <alpha-value>)' });
+    expect(colors.muted).toBe('rgb(var(--text-muted) / <alpha-value>)');
+    expect(colors.danger).toBe('rgb(var(--danger-text) / <alpha-value>)');
+    expect(colors.warning).toBe('rgb(var(--warning-text) / <alpha-value>)');
     expect(colors.accent).toMatchObject({ DEFAULT: 'rgb(var(--accent-primary) / <alpha-value>)' });
   });
 });

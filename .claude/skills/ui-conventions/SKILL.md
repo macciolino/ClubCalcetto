@@ -34,8 +34,13 @@ description: ClubCalcetto UI conventions - theme, shared components (tables, dro
   tap → Sheet with System / Light / Dark stacked vertically (radio rows), saved by next-themes on the device (not on the
   profile yet: the rules let a player change only name/photo/role; to be added together with the language preference).
   Labels from `messages/*.json` → `theme.*`. Tested by `tests/e2e/theme.spec.ts`.
-- New/converted components use the tokens, never fixed slate colors. Until Step 3 · Block 1 the app still LOOKS dark for
-  everyone (html/body background and `color-scheme: dark` fixed in globals.css, `enableColorScheme={false}`).
+- New/converted components use the tokens, never fixed slate colors. Extra tokens: `text-muted`, `border-line-strong` /
+  `bg-line-strong`, `text-danger` (rose-700 light / rose-300 dark), `text-warning`. Overlays stay `bg-black/60`; text on
+  filled red/amber stays white/dark on purpose.
+- Converted (Block 1, 2026-11-13): layout (html/body bg + `color-scheme` per theme, themeColor per system scheme), Navbar
+  (top bar, desktop tabs, bottom nav, user menu), `ui/Sheet`, `ui/Feedback` (toasts + confirm), `ui/buttons` (btn, menu,
+  textLink, presenceBtn), `settings/ThemeSetting`. NOT yet: page contents (Block 2: settings + Partita della settimana;
+  Block 3: players, teams, attendance, history, home, profile). Don't push a light theme to users before Block 3.
 
 ## Current style (approved 2026-11-11, applied to every page)
 

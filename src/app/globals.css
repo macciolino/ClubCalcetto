@@ -23,6 +23,10 @@
   --accent-primary: 5 150 105;    /* #059669 */
   --accent-contrast: 15 23 42;    /* testo sopra il verde: #0F172A (4.8:1; il bianco sarebbe 3.8:1, non basta) */
   --accent-text: 4 120 87;        /* #047857 — verde per testi piccoli e link su sfondo chiaro (5.5:1) */
+  --text-muted: 100 116 139;      /* #64748B — testi di contorno (4.8:1 su bianco) */
+  --border-strong: 203 213 225;   /* #CBD5E1 — bordi di bottoni e campi, maniglia delle finestre */
+  --danger-text: 190 18 60;       /* #BE123C — azioni distruttive, errori (6.4:1 su bianco) */
+  --warning-text: 180 83 9;       /* #B45309 — avvisi (5.0:1 su bianco) */
 }
 
 .dark {
@@ -35,41 +39,47 @@
   --accent-primary: 16 185 129;   /* #10B981 */
   --accent-contrast: 11 15 25;    /* #0B0F19 */
   --accent-text: 52 211 153;      /* #34D399 */
+  --text-muted: 100 116 139;      /* #64748B (slate-500, come oggi) */
+  --border-strong: 51 65 85;      /* #334155 (slate-700) */
+  --danger-text: 253 164 175;     /* #FDA4AF (rose-300) */
+  --warning-text: 252 211 77;     /* #FCD34D (amber-300) */
 }
 
-/* TEMPORANEO fino alla conversione dei componenti (Step 3 · Blocco 1): sfondo e controlli nativi restano scuri
-   anche con il tema chiaro, così nessuno vede pagine a metà. Poi diventeranno var(--bg-app) e color-scheme per tema. */
+/* Sfondo e controlli nativi (select, date, orari, barre di scorrimento) seguono il tema */
 html {
-  background-color: #0B0F19 !important;
+  background-color: rgb(var(--bg-app));
+  color-scheme: light;
+}
+html.dark {
   color-scheme: dark;
 }
 
 body {
-  color: var(--foreground);
-  background-color: #0B0F19 !important;
+  color: rgb(var(--text-primary));
+  background-color: rgb(var(--bg-app));
   font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-feature-settings: "cv11", "ss01";
   overflow-x: hidden;
   min-height: 100vh;
 }
 
-/* Custom scrollbars for dark mode */
+/* Barre di scorrimento sottili, nei colori del tema */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #131C2E;
+  background: rgb(var(--bg-card));
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: rgb(var(--border-strong));
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: rgb(var(--text-muted));
 }
 
 /*

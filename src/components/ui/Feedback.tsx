@@ -91,13 +91,13 @@ export function FeedbackHost() {
               key={t.id}
               className={`pointer-events-auto w-full max-w-md flex items-start gap-2.5 rounded-xl border px-4 py-3 text-sm shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-200 ${
                 t.kind === 'error'
-                  ? 'bg-slate-900 border-rose-500/40 text-rose-100'
-                  : 'bg-slate-900 border-slate-700 text-slate-100'
+                  ? 'bg-card border-rose-500/40 text-rose-100'
+                  : 'bg-card border-line-strong text-primary'
               }`}
             >
               <Icon
                 className={`h-4 w-4 mt-0.5 flex-shrink-0 ${
-                  t.kind === 'error' ? 'text-rose-400' : t.kind === 'info' ? 'text-sky-400' : 'text-emerald-400'
+                  t.kind === 'error' ? 'text-rose-400' : t.kind === 'info' ? 'text-sky-400' : 'text-accent-text'
                 }`}
               />
               <span className="flex-1">{t.message}</span>
@@ -105,7 +105,7 @@ export function FeedbackHost() {
                 type="button"
                 onClick={() => setToasts((list) => list.filter((x) => x.id !== t.id))}
                 aria-label="Chiudi messaggio"
-                className="text-slate-500 hover:text-white"
+                className="text-muted hover:text-primary"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -117,18 +117,18 @@ export function FeedbackHost() {
       {/* Conferma */}
       {request && (
         <div
-          className="fixed inset-0 z-[70] bg-black/60 lg:bg-slate-950/70 lg:backdrop-blur-sm flex items-end lg:items-center justify-center lg:p-6 animate-fade"
+          className="fixed inset-0 z-[70] bg-black/60 lg:bg-app/70 lg:backdrop-blur-sm flex items-end lg:items-center justify-center lg:p-6 animate-fade"
           onClick={() => close(false)}
         >
           <div
             role="alertdialog"
             aria-modal="true"
             aria-describedby="confirm-message"
-            className="w-full lg:max-w-sm bg-slate-900 border border-slate-800 border-b-0 lg:border-b rounded-t-3xl lg:rounded-2xl px-5 pt-2 lg:pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] lg:pb-5 space-y-5 shadow-2xl sheet-panel"
+            className="w-full lg:max-w-sm bg-card border border-line border-b-0 lg:border-b rounded-t-3xl lg:rounded-2xl px-5 pt-2 lg:pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] lg:pb-5 space-y-5 shadow-2xl sheet-panel"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="lg:hidden mx-auto h-1.5 w-10 rounded-full bg-slate-700" aria-hidden="true" />
-            <p id="confirm-message" className="text-sm text-slate-100 leading-relaxed whitespace-pre-line">
+            <div className="lg:hidden mx-auto h-1.5 w-10 rounded-full bg-line-strong" aria-hidden="true" />
+            <p id="confirm-message" className="text-sm text-primary leading-relaxed whitespace-pre-line">
               {request.message}
             </p>
             <div className="flex flex-col-reverse lg:flex-row lg:justify-end gap-2 [&>*]:w-full lg:[&>*]:w-auto">

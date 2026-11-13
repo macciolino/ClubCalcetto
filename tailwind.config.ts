@@ -25,7 +25,13 @@ const config: Config = {
         },
         primary: "rgb(var(--text-primary) / <alpha-value>)",
         secondary: "rgb(var(--text-secondary) / <alpha-value>)",
-        line: "rgb(var(--border-color) / <alpha-value>)",
+        muted: "rgb(var(--text-muted) / <alpha-value>)",
+        line: {
+          DEFAULT: "rgb(var(--border-color) / <alpha-value>)",
+          strong: "rgb(var(--border-strong) / <alpha-value>)",
+        },
+        danger: "rgb(var(--danger-text) / <alpha-value>)",
+        warning: "rgb(var(--warning-text) / <alpha-value>)",
         accent: {
           DEFAULT: "rgb(var(--accent-primary) / <alpha-value>)",
           text: "rgb(var(--accent-text) / <alpha-value>)",

@@ -44,17 +44,17 @@ export function ThemeSetting() {
         type="button"
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
-        className="w-full flex items-center gap-3 px-3.5 py-3 text-sm text-left text-slate-200 hover:bg-slate-800/60 transition-colors"
+        className="w-full flex items-center gap-3 px-3.5 py-3 text-sm text-left text-primary hover:bg-card-hover/60 transition-colors"
       >
-        <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-slate-800 text-emerald-400">
+        <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-card-hover text-accent-text">
           <Palette className="h-4 w-4" />
         </span>
         <span className="flex-1 min-w-0">
           <span className="block font-medium truncate">{t('label')}</span>
-          {mounted && <span className="sm:hidden block text-xs text-slate-400 truncate">{t(current)}</span>}
+          {mounted && <span className="sm:hidden block text-xs text-secondary truncate">{t(current)}</span>}
         </span>
-        {mounted && <span className="hidden sm:block text-xs text-slate-400 text-right">{t(current)}</span>}
-        <ChevronRight className="h-4 w-4 flex-shrink-0 text-slate-600" aria-hidden="true" />
+        {mounted && <span className="hidden sm:block text-xs text-secondary text-right">{t(current)}</span>}
+        <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted" aria-hidden="true" />
       </button>
 
       {open && (
@@ -70,22 +70,22 @@ export function ThemeSetting() {
                   aria-checked={active}
                   onClick={() => choose(id)}
                   className={`w-full flex items-center gap-3 rounded-2xl px-4 py-3.5 text-left transition-colors ${
-                    active ? 'bg-emerald-500/10 ring-2 ring-emerald-500' : 'bg-slate-950/60 hover:bg-slate-800'
+                    active ? 'bg-accent/10 ring-2 ring-accent' : 'bg-app/60 hover:bg-card-hover'
                   }`}
                 >
                   <span
                     className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl ${
-                      active ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-300'
+                      active ? 'bg-accent text-on-accent' : 'bg-card-hover text-secondary'
                     }`}
                   >
                     <Icon className="h-5 w-5" />
                   </span>
                   <span className="flex-1 min-w-0">
-                    <span className="block text-sm font-semibold text-white">{t(id)}</span>
-                    <span className="block text-xs text-slate-400">{t(`${id}Hint`)}</span>
+                    <span className="block text-sm font-semibold text-primary">{t(id)}</span>
+                    <span className="block text-xs text-secondary">{t(`${id}Hint`)}</span>
                   </span>
                   {active && (
-                    <span className="flex items-center gap-1 text-xs font-semibold text-emerald-300">
+                    <span className="flex items-center gap-1 text-xs font-semibold text-accent-text">
                       <Check className="h-4 w-4" /> <span className="hidden sm:inline">{t('active')}</span>
                     </span>
                   )}
@@ -93,7 +93,7 @@ export function ThemeSetting() {
               );
             })}
           </div>
-          <p className="text-xs text-slate-500">{t('savedOnDevice')}</p>
+          <p className="text-xs text-muted">{t('savedOnDevice')}</p>
         </Sheet>
       )}
     </>

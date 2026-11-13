@@ -13,9 +13,9 @@ const shape =
   'inline-flex items-center justify-center gap-2 px-5 py-3 sm:py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50';
 
 const tone = {
-  primary: 'bg-emerald-500 hover:bg-emerald-400 text-slate-950',
-  secondary: 'border border-slate-700 text-slate-200 hover:bg-slate-800',
-  danger: 'border border-rose-500/40 text-rose-300 hover:bg-rose-500/10',
+  primary: 'bg-accent hover:bg-accent/90 text-on-accent',
+  secondary: 'border border-line-strong text-primary hover:bg-card-hover',
+  danger: 'border border-rose-500/40 text-danger hover:bg-rose-500/10',
 };
 
 export const btn = {
@@ -33,18 +33,18 @@ export const btnInline = {
 };
 
 /** Green text link with <ArrowRight /> on the right ("Vai allo Storico →"). */
-export const textLink = 'inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-300 hover:text-emerald-200';
+export const textLink = 'inline-flex items-center gap-1.5 text-sm font-semibold text-accent-text hover:opacity-80';
 
 /** "⋯" / account dropdown menus: panel and rows (position classes are added by the caller). */
 export const menu = {
-  panel: 'rounded-xl bg-slate-800 border border-slate-700 shadow-2xl p-1 animate-in',
-  item: 'w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-slate-100 hover:bg-slate-700 disabled:opacity-50',
-  danger: 'w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-rose-300 hover:bg-rose-500/10 disabled:opacity-50',
-  divider: 'my-1 border-t border-slate-700',
+  panel: 'rounded-xl bg-card-hover border border-line-strong shadow-2xl p-1 animate-in',
+  item: 'w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-primary hover:bg-line-strong disabled:opacity-50',
+  danger: 'w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-danger hover:bg-rose-500/10 disabled:opacity-50',
+  divider: 'my-1 border-t border-line-strong',
 };
 
 /** The big "Ci sono" / "Mettimi in attesa" button (Home and Presenze): same everywhere. */
 export const presenceBtn = (isFull: boolean) =>
   `w-full py-3.5 px-4 rounded-xl font-semibold text-base transition-colors active:scale-[0.99] disabled:opacity-50 ${
-    isFull ? 'bg-amber-400 hover:bg-amber-300 text-slate-950' : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
+    isFull ? 'bg-amber-400 hover:bg-amber-300 text-on-accent' : 'bg-accent hover:bg-accent/90 text-on-accent'
   }`;

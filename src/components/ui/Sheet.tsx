@@ -64,14 +64,14 @@ export function Sheet({ onClose, title, subtitle, headerActions, footer, size = 
   if (!mounted) return null;
   return createPortal(
     <div
-      className="fixed inset-0 z-[60] bg-black/60 lg:bg-slate-950/70 lg:backdrop-blur-sm flex items-end lg:items-center justify-center lg:p-6 animate-fade"
+      className="fixed inset-0 z-[60] bg-black/60 lg:bg-app/70 lg:backdrop-blur-sm flex items-end lg:items-center justify-center lg:p-6 animate-fade"
       onClick={() => !locked && onClose()}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="sheet-title"
-        className={`w-full flex flex-col bg-slate-900 border border-slate-800 border-b-0 lg:border-b rounded-t-3xl lg:rounded-2xl shadow-2xl sheet-panel ${
+        className={`w-full flex flex-col bg-card border border-line border-b-0 lg:border-b rounded-t-3xl lg:rounded-2xl shadow-2xl sheet-panel ${
           height === 'tall' ? 'h-[80dvh] lg:h-auto' : ''
         } max-h-[90dvh] lg:max-h-[85vh] ${size === 'lg' ? 'lg:max-w-2xl' : 'lg:max-w-lg'}`}
         style={dragY ? { transform: `translateY(${dragY}px)`, transition: 'none' } : undefined}
@@ -79,13 +79,13 @@ export function Sheet({ onClose, title, subtitle, headerActions, footer, size = 
       >
         {/* Barra da trascinare (solo telefono/tablet) + intestazione */}
         <div className="flex-shrink-0 px-5 lg:px-6 pt-2 lg:pt-5" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
-          <div className="lg:hidden mx-auto mb-3 h-1.5 w-10 rounded-full bg-slate-700" aria-hidden="true" />
-          <div className="flex items-start justify-between gap-3 pb-4 border-b border-slate-800">
+          <div className="lg:hidden mx-auto mb-3 h-1.5 w-10 rounded-full bg-line-strong" aria-hidden="true" />
+          <div className="flex items-start justify-between gap-3 pb-4 border-b border-line">
             <div className="min-w-0">
-              <h2 id="sheet-title" className="text-lg font-semibold text-white">
+              <h2 id="sheet-title" className="text-lg font-semibold text-primary">
                 {title}
               </h2>
-              {subtitle && <p className="text-sm text-slate-400 mt-0.5">{subtitle}</p>}
+              {subtitle && <p className="text-sm text-secondary mt-0.5">{subtitle}</p>}
             </div>
             <div className="flex-shrink-0 flex items-center gap-1 -m-1">
               {headerActions}
@@ -94,7 +94,7 @@ export function Sheet({ onClose, title, subtitle, headerActions, footer, size = 
                 onClick={onClose}
                 disabled={locked}
                 aria-label="Chiudi"
-                className="p-2 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 disabled:opacity-40"
+                className="p-2 rounded-full text-secondary hover:text-primary hover:bg-card-hover disabled:opacity-40"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -107,7 +107,7 @@ export function Sheet({ onClose, title, subtitle, headerActions, footer, size = 
 
         {/* Azioni sempre visibili in basso */}
         {footer && (
-          <div className="flex-shrink-0 border-t border-slate-800 px-5 lg:px-6 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:pb-4 flex flex-col-reverse lg:flex-row lg:justify-end gap-2 [&>*]:w-full lg:[&>*]:w-auto">
+          <div className="flex-shrink-0 border-t border-line px-5 lg:px-6 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:pb-4 flex flex-col-reverse lg:flex-row lg:justify-end gap-2 [&>*]:w-full lg:[&>*]:w-auto">
             {footer}
           </div>
         )}

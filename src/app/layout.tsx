@@ -21,7 +21,11 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#0B0F19',
+  // Colore della barra del browser / del telefono, secondo il tema del sistema
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#F8FAFC' },
+    { media: '(prefers-color-scheme: dark)', color: '#0B0F19' },
+  ],
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -36,8 +40,8 @@ export default function RootLayout({
 }>) {
   return (
     // La classe "dark" / "light" su <html> la mette next-themes prima del primo disegno (niente lampo)
-    <html lang="it" className={inter.variable} suppressHydrationWarning style={{ backgroundColor: '#0B0F19', colorScheme: 'dark' }}>
-      <body className="min-h-screen bg-slate-950 text-slate-100 flex flex-col antialiased selection:bg-emerald-500 selection:text-slate-950 body-safe-bottom px-safe" suppressHydrationWarning style={{ backgroundColor: '#0B0F19' }}>
+    <html lang="it" className={inter.variable} suppressHydrationWarning>
+      <body className="min-h-screen bg-app text-primary flex flex-col antialiased selection:bg-accent selection:text-on-accent body-safe-bottom px-safe" suppressHydrationWarning>
         {/* Schermata di avvio: nascosta subito se già vista in questa sessione o sul login */}
         <script dangerouslySetInnerHTML={{ __html: SPLASH_GUARD }} />
         <SplashScreen />
