@@ -17,8 +17,9 @@ import {
   FORM_LOSS_POINTS,
 } from '@/lib/utils/formUtils';
 import { ChevronDown, Flame, Star, Info } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useLocaleSetting } from '@/i18n/I18nProvider';
 
-const num = (n: number) => String(Math.abs(n)).replace('.', ',');
 
 /**
  * Impostazioni → Parametri e forma: what raises the players' "Stato forma". Always open; the legend is collapsible.
@@ -28,6 +29,23 @@ export function FormSettingsCard({ show = 'form' }: { show?: 'form' | 'keeper' }
   const settings = useFormSettings();
   const [saving, setSaving] = useState(false);
   const [legendOpen, setLegendOpen] = useState(false);
+  const t = useTranslations('formSettings');
+  const { locale } = useLocaleSetting();
+  const num = (n: number) => (locale === 'en' ? String(Math.abs(n)) : String(Math.abs(n)).replace('.', ','));
+  // Valori usati nei testi (punti e soglie decisi in formUtils)
+  const v = {
+    min: FORM_GOALS_MIN,
+    pts: num(FORM_GOALS_POINTS),
+    save: num(FORM_PENALTY_SAVE_POINTS),
+    max: num(FORM_PENALTY_SAVE_MAX),
+    mvp: num(FORM_MVP_POINTS),
+    votes: FORM_MIN_VOTES,
+    vote: num(FORM_VOTE_POINTS),
+    win: num(FORM_WIN_POINTS),
+    loss: num(FORM_LOSS_POINTS),
+    n: FORM_MATCHES,
+  };
+  const b = (c: React.ReactNode) => <strong>{c}</strong>;
 
   const setKeeperMode = async (mode: 'rotation' | 'fixed') => {
     if ((mode === 'fixed') === Boolean(settings.fixedKeeper)) return;
@@ -52,24 +70,22 @@ export function FormSettingsCard({ show = 'form' }: { show?: 'form' | 'keeper' }
     {
       key: 'form_goals' as const,
       on: settings.goals,
-      label: 'Gol',
-      help: settings.fixedKeeper
-        ? `${FORM_GOALS_MIN}+ gol in una partita +${num(FORM_GOALS_POINTS)} (difensori e portiere dal primo gol); rigore parato +${num(FORM_PENALTY_SAVE_POINTS)}.`
-        : `${FORM_GOALS_MIN}+ gol in una partita +${num(FORM_GOALS_POINTS)}; i difensori già dal primo gol.`,
+      label: t('goals'),
+      help: settings.fixedKeeper ? t('goalsHelpFixed', v) : t('goalsHelp', v),
       icon: <span className="text-base leading-none">⚽</span>,
     },
     {
       key: 'form_mvp' as const,
       on: settings.mvp,
-      label: 'MVP e voti',
-      help: `MVP della partita +${num(FORM_MVP_POINTS)}; gli altri da ${FORM_MIN_VOTES} voti in su +${num(FORM_VOTE_POINTS)} per voto.`,
+      label: t('mvp'),
+      help: t('mvpHelp', v),
       icon: <Star className="h-4 w-4 text-warning" />,
     },
     {
       key: 'form_results' as const,
       on: settings.results,
-      label: 'Vittorie e sconfitte',
-      help: `Vittoria +${num(FORM_WIN_POINTS)}, pareggio 0, sconfitta −${num(FORM_LOSS_POINTS)} a tutti e 5 della squadra.`,
+      label: t('results'),
+      help: t('resultsHelp', v),
       icon: <span className="text-base leading-none">🏆</span>,
     },
   ];
@@ -81,13 +97,13 @@ export function FormSettingsCard({ show = 'form' }: { show?: 'form' | 'keeper' }
       {/* Come gioca il club in porta */}
       <section className="bg-card rounded-2xl p-4 sm:p-5 space-y-3">
         <div>
-          <h3 className="text-base font-semibold text-primary">Portiere</h3>
-          <p className="text-sm text-secondary mt-0.5">Come gioca il club in porta: cambia il bilanciamento delle squadre e il campo.</p>
+          <h3 className="text-base font-semibold text-primary">{t('keeper')}</h3>
+          <p className="text-sm text-secondary mt-0.5">{t('keeperHelp')}</p>
         </div>
-        <div className="grid grid-cols-2 gap-1 bg-app p-1 rounded-xl text-sm" role="radiogroup" aria-label="Portiere">
+        <div className="grid grid-cols-2 gap-1 bg-app p-1 rounded-xl text-sm" role="radiogroup" aria-label={t('keeper')}>
           {([
-            ['rotation', 'A rotazione'],
-            ['fixed', 'Fisso'],
+            ['rotation', t('rotation')],
+            ['fixed', t('fixed')],
           ] as const).map(([value, label]) => {
             const active = (value === 'fixed') === Boolean(settings.fixedKeeper);
             return (
@@ -107,8 +123,8 @@ export function FormSettingsCard({ show = 'form' }: { show?: 'form' | 'keeper' }
         </div>
         <p className="text-xs text-secondary">
           {settings.fixedKeeper
-            ? 'Fisso: due portieri tra i 10 vanno uno per squadra; il portiere prende il bonus dal primo gol e i rigori parati contano.'
-            : 'A rotazione (es. ogni 5 minuti): nessun portiere fisso, sul campo il posto in porta è "PORTA ↻" e le squadre si bilanciano senza cercare un portiere.'}
+            ? t('fixedNote')
+            : t('rotationNote')}
         </p>
       </section>
       </>
@@ -120,12 +136,12 @@ export function FormSettingsCard({ show = 'form' }: { show?: 'form' | 'keeper' }
       <div>
         <h2 className="text-sm font-bold text-primary flex items-center gap-2">
           <Flame className="h-5 w-5 text-orange-700 dark:text-orange-400 flex-shrink-0" />
-          Stato forma dei giocatori
+          {t('title')}
         </h2>
         <p className="text-xs text-secondary mt-0.5">
           {anyOn
-            ? `Attivo: in base alle ultime ${FORM_MATCHES} partite i giocatori salgono o scendono un po' in tutti i parametri e nel bilanciamento delle squadre.`
-            : 'Spento: contano solo i valori scritti nella scheda di ogni giocatore.'}
+            ? t('on', v)
+            : t('off')}
         </p>
       </div>
 
@@ -142,7 +158,7 @@ export function FormSettingsCard({ show = 'form' }: { show?: 'form' | 'keeper' }
               type="button"
               role="switch"
               aria-checked={r.on}
-              aria-label={`${r.label}: fa salire lo stato forma`}
+              aria-label={t('switchAria', { label: r.label })}
               disabled={saving}
               onClick={() => toggle(r.key, !r.on)}
               className={`relative flex-shrink-0 h-8 w-14 rounded-full transition-colors disabled:opacity-60 ${
@@ -168,92 +184,30 @@ export function FormSettingsCard({ show = 'form' }: { show?: 'form' | 'keeper' }
           className="w-full flex items-center justify-between gap-2 p-3 text-left"
         >
           <span className="text-xs font-bold text-primary flex items-center gap-1.5">
-            <Info className="h-4 w-4 text-accent-text" /> Legenda: come si calcola lo stato forma
+            <Info className="h-4 w-4 text-accent-text" /> {t('legend')}
           </span>
           <ChevronDown className={`h-4 w-4 text-secondary transition-transform ${legendOpen ? 'rotate-180' : ''}`} />
         </button>
         {legendOpen && (
           <div className="px-3 pb-3 space-y-3 text-xs text-secondary">
-            <div>
-              <p className="font-bold text-primary mb-1">Punti di ogni partita</p>
-              <ul className="list-disc pl-5 space-y-0.5">
-                <li>
-                  <strong>MVP della partita</strong> (scelto dall&apos;admin alla chiusura): <strong>+{num(FORM_MVP_POINTS)}</strong>.
-                  Così anche un difensore che non segna può salire.
-                </li>
-                <li>
-                  <strong>Voti MVP dei giocatori</strong>, da {FORM_MIN_VOTES} voti in su: <strong>+{num(FORM_VOTE_POINTS)} per voto</strong>{' '}
-                  (2 voti +0,2 · 3 voti +0,3 · 5 voti +0,5). Per chi è l&apos;MVP vale il +{num(FORM_MVP_POINTS)} al posto dei voti.
-                </li>
-                <li>
-                  <strong>{FORM_GOALS_MIN} o più gol</strong> nella stessa partita: <strong>+{num(FORM_GOALS_POINTS)}</strong>.
-                  Chi ha come ruolo <strong>Difensore</strong> (nella scheda giocatore) lo prende già{' '}
-                  <strong>dal primo gol</strong>, perché segna raramente. Con il <strong>portiere fisso</strong> vale lo stesso
-                  per chi ha ruolo <strong>Portiere</strong>.
-                </li>
-                <li>
-                  <strong>Rigore parato</strong> (solo con portiere fisso, si segna a fine partita):{' '}
-                  <strong>+{num(FORM_PENALTY_SAVE_POINTS)}</strong> ciascuno, al massimo <strong>+{num(FORM_PENALTY_SAVE_MAX)}</strong> a
-                  partita. Conta con l&apos;interruttore Gol.
-                </li>
-                <li>
-                  <strong>Risultato</strong>: vittoria <strong>+{num(FORM_WIN_POINTS)}</strong>, pareggio <strong>0</strong>, sconfitta{' '}
-                  <strong>−{num(FORM_LOSS_POINTS)}</strong>, a tutti e 5 della squadra. Lo scarto non conta (5-4 o 10-2 è uguale).
-                </li>
-                <li>
-                  I punti della stessa partita <strong>si sommano</strong>: chi perde ma è MVP prende −0,2 + 1 = <strong>+0,8</strong>.
-                </li>
-                <li>Ogni voce conta solo se il suo interruttore qui sopra è acceso.</li>
-              </ul>
-            </div>
-            <div>
-              <p className="font-bold text-primary mb-1">Stato forma</p>
-              <ul className="list-disc pl-5 space-y-0.5">
-                <li>
-                  È la <strong>media dei punti delle ultime {FORM_MATCHES} partite</strong> archiviate (una partita non giocata conta 0),
-                  da <strong>−{num(FORM_MAX)}</strong> a <strong>+{num(FORM_MAX)}</strong>.
-                </li>
-                <li>
-                  Sopra zero il giocatore è <strong>🔥 in forma</strong> (i valori salgono), sotto zero è <strong>❄️ fuori forma</strong>{' '}
-                  (i valori scendono un po&apos;).
-                </li>
-                <li>
-                  Si aggiunge (o si toglie) a <strong>tutti i parametri</strong> e all&apos;<strong>OVR</strong>, sempre tra 1 e 10,
-                  e conta quando si bilanciano le squadre.
-                </li>
-                <li>
-                  È <strong>temporaneo</strong>: se nelle partite dopo non fa punti, torna a 0 da solo. I valori scritti nella scheda
-                  del giocatore non vengono mai modificati.
-                </li>
-              </ul>
-            </div>
-            <div>
-              <p className="font-bold text-primary mb-1">Esempi (tutti gli interruttori accesi)</p>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>
-                  <strong>Marco B.</strong>: ultima partita vinta (+0,2), MVP (+1) e 4 gol (+0,5) = 1,7; nelle 2 partite prima ha perso
-                  (−0,2) e pareggiato (0). Media: (1,7 − 0,2 + 0) ÷ 3 = <strong>+0,5 🔥</strong>. Tiro 7 diventa 7,5, OVR 7,2 diventa 7,7.
-                </li>
-                <li>
-                  <strong>Luca</strong>: 3 sconfitte di fila, nessun voto né gol. Media: (−0,2 × 3) ÷ 3 = <strong>−0,2 ❄️</strong>.
-                  Difesa 8 diventa 7,8, OVR 6,5 diventa 6,3.
-                </li>
-              </ul>
-            </div>
-            <div>
-              <p className="font-bold text-primary mb-1">Portiere a rotazione o fisso</p>
-              <ul className="list-disc pl-5 space-y-0.5">
-                <li>
-                  <strong>A rotazione</strong> (in porta a turno): il ruolo Portiere non conta, nessun bonus da portiere, le squadre si
-                  bilanciano solo sulle abilità.
-                </li>
-                <li>
-                  <strong>Fisso</strong>: due portieri tra i 10 vanno in squadre diverse; gol del portiere dal primo gol; rigori parati
-                  +{num(FORM_PENALTY_SAVE_POINTS)}.
-                </li>
-              </ul>
-            </div>
-            <p className="text-secondary">Con tutti gli interruttori spenti lo stato forma è 0 per tutti.</p>
+            {(
+              [
+                ['pointsTitle', ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7'], 'space-y-0.5'],
+                ['formTitle', ['s1', 's2', 's3', 's4'], 'space-y-0.5'],
+                ['examplesTitle', ['e1', 'e2'], 'space-y-1'],
+                ['keeperTitle', ['k1', 'k2'], 'space-y-0.5'],
+              ] as const
+            ).map(([title, items, gap]) => (
+              <div key={title}>
+                <p className="font-bold text-primary mb-1">{t(title)}</p>
+                <ul className={`list-disc pl-5 ${gap}`}>
+                  {items.map((k) => (
+                    <li key={k}>{t.rich(k, { ...v, b })}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+            <p className="text-secondary">{t('allOff')}</p>
           </div>
         )}
       </div>

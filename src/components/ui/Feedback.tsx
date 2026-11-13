@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 import { btnInline } from '@/components/ui/buttons';
 
@@ -42,6 +43,7 @@ export function askConfirm(message: string, opts: { danger?: boolean } = {}): Pr
 }
 
 export function FeedbackHost() {
+  const tf = useTranslations('feedback');
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [request, setRequest] = useState<ConfirmRequest | null>(null);
   const confirmBtn = useRef<HTMLButtonElement>(null);
@@ -104,7 +106,7 @@ export function FeedbackHost() {
               <button
                 type="button"
                 onClick={() => setToasts((list) => list.filter((x) => x.id !== t.id))}
-                aria-label="Chiudi messaggio"
+                aria-label={tf('closeMessage')}
                 className="text-muted hover:text-primary"
               >
                 <X className="h-4 w-4" />
@@ -137,7 +139,7 @@ export function FeedbackHost() {
                 onClick={() => close(false)}
                 className={btnInline.secondary}
               >
-                Annulla
+                {tf('cancel')}
               </button>
               <button
                 ref={confirmBtn}
@@ -145,7 +147,7 @@ export function FeedbackHost() {
                 onClick={() => close(true)}
                 className={request.danger ? btnInline.dangerSolid : btnInline.primary}
               >
-                Conferma
+                {tf('confirm')}
               </button>
             </div>
           </div>

@@ -4,6 +4,8 @@ import React from 'react';
 import { Sheet, sheetBtn } from '@/components/ui/Sheet';
 import { STAT_DETAILS, STAT_CANONICAL_ORDER } from '@/types/database';
 import { Zap, Shield, Eye, Flame, Activity, Footprints, Target } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { usePlayerLabels } from '@/i18n/usePlayerLabels';
 
 interface StatsLegendModalProps {
   isOpen: boolean;
@@ -21,7 +23,21 @@ const STAT_ICON_MAP: Record<string, React.ReactNode> = {
   VIS: <Eye className="h-5 w-5 text-indigo-700 dark:text-indigo-400" />,
 };
 
+const STAT_IDS: Record<string, string> = {
+  Velocità: 'velocita',
+  Fisico: 'fisico',
+  Resistenza: 'resistenza',
+  Tiro: 'tiro',
+  Passaggio: 'passaggio',
+  Dribbling: 'dribbling',
+  Difesa: 'difesa',
+  Visione: 'visione',
+};
+
 export function StatsLegendModal({ isOpen, onClose }: StatsLegendModalProps) {
+  const t = useTranslations('statsLegend');
+  const ts = useTranslations('statNames');
+  const labels = usePlayerLabels();
   if (!isOpen) return null;
 
   return (
@@ -29,11 +45,11 @@ export function StatsLegendModal({ isOpen, onClose }: StatsLegendModalProps) {
       onClose={onClose}
       size="lg"
       height="tall"
-      title="Legenda dei parametri"
-      subtitle="Cosa misura ognuno degli 8 parametri dell'ottagono"
+      title={t('title')}
+      subtitle={t('subtitle')}
       footer={
         <button type="button" onClick={onClose} className={sheetBtn.secondary}>
-          Chiudi
+          {t('close')}
         </button>
       }
     >
@@ -56,19 +72,19 @@ export function StatsLegendModal({ isOpen, onClose }: StatsLegendModalProps) {
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="font-mono text-xs font-bold text-accent-text bg-accent/10 border border-accent/20 px-2 py-0.5 rounded-md">
-                            {detail.code}
+                            {labels.statCode(statName)}
                           </span>
-                          <span className="font-bold text-primary text-sm">{detail.name}</span>
+                          <span className="font-bold text-primary text-sm">{labels.statName(statName)}</span>
                         </div>
                         <span className="text-[11px] text-secondary block font-medium">
-                          {detail.label}
+                          {STAT_IDS[statName] ? ts(`${STAT_IDS[statName]}.label`) : detail.label}
                         </span>
                       </div>
                     </div>
                   </div>
 
                   <p className="text-xs text-secondary leading-relaxed pt-1">
-                    {detail.description}
+                    {STAT_IDS[statName] ? ts(`${STAT_IDS[statName]}.description`) : detail.description}
                   </p>
                 </div>
               );
@@ -78,10 +94,8 @@ export function StatsLegendModal({ isOpen, onClose }: StatsLegendModalProps) {
           <div className="p-4 bg-accent/10 border border-accent/30 rounded-2xl text-xs text-secondary flex items-start gap-3">
             <span className="text-lg">💡</span>
             <div>
-              <strong className="text-primary block mb-0.5">Come influiscono sul bilanciamento 5v5:</strong>
-              L&apos;algoritmo calcola la media pesata di questi 8 valori per ogni giocatore, confrontando
-              poi le combinazioni possibili di squadre per minimizzare lo scarto totale e bilanciare sia la
-              fase difensiva che quella offensiva.
+              <strong className="text-primary block mb-0.5">{t('balanceTitle')}</strong>
+              {t('balanceText')}
             </div>
           </div>
     </Sheet>

@@ -16,7 +16,7 @@ import { initialsOf, uploadedPhoto } from '@/lib/utils/playerUtils';
 import { Bell, Check, Link2, Loader2, RotateCcw, UserPlus, UserX, Eraser, ClipboardCheck, ChevronDown, Lightbulb } from 'lucide-react';
 import { useMatchFormats } from '@/lib/hooks/useMatchFormats';
 import { FORMAT_INFO, dayFormat, isMatchFormat } from '@/lib/utils/matchFormat';
-import { formatItalianDate } from '@/lib/utils/dateUtils';
+import { formatLongDate } from '@/lib/utils/dateUtils';
 import { useStatCategories } from '@/lib/hooks/useStatCategories';
 import { StatRatingFields, ovrOf, orderedCategories } from '@/components/StatRatingFields';
 
@@ -57,7 +57,8 @@ export function nameSimilarity(a: string, b: string): number {
   return Math.max(words, chars * 0.9);
 }
 
-async function resolve(id: string, action: string, guestId?: string): Promise<boolean> {
+type Msg = { alreadyDone: string; failed: string };
+async function resolve(msg: Msg, id: string, action: string, guestId?: string): Promise<boolean> {
   try {
     const token = await firebaseAuth.currentUser?.getIdToken();
     const res = await fetch('/api/admin/requests', {
@@ -67,12 +68,12 @@ async function resolve(id: string, action: string, guestId?: string): Promise<bo
     });
     const data = await res.json();
     if (!data?.ok) {
-      notify(data?.error === 'already_done' ? 'Richiesta già gestita da un altro admin.' : 'Operazione non riuscita, riprova.');
+      notify(data?.error === 'already_done' ? msg.alreadyDone : msg.failed);
       return false;
     }
     return true;
   } catch {
-    notify('Operazione non riuscita, riprova.');
+    notify(msg.failed);
     return false;
   }
 }
@@ -88,13 +89,14 @@ function Avatar({ name, photo }: { name: string; photo?: string | null }) {
   );
 }
 
-const when = (iso: string) =>
-  new Date(iso).toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).replace(/\./g, '');
+const when = (iso: string, locale: string) =>
+  new Date(iso).toLocaleString(locale === 'en' ? 'en-GB' : 'it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).replace(/\./g, '');
 
 /** New player after the first match: the admin corrects the self-assessment and saves (needs_stat_review → false). */
 function StatReviewCard({ player, categories, reviewerId }: { player: Profile; categories: StatCategory[]; reviewerId: string }) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const tr = useTranslations('requests');
   const [values, setValues] = useState<Record<string, number>>(() => {
     const v: Record<string, number> = {};
     categories.forEach((c) => (v[c.name] = Number(player.stats?.[c.name] ?? c.default_value ?? 6)));
@@ -116,9 +118,9 @@ function StatReviewCard({ player, categories, reviewerId }: { player: Profile; c
         stat_reviewed_by: reviewerId,
         updated_at: now,
       });
-      notify(`Valutazione di ${player.full_name} salvata`);
+      notify(tr('reviewSaved', { name: player.full_name }));
     } catch {
-      notify('Salvataggio non riuscito, riprova.');
+      notify(tr('saveFailed'));
       setSaving(false);
     }
   };
@@ -130,8 +132,7 @@ function StatReviewCard({ player, categories, reviewerId }: { player: Profile; c
         <span className="flex-1 min-w-0">
           <span className="block text-sm font-semibold text-primary truncate">{player.full_name}</span>
           <span className="block text-xs text-muted">
-            {played === 1 ? 'Prima partita giocata' : `${played} partite giocate`} ·{' '}
-            {player.self_stats ? 'si è autovalutato' : 'autovalutazione non compilata'}
+            {tr('played', { count: played })} · {player.self_stats ? tr('selfRated') : tr('notSelfRated')}
           </span>
         </span>
         <span className="text-right flex-shrink-0">
@@ -143,7 +144,7 @@ function StatReviewCard({ player, categories, reviewerId }: { player: Profile; c
       {open && (
         <div className="space-y-4 pt-1">
           <p className="text-sm text-secondary">
-            Correggi i voti in base a quello che hai visto in campo. Sotto ogni parametro c&apos;è il voto che si è dato.
+            {tr('reviewHint')}
           </p>
           <StatRatingFields
             categories={categories}
@@ -154,7 +155,7 @@ function StatReviewCard({ player, categories, reviewerId }: { player: Profile; c
           />
           <button type="button" onClick={save} disabled={saving} className={btn.primary}>
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardCheck className="h-4 w-4" />}
-            Salva valutazione
+            {tr('saveReview')}
           </button>
         </div>
       )}
@@ -183,7 +184,9 @@ export function RequestsBell() {
   const { profile, isAdmin } = useAuth();
   const router = useRouter();
   const tb = useTranslations('bell');
+  const tr = useTranslations('requests');
   const { locale } = useLocaleSetting();
+  const msg: Msg = { alreadyDone: tr('alreadyDone'), failed: tr('failed') };
   const admin = Boolean(isAdmin || profile?.role === 'admin');
   const profileId = profile?.id;
   // Notifiche personali (ultime 30) e quelle non lette al momento dell'apertura (restano evidenziate)
@@ -297,11 +300,10 @@ export function RequestsBell() {
     return (
       <>
         <p className="text-sm text-secondary">
-          Si è registrato senza link di invito. È uno degli ospiti già in rosa? Collegandolo, le sue partite, gol, MVP, presenze e valutazioni
-          passano al nuovo account.
+          {tr('signupHint')}
         </p>
         {ranked.length === 0 ? (
-          <p className="text-sm text-muted">Non ci sono più ospiti senza account.</p>
+          <p className="text-sm text-muted">{tr('noGuests')}</p>
         ) : (
           <ul className="rounded-xl bg-app/50 divide-y divide-line max-h-64 overflow-y-auto">
             {ranked.map(({ g, score }, i) => (
@@ -310,8 +312,8 @@ export function RequestsBell() {
                 <span className="flex-1 min-w-0">
                   <span className="block text-sm font-medium text-primary truncate">{g.full_name}</span>
                   <span className="block text-xs text-muted">
-                    Ospite · {(g.matches_won || 0) + (g.matches_drawn || 0) + (g.matches_lost || 0)} partite
-                    {i === 0 && score >= 0.5 && <span className="ml-1.5 text-accent-text">· nome simile</span>}
+                    {tr('guestMatches', { count: (g.matches_won || 0) + (g.matches_drawn || 0) + (g.matches_lost || 0) })}
+                    {i === 0 && score >= 0.5 && <span className="ml-1.5 text-accent-text">{tr('similar')}</span>}
                   </span>
                 </span>
                 <button
@@ -320,16 +322,16 @@ export function RequestsBell() {
                   onClick={async () => {
                     if (
                       !(await askConfirm(
-                        `Collegare ${r.name} all'ospite "${g.full_name}"?\nPartite, gol, MVP, presenze e valutazioni di ${g.full_name} passano all'account di ${r.name}; il profilo ospite viene eliminato.`
+                        tr('confirmLink', { name: r.name, guest: g.full_name })
                       ))
                     )
                       return;
-                    run(`${r.id}:${g.id}`, () => resolve(r.id, 'link', g.id), `${r.name} collegato a ${g.full_name}`);
+                    run(`${r.id}:${g.id}`, () => resolve(msg, r.id, 'link', g.id), tr('linked', { name: r.name, guest: g.full_name }));
                   }}
                   className={`${btnInline.secondary} !px-3 !py-2 flex-shrink-0`}
                 >
                   {busy === `${r.id}:${g.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
-                  Collega
+                  {tr('link')}
                 </button>
               </li>
             ))}
@@ -338,11 +340,11 @@ export function RequestsBell() {
         <button
           type="button"
           disabled={busy !== null}
-          onClick={() => run(r.id, () => resolve(r.id, 'new'), `${r.name} è un nuovo giocatore`)}
+          onClick={() => run(r.id, () => resolve(msg, r.id, 'new'), tr('isNew', { name: r.name }))}
           className={btn.secondary}
         >
           {busy === r.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
-          Nuovo giocatore (non collegare)
+          {tr('newPlayer')}
         </button>
       </>
     );
@@ -351,17 +353,17 @@ export function RequestsBell() {
   const restoreCard = (r: AdminRequest) => (
     <>
       <p className="text-sm text-secondary">
-        Aveva chiuso l&apos;account e ha provato a rientrare. Ora vede &quot;Bentornato&quot; e aspetta la tua scelta.
+        {tr('restoreHint')}
       </p>
       <div className="flex flex-col sm:flex-row gap-2">
         <button
           type="button"
           disabled={busy !== null}
-          onClick={() => run(`${r.id}:restore`, () => resolve(r.id, 'restore'), `Profilo di ${r.name} ripristinato`)}
+          onClick={() => run(`${r.id}:restore`, () => resolve(msg, r.id, 'restore'), tr('restored', { name: r.name }))}
           className={btn.primary}
         >
           {busy === `${r.id}:restore` ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
-          Ripristina profilo e storico
+          {tr('restore')}
         </button>
         <button
           type="button"
@@ -369,17 +371,17 @@ export function RequestsBell() {
           onClick={async () => {
             if (
               !(await askConfirm(
-                `Far ripartire ${r.name} da zero?\nLe partite giocate restano nello storico con il suo nome, ma non contano più per il nuovo account: 0 partite e parametri di base.`,
+                tr('confirmReset', { name: r.name }),
                 { danger: true }
               ))
             )
               return;
-            run(`${r.id}:reset`, () => resolve(r.id, 'reset'), `${r.name} riparte da zero`);
+            run(`${r.id}:reset`, () => resolve(msg, r.id, 'reset'), tr('resetDone', { name: r.name }));
           }}
           className={btn.secondary}
         >
           {busy === `${r.id}:reset` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eraser className="h-4 w-4" />}
-          Riparti da zero
+          {tr('reset')}
         </button>
       </div>
     </>
@@ -395,8 +397,8 @@ export function RequestsBell() {
       <>
         <p className="text-sm text-secondary">
           {already
-            ? `La partita è già ${FORMAT_INFO[current!].label}: puoi chiudere l'avviso.`
-            : `Con il ${FORMAT_INFO[next].label} i primi ${FORMAT_INFO[next].players} iscritti diventano titolari e ricevono la notifica. Le squadre già fatte vanno rigenerate.`}
+            ? tr('formatAlready', { label: FORMAT_INFO[current!].label })
+            : tr('formatHint', { label: FORMAT_INFO[next].label, n: FORMAT_INFO[next].players })}
         </p>
         <div className="flex flex-col sm:flex-row gap-2">
           {!already && (
@@ -404,22 +406,22 @@ export function RequestsBell() {
               type="button"
               disabled={busy !== null}
               onClick={() =>
-                run(`${r.id}:apply`, () => resolve(r.id, 'apply_format'), `Partita del ${formatItalianDate(r.date!)}: ${FORMAT_INFO[next].label}`)
+                run(`${r.id}:apply`, () => resolve(msg, r.id, 'apply_format'), tr('formatApplied', { date: formatLongDate(r.date!, locale), label: FORMAT_INFO[next].label }))
               }
               className={btn.primary}
             >
               {busy === `${r.id}:apply` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-              Passa al {FORMAT_INFO[next].label}
+              {tr('switchTo', { label: FORMAT_INFO[next].label })}
             </button>
           )}
           <button
             type="button"
             disabled={busy !== null}
-            onClick={() => run(r.id, () => resolve(r.id, 'dismiss'), already ? 'Avviso chiuso' : `Resta ${FORMAT_INFO[current || '5v5'].label}`)}
+            onClick={() => run(r.id, () => resolve(msg, r.id, 'dismiss'), already ? tr('dismissed') : tr('stay', { label: FORMAT_INFO[current || '5v5'].label }))}
             className={btn.secondary}
           >
             {busy === r.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-            {already ? 'Chiudi avviso' : `Resta ${FORMAT_INFO[current || '5v5'].label}`}
+            {already ? tr('closeNotice') : tr('stay', { label: FORMAT_INFO[current || '5v5'].label })}
           </button>
         </div>
       </>
@@ -430,37 +432,39 @@ export function RequestsBell() {
     <>
       <p className="text-sm text-secondary">
         {r.mode === 'delete'
-          ? 'Account eliminato: i dati sono stati cancellati, le partite archiviate restano con il suo nome.'
-          : 'Account disattivato: dati e storico sono conservati. Se torna, ti arriva una richiesta di rientro.'}
-        {r.reason && <span className="block mt-1 text-muted">Motivo: {r.reason}</span>}
+          ? tr('deletedInfo')
+          : tr('deactivatedInfo')}
+        {r.reason && <span className="block mt-1 text-muted">{tr('reason', { reason: r.reason })}</span>}
       </p>
       <button
         type="button"
         disabled={busy !== null}
-        onClick={() => run(r.id, () => resolve(r.id, 'dismiss'), 'Segnato come letto')}
+        onClick={() => run(r.id, () => resolve(msg, r.id, 'dismiss'), tr('markedRead'))}
         className={btn.secondary}
       >
         {busy === r.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-        Segna come letto
+        {tr('markRead')}
       </button>
     </>
   );
 
   const META: Record<AdminRequest['type'], { icon: React.ElementType; tone: string; title: (r: AdminRequest) => string }> = {
-    new_signup: { icon: UserPlus, tone: 'bg-accent/15 text-accent-text', title: (r) => `Nuovo iscritto: ${r.name}` },
-    restore: { icon: RotateCcw, tone: 'bg-amber-500/15 text-warning', title: (r) => `Richiesta di rientro: ${r.name}` },
+    new_signup: { icon: UserPlus, tone: 'bg-accent/15 text-accent-text', title: (r) => tr('tNewSignup', { name: r.name }) },
+    restore: { icon: RotateCcw, tone: 'bg-amber-500/15 text-warning', title: (r) => tr('tRestore', { name: r.name }) },
     format_proposal: {
       icon: Lightbulb,
       tone: 'bg-sky-500/15 text-sky-700 dark:text-sky-300',
       title: (r) =>
-        `${r.count} iscritti per ${r.date ? formatItalianDate(r.date) : 'la partita'}: passare al ${
-          isMatchFormat(r.format) ? FORMAT_INFO[r.format].label : r.format
-        }?`,
+        tr('tFormat', {
+          count: r.count ?? 0,
+          date: r.date ? formatLongDate(r.date, locale) : tr('theMatch'),
+          label: isMatchFormat(r.format) ? FORMAT_INFO[r.format].label : String(r.format || ''),
+        }),
     },
     account_closed: {
       icon: UserX,
       tone: 'bg-card-hover text-secondary',
-      title: (r) => `${r.name} ha ${r.mode === 'delete' ? 'eliminato' : 'disattivato'} il proprio account`,
+      title: (r) => (r.mode === 'delete' ? tr('tDeleted', { name: r.name }) : tr('tDeactivated', { name: r.name })),
     },
   };
   // Prima le richieste che aspettano una scelta (rientro, nuovi iscritti), poi gli avvisi
@@ -505,8 +509,8 @@ export function RequestsBell() {
         >
           {admin && (todo > 0 || denied) && <h3 className="px-1 -mb-3 text-xs font-semibold text-muted">{tb('sectionToHandle')}</h3>}
           {admin && reviews.length > 0 && (
-            <section className="space-y-2" aria-label="Valutazioni da rivedere">
-              <h3 className="px-1 text-xs font-semibold text-muted">Valutazioni da rivedere · dopo la prima partita</h3>
+            <section className="space-y-2" aria-label={tr('reviewsAria')}>
+              <h3 className="px-1 text-xs font-semibold text-muted">{tr('reviewsTitle')}</h3>
               <ul className="space-y-3">
                 {reviews.map((p) => (
                   <StatReviewCard key={p.id} player={p} categories={categories} reviewerId={profile?.id || ''} />
@@ -516,8 +520,7 @@ export function RequestsBell() {
           )}
           {!admin ? null : denied ? (
             <div className="rounded-2xl bg-amber-500/10 border border-amber-500/25 p-4 text-sm text-warning leading-relaxed">
-              Non riesco a leggere le richieste: le regole Firestore aggiornate non risultano pubblicate. Pubblica il file firestore.rules
-              dalla console Firebase (Firestore → Regole) e riapri questa finestra.
+              {tr('denied')}
             </div>
           ) : sorted.length === 0 ? null : (
             <ul className="space-y-3">
@@ -534,7 +537,7 @@ export function RequestsBell() {
                         <p className="text-sm font-semibold text-primary">{m.title(r)}</p>
                         <p className="text-xs text-muted truncate">
                           {r.email ? `${r.email} · ` : ''}
-                          {when(r.created_at)}
+                          {when(r.created_at, locale)}
                         </p>
                       </div>
                     </div>
@@ -552,7 +555,7 @@ export function RequestsBell() {
           )}
 
           {/* Notifiche personali: le stesse che arrivano sul telefono */}
-          <section className="space-y-2" aria-label="Notifiche">
+          <section className="space-y-2" aria-label={tr('notificationsAria')}>
             {admin && todo > 0 && <h3 className="px-1 text-xs font-semibold text-muted">{tb('sectionNotifications')}</h3>}
             {inbox.length === 0 ? (
               todo > 0 ? (

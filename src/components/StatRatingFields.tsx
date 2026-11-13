@@ -1,6 +1,8 @@
 'use client';
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
+import { usePlayerLabels } from '@/i18n/usePlayerLabels';
 import { StatCategory, STAT_DETAILS, sortStatsByCanonicalOrder } from '@/types/database';
 
 /** Average of the values, 1 decimal (same OVR formula as the player editor). */
@@ -20,12 +22,24 @@ export function orderedCategories(categories: StatCategory[]): StatCategory[] {
  * One slider 1–10 per player parameter, with code, name and value.
  * `reference` (optional) shows a second value under the name, e.g. the player's self-assessment for the admin.
  */
+const STAT_IDS: Record<string, string> = {
+  Velocità: 'velocita',
+  Fisico: 'fisico',
+  Resistenza: 'resistenza',
+  Tiro: 'tiro',
+  Passaggio: 'passaggio',
+  Dribbling: 'dribbling',
+  Difesa: 'difesa',
+  Visione: 'visione',
+  Tecnica: 'tecnica',
+};
+
 export function StatRatingFields({
   categories,
   values,
   onChange,
   reference,
-  referenceLabel = 'Autovalutazione',
+  referenceLabel,
   showHelp = false,
   disabled = false,
 }: {
@@ -37,6 +51,11 @@ export function StatRatingFields({
   showHelp?: boolean;
   disabled?: boolean;
 }) {
+  const t = useTranslations('selfRating');
+  const ts = useTranslations('statNames');
+  const labels = usePlayerLabels();
+  const refLabel = referenceLabel || t('selfAssessment');
+  const describe = (name: string, fallback?: string) => (STAT_IDS[name] ? ts(`${STAT_IDS[name]}.description`) : fallback);
   return (
     <ul className="space-y-4">
       {orderedCategories(categories).map((cat) => {
@@ -48,11 +67,11 @@ export function StatRatingFields({
           <li key={cat.name} className="space-y-1.5">
             <div className="flex items-baseline justify-between gap-3">
               <label htmlFor={id} className="min-w-0">
-                <span className="text-[11px] font-semibold tracking-wider text-muted mr-1.5">{d?.code || cat.name.slice(0, 3).toUpperCase()}</span>
-                <span className="text-sm font-medium text-primary">{cat.name}</span>
+                <span className="text-[11px] font-semibold tracking-wider text-muted mr-1.5">{labels.statCode(cat.name)}</span>
+                <span className="text-sm font-medium text-primary">{labels.statName(cat.name)}</span>
                 {ref !== undefined && (
                   <span className="block text-xs text-muted">
-                    {referenceLabel}: <span className="text-secondary tabular-nums">{ref}</span>
+                    {refLabel}: <span className="text-secondary tabular-nums">{ref}</span>
                   </span>
                 )}
               </label>
@@ -70,9 +89,9 @@ export function StatRatingFields({
               disabled={disabled}
               onChange={(e) => onChange({ ...values, [cat.name]: Number(e.target.value) })}
               className="w-full accent-emerald-500 h-2 cursor-pointer disabled:opacity-50"
-              aria-valuetext={`${cat.name} ${value} su 10`}
+              aria-valuetext={t('valueText', { name: labels.statName(cat.name), value })}
             />
-            {showHelp && d?.description && <p className="text-xs text-muted leading-relaxed">{d.description}</p>}
+            {showHelp && d?.description && <p className="text-xs text-muted leading-relaxed">{describe(cat.name, d.description)}</p>}
           </li>
         );
       })}

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Sheet, sheetBtn } from '@/components/ui/Sheet';
 import { SportField } from '@/types/database';
 import { MapPin, Phone, Save } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 interface FieldModalProps {
   isOpen: boolean;
@@ -13,6 +14,8 @@ interface FieldModalProps {
 }
 
 export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalProps) {
+  const t = useTranslations('fieldModal');
+  const surfaceLabels = t.raw('surfaces') as string[];
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [mapsUrl, setMapsUrl] = useState('');
@@ -94,27 +97,27 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
   return (
     <Sheet
       onClose={onClose}
-      title={fieldToEdit ? 'Modifica campo' : 'Nuovo campo'}
-      subtitle="Centro sportivo dove si gioca"
+      title={fieldToEdit ? t('editTitle') : t('newTitle')}
+      subtitle={t('subtitle')}
       footer={
         <>
           <button type="button" onClick={onClose} className={sheetBtn.secondary}>
-            Annulla
+            {t('cancel')}
           </button>
           <button type="submit" form="field-form" className={sheetBtn.primary}>
             <Save className="h-4 w-4" />
-            {fieldToEdit ? 'Aggiorna campo' : 'Salva campo'}
+            {fieldToEdit ? t('update') : t('save')}
           </button>
         </>
       }
     >
         <form id="field-form" onSubmit={handleSubmit} className="space-y-4 text-sm">
           <div>
-            <label className="block text-xs font-medium text-secondary mb-1.5">Nome del centro</label>
+            <label className="block text-xs font-medium text-secondary mb-1.5">{t('name')}</label>
             <input
               type="text"
               required
-              placeholder="Es. Centro Sportivo Green Club"
+              placeholder={t('namePh')}
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full px-3.5 py-2.5 bg-app border border-line rounded-xl text-primary font-medium focus:outline-none focus:border-accent"
@@ -122,13 +125,13 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-secondary mb-1.5">Indirizzo</label>
+            <label className="block text-xs font-medium text-secondary mb-1.5">{t('address')}</label>
             <div className="relative">
               <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted" />
               <input
                 type="text"
                 required
-                placeholder="Es. Via dello Sport 12, Milano"
+                placeholder={t('addressPh')}
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 className="w-full pl-9 pr-3.5 py-2.5 bg-app border border-line rounded-xl text-primary font-medium focus:outline-none focus:border-accent"
@@ -138,12 +141,12 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-secondary mb-1.5">Telefono</label>
+              <label className="block text-xs font-medium text-secondary mb-1.5">{t('phone')}</label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted" />
                 <input
                   type="text"
-                  placeholder="Es. +39 02 8765432"
+                  placeholder={t('phonePh')}
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="w-full pl-9 pr-3.5 py-2.5 bg-app border border-line rounded-xl text-primary font-medium focus:outline-none focus:border-accent"
@@ -152,25 +155,28 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-secondary mb-1.5">Fondo</label>
+              <label className="block text-xs font-medium text-secondary mb-1.5">{t('surface')}</label>
               <select
                 value={courtType}
                 onChange={(e) => setCourtType(e.target.value)}
                 className="w-full px-3 py-2.5 bg-app border border-line rounded-xl text-primary font-medium focus:outline-none focus:border-accent"
               >
-                <option value="Erba Sintetica 4G Outdoor">Sintetico 4G Outdoor</option>
-                <option value="Erba Sintetica 5G Intaso Naturale">Sintetico 5G Intaso Naturale</option>
-                <option value="Indoor Parquet Professionale">Indoor Parquet Professionale</option>
-                <option value="Indoor Gomma / Resina">Indoor Gomma / Resina</option>
-                <option value="Erba Naturale">Erba Naturale</option>
+                {/* Valori salvati in italiano (dato), etichette nella lingua dell'app */}
+                {['Erba Sintetica 4G Outdoor', 'Erba Sintetica 5G Intaso Naturale', 'Indoor Parquet Professionale', 'Indoor Gomma / Resina', 'Erba Naturale'].map(
+                  (v, i) => (
+                    <option key={v} value={v}>
+                      {surfaceLabels[i]}
+                    </option>
+                  )
+                )}
               </select>
             </div>
           </div>
 
           <fieldset className="space-y-2">
-            <legend className="block text-xs font-medium text-secondary mb-1.5">Costo per formato (€, totale della partita)</legend>
+            <legend className="block text-xs font-medium text-secondary mb-1.5">{t('costPerFormat')}</legend>
             <p className="text-xs text-muted">
-              Casella vuota = su questo campo non si gioca quel formato (il 5vs5 vuoto usa il costo standard del club).
+              {t('costHelp')}
             </p>
             <div className="grid grid-cols-2 gap-2">
               {(
@@ -188,7 +194,7 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
                     <span className="flex items-baseline justify-between gap-2 text-xs">
                       <span className="font-semibold text-primary">{label}</span>
                       <span className="text-muted tabular-nums">
-                        {num(value) > 0 ? `€${(num(value) / n).toFixed(2).replace('.', ',')} a testa` : f === '5v5' ? 'standard' : 'non disponibile'}
+                        {num(value) > 0 ? t('perHead', { amount: (num(value) / n).toFixed(2).replace('.', ',') }) : f === '5v5' ? t('standard') : t('notAvailable')}
                       </span>
                     </span>
                     <input
@@ -198,7 +204,7 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
                       placeholder="—"
                       value={value}
                       onChange={(e) => set(e.target.value.replace(/[^0-9.,]/g, ''))}
-                      aria-label={`Costo ${label}`}
+                      aria-label={t('costAria', { label })}
                       className="mt-0.5 w-full bg-transparent text-primary font-medium tabular-nums focus:outline-none"
                     />
                   </label>
@@ -208,10 +214,10 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
           </fieldset>
 
           <div>
-            <label className="block text-xs font-medium text-secondary mb-1.5">Note</label>
+            <label className="block text-xs font-medium text-secondary mb-1.5">{t('notes')}</label>
             <textarea
               rows={2}
-              placeholder="Es. Campo 3 coperto, spogliatoi con phon a gettone, parcheggio interno."
+              placeholder={t('notesPh')}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               className="w-full px-3.5 py-2 bg-app border border-line rounded-xl text-primary font-medium focus:outline-none focus:border-accent"

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useAuth } from '@/lib/context/AuthContext';
 import { auth as firebaseAuth } from '@/lib/firebase/config';
 import { useStatCategories } from '@/lib/hooks/useStatCategories';
@@ -31,6 +32,7 @@ export function SelfRatingPrompt() {
     }
   }, []);
 
+  const t = useTranslations('selfRating');
   const pending = Boolean(profile?.self_rating_pending && !profile.is_guest);
   useEffect(() => {
     if (!pending) return;
@@ -63,9 +65,9 @@ export function SelfRatingPrompt() {
       const data = await res.json();
       if (!data?.ok) throw new Error(data?.error);
       await refreshProfile();
-      notify('Autovalutazione salvata. Dopo la tua prima partita un admin la conferma.');
+      notify(t('saved'));
     } catch {
-      notify('Salvataggio non riuscito, riprova.');
+      notify(t('failed'));
     } finally {
       setSaving(false);
     }
@@ -74,28 +76,28 @@ export function SelfRatingPrompt() {
   return (
     <Sheet
       onClose={close}
-      title="Come te la cavi in campo?"
-      subtitle="Dai un voto da 1 a 10 a ogni abilità. Servono per fare squadre equilibrate."
+      title={t('title')}
+      subtitle={t('subtitle')}
       height="tall"
       locked={saving}
       footer={
         <>
           <button type="button" onClick={close} disabled={saving} className={sheetBtn.secondary}>
-            Più tardi
+            {t('later')}
           </button>
           <button type="button" onClick={save} disabled={saving} className={sheetBtn.primary}>
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-            Salva
+            {t('save')}
           </button>
         </>
       }
     >
       <div className="flex items-center justify-between rounded-xl bg-app/60 px-4 py-3">
-        <span className="text-sm text-secondary">Il tuo OVR di partenza</span>
+        <span className="text-sm text-secondary">{t('startOvr')}</span>
         <span className="text-2xl font-bold text-primary tabular-nums">{Math.round(ovrOf(values) * 10)}</span>
       </div>
       <p className="text-xs text-muted leading-relaxed">
-        Sii sincero: dopo la tua prima partita un admin rivede i voti in base a quello che ha visto in campo.
+        {t('honest')}
       </p>
       <StatRatingFields categories={categories} values={values} onChange={setValues} showHelp disabled={saving} />
     </Sheet>

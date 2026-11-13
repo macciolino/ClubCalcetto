@@ -230,39 +230,57 @@
   "statNames": {
     "velocita": {
       "name": "Velocità",
-      "code": "VEL"
+      "code": "VEL",
+      "label": "Velocità / Scatto breve",
+      "description": "Rapidità nei primi metri, accelerazione e reattività nelle transizioni offensive e difensive tipiche del calcetto."
     },
     "fisico": {
       "name": "Fisico",
-      "code": "FIS"
+      "code": "FIS",
+      "label": "Fisico / Protezione palla e contrasti",
+      "description": "Forza nei contrasti ruvidi, tenuta nei duelli fisici corpo a corpo e capacità di difendere palla spalle alla porta."
     },
     "resistenza": {
       "name": "Resistenza",
-      "code": "RES"
+      "code": "RES",
+      "label": "Resistenza / Fiato",
+      "description": "Capacità polmonare di mantenere ritmi intensi per tutti i 60 minuti senza calare nel finale di partita."
     },
     "tiro": {
       "name": "Tiro",
-      "code": "TIR"
+      "code": "TIR",
+      "label": "Tiro / Conclusione",
+      "description": "Precisione balistica, potenza di collo/piattone, tiro di punta improvviso e freddezza davanti al portiere."
     },
     "passaggio": {
       "name": "Passaggio",
-      "code": "PAS"
+      "code": "PAS",
+      "label": "Passaggio / Sponde",
+      "description": "Precisione nelle sponde rapide a un tocco, verticalizzazioni filtranti rasoterra e cambi di fronte nello stretto."
     },
     "dribbling": {
       "name": "Dribbling",
-      "code": "DRI"
+      "code": "DRI",
+      "label": "Dribbling / Controllo palla nello stretto",
+      "description": "Agilità con la suola, cambi di direzione repentini e capacità di saltare l'uomo creando superiorità numerica."
     },
     "difesa": {
       "name": "Difesa",
-      "code": "DIF"
+      "code": "DIF",
+      "label": "Difesa / 1v1",
+      "description": "Tempismo nei raddoppi, lettura delle linee di passaggio avversarie, intercetti e solidità nell'1 contro 1 difensivo."
     },
     "visione": {
       "name": "Visione",
-      "code": "VIS"
+      "code": "VIS",
+      "label": "Visione di gioco / Tattica",
+      "description": "Intelligenza tattica, senso della posizione preventiva, capacità di anticipare lo sviluppo del gioco e dettare i ritmi."
     },
     "tecnica": {
       "name": "Tecnica",
-      "code": "TEC"
+      "code": "TEC",
+      "label": "Tecnica di base",
+      "description": "Controllo di palla e pulizia del gesto tecnico."
     }
   },
   "players": {
@@ -920,5 +938,429 @@
     "verifyNote": "Ti invieremo un'email per confermare l'indirizzo.",
     "noAccount": "Non hai un account? ",
     "haveAccount": "Hai già un account? "
+  },
+  "settings": {
+    "title": "Impostazioni",
+    "groups": {
+      "account": "Tuo account",
+      "match": "Gestione partita",
+      "club": "Club",
+      "access": "Accessi"
+    },
+    "sections": {
+      "notifiche": {
+        "label": "Notifiche",
+        "description": "Le notifiche su questo dispositivo"
+      },
+      "account": {
+        "label": "Account",
+        "description": "Esci da tutti i dispositivi, disattiva o elimina l’account"
+      },
+      "partita": {
+        "label": "Partita della settimana",
+        "description": "Un giorno alla volta: organizzazione, cassa e risultato"
+      },
+      "campi": {
+        "label": "Campi e costi",
+        "description": "Campi, costo di ogni campo, orario e costo standard"
+      },
+      "regole": {
+        "label": "Regole di gioco",
+        "description": "Blocco ritiri e portiere"
+      },
+      "parametri": {
+        "label": "Parametri e forma",
+        "description": "Parametri dell’ottagono e stato forma"
+      },
+      "notifiche-club": {
+        "label": "Notifiche del club",
+        "description": "Chi riceve le notifiche, prova, telefoni degli admin"
+      },
+      "accessi": {
+        "label": "Admin e account",
+        "description": "Chi è admin, account disattivati, motivi di chi lascia"
+      }
+    },
+    "notifOn": "attive",
+    "notifBlocked": "bloccate",
+    "notifOff": "spente",
+    "noOfficial": "nessun giorno ufficiale",
+    "timelockOn": "ritiri bloccati {hours}h prima",
+    "timelockOff": "ritiri liberi",
+    "keeper": "portiere {mode}",
+    "keeperFixed": "fisso",
+    "keeperRotation": "a rotazione",
+    "params": "{count} parametri · forma {state}",
+    "formOn": "attiva",
+    "formOff": "spenta",
+    "clubAll": "a tutti",
+    "clubOff": "spente",
+    "clubAdmins": "solo admin",
+    "admins": "{count} admin",
+    "returning": "{count, plural, one {# vuole rientrare} other {# vogliono rientrare}}",
+    "signInToManage": "Accedi per gestire le tue impostazioni.",
+    "goLogin": "Vai al login",
+    "toHandle": "Da gestire",
+    "backAria": "Torna alla schermata generale delle impostazioni"
+  },
+  "notifGuide": {
+    "status": {
+      "on": "Notifiche ATTIVE su questo dispositivo.",
+      "off": "Notifiche non ancora attive su questo dispositivo.",
+      "denied": "Hai bloccato le notifiche: sbloccale dalle impostazioni del telefono (vedi l'ultimo passaggio qui sotto).",
+      "needs_install": "Su iPhone prima aggiungi l'app alla schermata Home e aprila da lì (passaggi qui sotto).",
+      "unsupported": "Questo browser non supporta le notifiche: usa Chrome su Android o Safari su iPhone.",
+      "not_configured": "Le notifiche non sono ancora attive sul server: riprova tra qualche giorno."
+    },
+    "android": [
+      "Apri Club Soccer con Google Chrome.",
+      "Tocca i tre puntini in alto a destra e scegli \"Aggiungi a schermata Home\" (oppure \"Installa app\").",
+      "Apri l'app dall'icona che è comparsa sulla schermata Home.",
+      "Torna qui nel Profilo, tocca \"Attiva notifiche su questo telefono\" e poi \"Consenti\".",
+      "Se per sbaglio hai negato: Impostazioni del telefono → App → Chrome (o Club Soccer) → Notifiche → attiva."
+    ],
+    "ios": [
+      "Serve iPhone con iOS 16.4 o successivo (Impostazioni → Generali → Info).",
+      "Apri Club Soccer con Safari (non con altre app o browser).",
+      "Tocca il pulsante Condividi (il quadrato con la freccia verso l'alto) e scegli \"Aggiungi alla schermata Home\".",
+      "Apri l'app SOLO dall'icona sulla schermata Home: su iPhone le notifiche funzionano solo così.",
+      "Dall'app aperta così, vai nel Profilo, tocca \"Attiva notifiche su questo telefono\" e poi \"Consenti\".",
+      "Se per sbaglio hai negato: Impostazioni → Notifiche → Club Soccer → Consenti notifiche."
+    ],
+    "enableFailed": "Attivazione non riuscita. Riprova; su iPhone apri l'app dall'icona sulla schermata Home.",
+    "title": "Notifiche",
+    "weTell": "Ti avvisiamo quando:",
+    "w1": "si aprono le iscrizioni della settimana prossima;",
+    "w2": "dalla lista d'attesa entri tra i titolari;",
+    "w3": "la tua partita è confermata o le squadre cambiano;",
+    "w4": "qualcuno prende il posto di chi si è ritirato;",
+    "w5": "si apre il voto per l'MVP, a fine partita.",
+    "free": "Le notifiche sono gratuite.",
+    "onDevice": "Notifiche su questo dispositivo",
+    "howTo": "Come attivarle sul telefono"
+  },
+  "account": {
+    "access": "Accesso",
+    "signedInAs": "Sei collegato come <b>{name}</b>",
+    "signOutAllHint": "Esce da questo e da tutti gli altri dispositivi dove sei collegato.",
+    "confirmSignOutAll": "Uscire da tutti i dispositivi? Dovrai accedere di nuovo ovunque.",
+    "signOutAll": "Esci da tutti i dispositivi",
+    "superCannot": "L'account del super amministratore non si può eliminare dall'app.",
+    "chooseReason": "Scegli un motivo: ci aiuta a migliorare l’app.",
+    "writeReason": "Scrivi in breve il motivo.",
+    "confirmDeactivate": "Confermi la disattivazione del tuo account? Non potrai più entrare finché un amministratore non lo riattiva.",
+    "confirmDelete": "Confermi l’eliminazione DEFINITIVA del tuo account e di tutti i tuoi dati? Non si può annullare.",
+    "deactivated": "Il tuo account è stato disattivato. Per tornare chiedi a un amministratore di riattivarlo.",
+    "deleted": "Il tuo account è stato eliminato. Grazie per aver giocato con noi!",
+    "notAvailable": "Operazione non disponibile al momento: contatta un amministratore.",
+    "failedLater": "Operazione non riuscita. Riprova tra poco.",
+    "failed": "Operazione non riuscita. Controlla la connessione e riprova.",
+    "removeTitle": "Disattiva o elimina account",
+    "removeHint": "Metti in pausa il tuo account oppure cancellalo con tutti i dati.",
+    "removeOpen": "Disattiva o elimina",
+    "whatToDo": "Cosa vuoi fare?",
+    "deactivateLabel": "Disattiva (posso tornare)",
+    "deactivateHelp": "Non potrai più entrare, ma scheda, parametri e statistiche restano salvati: un amministratore può riattivare l’account e ritrovi tutto.",
+    "deleteLabel": "Elimina tutto",
+    "deleteHelp": "Accesso, scheda, parametri e statistiche vengono cancellati. Nelle partite giocate resta solo il tuo nome. Non si può annullare.",
+    "bothCases": "In entrambi i casi vengono tolte le tue iscrizioni e le notifiche.",
+    "whyLeave": "Perché lasci? (obbligatorio)",
+    "reasons": [
+      "Non gioco più con il gruppo",
+      "Troppe notifiche",
+      "L'app è difficile da usare",
+      "Problemi o errori nell’app",
+      "Privacy: non voglio i miei dati qui",
+      "Altro"
+    ],
+    "addSomething": "Vuoi aggiungere qualcosa? {required}",
+    "required": "(obbligatorio)",
+    "optional": "(facoltativo)",
+    "commentPh": "Il tuo commento arriva allo sviluppatore dell'app.",
+    "cancel": "Annulla",
+    "deactivateBtn": "Disattiva account",
+    "deleteBtn": "Elimina definitivamente"
+  },
+  "feedback": {
+    "closeMessage": "Chiudi messaggio",
+    "cancel": "Annulla",
+    "confirm": "Conferma"
+  },
+  "adminSections": {
+    "checking": "Verifica permessi in corso",
+    "onlyAdmins": "Solo gli admin possono promuovere o retrocedere gli amministratori.",
+    "cannotDemoteMain": "Non è possibile retrocedere l'amministratore principale.",
+    "confirmReactivate": "Riattivare l'account di \"{name}\"? Potrà di nuovo entrare e ritroverà scheda, parametri e statistiche.",
+    "reactivateFailed": "Riattivazione non riuscita. Riprova.",
+    "confirmDelete": "Eliminare DEFINITIVAMENTE l'account di \"{name}\"? Scheda, parametri e statistiche verranno cancellati. Non si può annullare.",
+    "deleteFailed": "Eliminazione non riuscita. Riprova."
+  },
+  "clubConfig": {
+    "fields": "Campi",
+    "fieldsHelp": "Dove gioca il club. Ogni campo può avere il suo costo; il predefinito si usa quando la partita non ne ha uno.",
+    "addField": "Campo",
+    "noFields": "Nessun campo: aggiungine uno.",
+    "default": "Predefinito",
+    "perHead": "{amount} a testa",
+    "standardFor5": "5vs5: costo standard del club ({amount})",
+    "openMaps": "Apri su Google Maps",
+    "setDefault": "Imposta come predefinito",
+    "setDefaultAria": "Imposta {name} come predefinito",
+    "editField": "Modifica campo",
+    "editAria": "Modifica {name}",
+    "deleteField": "Elimina campo",
+    "deleteAria": "Elimina {name}",
+    "confirmDeleteField": "Eliminare il campo \"{name}\"?",
+    "timeCost": "Orario e costo standard",
+    "timeCostHelp": "L'orario di ogni partita e il costo usato quando il campo non ne ha uno suo. Per una sola partita si cambiano in Squadre.",
+    "time": "Orario",
+    "standardCost": "Costo standard (€)",
+    "otherFormats": "Costo standard degli altri formati (€)",
+    "standardCostAria": "Costo standard {label}",
+    "emptySame": "Vuoto = stessa quota a testa del 5vs5.",
+    "fivePerHead": "5vs5: {amount} a testa",
+    "saved": "Salvato",
+    "save": "Salva",
+    "timelock": "Blocco ritiri",
+    "timelockHelp": "Se attivo, i giocatori non possono ritirarsi a ridosso della partita. Gli admin possono sempre modificare le presenze.",
+    "lock": "Blocca",
+    "hoursBefore": "{n} ore prima"
+  },
+  "fieldModal": {
+    "editTitle": "Modifica campo",
+    "newTitle": "Nuovo campo",
+    "subtitle": "Centro sportivo dove si gioca",
+    "cancel": "Annulla",
+    "update": "Aggiorna campo",
+    "save": "Salva campo",
+    "name": "Nome del centro",
+    "namePh": "Es. Centro Sportivo Green Club",
+    "address": "Indirizzo",
+    "addressPh": "Es. Via dello Sport 12, Milano",
+    "phone": "Telefono",
+    "phonePh": "Es. +39 02 8765432",
+    "surface": "Fondo",
+    "surfaces": [
+      "Sintetico 4G Outdoor",
+      "Sintetico 5G Intaso Naturale",
+      "Indoor Parquet Professionale",
+      "Indoor Gomma / Resina",
+      "Erba Naturale"
+    ],
+    "costPerFormat": "Costo per formato (€, totale della partita)",
+    "costHelp": "Casella vuota = su questo campo non si gioca quel formato (il 5vs5 vuoto usa il costo standard del club).",
+    "perHead": "€{amount} a testa",
+    "standard": "standard",
+    "notAvailable": "non disponibile",
+    "costAria": "Costo {label}",
+    "notes": "Note",
+    "notesPh": "Es. Campo 3 coperto, spogliatoi con phon a gettone, parcheggio interno."
+  },
+  "formSettings": {
+    "goals": "Gol",
+    "goalsHelpFixed": "{min}+ gol in una partita +{pts} (difensori e portiere dal primo gol); rigore parato +{save}.",
+    "goalsHelp": "{min}+ gol in una partita +{pts}; i difensori già dal primo gol.",
+    "mvp": "MVP e voti",
+    "mvpHelp": "MVP della partita +{mvp}; gli altri da {votes} voti in su +{vote} per voto.",
+    "results": "Vittorie e sconfitte",
+    "resultsHelp": "Vittoria +{win}, pareggio 0, sconfitta −{loss} a tutti e 5 della squadra.",
+    "keeper": "Portiere",
+    "keeperHelp": "Come gioca il club in porta: cambia il bilanciamento delle squadre e il campo.",
+    "rotation": "A rotazione",
+    "fixed": "Fisso",
+    "fixedNote": "Fisso: due portieri tra i 10 vanno uno per squadra; il portiere prende il bonus dal primo gol e i rigori parati contano.",
+    "rotationNote": "A rotazione (es. ogni 5 minuti): nessun portiere fisso, sul campo il posto in porta è \"PORTA ↻\" e le squadre si bilanciano senza cercare un portiere.",
+    "title": "Stato forma dei giocatori",
+    "on": "Attivo: in base alle ultime {n} partite i giocatori salgono o scendono un po' in tutti i parametri e nel bilanciamento delle squadre.",
+    "off": "Spento: contano solo i valori scritti nella scheda di ogni giocatore.",
+    "switchAria": "{label}: fa salire lo stato forma",
+    "legend": "Legenda: come si calcola lo stato forma",
+    "pointsTitle": "Punti di ogni partita",
+    "p1": "<b>MVP della partita</b> (scelto dall'admin alla chiusura): <b>+{mvp}</b>. Così anche un difensore che non segna può salire.",
+    "p2": "<b>Voti MVP dei giocatori</b>, da {votes} voti in su: <b>+{vote} per voto</b> (2 voti +0,2 · 3 voti +0,3 · 5 voti +0,5). Per chi è l'MVP vale il +{mvp} al posto dei voti.",
+    "p3": "<b>{min} o più gol</b> nella stessa partita: <b>+{pts}</b>. Chi ha come ruolo <b>Difensore</b> (nella scheda giocatore) lo prende già <b>dal primo gol</b>, perché segna raramente. Con il <b>portiere fisso</b> vale lo stesso per chi ha ruolo <b>Portiere</b>.",
+    "p4": "<b>Rigore parato</b> (solo con portiere fisso, si segna a fine partita): <b>+{save}</b> ciascuno, al massimo <b>+{max}</b> a partita. Conta con l'interruttore Gol.",
+    "p5": "<b>Risultato</b>: vittoria <b>+{win}</b>, pareggio <b>0</b>, sconfitta <b>−{loss}</b>, a tutti e 5 della squadra. Lo scarto non conta (5-4 o 10-2 è uguale).",
+    "p6": "I punti della stessa partita <b>si sommano</b>: chi perde ma è MVP prende −0,2 + 1 = <b>+0,8</b>.",
+    "p7": "Ogni voce conta solo se il suo interruttore qui sopra è acceso.",
+    "formTitle": "Stato forma",
+    "s1": "È la <b>media dei punti delle ultime {n} partite</b> archiviate (una partita non giocata conta 0), da <b>−{max}</b> a <b>+{max}</b>.",
+    "s2": "Sopra zero il giocatore è <b>🔥 in forma</b> (i valori salgono), sotto zero è <b>❄️ fuori forma</b> (i valori scendono un po').",
+    "s3": "Si aggiunge (o si toglie) a <b>tutti i parametri</b> e all'<b>OVR</b>, sempre tra 1 e 10, e conta quando si bilanciano le squadre.",
+    "s4": "È <b>temporaneo</b>: se nelle partite dopo non fa punti, torna a 0 da solo. I valori scritti nella scheda del giocatore non vengono mai modificati.",
+    "examplesTitle": "Esempi (tutti gli interruttori accesi)",
+    "e1": "<b>Marco B.</b>: ultima partita vinta (+0,2), MVP (+1) e 4 gol (+0,5) = 1,7; nelle 2 partite prima ha perso (−0,2) e pareggiato (0). Media: (1,7 − 0,2 + 0) ÷ 3 = <b>+0,5 🔥</b>. Tiro 7 diventa 7,5, OVR 7,2 diventa 7,7.",
+    "e2": "<b>Luca</b>: 3 sconfitte di fila, nessun voto né gol. Media: (−0,2 × 3) ÷ 3 = <b>−0,2 ❄️</b>. Difesa 8 diventa 7,8, OVR 6,5 diventa 6,3.",
+    "keeperTitle": "Portiere a rotazione o fisso",
+    "k1": "<b>A rotazione</b> (in porta a turno): il ruolo Portiere non conta, nessun bonus da portiere, le squadre si bilanciano solo sulle abilità.",
+    "k2": "<b>Fisso</b>: due portieri tra i 10 vanno in squadre diverse; gol del portiere dal primo gol; rigori parati +{save}.",
+    "allOff": "Con tutti gli interruttori spenti lo stato forma è 0 per tutti."
+  },
+  "statParams": {
+    "badName": "Usa un nome breve, senza simboli (es. Tecnica, Visione, Portiere).",
+    "exists": "\"{name}\" esiste già.",
+    "confirmAdd": "Aggiungere il parametro \"{name}\"? Tutti i giocatori che non ce l'hanno riceveranno il valore {value}.",
+    "added": "\"{name}\" aggiunto: {count} giocatori hanno ricevuto il valore {value}.",
+    "addedKept": "\"{name}\" aggiunto: tutti i giocatori avevano già un valore salvato, che è stato mantenuto.",
+    "addFailed": "Aggiunta non riuscita. Controlla la connessione e riprova.",
+    "confirmRemove": "Togliere \"{name}\"? Non verrà più mostrato né usato per OVR e squadre. I valori dei giocatori restano salvati: se lo rimetti tornano quelli di prima.",
+    "removed": "\"{name}\" tolto.",
+    "removeFailed": "Rimozione non riuscita. Riprova.",
+    "title": "Parametri dei giocatori",
+    "none": "Nessun parametro",
+    "intro": "Le abilità di ogni giocatore (card, radar e bilanciamento squadre). Si aggiungono e tolgono solo qui.",
+    "whatTheyMeasure": "Cosa misurano",
+    "howItWorks": "Come funziona",
+    "h1": "<b>Aggiungi:</b> ogni giocatore riceve il valore predefinito (di solito 6). Poi lo cambi dalla scheda del giocatore.",
+    "h2": "<b>Il voto generale (OVR) non cambia</b> quando aggiungi un parametro: si ricalcola solo quando modifichi e salvi quel giocatore. Così le squadre restano bilanciate come prima.",
+    "h3": "<b>Togli:</b> il parametro sparisce dalle schermate e dal calcolo, ma i valori restano salvati. Se lo aggiungi di nuovo con lo stesso nome, tornano i valori di prima.",
+    "noneAddOne": "Nessun parametro: aggiungine almeno uno qui sotto.",
+    "defaultValue": "predefinito {value}",
+    "removeAria": "Togli {name}",
+    "newNameAria": "Nome del nuovo parametro",
+    "newNamePh": "Nuovo parametro (es. Tecnica)",
+    "initialValue": "Valore iniziale",
+    "add": "Aggiungi"
+  },
+  "statsLegend": {
+    "title": "Legenda dei parametri",
+    "subtitle": "Cosa misura ognuno degli 8 parametri dell'ottagono",
+    "close": "Chiudi",
+    "balanceTitle": "Come influiscono sul bilanciamento 5v5:",
+    "balanceText": "L'algoritmo calcola la media pesata di questi 8 valori per ogni giocatore, confrontando poi le combinazioni possibili di squadre per minimizzare lo scarto totale e bilanciare sia la fase difensiva che quella offensiva."
+  },
+  "clubNotif": {
+    "modes": {
+      "off": {
+        "label": "Spente",
+        "help": "Non parte nessuna notifica."
+      },
+      "admins": {
+        "label": "Solo admin (prova)",
+        "help": "Ogni notifica arriva SOLO agli amministratori, con la scritta [PROVA]: vedete cosa riceverebbero i giocatori senza disturbarli."
+      },
+      "all": {
+        "label": "Tutti i giocatori",
+        "help": "Le notifiche arrivano ai giocatori interessati."
+      }
+    },
+    "confirmAll": "Da ora le notifiche arriveranno a tutti i giocatori interessati. Confermi?",
+    "modeFailed": "Impossibile salvare la modalità. Riprova.",
+    "testAdminsSent": "Prova inviata a {count} dispositivi degli admin.",
+    "checkFailed": "Controllo non riuscito. Riprova.",
+    "checkFailedNet": "Controllo non riuscito. Controlla la connessione.",
+    "testSent": "Notifica di prova inviata a {sent}/{devices} tuoi dispositivi.",
+    "noDevice": "Nessun tuo dispositivo registrato: attiva prima le notifiche dal tuo Profilo.",
+    "notConfigured": "Il server non è ancora configurato per le notifiche (mancano le chiavi su Vercel).",
+    "sendFailed": "Invio non riuscito. Riprova.",
+    "sendFailedNet": "Invio non riuscito. Controlla la connessione.",
+    "title": "Notifiche ai giocatori",
+    "recipients": "Destinatari:",
+    "intro": "Iscrizioni aperte (a tutti i registrati), sei entrato tra i titolari (a chi sale dalla lista d'attesa), partita confermata, squadre cambiate, chi subentra a chi (ai 10 della partita) e voto MVP aperto (a tutti i registrati). Agli admin arriva anche l'avviso quando una partita è al completo (10, 14, 16 o 22 iscritti secondo il formato) e la proposta di passare a un formato più grande quando gli iscritti sono tanti. Gratuite (Firebase Cloud Messaging).",
+    "whoAria": "Chi riceve le notifiche",
+    "testMe": "Manda una notifica di prova a me",
+    "checking": "Controllo…",
+    "checkAdmins": "Controlla i telefoni degli admin",
+    "testAllAdmins": "Manda una prova a tutti gli admin",
+    "devices": "{count, plural, one {# telefono} other {# dispositivi}} ({platforms})",
+    "updated": "aggiornato {when}",
+    "noPhone": "nessun telefono: deve attivare le notifiche dal Profilo"
+  },
+  "admins": {
+    "confirmMake": "Rendere admin \"{name}\"? Potrà gestire presenze, squadre, partite e impostazioni del club.",
+    "title": "Admin",
+    "intro": "Chi gestisce il club. Ogni admin può aggiungere o togliere admin; il super admin non si può togliere.",
+    "noEmail": "nessuna email",
+    "superAdmin": "Super admin",
+    "confirmRemove": "Togliere i permessi di admin a \"{name}\"? Resterà un giocatore normale.",
+    "remove": "Togli admin",
+    "pickAria": "Giocatore da rendere admin",
+    "pick": "Scegli un giocatore…",
+    "make": "Rendi admin"
+  },
+  "deactivated": {
+    "wantsBack": "Vuole rientrare",
+    "noEmail": "Nessuna mail",
+    "byPlayer": "Disattivato dal giocatore",
+    "byAdmin": "Disattivato da un admin",
+    "on": " il {date}",
+    "record": "{w}V-{d}P-{l}S",
+    "reactivate": "Riattiva",
+    "deleteAria": "Elimina definitivamente {name}",
+    "delete": "Elimina definitivamente",
+    "none": "Nessun account disattivato."
+  },
+  "deletionFeedback": {
+    "loadFailed": "Impossibile caricare i feedback.",
+    "title": "Feedback account chiusi",
+    "intro": "Solo per te (super admin): i motivi lasciati da chi ha disattivato o eliminato l'account.",
+    "close": "Chiudi",
+    "open": "Apri",
+    "loading": "Caricamento…",
+    "none": "Nessun account chiuso finora.",
+    "deactivated": " · disattivato",
+    "deleted": " · eliminato",
+    "byYou": " da te",
+    "reason": "Motivo: {reason}"
+  },
+  "selfRating": {
+    "saved": "Autovalutazione salvata. Dopo la tua prima partita un admin la conferma.",
+    "failed": "Salvataggio non riuscito, riprova.",
+    "title": "Come te la cavi in campo?",
+    "subtitle": "Dai un voto da 1 a 10 a ogni abilità. Servono per fare squadre equilibrate.",
+    "later": "Più tardi",
+    "save": "Salva",
+    "startOvr": "Il tuo OVR di partenza",
+    "honest": "Sii sincero: dopo la tua prima partita un admin rivede i voti in base a quello che ha visto in campo.",
+    "selfAssessment": "Autovalutazione",
+    "valueText": "{name} {value} su 10"
+  },
+  "requests": {
+    "alreadyDone": "Richiesta già gestita da un altro admin.",
+    "failed": "Operazione non riuscita, riprova.",
+    "reviewSaved": "Valutazione di {name} salvata",
+    "saveFailed": "Salvataggio non riuscito, riprova.",
+    "played": "{count, plural, one {Prima partita giocata} other {# partite giocate}}",
+    "selfRated": "si è autovalutato",
+    "notSelfRated": "autovalutazione non compilata",
+    "reviewHint": "Correggi i voti in base a quello che hai visto in campo. Sotto ogni parametro c'è il voto che si è dato.",
+    "saveReview": "Salva valutazione",
+    "signupHint": "Si è registrato senza link di invito. È uno degli ospiti già in rosa? Collegandolo, le sue partite, gol, MVP, presenze e valutazioni passano al nuovo account.",
+    "noGuests": "Non ci sono più ospiti senza account.",
+    "guestMatches": "Ospite · {count, plural, one {# partita} other {# partite}}",
+    "similar": "· nome simile",
+    "confirmLink": "Collegare {name} all'ospite \"{guest}\"?\nPartite, gol, MVP, presenze e valutazioni di {guest} passano all'account di {name}; il profilo ospite viene eliminato.",
+    "linked": "{name} collegato a {guest}",
+    "link": "Collega",
+    "isNew": "{name} è un nuovo giocatore",
+    "newPlayer": "Nuovo giocatore (non collegare)",
+    "restoreHint": "Aveva chiuso l'account e ha provato a rientrare. Ora vede \"Bentornato\" e aspetta la tua scelta.",
+    "restored": "Profilo di {name} ripristinato",
+    "restore": "Ripristina profilo e storico",
+    "confirmReset": "Far ripartire {name} da zero?\nLe partite giocate restano nello storico con il suo nome, ma non contano più per il nuovo account: 0 partite e parametri di base.",
+    "resetDone": "{name} riparte da zero",
+    "reset": "Riparti da zero",
+    "formatAlready": "La partita è già {label}: puoi chiudere l'avviso.",
+    "formatHint": "Con il {label} i primi {n} iscritti diventano titolari e ricevono la notifica. Le squadre già fatte vanno rigenerate.",
+    "formatApplied": "Partita del {date}: {label}",
+    "switchTo": "Passa al {label}",
+    "dismissed": "Avviso chiuso",
+    "stay": "Resta {label}",
+    "closeNotice": "Chiudi avviso",
+    "deletedInfo": "Account eliminato: i dati sono stati cancellati, le partite archiviate restano con il suo nome.",
+    "deactivatedInfo": "Account disattivato: dati e storico sono conservati. Se torna, ti arriva una richiesta di rientro.",
+    "reason": "Motivo: {reason}",
+    "markedRead": "Segnato come letto",
+    "markRead": "Segna come letto",
+    "tNewSignup": "Nuovo iscritto: {name}",
+    "tRestore": "Richiesta di rientro: {name}",
+    "tFormat": "{count} iscritti per {date}: passare al {label}?",
+    "theMatch": "la partita",
+    "tDeleted": "{name} ha eliminato il proprio account",
+    "tDeactivated": "{name} ha disattivato il proprio account",
+    "reviewsAria": "Valutazioni da rivedere",
+    "reviewsTitle": "Valutazioni da rivedere · dopo la prima partita",
+    "denied": "Non riesco a leggere le richieste: le regole Firestore aggiornate non risultano pubblicate. Pubblica il file firestore.rules dalla console Firebase (Firestore → Regole) e riapri questa finestra.",
+    "notificationsAria": "Notifiche"
   }
 }

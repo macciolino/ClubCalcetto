@@ -6,6 +6,7 @@ import { askConfirm } from '@/components/ui/Feedback';
 import { initialsOf, uploadedPhoto } from '@/lib/utils/playerUtils';
 import { ShieldCheck, ShieldOff } from 'lucide-react';
 import { btn } from '@/components/ui/buttons';
+import { useTranslations } from 'next-intl';
 
 const isSuper = (p: Profile) => Boolean(p.email?.toLowerCase().includes('macciolino84'));
 
@@ -17,11 +18,12 @@ export function AdminsCard({ players, onToggleRole }: { players: Profile[]; onTo
   const admins = players.filter((p) => p.role === 'admin' || isSuper(p)).sort((a, b) => Number(isSuper(b)) - Number(isSuper(a)) || a.full_name.localeCompare(b.full_name));
   const candidates = players.filter((p) => p.role !== 'admin' && !isSuper(p) && !p.is_guest).sort((a, b) => a.full_name.localeCompare(b.full_name));
   const [pick, setPick] = useState('');
+  const t = useTranslations('admins');
 
   const promote = async () => {
     const p = candidates.find((c) => c.id === pick);
     if (!p) return;
-    if (!(await askConfirm(`Rendere admin "${p.full_name}"? Potrà gestire presenze, squadre, partite e impostazioni del club.`))) return;
+    if (!(await askConfirm(t('confirmMake', { name: p.full_name })))) return;
     await onToggleRole(p);
     setPick('');
   };
@@ -29,8 +31,8 @@ export function AdminsCard({ players, onToggleRole }: { players: Profile[]; onTo
   return (
     <section className="bg-card rounded-2xl p-4 sm:p-5 space-y-4">
       <div>
-        <h3 className="text-base font-semibold text-primary">Admin</h3>
-        <p className="text-sm text-secondary mt-0.5">Chi gestisce il club. Ogni admin può aggiungere o togliere admin; il super admin non si può togliere.</p>
+        <h3 className="text-base font-semibold text-primary">{t('title')}</h3>
+        <p className="text-sm text-secondary mt-0.5">{t('intro')}</p>
       </div>
 
       <ul className="divide-y divide-line rounded-xl bg-app/50">
@@ -47,19 +49,19 @@ export function AdminsCard({ players, onToggleRole }: { players: Profile[]; onTo
               )}
               <span className="flex-1 min-w-0">
                 <span className="block text-sm font-semibold text-primary truncate">{p.full_name}</span>
-                <span className="block text-xs text-secondary truncate">{p.email || 'nessuna email'}</span>
+                <span className="block text-xs text-secondary truncate">{p.email || t('noEmail')}</span>
               </span>
               {isSuper(p) ? (
-                <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-500/15 text-warning">Super admin</span>
+                <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-500/15 text-warning">{t('superAdmin')}</span>
               ) : (
                 <button
                   type="button"
                   onClick={async () => {
-                    if (await askConfirm(`Togliere i permessi di admin a "${p.full_name}"? Resterà un giocatore normale.`)) await onToggleRole(p);
+                    if (await askConfirm(t('confirmRemove', { name: p.full_name }))) await onToggleRole(p);
                   }}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-line-strong text-secondary hover:text-danger hover:border-rose-500/40"
                 >
-                  <ShieldOff className="h-3.5 w-3.5" /> Togli admin
+                  <ShieldOff className="h-3.5 w-3.5" /> {t('remove')}
                 </button>
               )}
             </li>
@@ -71,10 +73,10 @@ export function AdminsCard({ players, onToggleRole }: { players: Profile[]; onTo
         <select
           value={pick}
           onChange={(e) => setPick(e.target.value)}
-          aria-label="Giocatore da rendere admin"
+          aria-label={t('pickAria')}
           className="flex-1 min-w-0 bg-app border border-line rounded-xl px-3 py-2.5 text-sm text-primary focus:outline-none focus:border-accent"
         >
-          <option value="">Scegli un giocatore…</option>
+          <option value="">{t('pick')}</option>
           {candidates.map((p) => (
             <option key={p.id} value={p.id}>
               {p.full_name}
@@ -88,7 +90,7 @@ export function AdminsCard({ players, onToggleRole }: { players: Profile[]; onTo
           disabled={!pick}
           className={btn.primary}
         >
-          <ShieldCheck className="h-4 w-4" /> Rendi admin
+          <ShieldCheck className="h-4 w-4" /> {t('make')}
         </button>
       </div>
     </section>

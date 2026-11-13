@@ -230,39 +230,57 @@
   "statNames": {
     "velocita": {
       "name": "Pace",
-      "code": "PAC"
+      "code": "PAC",
+      "label": "Pace / Short sprint",
+      "description": "Quickness over the first metres, acceleration and reactivity in the attacking and defensive transitions typical of five-a-side."
     },
     "fisico": {
       "name": "Physical",
-      "code": "PHY"
+      "code": "PHY",
+      "label": "Physical / Shielding and tackles",
+      "description": "Strength in rough challenges, holding up in one-on-one physical duels and shielding the ball with your back to goal."
     },
     "resistenza": {
       "name": "Stamina",
-      "code": "STA"
+      "code": "STA",
+      "label": "Stamina / Breath",
+      "description": "Lung capacity to keep an intense pace for the whole 60 minutes without fading at the end of the match."
     },
     "tiro": {
       "name": "Shooting",
-      "code": "SHO"
+      "code": "SHO",
+      "label": "Shooting / Finishing",
+      "description": "Accuracy, power with the laces or inside of the foot, sudden toe-pokes and composure in front of the goalkeeper."
     },
     "passaggio": {
       "name": "Passing",
-      "code": "PAS"
+      "code": "PAS",
+      "label": "Passing / Lay-offs",
+      "description": "Accuracy in quick one-touch lay-offs, through balls along the ground and switches of play in tight spaces."
     },
     "dribbling": {
       "name": "Dribbling",
-      "code": "DRI"
+      "code": "DRI",
+      "label": "Dribbling / Close control",
+      "description": "Agility with the sole, sudden changes of direction and the ability to beat a player to create an overload."
     },
     "difesa": {
       "name": "Defending",
-      "code": "DEF"
+      "code": "DEF",
+      "label": "Defending / 1v1",
+      "description": "Timing when doubling up, reading the opponents' passing lanes, interceptions and solidity in defensive one-on-ones."
     },
     "visione": {
       "name": "Vision",
-      "code": "VIS"
+      "code": "VIS",
+      "label": "Vision / Tactics",
+      "description": "Tactical intelligence, sense of preventive positioning, ability to anticipate how play develops and set the tempo."
     },
     "tecnica": {
       "name": "Technique",
-      "code": "TEC"
+      "code": "TEC",
+      "label": "Basic technique",
+      "description": "Ball control and clean technique."
     }
   },
   "players": {
@@ -920,5 +938,429 @@
     "verifyNote": "We'll send you an email to confirm the address.",
     "noAccount": "Don't have an account? ",
     "haveAccount": "Already have an account? "
+  },
+  "settings": {
+    "title": "Settings",
+    "groups": {
+      "account": "Your account",
+      "match": "Match management",
+      "club": "Club",
+      "access": "Access"
+    },
+    "sections": {
+      "notifiche": {
+        "label": "Notifications",
+        "description": "Notifications on this device"
+      },
+      "account": {
+        "label": "Account",
+        "description": "Sign out of all devices, deactivate or delete the account"
+      },
+      "partita": {
+        "label": "Match of the week",
+        "description": "One day at a time: organisation, cash and result"
+      },
+      "campi": {
+        "label": "Pitches and costs",
+        "description": "Pitches, cost of each pitch, standard time and cost"
+      },
+      "regole": {
+        "label": "Game rules",
+        "description": "Withdrawal lock and goalkeeper"
+      },
+      "parametri": {
+        "label": "Ratings and form",
+        "description": "Radar ratings and current form"
+      },
+      "notifiche-club": {
+        "label": "Club notifications",
+        "description": "Who gets notifications, test, admins' phones"
+      },
+      "accessi": {
+        "label": "Admins and accounts",
+        "description": "Who is admin, deactivated accounts, why people leave"
+      }
+    },
+    "notifOn": "on",
+    "notifBlocked": "blocked",
+    "notifOff": "off",
+    "noOfficial": "no official day",
+    "timelockOn": "withdrawals locked {hours}h before",
+    "timelockOff": "withdrawals free",
+    "keeper": "goalkeeper {mode}",
+    "keeperFixed": "fixed",
+    "keeperRotation": "rotating",
+    "params": "{count} ratings · form {state}",
+    "formOn": "on",
+    "formOff": "off",
+    "clubAll": "everyone",
+    "clubOff": "off",
+    "clubAdmins": "admins only",
+    "admins": "{count} admins",
+    "returning": "{count, plural, one {# wants to come back} other {# want to come back}}",
+    "signInToManage": "Sign in to manage your settings.",
+    "goLogin": "Go to login",
+    "toHandle": "To handle",
+    "backAria": "Back to the settings overview"
+  },
+  "notifGuide": {
+    "status": {
+      "on": "Notifications ON on this device.",
+      "off": "Notifications not active on this device yet.",
+      "denied": "You blocked notifications: unblock them in your phone settings (see the last step below).",
+      "needs_install": "On iPhone, first add the app to the Home Screen and open it from there (steps below).",
+      "unsupported": "This browser doesn't support notifications: use Chrome on Android or Safari on iPhone.",
+      "not_configured": "Notifications are not active on the server yet: try again in a few days."
+    },
+    "android": [
+      "Open Club Soccer with Google Chrome.",
+      "Tap the three dots at the top right and choose \"Add to Home screen\" (or \"Install app\").",
+      "Open the app from the icon that appeared on the Home screen.",
+      "Come back here, tap \"Turn on notifications on this phone\" and then \"Allow\".",
+      "If you denied by mistake: phone Settings → Apps → Chrome (or Club Soccer) → Notifications → turn on."
+    ],
+    "ios": [
+      "You need an iPhone with iOS 16.4 or later (Settings → General → About).",
+      "Open Club Soccer with Safari (not with other apps or browsers).",
+      "Tap the Share button (the square with the arrow pointing up) and choose \"Add to Home Screen\".",
+      "Open the app ONLY from the icon on the Home Screen: on iPhone notifications only work this way.",
+      "From the app opened that way, come back here, tap \"Turn on notifications on this phone\" and then \"Allow\".",
+      "If you denied by mistake: Settings → Notifications → Club Soccer → Allow Notifications."
+    ],
+    "enableFailed": "Couldn't turn them on. Try again; on iPhone open the app from the Home Screen icon.",
+    "title": "Notifications",
+    "weTell": "We let you know when:",
+    "w1": "next week's sign-ups open;",
+    "w2": "you move from the waiting list to the starters;",
+    "w3": "your match is confirmed or the teams change;",
+    "w4": "someone takes the place of a player who withdrew;",
+    "w5": "the MVP vote opens, after the match.",
+    "free": "Notifications are free.",
+    "onDevice": "Notifications on this device",
+    "howTo": "How to turn them on on your phone"
+  },
+  "account": {
+    "access": "Sign-in",
+    "signedInAs": "You're signed in as <b>{name}</b>",
+    "signOutAllHint": "Signs you out of this and every other device where you're signed in.",
+    "confirmSignOutAll": "Sign out of all devices? You'll have to sign in again everywhere.",
+    "signOutAll": "Sign out of all devices",
+    "superCannot": "The super admin account can't be deleted from the app.",
+    "chooseReason": "Choose a reason: it helps us improve the app.",
+    "writeReason": "Briefly write the reason.",
+    "confirmDeactivate": "Confirm deactivating your account? You won't be able to sign in until an admin reactivates it.",
+    "confirmDelete": "Confirm PERMANENTLY deleting your account and all your data? This can't be undone.",
+    "deactivated": "Your account has been deactivated. To come back, ask an admin to reactivate it.",
+    "deleted": "Your account has been deleted. Thanks for playing with us!",
+    "notAvailable": "Not available right now: contact an admin.",
+    "failedLater": "Something went wrong. Try again shortly.",
+    "failed": "Something went wrong. Check your connection and try again.",
+    "removeTitle": "Deactivate or delete account",
+    "removeHint": "Pause your account or delete it with all its data.",
+    "removeOpen": "Deactivate or delete",
+    "whatToDo": "What do you want to do?",
+    "deactivateLabel": "Deactivate (I can come back)",
+    "deactivateHelp": "You won't be able to sign in, but your profile, ratings and stats stay saved: an admin can reactivate the account and you'll find everything.",
+    "deleteLabel": "Delete everything",
+    "deleteHelp": "Sign-in, profile, ratings and stats are deleted. Only your name stays in the matches played. This can't be undone.",
+    "bothCases": "In both cases your sign-ups and notifications are removed.",
+    "whyLeave": "Why are you leaving? (required)",
+    "reasons": [
+      "I don't play with the group any more",
+      "Too many notifications",
+      "The app is hard to use",
+      "Problems or errors in the app",
+      "Privacy: I don't want my data here",
+      "Other"
+    ],
+    "addSomething": "Anything to add? {required}",
+    "required": "(required)",
+    "optional": "(optional)",
+    "commentPh": "Your comment goes to the app's developer.",
+    "cancel": "Cancel",
+    "deactivateBtn": "Deactivate account",
+    "deleteBtn": "Delete permanently"
+  },
+  "feedback": {
+    "closeMessage": "Close message",
+    "cancel": "Cancel",
+    "confirm": "Confirm"
+  },
+  "adminSections": {
+    "checking": "Checking permissions",
+    "onlyAdmins": "Only admins can promote or demote administrators.",
+    "cannotDemoteMain": "The main administrator can't be demoted.",
+    "confirmReactivate": "Reactivate the account of \"{name}\"? They'll be able to sign in again and will find their profile, ratings and stats.",
+    "reactivateFailed": "Reactivation failed. Try again.",
+    "confirmDelete": "PERMANENTLY delete the account of \"{name}\"? Profile, ratings and stats will be deleted. This can't be undone.",
+    "deleteFailed": "Deletion failed. Try again."
+  },
+  "clubConfig": {
+    "fields": "Pitches",
+    "fieldsHelp": "Where the club plays. Each pitch can have its own cost; the default one is used when the match has none.",
+    "addField": "Pitch",
+    "noFields": "No pitches: add one.",
+    "default": "Default",
+    "perHead": "{amount} each",
+    "standardFor5": "5vs5: club standard cost ({amount})",
+    "openMaps": "Open in Google Maps",
+    "setDefault": "Set as default",
+    "setDefaultAria": "Set {name} as default",
+    "editField": "Edit pitch",
+    "editAria": "Edit {name}",
+    "deleteField": "Delete pitch",
+    "deleteAria": "Delete {name}",
+    "confirmDeleteField": "Delete the pitch \"{name}\"?",
+    "timeCost": "Standard time and cost",
+    "timeCostHelp": "The time of every match and the cost used when the pitch has none of its own. For a single match you change them in Teams.",
+    "time": "Time",
+    "standardCost": "Standard cost (€)",
+    "otherFormats": "Standard cost of the other formats (€)",
+    "standardCostAria": "Standard cost {label}",
+    "emptySame": "Empty = same share each as the 5vs5.",
+    "fivePerHead": "5vs5: {amount} each",
+    "saved": "Saved",
+    "save": "Save",
+    "timelock": "Withdrawal lock",
+    "timelockHelp": "When on, players can't withdraw close to the match. Admins can always change attendance.",
+    "lock": "Lock",
+    "hoursBefore": "{n} hours before"
+  },
+  "fieldModal": {
+    "editTitle": "Edit pitch",
+    "newTitle": "New pitch",
+    "subtitle": "Sports centre where you play",
+    "cancel": "Cancel",
+    "update": "Update pitch",
+    "save": "Save pitch",
+    "name": "Centre name",
+    "namePh": "e.g. Green Club Sports Centre",
+    "address": "Address",
+    "addressPh": "e.g. 12 Sport Street, London",
+    "phone": "Phone",
+    "phonePh": "e.g. +44 20 7946 0000",
+    "surface": "Surface",
+    "surfaces": [
+      "Artificial 4G outdoor",
+      "Artificial 5G natural infill",
+      "Indoor professional parquet",
+      "Indoor rubber / resin",
+      "Natural grass"
+    ],
+    "costPerFormat": "Cost per format (€, whole match)",
+    "costHelp": "Empty box = that format isn't played on this pitch (an empty 5vs5 uses the club standard cost).",
+    "perHead": "€{amount} each",
+    "standard": "standard",
+    "notAvailable": "not available",
+    "costAria": "Cost {label}",
+    "notes": "Notes",
+    "notesPh": "e.g. Pitch 3 covered, changing rooms, on-site parking."
+  },
+  "formSettings": {
+    "goals": "Goals",
+    "goalsHelpFixed": "{min}+ goals in a match +{pts} (defenders and goalkeeper from the first goal); penalty saved +{save}.",
+    "goalsHelp": "{min}+ goals in a match +{pts}; defenders from the first goal.",
+    "mvp": "MVP and votes",
+    "mvpHelp": "Match MVP +{mvp}; the others from {votes} votes up +{vote} per vote.",
+    "results": "Wins and losses",
+    "resultsHelp": "Win +{win}, draw 0, loss −{loss} for all 5 of the team.",
+    "keeper": "Goalkeeper",
+    "keeperHelp": "How the club plays in goal: it changes team balancing and the pitch.",
+    "rotation": "Rotating",
+    "fixed": "Fixed",
+    "fixedNote": "Fixed: two goalkeepers among the 10 go one per team; the goalkeeper gets the bonus from the first goal and saved penalties count.",
+    "rotationNote": "Rotating (e.g. every 5 minutes): no fixed goalkeeper, on the pitch the goal spot is \"GOAL ↻\" and teams are balanced without looking for a goalkeeper.",
+    "title": "Players' current form",
+    "on": "On: based on the last {n} matches, players go a little up or down in all ratings and in team balancing.",
+    "off": "Off: only the values written in each player's card count.",
+    "switchAria": "{label}: raises current form",
+    "legend": "Legend: how current form is calculated",
+    "pointsTitle": "Points of each match",
+    "p1": "<b>Match MVP</b> (chosen by the admin when closing): <b>+{mvp}</b>. So even a defender who doesn't score can go up.",
+    "p2": "<b>Players' MVP votes</b>, from {votes} votes up: <b>+{vote} per vote</b> (2 votes +0.2 · 3 votes +0.3 · 5 votes +0.5). For the MVP the +{mvp} applies instead of the votes.",
+    "p3": "<b>{min} or more goals</b> in the same match: <b>+{pts}</b>. Players whose role is <b>Defender</b> (in the player card) get it <b>from the first goal</b>, because they rarely score. With a <b>fixed goalkeeper</b> the same applies to the <b>Goalkeeper</b> role.",
+    "p4": "<b>Penalty saved</b> (fixed goalkeeper only, entered at the end of the match): <b>+{save}</b> each, at most <b>+{max}</b> per match. Counts with the Goals switch.",
+    "p5": "<b>Result</b>: win <b>+{win}</b>, draw <b>0</b>, loss <b>−{loss}</b>, for all 5 of the team. The margin doesn't count (5-4 or 10-2 is the same).",
+    "p6": "Points of the same match <b>add up</b>: a player who loses but is MVP gets −0.2 + 1 = <b>+0.8</b>.",
+    "p7": "Each item counts only if its switch above is on.",
+    "formTitle": "Current form",
+    "s1": "It's the <b>average of the points of the last {n} archived matches</b> (a match not played counts 0), from <b>−{max}</b> to <b>+{max}</b>.",
+    "s2": "Above zero the player is <b>🔥 in form</b> (values go up), below zero <b>❄️ out of form</b> (values go down a little).",
+    "s3": "It's added to (or taken from) <b>all ratings</b> and the <b>OVR</b>, always between 1 and 10, and it counts when teams are balanced.",
+    "s4": "It's <b>temporary</b>: if no points are made in the following matches, it goes back to 0 by itself. The values written in the player's card are never changed.",
+    "examplesTitle": "Examples (all switches on)",
+    "e1": "<b>Marco B.</b>: last match won (+0.2), MVP (+1) and 4 goals (+0.5) = 1.7; in the 2 matches before he lost (−0.2) and drew (0). Average: (1.7 − 0.2 + 0) ÷ 3 = <b>+0.5 🔥</b>. Shooting 7 becomes 7.5, OVR 7.2 becomes 7.7.",
+    "e2": "<b>Luca</b>: 3 losses in a row, no votes or goals. Average: (−0.2 × 3) ÷ 3 = <b>−0.2 ❄️</b>. Defending 8 becomes 7.8, OVR 6.5 becomes 6.3.",
+    "keeperTitle": "Rotating or fixed goalkeeper",
+    "k1": "<b>Rotating</b> (taking turns in goal): the Goalkeeper role doesn't count, no goalkeeper bonus, teams are balanced on skills only.",
+    "k2": "<b>Fixed</b>: two goalkeepers among the 10 go to different teams; goalkeeper goals from the first goal; saved penalties +{save}.",
+    "allOff": "With all switches off, current form is 0 for everyone."
+  },
+  "statParams": {
+    "badName": "Use a short name, without symbols (e.g. Technique, Vision, Goalkeeper).",
+    "exists": "\"{name}\" already exists.",
+    "confirmAdd": "Add the rating \"{name}\"? All players who don't have it will get the value {value}.",
+    "added": "\"{name}\" added: {count} players got the value {value}.",
+    "addedKept": "\"{name}\" added: all players already had a saved value, which was kept.",
+    "addFailed": "Adding failed. Check your connection and try again.",
+    "confirmRemove": "Remove \"{name}\"? It won't be shown or used for OVR and teams any more. Players' values stay saved: if you add it back, the previous ones return.",
+    "removed": "\"{name}\" removed.",
+    "removeFailed": "Removal failed. Try again.",
+    "title": "Player ratings",
+    "none": "No ratings",
+    "intro": "Each player's skills (card, radar and team balancing). They're added and removed only here.",
+    "whatTheyMeasure": "What they measure",
+    "howItWorks": "How it works",
+    "h1": "<b>Add:</b> every player gets the default value (usually 6). Then you change it from the player's card.",
+    "h2": "<b>The overall rating (OVR) doesn't change</b> when you add a rating: it's recalculated only when you edit and save that player. So teams stay balanced as before.",
+    "h3": "<b>Remove:</b> the rating disappears from the screens and the calculation, but the values stay saved. If you add it again with the same name, the previous values return.",
+    "noneAddOne": "No ratings: add at least one below.",
+    "defaultValue": "default {value}",
+    "removeAria": "Remove {name}",
+    "newNameAria": "Name of the new rating",
+    "newNamePh": "New rating (e.g. Technique)",
+    "initialValue": "Initial value",
+    "add": "Add"
+  },
+  "statsLegend": {
+    "title": "Ratings legend",
+    "subtitle": "What each of the 8 radar ratings measures",
+    "close": "Close",
+    "balanceTitle": "How they affect 5v5 balancing:",
+    "balanceText": "The algorithm computes the weighted average of these 8 values for each player, then compares the possible team combinations to minimise the total gap and balance both defence and attack."
+  },
+  "clubNotif": {
+    "modes": {
+      "off": {
+        "label": "Off",
+        "help": "No notifications are sent."
+      },
+      "admins": {
+        "label": "Admins only (test)",
+        "help": "Every notification goes ONLY to admins, marked [TEST]: you see what players would get without bothering them."
+      },
+      "all": {
+        "label": "All players",
+        "help": "Notifications go to the players concerned."
+      }
+    },
+    "confirmAll": "From now on notifications will go to all players concerned. Confirm?",
+    "modeFailed": "Couldn't save the mode. Try again.",
+    "testAdminsSent": "Test sent to {count} admin devices.",
+    "checkFailed": "Check failed. Try again.",
+    "checkFailedNet": "Check failed. Check your connection.",
+    "testSent": "Test notification sent to {sent}/{devices} of your devices.",
+    "noDevice": "No device of yours registered: first turn on notifications from your Profile.",
+    "notConfigured": "The server isn't configured for notifications yet (keys missing on Vercel).",
+    "sendFailed": "Sending failed. Try again.",
+    "sendFailedNet": "Sending failed. Check your connection.",
+    "title": "Notifications to players",
+    "recipients": "Recipients:",
+    "intro": "Sign-ups open (to all registered), you're now a starter (to whoever moves up from the waiting list), match confirmed, teams changed, who replaces whom (to the players of the match) and MVP vote open (to all registered). Admins also get an alert when a match is full (10, 14, 16 or 22 sign-ups depending on the format) and the suggestion to move to a bigger format when there are many sign-ups. Free (Firebase Cloud Messaging).",
+    "whoAria": "Who gets notifications",
+    "testMe": "Send a test notification to me",
+    "checking": "Checking…",
+    "checkAdmins": "Check the admins' phones",
+    "testAllAdmins": "Send a test to all admins",
+    "devices": "{count, plural, one {# phone} other {# devices}} ({platforms})",
+    "updated": "updated {when}",
+    "noPhone": "no phone: they need to turn on notifications from their Profile"
+  },
+  "admins": {
+    "confirmMake": "Make \"{name}\" an admin? They will manage attendance, teams, matches and club settings.",
+    "title": "Admins",
+    "intro": "Who runs the club. Every admin can add or remove admins; the super admin can't be removed.",
+    "noEmail": "no email",
+    "superAdmin": "Super admin",
+    "confirmRemove": "Remove admin rights from \"{name}\"? They will be a regular player.",
+    "remove": "Remove admin",
+    "pickAria": "Player to make admin",
+    "pick": "Choose a player…",
+    "make": "Make admin"
+  },
+  "deactivated": {
+    "wantsBack": "Wants to come back",
+    "noEmail": "No email",
+    "byPlayer": "Deactivated by the player",
+    "byAdmin": "Deactivated by an admin",
+    "on": " on {date}",
+    "record": "{w}W-{d}D-{l}L",
+    "reactivate": "Reactivate",
+    "deleteAria": "Permanently delete {name}",
+    "delete": "Delete permanently",
+    "none": "No deactivated accounts."
+  },
+  "deletionFeedback": {
+    "loadFailed": "Couldn't load the feedback.",
+    "title": "Closed account feedback",
+    "intro": "Only for you (super admin): the reasons left by those who deactivated or deleted their account.",
+    "close": "Close",
+    "open": "Open",
+    "loading": "Loading…",
+    "none": "No closed accounts so far.",
+    "deactivated": " · deactivated",
+    "deleted": " · deleted",
+    "byYou": " by you",
+    "reason": "Reason: {reason}"
+  },
+  "selfRating": {
+    "saved": "Self-assessment saved. After your first match an admin confirms it.",
+    "failed": "Saving failed, try again.",
+    "title": "How do you do on the pitch?",
+    "subtitle": "Rate each skill from 1 to 10. It's used to make balanced teams.",
+    "later": "Later",
+    "save": "Save",
+    "startOvr": "Your starting OVR",
+    "honest": "Be honest: after your first match an admin reviews the ratings based on what they saw on the pitch.",
+    "selfAssessment": "Self-assessment",
+    "valueText": "{name} {value} out of 10"
+  },
+  "requests": {
+    "alreadyDone": "Request already handled by another admin.",
+    "failed": "Something went wrong, try again.",
+    "reviewSaved": "Rating of {name} saved",
+    "saveFailed": "Saving failed, try again.",
+    "played": "{count, plural, one {First match played} other {# matches played}}",
+    "selfRated": "self-assessed",
+    "notSelfRated": "self-assessment not filled in",
+    "reviewHint": "Correct the ratings based on what you saw on the pitch. Under each rating is the value they gave themselves.",
+    "saveReview": "Save rating",
+    "signupHint": "They signed up without an invite link. Are they one of the guests already in the squad? If you link them, their matches, goals, MVPs, attendance and ratings move to the new account.",
+    "noGuests": "There are no guests without an account left.",
+    "guestMatches": "Guest · {count, plural, one {# match} other {# matches}}",
+    "similar": "· similar name",
+    "confirmLink": "Link {name} to the guest \"{guest}\"?\nMatches, goals, MVPs, attendance and ratings of {guest} move to {name}'s account; the guest profile is deleted.",
+    "linked": "{name} linked to {guest}",
+    "link": "Link",
+    "isNew": "{name} is a new player",
+    "newPlayer": "New player (don't link)",
+    "restoreHint": "They had closed their account and tried to come back. Now they see \"Welcome back\" and wait for your choice.",
+    "restored": "Profile of {name} restored",
+    "restore": "Restore profile and history",
+    "confirmReset": "Restart {name} from scratch?\nThe matches played stay in the history with their name, but no longer count for the new account: 0 matches and base ratings.",
+    "resetDone": "{name} starts from scratch",
+    "reset": "Start from scratch",
+    "formatAlready": "The match is already {label}: you can close the notice.",
+    "formatHint": "With {label} the first {n} sign-ups become starters and get notified. Teams already made must be regenerated.",
+    "formatApplied": "Match of {date}: {label}",
+    "switchTo": "Switch to {label}",
+    "dismissed": "Notice closed",
+    "stay": "Stay {label}",
+    "closeNotice": "Close notice",
+    "deletedInfo": "Account deleted: the data was erased, archived matches keep their name.",
+    "deactivatedInfo": "Account deactivated: data and history are kept. If they come back, you'll get a return request.",
+    "reason": "Reason: {reason}",
+    "markedRead": "Marked as read",
+    "markRead": "Mark as read",
+    "tNewSignup": "New sign-up: {name}",
+    "tRestore": "Return request: {name}",
+    "tFormat": "{count} sign-ups for {date}: switch to {label}?",
+    "theMatch": "the match",
+    "tDeleted": "{name} deleted their account",
+    "tDeactivated": "{name} deactivated their account",
+    "reviewsAria": "Ratings to review",
+    "reviewsTitle": "Ratings to review · after the first match",
+    "denied": "I can't read the requests: the updated Firestore rules don't seem to be published. Publish the firestore.rules file from the Firebase console (Firestore → Rules) and reopen this window.",
+    "notificationsAria": "Notifications"
   }
 }

@@ -8,18 +8,12 @@ import { db, isFirebaseConfigured } from '@/lib/firebase/config';
 import { useAuth } from '@/lib/context/AuthContext';
 import { callNotifyApi } from '@/lib/services/pushService';
 import { Bell, Loader2, Send, ChevronDown } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useLocaleSetting } from '@/i18n/I18nProvider';
 
 type Mode = 'off' | 'admins' | 'all';
 
-const MODES: { value: Mode; label: string; help: string }[] = [
-  { value: 'off', label: 'Spente', help: 'Non parte nessuna notifica.' },
-  {
-    value: 'admins',
-    label: 'Solo admin (prova)',
-    help: 'Ogni notifica arriva SOLO agli amministratori, con la scritta [PROVA]: vedete cosa riceverebbero i giocatori senza disturbarli.',
-  },
-  { value: 'all', label: 'Tutti i giocatori', help: 'Le notifiche arrivano ai giocatori interessati.' },
-];
+const MODES: Mode[] = ['off', 'admins', 'all'];
 
 /** Impostazioni → Notifiche del club: who receives notifications + test notification to yourself. */
 export function NotificationSettingsCard({ defaultOpen = false }: { defaultOpen?: boolean } = {}) {
@@ -29,6 +23,8 @@ export function NotificationSettingsCard({ defaultOpen = false }: { defaultOpen?
   const [testing, setTesting] = useState(false);
   const [message, setMessage] = useState('');
   const [open, setOpen] = useState(defaultOpen);
+  const t = useTranslations('clubNotif');
+  const { locale } = useLocaleSetting();
 
   useEffect(() => {
     if (!isFirebaseConfigured) return;
@@ -44,7 +40,7 @@ export function NotificationSettingsCard({ defaultOpen = false }: { defaultOpen?
 
   const handleMode = async (next: Mode) => {
     if (next === mode) return;
-    if (next === 'all' && !(await askConfirm('Da ora le notifiche arriveranno a tutti i giocatori interessati. Confermi?'))) return;
+    if (next === 'all' && !(await askConfirm(t('confirmAll')))) return;
     setSaving(true);
     try {
       await setDoc(
@@ -54,7 +50,7 @@ export function NotificationSettingsCard({ defaultOpen = false }: { defaultOpen?
       );
     } catch (err) {
       console.warn('[Notifiche] salvataggio modalità:', err);
-      setMessage('Impossibile salvare la modalità. Riprova.');
+      setMessage(t('modeFailed'));
     } finally {
       setSaving(false);
     }
@@ -72,12 +68,12 @@ export function NotificationSettingsCard({ defaultOpen = false }: { defaultOpen?
       const res = await callNotifyApi({ type });
       if (res.ok) {
         setDevices((res.devices as AdminDevice[]) || []);
-        if (type === 'test_admins') setMessage(`Prova inviata a ${res.sent} dispositivi degli admin.`);
+        if (type === 'test_admins') setMessage(t('testAdminsSent', { count: Number(res.sent) || 0 }));
       } else {
-        setMessage('Controllo non riuscito. Riprova.');
+        setMessage(t('checkFailed'));
       }
     } catch {
-      setMessage('Controllo non riuscito. Controlla la connessione.');
+      setMessage(t('checkFailedNet'));
     } finally {
       setLoadingDevices(false);
     }
@@ -91,16 +87,16 @@ export function NotificationSettingsCard({ defaultOpen = false }: { defaultOpen?
     try {
       const res = await callNotifyApi({ type: 'test' });
       if (res.ok && Number(res.devices) > 0) {
-        setMessage(`Notifica di prova inviata a ${res.sent}/${res.devices} tuoi dispositivi.`);
+        setMessage(t('testSent', { sent: Number(res.sent) || 0, devices: Number(res.devices) || 0 }));
       } else if (res.ok) {
-        setMessage('Nessun tuo dispositivo registrato: attiva prima le notifiche dal tuo Profilo.');
+        setMessage(t('noDevice'));
       } else if (res.error === 'not_configured') {
-        setMessage('Il server non è ancora configurato per le notifiche (mancano le chiavi su Vercel).');
+        setMessage(t('notConfigured'));
       } else {
-        setMessage('Invio non riuscito. Riprova.');
+        setMessage(t('sendFailed'));
       }
     } catch {
-      setMessage('Invio non riuscito. Controlla la connessione.');
+      setMessage(t('sendFailedNet'));
     } finally {
       setTesting(false);
     }
@@ -117,10 +113,10 @@ export function NotificationSettingsCard({ defaultOpen = false }: { defaultOpen?
         <div className="min-w-0">
           <h3 className="text-sm font-bold text-primary flex items-center gap-2">
             <Bell className="h-4 w-4 text-accent-text flex-shrink-0" />
-            Notifiche ai giocatori
+            {t('title')}
           </h3>
           <p className="text-xs text-secondary mt-0.5">
-            Destinatari: <strong className={mode === 'all' ? 'text-accent-text' : mode === 'admins' ? 'text-violet-700 dark:text-violet-300' : 'text-secondary'}>{MODES.find((m) => m.value === mode)?.label}</strong>
+            {t('recipients')} <strong className={mode === 'all' ? 'text-accent-text' : mode === 'admins' ? 'text-violet-700 dark:text-violet-300' : 'text-secondary'}>{t(`modes.${mode}.label`)}</strong>
           </p>
         </div>
         <ChevronDown className={`h-5 w-5 text-secondary flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
@@ -129,25 +125,24 @@ export function NotificationSettingsCard({ defaultOpen = false }: { defaultOpen?
       {open && (
       <div className="space-y-4 border-t border-line pt-4">
       <p className="text-xs text-secondary">
-        Iscrizioni aperte (a tutti i registrati), sei entrato tra i titolari (a chi sale dalla lista d&apos;attesa), partita confermata, squadre cambiate, chi subentra a chi (ai 10
-        della partita) e voto MVP aperto (a tutti i registrati). Agli admin arriva anche l&apos;avviso quando una partita è al completo (10, 14, 16 o 22 iscritti secondo il formato) e la proposta di passare a un formato più grande quando gli iscritti sono tanti. Gratuite (Firebase Cloud Messaging).
+        {t('intro')}
       </p>
 
-      <div className="space-y-2" role="radiogroup" aria-label="Chi riceve le notifiche">
+      <div className="space-y-2" role="radiogroup" aria-label={t('whoAria')}>
         {MODES.map((m) => (
           <button
-            key={m.value}
+            key={m}
             type="button"
             role="radio"
-            aria-checked={mode === m.value}
-            onClick={() => handleMode(m.value)}
+            aria-checked={mode === m}
+            onClick={() => handleMode(m)}
             disabled={saving}
             className={`w-full text-left p-3 rounded-2xl border transition-all ${
-              mode === m.value ? 'border-accent bg-accent/10' : 'border-line bg-app hover:border-line-strong'
+              mode === m ? 'border-accent bg-accent/10' : 'border-line bg-app hover:border-line-strong'
             }`}
           >
-            <span className="block text-sm font-bold text-primary">{m.label}</span>
-            <span className="block text-xs text-secondary mt-0.5">{m.help}</span>
+            <span className="block text-sm font-bold text-primary">{t(`modes.${m}.label`)}</span>
+            <span className="block text-xs text-secondary mt-0.5">{t(`modes.${m}.help`)}</span>
           </button>
         ))}
       </div>
@@ -159,7 +154,7 @@ export function NotificationSettingsCard({ defaultOpen = false }: { defaultOpen?
         className="flex items-center gap-2 px-4 py-2.5 bg-card-hover hover:bg-line-strong text-primary font-bold rounded-xl text-xs border border-line-strong disabled:opacity-60"
       >
         {testing ? <Loader2 className="h-4 w-4 animate-spin text-accent-text" /> : <Send className="h-4 w-4 text-accent-text" />}
-        Manda una notifica di prova a me
+        {t('testMe')}
       </button>
       {message && <p className="text-xs text-secondary">{message}</p>}
 
@@ -172,7 +167,7 @@ export function NotificationSettingsCard({ defaultOpen = false }: { defaultOpen?
             disabled={loadingDevices}
             className="px-4 py-2.5 bg-card-hover hover:bg-line-strong text-primary font-bold rounded-xl text-xs border border-line-strong disabled:opacity-60"
           >
-            {loadingDevices ? 'Controllo…' : 'Controlla i telefoni degli admin'}
+            {loadingDevices ? t('checking') : t('checkAdmins')}
           </button>
           <button
             type="button"
@@ -180,7 +175,7 @@ export function NotificationSettingsCard({ defaultOpen = false }: { defaultOpen?
             disabled={loadingDevices}
             className="px-4 py-2.5 bg-card-hover hover:bg-line-strong text-primary font-bold rounded-xl text-xs border border-line-strong disabled:opacity-60"
           >
-            Manda una prova a tutti gli admin
+            {t('testAllAdmins')}
           </button>
         </div>
         {devices && (
@@ -190,15 +185,17 @@ export function NotificationSettingsCard({ defaultOpen = false }: { defaultOpen?
                 <span className="font-bold text-primary truncate">{d.name}</span>
                 {d.count > 0 ? (
                   <span className="text-right text-accent-text">
-                    {d.count} {d.count === 1 ? 'telefono' : 'dispositivi'} ({d.platforms.map(platformLabel).join(', ')})
+                    {t('devices', { count: d.count, platforms: d.platforms.map(platformLabel).join(', ') })}
                     {d.last && (
                       <span className="block text-muted">
-                        aggiornato {new Date(d.last).toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                        {t('updated', {
+                          when: new Date(d.last).toLocaleString(locale === 'en' ? 'en-GB' : 'it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
+                        })}
                       </span>
                     )}
                   </span>
                 ) : (
-                  <span className="text-right text-warning">nessun telefono: deve attivare le notifiche dal Profilo</span>
+                  <span className="text-right text-warning">{t('noPhone')}</span>
                 )}
               </li>
             ))}

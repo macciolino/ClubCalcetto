@@ -19,30 +19,30 @@ import { useStatCategories } from '@/lib/hooks/useStatCategories';
 import { useFormSettings } from '@/lib/hooks/useForms';
 import { Bell, UserCog, Trophy, MapPin, Ruler, BarChart3, Megaphone, ShieldCheck, ChevronRight, ArrowLeft, ArrowRight } from 'lucide-react';
 import { btn } from '@/components/ui/buttons';
+import { useTranslations } from 'next-intl';
+import { useLocaleSetting } from '@/i18n/I18nProvider';
 
 type SectionId = 'notifiche' | 'account' | AdminSection;
 
 interface SectionDef {
   id: SectionId;
-  label: string;
-  description: string;
   icon: React.ElementType;
   access: 'all' | 'admin' | 'super';
-  group: 'Tuo account' | 'Gestione partita' | 'Club' | 'Accessi';
+  group: 'account' | 'match' | 'club' | 'access';
 }
 
-/** Sections of Impostazioni, in menu order, grouped. */
+/** Sections of Impostazioni, in menu order, grouped (names: settings.sections.<id>, settings.groups.<group>). */
 const SECTIONS: SectionDef[] = [
-  { id: 'notifiche', label: 'Notifiche', description: 'Le notifiche su questo dispositivo', icon: Bell, access: 'all', group: 'Tuo account' },
-  { id: 'account', label: 'Account', description: 'Esci da tutti i dispositivi, disattiva o elimina l’account', icon: UserCog, access: 'all', group: 'Tuo account' },
-  { id: 'partita', label: 'Partita della settimana', description: 'Un giorno alla volta: organizzazione, cassa e risultato', icon: Trophy, access: 'admin', group: 'Gestione partita' },
-  { id: 'campi', label: 'Campi e costi', description: 'Campi, costo di ogni campo, orario e costo standard', icon: MapPin, access: 'admin', group: 'Club' },
-  { id: 'regole', label: 'Regole di gioco', description: 'Blocco ritiri e portiere', icon: Ruler, access: 'admin', group: 'Club' },
-  { id: 'parametri', label: 'Parametri e forma', description: 'Parametri dell’ottagono e stato forma', icon: BarChart3, access: 'admin', group: 'Club' },
-  { id: 'notifiche-club', label: 'Notifiche del club', description: 'Chi riceve le notifiche, prova, telefoni degli admin', icon: Megaphone, access: 'admin', group: 'Club' },
-  { id: 'accessi', label: 'Admin e account', description: 'Chi è admin, account disattivati, motivi di chi lascia', icon: ShieldCheck, access: 'admin', group: 'Accessi' },
+  { id: 'notifiche', icon: Bell, access: 'all', group: 'account' },
+  { id: 'account', icon: UserCog, access: 'all', group: 'account' },
+  { id: 'partita', icon: Trophy, access: 'admin', group: 'match' },
+  { id: 'campi', icon: MapPin, access: 'admin', group: 'club' },
+  { id: 'regole', icon: Ruler, access: 'admin', group: 'club' },
+  { id: 'parametri', icon: BarChart3, access: 'admin', group: 'club' },
+  { id: 'notifiche-club', icon: Megaphone, access: 'admin', group: 'club' },
+  { id: 'accessi', icon: ShieldCheck, access: 'admin', group: 'access' },
 ];
-const GROUPS: SectionDef['group'][] = ['Tuo account', 'Gestione partita', 'Club', 'Accessi'];
+const GROUPS: SectionDef['group'][] = ['account', 'match', 'club', 'access'];
 
 /** Live values shown on the right of each row of the overview ("how the club is set up" at a glance). */
 function useSummary(
@@ -60,6 +60,8 @@ function useSummary(
   const [permission, setPermission] = useState<string>('');
   const categories = useStatCategories();
   const form = useFormSettings();
+  const t = useTranslations('settings');
+  const { locale } = useLocaleSetting();
 
   useEffect(() => {
     try {
@@ -88,24 +90,22 @@ function useSummary(
   const short = (d?: string) => {
     if (!d) return '';
     const [y, m, dd] = d.split('-').map(Number);
-    return new Date(y, m - 1, dd).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '');
+    return new Date(y, m - 1, dd).toLocaleDateString(locale === 'en' ? 'en-GB' : 'it-IT', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '');
   };
   const def = fields.find((f) => f.id === settings.default_field_id) || fields[0];
   const anyForm = form.goals || form.mvp || form.results;
   const values: Partial<Record<SectionId, string>> = {
-    notifiche: permission === 'granted' ? 'attive' : permission === 'denied' ? 'bloccate' : permission === 'unsupported' ? '' : 'spente',
+    notifiche: permission === 'granted' ? t('notifOn') : permission === 'denied' ? t('notifBlocked') : permission === 'unsupported' ? '' : t('notifOff'),
     account: email || '',
-    partita: officialDate ? short(officialDate) : 'nessun giorno ufficiale',
+    partita: officialDate ? short(officialDate) : t('noOfficial'),
     campi: def ? `${def.name} · €${Number(def.cost || settings.standard_total_cost || 80)}` : '',
-    regole: `${settings.timelock_enabled ? `ritiri bloccati ${settings.timelock_hours_before || 4}h prima` : 'ritiri liberi'} · portiere ${
-      form.fixedKeeper ? 'fisso' : 'a rotazione'
-    }`,
-    parametri: `${categories.length} parametri · forma ${anyForm ? 'attiva' : 'spenta'}`,
-    'notifiche-club': notifyMode === 'all' ? 'a tutti' : notifyMode === 'off' ? 'spente' : notifyMode ? 'solo admin' : '',
+    regole: `${settings.timelock_enabled ? t('timelockOn', { hours: settings.timelock_hours_before || 4 }) : t('timelockOff')} · ${t('keeper', {
+      mode: form.fixedKeeper ? t('keeperFixed') : t('keeperRotation'),
+    })}`,
+    parametri: t('params', { count: categories.length, state: anyForm ? t('formOn') : t('formOff') }),
+    'notifiche-club': notifyMode === 'all' ? t('clubAll') : notifyMode === 'off' ? t('clubOff') : notifyMode ? t('clubAdmins') : '',
     accessi:
-      admins === null
-        ? ''
-        : `${admins} admin${returning ? ` · ${returning} ${returning === 1 ? 'vuole' : 'vogliono'} rientrare` : ''}`,
+      admins === null ? '' : `${t('admins', { count: admins })}${returning ? ` · ${t('returning', { count: returning })}` : ''}`,
   };
   return { values, alerts: { accessi: returning } };
 }
@@ -120,14 +120,16 @@ function SettingsContent() {
   const { values: summary, alerts } = useSummary(admin, Boolean(isSuperAdmin), user?.email);
 
   const raw = params.get('sezione') || '';
+  const t = useTranslations('settings');
+  const label = (s: SectionDef) => t(`sections.${s.id}.label`);
 
   if (isLoading) return <PageSkeleton />;
   if (!user || !profile) {
     return (
       <div className="min-h-[50vh] flex flex-col items-center justify-center text-center gap-3">
-        <p className="text-sm text-secondary">Accedi per gestire le tue impostazioni.</p>
+        <p className="text-sm text-secondary">{t('signInToManage')}</p>
         <Link href="/login" className={btn.primary}>
-          Vai al login <ArrowRight className="h-4 w-4" />
+          {t('goLogin')} <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
     );
@@ -155,11 +157,11 @@ function SettingsContent() {
         <span className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-card-hover text-accent-text">
           <Icon className="h-4 w-4" />
           {Boolean(alerts[s.id]) && (
-            <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-amber-400 ring-2 ring-card" aria-label="Da gestire" />
+            <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-amber-400 ring-2 ring-card" aria-label={t('toHandle')} />
           )}
         </span>
         <span className="flex-1 min-w-0">
-          <span className="block font-medium truncate">{s.label}</span>
+          <span className="block font-medium truncate">{label(s)}</span>
           {withValue && summary[s.id] && <span className="sm:hidden block text-xs text-secondary truncate">{summary[s.id]}</span>}
         </span>
         {withValue && summary[s.id] && (
@@ -173,14 +175,14 @@ function SettingsContent() {
   const groupList = (withValue: boolean) => (
     <div className="space-y-5">
       {groups.map((g) => (
-        <section key={g.title} className="space-y-1.5" aria-label={g.title}>
-          <h2 className="px-1 text-xs font-semibold text-muted">{g.title}</h2>
+        <section key={g.title} className="space-y-1.5" aria-label={t(`groups.${g.title}`)}>
+          <h2 className="px-1 text-xs font-semibold text-muted">{t(`groups.${g.title}`)}</h2>
           <div className="bg-card rounded-2xl overflow-hidden divide-y divide-line">
             {g.items.map((s) => (
               <div key={s.id}>{row(s, withValue)}</div>
             ))}
             {/* Lingua e tema: si scelgono in una finestra, senza aprire una pagina */}
-            {g.title === 'Tuo account' && (
+            {g.title === 'account' && (
               <>
                 <LanguageSetting />
                 <ThemeSetting />
@@ -195,7 +197,7 @@ function SettingsContent() {
   return (
     <div className="space-y-6 pb-16">
       <header className="min-h-[2.5rem] flex items-center">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-primary">Impostazioni</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-primary">{t('title')}</h1>
       </header>
 
       {!requested ? (
@@ -210,15 +212,15 @@ function SettingsContent() {
             <Link
               href="/settings"
               className="inline-flex items-center gap-1 text-sm font-medium text-accent-text hover:text-accent-text"
-              aria-label="Torna alla schermata generale delle impostazioni"
+              aria-label={t('backAria')}
             >
-              <ArrowLeft className="h-4 w-4" /> Impostazioni
+              <ArrowLeft className="h-4 w-4" /> {t('title')}
             </Link>
             <div>
               <h2 id="settings-section-title" className="text-xl font-semibold text-primary">
-                {current.label}
+                {label(current)}
               </h2>
-              <p className="text-sm text-secondary mt-0.5">{current.description}</p>
+              <p className="text-sm text-secondary mt-0.5">{t(`sections.${current.id}.description`)}</p>
             </div>
 
             {current.id === 'notifiche' ? (

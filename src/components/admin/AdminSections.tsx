@@ -50,6 +50,7 @@ import {
   subscribeSportFields 
 } from '@/lib/services/fieldService';
 import { getCalendarDays, toDateString } from '@/lib/utils/dateUtils';
+import { useTranslations } from 'next-intl';
 
 /** Admin sections shown in Impostazioni (each one was a part of the old /admin page). */
 export type AdminSection = 'partita' | 'campi' | 'regole' | 'parametri' | 'notifiche-club' | 'accessi';
@@ -57,6 +58,7 @@ export type AdminSection = 'partita' | 'campi' | 'regole' | 'parametri' | 'notif
 export function AdminSections({ section }: { section: AdminSection }) {
   const { user, profile, isAdmin, isSuperAdmin, isLoading } = useAuth();
   const [mounted, setMounted] = useState(false);
+  const t = useTranslations('adminSections');
 
   // Stato Dati Globali
   const [upcomingDays] = useState(() => getCalendarDays());
@@ -177,7 +179,7 @@ export function AdminSections({ section }: { section: AdminSection }) {
 
   if (!isStrictAdmin) {
     return (
-      <div className="space-y-4" role="status" aria-label="Verifica permessi in corso">
+      <div className="space-y-4" role="status" aria-label={t('checking')}>
         <Skeleton className="h-32 w-full rounded-2xl" />
         <Skeleton className="h-24 w-full rounded-2xl" />
       </div>
@@ -213,12 +215,12 @@ export function AdminSections({ section }: { section: AdminSection }) {
   // Handlers Tab 3: Anagrafica & Ruoli
   const handleTogglePlayerRole = async (targetPlayer: Profile) => {
     if (!isSuperAdmin && !isAdmin) {
-      notify('Solo gli admin possono promuovere o retrocedere gli amministratori.');
+      notify(t('onlyAdmins'));
       return;
     }
     const isMarco = targetPlayer.email?.toLowerCase().includes('macciolino84');
     if (isMarco && targetPlayer.role === 'admin') {
-      notify('Non è possibile retrocedere l\'amministratore principale.');
+      notify(t('cannotDemoteMain'));
       return;
     }
 
@@ -235,17 +237,17 @@ export function AdminSections({ section }: { section: AdminSection }) {
   };
 
   const handleReactivatePlayer = async (player: Profile) => {
-    if (!(await askConfirm(`Riattivare l'account di "${player.full_name}"? Potrà di nuovo entrare e ritroverà scheda, parametri e statistiche.`))) return;
+    if (!(await askConfirm(t('confirmReactivate', { name: player.full_name })))) return;
     const res = await manageAccountAsSuperAdmin(player.id, 'reactivate');
     if (res.ok) setDeactivatedPlayers((prev) => prev.filter((p) => p.id !== player.id));
-    else notify('Riattivazione non riuscita. Riprova.');
+    else notify(t('reactivateFailed'));
   };
 
   const handleDeleteDeactivatedPlayer = async (player: Profile) => {
-    if (!(await askConfirm(`Eliminare DEFINITIVAMENTE l'account di "${player.full_name}"? Scheda, parametri e statistiche verranno cancellati. Non si può annullare.`))) return;
+    if (!(await askConfirm(t('confirmDelete', { name: player.full_name })))) return;
     const res = await manageAccountAsSuperAdmin(player.id, 'delete');
     if (res.ok) setDeactivatedPlayers((prev) => prev.filter((p) => p.id !== player.id));
-    else notify('Eliminazione non riuscita. Riprova.');
+    else notify(t('deleteFailed'));
   };
 
   // Handlers Tab 4: Configurazione Club & Campi
