@@ -21,7 +21,12 @@
   "language": {
     "label": "Lingua",
     "it": "Italiano",
-    "en": "English"
+    "en": "English",
+    "title": "Lingua",
+    "subtitle": "La lingua dell’app",
+    "itHint": "Testi dell’app in italiano",
+    "enHint": "Testi dell’app in inglese",
+    "changed": "Lingua: {name}"
   },
   "theme": {
     "label": "Tema",
@@ -34,7 +39,8 @@
     "lightHint": "Sfondo chiaro, ideale all’aperto e con tanta luce",
     "darkHint": "Sfondo scuro, riposante e il look classico di Club Soccer",
     "active": "Attivo",
-    "savedOnDevice": "La scelta vale su questo dispositivo.",
-    "changed": "Tema: {name}"
+    "savedOnDevice": "La scelta si salva sul tuo profilo e vale su tutti i tuoi dispositivi.",
+    "changed": "Tema: {name}",
+    "notSaved": "Salvata solo su questo dispositivo: riprova più tardi per salvarla sul profilo."
   }
 }

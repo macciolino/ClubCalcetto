@@ -81,8 +81,11 @@ service cloud.firestore {
         || (isAdmin() && (roleUntouchedOrLegacyFix() || adminRoleChange(profileId)))
         || (signedIn()
             && profileId == request.auth.uid
-            && onlyChanges(['full_name', 'avatar_url', 'position', 'updated_at'])
-            && (!('avatar_url' in changedKeys()) || isValidAvatar(request.resource.data.avatar_url)));
+            && onlyChanges(['full_name', 'avatar_url', 'position', 'locale', 'theme', 'updated_at'])
+            && (!('avatar_url' in changedKeys()) || isValidAvatar(request.resource.data.avatar_url))
+            // Preferenze personali: lingua dell'app e tema
+            && (!('locale' in changedKeys()) || request.resource.data.locale in ['it', 'en'])
+            && (!('theme' in changedKeys()) || request.resource.data.theme in ['system', 'light', 'dark']));
 
       // The super admin profile can never be deleted. Admins delete only GUESTS (players without an account);
       // registered accounts are deleted only by the super admin, from the app via the server (login + data).

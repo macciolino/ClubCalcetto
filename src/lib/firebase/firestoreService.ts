@@ -126,6 +126,15 @@ export function subscribeMatchFormats(callback: (days: DayFormats) => void): Uns
   }
 }
 
+/**
+ * The signed-in person's preferences (language, theme) on their own profile: they follow them on every device.
+ * Throws if Firestore refuses (e.g. rules not published yet): the caller keeps the choice on the device and tells the person.
+ */
+export async function savePreferences(profileId: string, prefs: Partial<Pick<Profile, 'locale' | 'theme'>>): Promise<void> {
+  if (!isFirebaseConfigured || !profileId) return;
+  await updateDoc(doc(db, 'profiles', profileId), { ...prefs, updated_at: new Date().toISOString() });
+}
+
 /** Admin: format (and formation) of a match day. */
 export async function saveDayFormat(date: string, format: MatchFormat, formation: string, by: string): Promise<void> {
   if (!isFirebaseConfigured) return;

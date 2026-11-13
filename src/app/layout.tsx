@@ -8,6 +8,7 @@ import { Navbar } from '@/components/Navbar';
 import { FeedbackHost } from '@/components/ui/Feedback';
 import { I18nProvider } from '@/i18n/I18nProvider';
 import { ThemeProvider } from '@/components/theme/ThemeProvider';
+import { PreferencesSync } from '@/components/settings/PreferencesSync';
 
 import { SplashScreen, SPLASH_GUARD } from '@/components/SplashScreen';
 export const metadata: Metadata = {
@@ -49,6 +50,8 @@ export default function RootLayout({
         <ThemeProvider>
           <I18nProvider>
             <AuthProvider>
+              {/* Lingua e tema salvati sul profilo: applicati quando si accede */}
+              <PreferencesSync />
               <Navbar />
               <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-6">
                 {children}

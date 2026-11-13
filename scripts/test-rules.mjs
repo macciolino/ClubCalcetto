@@ -295,6 +295,15 @@ console.log('\nCassa: ogni tocco scrive solo il giocatore toccato (merge sulla m
   await expectDenied('player B writes the cassa', () => setDoc(doc(playerB.db, 'match_payments', '2026-01-01'), { payments: { b: false } }, { merge: true }));
 }
 
+console.log('\nPreferenze personali (lingua e tema)');
+await expectAllowed('player A saves own language', () => updateDoc(doc(playerA.db, 'profiles', playerA.uid), { locale: 'en', updated_at: 'x' }));
+await expectAllowed('player A saves own theme', () => updateDoc(doc(playerA.db, 'profiles', playerA.uid), { theme: 'dark', updated_at: 'x' }));
+await expectDenied('player A saves an unknown language', () => updateDoc(doc(playerA.db, 'profiles', playerA.uid), { locale: 'fr' }));
+await expectDenied('player A saves an unknown theme', () => updateDoc(doc(playerA.db, 'profiles', playerA.uid), { theme: 'blue' }));
+await expectDenied('player A changes player B language', () => updateDoc(doc(playerA.db, 'profiles', playerB.uid), { locale: 'en' }));
+await expectDenied('player A sneaks a role change with the language', () =>
+  updateDoc(doc(playerA.db, 'profiles', playerA.uid), { locale: 'it', role: 'admin' }));
+
 console.log('\nImpostor (email/password account using the super admin address, NOT verified)');
 await expectDenied('writes settings', () => setDoc(doc(impostor.db, 'settings', 'official_match'), { date: 'x' }));
 await expectDenied('edits p-1', () => setDoc(doc(impostor.db, 'profiles', 'p-1'), { full_name: 'x' }, { merge: true }));

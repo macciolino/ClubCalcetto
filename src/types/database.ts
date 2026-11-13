@@ -131,6 +131,9 @@ export interface Profile {
   deactivated_at?: string;
   /** Logout from every device: sessions started before this time (ms) are closed */
   sessions_revoked_at?: number;
+  /** Personal preferences saved from Impostazioni (with name, photo and role, the only fields a player can change) */
+  locale?: 'it' | 'en';
+  theme?: 'system' | 'light' | 'dark';
   deactivated_by?: 'self' | 'super_admin';
   /** Closed account that tried to come back: waiting for an admin (restore or start from zero). Server only. */
   restore_requested_at?: string;

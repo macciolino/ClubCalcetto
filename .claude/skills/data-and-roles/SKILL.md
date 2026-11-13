@@ -147,3 +147,9 @@ Production data is REAL: never rewrite stats, no paid services, never print secr
 - Who is listed (TabOverviewMatch): archived match → its archived teams (frozen); teams saved in Squadre → their players
   (before the date with substitutions, after it as saved); otherwise the starters of the day. Quota = cost / players in the
   teams, or / the format's players when the list is the starters.
+
+## Personal preferences (2026-11-13)
+- `profiles/{id}.locale` ('it' | 'en') and `.theme` ('system' | 'light' | 'dark'): the player may change them on their own
+  profile (rules: added to the self-update whitelist with value checks; tested in `scripts/test-rules.mjs`).
+- Saved by `savePreferences()` from Impostazioni → Lingua / Tema (`components/settings/*`), applied on sign-in on any device
+  by `PreferencesSync` (layout). The device keeps its own copy (localStorage `cc_locale`, `cc_theme`) for the first paint.

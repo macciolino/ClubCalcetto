@@ -9,6 +9,7 @@ import { useAuth } from '@/lib/context/AuthContext';
 import { NotificationGuide } from '@/components/NotificationGuide';
 import { AccountSettings } from '@/components/AccountSettings';
 import { ThemeSetting } from '@/components/settings/ThemeSetting';
+import { LanguageSetting } from '@/components/settings/LanguageSetting';
 import { AdminSection, AdminSections } from '@/components/admin/AdminSections';
 import { AppSettings, Profile, SportField } from '@/types/database';
 import { subscribeAppSettings, subscribeOfficialMatchDate, subscribeProfiles } from '@/lib/firebase/firestoreService';
@@ -178,8 +179,13 @@ function SettingsContent() {
             {g.items.map((s) => (
               <div key={s.id}>{row(s, withValue)}</div>
             ))}
-            {/* Tema: si sceglie in una finestra, senza aprire una pagina */}
-            {g.title === 'Tuo account' && <ThemeSetting />}
+            {/* Lingua e tema: si scelgono in una finestra, senza aprire una pagina */}
+            {g.title === 'Tuo account' && (
+              <>
+                <LanguageSetting />
+                <ThemeSetting />
+              </>
+            )}
           </div>
         </section>
       ))}

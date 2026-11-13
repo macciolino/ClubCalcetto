@@ -21,7 +21,12 @@
   "language": {
     "label": "Language",
     "it": "Italiano",
-    "en": "English"
+    "en": "English",
+    "title": "Language",
+    "subtitle": "The language of the app",
+    "itHint": "App texts in Italian",
+    "enHint": "App texts in English",
+    "changed": "Language: {name}"
   },
   "theme": {
     "label": "Theme",
@@ -34,7 +39,8 @@
     "lightHint": "Light background, best outdoors and in bright light",
     "darkHint": "Dark background, easy on the eyes and the classic Club Soccer look",
     "active": "Active",
-    "savedOnDevice": "This choice applies to this device.",
-    "changed": "Theme: {name}"
+    "savedOnDevice": "Your choice is saved on your profile and applies to all your devices.",
+    "changed": "Theme: {name}",
+    "notSaved": "Saved on this device only: try again later to save it on your profile."
   }
 }
