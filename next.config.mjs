@@ -8,6 +8,7 @@ const LEGACY_ROUTES = [
   ['squadre', 'teams'],
   ['impostazioni', 'settings'],
   ['storico', 'history'],
+  ['profilo', 'profile'],
 ];
 
 /** @type {import('next').NextConfig} */

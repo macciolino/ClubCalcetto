@@ -30,7 +30,7 @@ Checks: `npx tsc --noEmit -p .`, `npx next build`, `npm run test:rules` (Firesto
 | `/players` (cont.) | Players | card view (`PlayerCardFifa`, tabs radar / Statistiche) or table view (players see only name, role column and OVR; admins also V-P-S and parameters); admin edit via `PlayerModal` |
 | `/teams` | Teams. Top to bottom: summary line (date · time · field · €/person), date pills (calendar days + "Altra data"), status bar with ONE primary admin button (Genera → Conferma partita; Ribilancia secondary), admin-only collapsible "Modifica dettagli partita" (time/field/cost), tab Campo / "Modifica manuale" (`TeamSwapEditor`), `VirtualPitch` + share row (WhatsApp, Scarica immagine, Analisi AI), "Equilibrio" card (Bianchi/Neri bars + lists), `MvpVoteCard`, AI report (if asked), empty state with Genera (admin) or link to Presenze |
 | `/history` | Storico (minimal): title + season pill select + admin "⋯" menu (Cancella tutto lo storico); number strip (partite · gol · giocatori) + Classifica/Partite pill. Classifica: < lg rows (index, top 3 bold, name, partite + V P S, value of the "Ordina per" select) ; ≥ lg borderless table with sortable headers, sorted column highlighted, zeros grey, top 3 numbers bold white (no medals). Tap player → `PlayerDetailSheet`. Partite: `HistoryCalendar` (left on lg) + thin rows (date · score · ⭐ MVP) → `MatchDetailSheet` (score, line-ups with ⚽/⭐/🧤, cost; admin Modifica → `MatchEditModal`, Cancella) |
-| `/profilo` | Own profile | photo, name, position, radar, global stats, two links: Notifiche and Account (both in Impostazioni) |
+| `/profile` | Own profile | photo, name, position, radar, global stats, two links: Notifiche and Account (both in Impostazioni) |
 | `/settings` | Settings (+ admin panel) | groups: Tuo account = notifiche (`NotificationGuide`), account (`AccountSettings`: logout everywhere + `DeleteAccountSection`) · Gestione partita = partita · Club = campi, regole, parametri, notifiche-club · Accessi (super admin) = accessi. Old `?sezione=rosa` → accessi (super) or /players (admin). Admin sections rendered by `components/admin/AdminSections.tsx` |
 | `/admin` | old admin panel | now only redirects to `/settings?sezione=partita` (old links keep working) |
 | `/login` | Google login | |
@@ -87,8 +87,8 @@ The menu item "Admin" points to `/settings?sezione=partita`.
 
 ## Routes & languages (2026-11-13)
 - Canonical routes are English: `/attendance` (Presenze), `/players` (Giocatori), `/teams` (Squadre), `/history` (Storico),
-  `/settings` (Impostazioni); `/profilo` and `/login` unchanged. Old Italian addresses (`/presenze`, `/giocatori`, `/squadre`,
-  `/impostazioni`, `/storico`, also with sub-paths) → 301 in `next.config.mjs`, query string kept. Query param names stay Italian
+  `/settings` (Impostazioni); `/profile` (Profilo) ; `/login` unchanged. Old Italian addresses (`/presenze`, `/giocatori`, `/squadre`,
+  `/impostazioni`, `/storico`, `/profilo`, also with sub-paths) → 301 in `next.config.mjs`, query string kept. Query param names stay Italian
   (`?sezione=`, `?date=`, `?da=notifica`).
 - i18n: `next-intl` used CLIENT-SIDE only (no plugin, no /it /en prefixes, pages stay static): `src/i18n/I18nProvider.tsx`
   (saved choice in localStorage `cc_locale` + cookie `NEXT_LOCALE` → `navigator.languages` → Italian; first render Italian),

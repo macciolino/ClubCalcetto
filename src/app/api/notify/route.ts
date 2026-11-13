@@ -120,7 +120,7 @@ export async function POST(request: Request) {
       const tokens = await adminDb().collection('push_tokens').where('uid', '==', caller.uid).get();
       const sent = await sendToTokens(
         tokens.docs.map((d) => d.id),
-        { title: '🔔 Notifica di prova', body: 'Se leggi questo messaggio le notifiche di Club Soccer funzionano!', url: '/profilo' }
+        { title: '🔔 Notifica di prova', body: 'Se leggi questo messaggio le notifiche di Club Soccer funzionano!', url: '/profile' }
       );
       return NextResponse.json({ ok: true, sent, devices: tokens.size });
     }

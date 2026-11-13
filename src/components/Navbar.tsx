@@ -156,7 +156,7 @@ export function Navbar() {
                   className={`absolute right-0 top-full mt-2 w-52 z-50 ${menu.panel}`}
                 >
                   <Link
-                    href="/profilo"
+                    href="/profile"
                     role="menuitem"
                     onClick={() => setMenuOpen(false)}
                     className={menu.item}
