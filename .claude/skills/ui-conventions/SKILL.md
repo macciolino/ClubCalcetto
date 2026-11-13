@@ -30,6 +30,10 @@ description: ClubCalcetto UI conventions - theme, shared components (tables, dro
   `bg-app`, `bg-card`, `bg-card-hover`, `text-primary`, `text-secondary`, `border-line`, `bg-accent`, `text-on-accent`
   (text on green, dark in both themes), `text-accent-text` (green for small text/links: #047857 light, #34D399 dark).
   Contrasts checked by `tests/unit/themeTokens.test.ts`.
+- Theme choice: Impostazioni → Tuo account → "Tema" row (`src/components/settings/ThemeSetting.tsx`): value on the right,
+  tap → Sheet with System / Light / Dark stacked vertically (radio rows), saved by next-themes on the device (not on the
+  profile yet: the rules let a player change only name/photo/role; to be added together with the language preference).
+  Labels from `messages/*.json` → `theme.*`. Tested by `tests/e2e/theme.spec.ts`.
 - New/converted components use the tokens, never fixed slate colors. Until Step 3 · Block 1 the app still LOOKS dark for
   everyone (html/body background and `color-scheme: dark` fixed in globals.css, `enableColorScheme={false}`).
 

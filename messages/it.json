@@ -22,5 +22,19 @@
     "label": "Lingua",
     "it": "Italiano",
     "en": "English"
+  },
+  "theme": {
+    "label": "Tema",
+    "title": "Tema",
+    "subtitle": "Come appare l’app su questo dispositivo",
+    "system": "Sistema",
+    "light": "Chiaro",
+    "dark": "Scuro",
+    "systemHint": "Segue l’impostazione del telefono o del computer",
+    "lightHint": "Sfondo chiaro, ideale all’aperto e con tanta luce",
+    "darkHint": "Sfondo scuro, riposante e il look classico di Club Soccer",
+    "active": "Attivo",
+    "savedOnDevice": "La scelta vale su questo dispositivo.",
+    "changed": "Tema: {name}"
   }
 }

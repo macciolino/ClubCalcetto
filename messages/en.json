@@ -22,5 +22,19 @@
     "label": "Language",
     "it": "Italiano",
     "en": "English"
+  },
+  "theme": {
+    "label": "Theme",
+    "title": "Theme",
+    "subtitle": "How the app looks on this device",
+    "system": "System",
+    "light": "Light",
+    "dark": "Dark",
+    "systemHint": "Follows your phone or computer setting",
+    "lightHint": "Light background, best outdoors and in bright light",
+    "darkHint": "Dark background, easy on the eyes and the classic Club Soccer look",
+    "active": "Active",
+    "savedOnDevice": "This choice applies to this device.",
+    "changed": "Theme: {name}"
   }
 }
