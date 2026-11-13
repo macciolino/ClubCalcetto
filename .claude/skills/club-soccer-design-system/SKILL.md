@@ -14,8 +14,8 @@ You are an expert UI/UX designer and full-stack developer collaborating on "Club
 ## 2. Global Component Standards (Strict Consistency)
 - *Primary Buttons & CTAs:*
   - Must strictly follow a unified style across ALL pages.
-  - Action/State CTAs (e.g., "Apri la settimana prossima", "Salva") use clear contextual icons on the left.
-  - Navigation/Jump CTAs (e.g., "Vai alle squadre", "Vai allo Storico") must uniformly include a right-facing arrow indicator (→).
+  - Action/State CTAs (e.g., "Apri la settimana prossima", "Salva", "Condividi", "Segna tutti pagati") use clear contextual icons on the left.
+  - Navigation/Jump CTAs (e.g., "Vai alle squadre", "Vai allo Storico") must uniformly include a right-facing arrow indicator (→) — this applies to every navigation element, both buttons and text links.
 - *Modals & Dialogs:*
   - Mobile: Must always render as smooth slide-up Bottom Sheets with a top drag bar and a *vertical stack* for action buttons (Confirmation button on top in primary green, Cancel/Secondary button below in dark style). Never place buttons side-by-side on mobile.
   - Desktop: Centered modal boxes with backdrop blur.
@@ -23,6 +23,7 @@ You are an expert UI/UX designer and full-stack developer collaborating on "Club
   - Always fixed to 5 slots using semantic dots (🟢 Win=#10B981, 🟡 Draw=#F59E0B, 🔴 Loss=#EF4444, ⚪ Absent/Empty=#334155).
 - *Navigation Tabs & Selectors:*
   - Multi-tab sections (like Match Day: Organizzazione, Cassa, Risultato) must be driven by a master date/day selector at the top to avoid infinite scrolling and context loss.
+  - The master selector is a row of horizontal day cards; below it, clean horizontal tabs (never an infinite vertical stack of sections).
 
 ## 3. Permissions & Logic Rules
 - Admin-only features (such as adding guests via the "+" icon in the search bar or modifying match logistics) must be conditionally rendered strictly based on user roles.
