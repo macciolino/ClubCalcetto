@@ -8,6 +8,7 @@ import { askConfirm } from '@/components/ui/Feedback';
 import { Sheet, sheetBtn } from '@/components/ui/Sheet';
 import { Lock, ArrowUp, ArrowDown, UserX, ChevronDown, ChevronRight, MoreHorizontal, Check, LogOut } from 'lucide-react';
 import { presenceBtn } from '@/components/ui/buttons';
+import { useTranslations } from 'next-intl';
 
 interface PresenceCardProps {
   day: CalendarDay;
@@ -51,8 +52,9 @@ export function CountRing({ count, max: MAX = DEFAULT_MAX }: { count: number; ma
   const r = 26;
   const c = 2 * Math.PI * r;
   const full = count >= MAX;
+  const t = useTranslations('presenceCard');
   return (
-    <div className="relative h-16 w-16 flex-shrink-0" role="img" aria-label={`${count} titolari su ${MAX}`}>
+    <div className="relative h-16 w-16 flex-shrink-0" role="img" aria-label={t('ringAria', { count, max: MAX })}>
       <svg viewBox="0 0 64 64" className="h-16 w-16 -rotate-90">
         <circle cx="32" cy="32" r={r} fill="none" strokeWidth="6" className="stroke-line" />
         <circle
@@ -102,6 +104,9 @@ export function PresenceCard({
   const [showManage, setShowManage] = useState(false);
   const [revealedId, setRevealedId] = useState<string | null>(null);
   const [actionsFor, setActionsFor] = useState<string | null>(null);
+  const t = useTranslations('presenceCard');
+  const tc = useTranslations('common');
+  const dayText = `${day.dayName} ${day.dayNumber} ${day.monthName}`;
 
   useEffect(() => {
     setMounted(true);
@@ -122,7 +127,7 @@ export function PresenceCard({
     .sort((a, b) => a.order_index - b.order_index)
     .map((p) => {
       const profile = allProfiles.find((prof) => prof.id === p.player_id) || p.profile;
-      return { ...p, profile, name: profile?.full_name || 'Giocatore' };
+      return { ...p, profile, name: profile?.full_name || t('playerFallback') };
     });
   const starters = enriched.filter((p) => p.status === 'confirmed');
   const waitlist = enriched.filter((p) => p.status === 'waitlist');
@@ -139,8 +144,8 @@ export function PresenceCard({
   const handleWithdraw = async () => {
     const msg =
       myStarterIdx >= 0
-        ? `Vuoi ritirarti da ${day.dayName} ${day.dayNumber} ${day.monthName}? Il tuo posto passa al primo in lista d'attesa.`
-        : `Vuoi uscire dalla lista d'attesa di ${day.dayName} ${day.dayNumber} ${day.monthName}?`;
+        ? t('confirmWithdraw', { day: dayText })
+        : t('confirmLeaveWait', { day: dayText });
     if (await askConfirm(msg)) onTogglePresence(day.dateString);
   };
 
@@ -158,10 +163,10 @@ export function PresenceCard({
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-lg font-semibold text-primary capitalize">{day.dayName}</h3>
             {day.isToday && (
-              <span className="bg-accent/15 text-accent-text text-xs font-medium px-2 py-0.5 rounded-full">Oggi</span>
+              <span className="bg-accent/15 text-accent-text text-xs font-medium px-2 py-0.5 rounded-full">{t('today')}</span>
             )}
             {isFirstToTen && (
-              <span className="bg-amber-500/15 text-warning text-xs font-medium px-2 py-0.5 rounded-full">🥇 Primo a 10</span>
+              <span className="bg-amber-500/15 text-warning text-xs font-medium px-2 py-0.5 rounded-full">{t('firstTo10')}</span>
             )}
           </div>
           <p className="text-sm text-secondary">
@@ -177,7 +182,7 @@ export function PresenceCard({
               showManage ? 'bg-card-hover text-primary' : 'text-secondary hover:text-primary hover:bg-card-hover'
             }`}
           >
-            <MoreHorizontal className="h-4 w-4" /> Gestisci
+            <MoreHorizontal className="h-4 w-4" /> {t('manage')}
           </button>
         )}
       </div>
@@ -192,11 +197,11 @@ export function PresenceCard({
           >
             <span className={`text-sm font-semibold flex items-center gap-2 ${myStarterIdx >= 0 ? 'text-accent-text' : 'text-warning'}`}>
               <Check className="h-4 w-4" />
-              {myStarterIdx >= 0 ? `Sei titolare (n° ${myStarterIdx + 1})` : `In attesa (${myWaitIdx + 1}°)`}
+              {myStarterIdx >= 0 ? t('starter', { n: myStarterIdx + 1 }) : t('waiting', { n: myWaitIdx + 1 })}
             </span>
             {cancelLocked ? (
               <span className="text-[11px] text-secondary flex items-center gap-1">
-                <Lock className="h-3 w-3" /> Ritiri bloccati
+                <Lock className="h-3 w-3" /> {t('withdrawLocked')}
               </span>
             ) : (
               <button
@@ -205,16 +210,16 @@ export function PresenceCard({
                 disabled={isToggling}
                 className="flex-shrink-0 flex items-center gap-1.5 min-h-[36px] px-3 rounded-lg border border-line-strong text-xs font-medium text-secondary hover:text-danger hover:border-rose-500/40 disabled:opacity-50"
               >
-                <LogOut className="h-3.5 w-3.5" /> Ritirati
+                <LogOut className="h-3.5 w-3.5" /> {t('withdraw')}
               </button>
             )}
           </div>
         ) : isLocked ? (
           <div className="w-full rounded-xl border border-line-strong bg-card-hover/60 px-4 py-3 text-center">
             <span className="text-sm font-semibold text-secondary flex items-center justify-center gap-2">
-              <Lock className="h-4 w-4" /> Iscrizioni chiuse
+              <Lock className="h-4 w-4" /> {t('signupsClosed')}
             </span>
-            <span className="block text-xs text-secondary mt-0.5">L&apos;admin le apre per la settimana prossima.</span>
+            <span className="block text-xs text-secondary mt-0.5">{t('adminOpens')}</span>
           </div>
         ) : (
           <button
@@ -223,7 +228,7 @@ export function PresenceCard({
             disabled={isToggling}
             className={`${presenceBtn(isFull)} disabled:cursor-wait`}
           >
-            {isFull ? 'Mettimi in attesa' : 'Ci sono'}
+            {isFull ? t('waitMe') : t('imIn')}
           </button>
         )}
       </div>
@@ -233,9 +238,9 @@ export function PresenceCard({
         <CountRing count={starters.length} max={MAX} />
         <div className="text-sm min-w-0">
           <p className="font-semibold text-primary">
-            {isFull ? 'Al completo' : `${MAX - starters.length} ${MAX - starters.length === 1 ? 'posto libero' : 'posti liberi'}`}
+            {isFull ? t('full') : t('freeSpots', { count: MAX - starters.length })}
           </p>
-          <p className="text-secondary">{waitlist.length > 0 ? `${waitlist.length} in lista d’attesa` : 'Tocca un pallino per il nome'}</p>
+          <p className="text-secondary">{waitlist.length > 0 ? t('waitCount', { count: waitlist.length }) : t('tapDot')}</p>
         </div>
       </div>
       <div className={`mt-4 grid ${dots.grid} gap-y-3 justify-items-center max-w-sm`}>
@@ -246,7 +251,7 @@ export function PresenceCard({
               <span
                 key={`free-${i}`}
                 className={`${dots.dot} rounded-full border-2 border-dashed border-line-strong`}
-                aria-label="Posto libero"
+                aria-label={t('freeSpot')}
               />
             );
           }
@@ -290,7 +295,7 @@ export function PresenceCard({
             aria-expanded={showNames}
             className="text-sm font-medium text-secondary hover:text-primary flex items-center gap-1"
           >
-            Vedi nomi <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showNames ? 'rotate-180' : ''}`} />
+            {t('seeNames')} <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showNames ? 'rotate-180' : ''}`} />
           </button>
           {showNames && (
             <ol className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
@@ -301,7 +306,7 @@ export function PresenceCard({
                 >
                   <span className="tabular-nums text-muted mr-1.5">{i + 1}.</span>
                   {p.name}
-                  {p.profile?.is_guest && <span className="text-[10px] text-muted"> · ospite</span>}
+                  {p.profile?.is_guest && <span className="text-[10px] text-muted">{t('guest')}</span>}
                 </li>
               ))}
             </ol>
@@ -317,7 +322,7 @@ export function PresenceCard({
           aria-expanded={showWaitlist}
           className="mt-3 w-full text-left text-sm text-warning/90 hover:text-warning"
         >
-          <span className="font-semibold">In attesa:</span>{' '}
+          <span className="font-semibold">{t('waitingLabel')}</span>{' '}
           {showWaitlist
             ? waitlist.map((p, i) => `${i + 1}. ${p.name}`).join(' · ')
             : `${waitlist
@@ -330,8 +335,8 @@ export function PresenceCard({
       {/* Strumenti admin, solo su richiesta */}
       {showAdminActions && showManage && (
         <div className="mt-4 pt-4 border-t border-line space-y-3">
-          <p className="text-xs font-semibold text-secondary">Gestione admin · tocca un giocatore per le azioni</p>
-          {enriched.length === 0 && <p className="text-xs text-muted">Nessun iscritto.</p>}
+          <p className="text-xs font-semibold text-secondary">{t('adminHint')}</p>
+          {enriched.length === 0 && <p className="text-xs text-muted">{t('noneSigned')}</p>}
           <ul className="divide-y divide-line rounded-xl bg-app/50">
             {enriched.map((p, i) => {
               const isStarter = p.status === 'confirmed';
@@ -350,7 +355,7 @@ export function PresenceCard({
                         isStarter ? 'bg-accent/15 text-accent-text' : 'bg-amber-500/15 text-warning'
                       }`}
                     >
-                      {isStarter ? 'Titolare' : 'In attesa'}
+                      {isStarter ? t('badgeStarter') : t('badgeWaiting')}
                     </span>
                     <ChevronRight className="h-4 w-4 text-muted flex-shrink-0" />
                   </button>
@@ -362,7 +367,7 @@ export function PresenceCard({
             <select
               className="w-full min-w-0 text-xs bg-app border border-line text-secondary rounded-lg px-2 py-2 focus:outline-none focus:border-slate-500"
               defaultValue=""
-              aria-label="Aggiungi un giocatore a questo giorno"
+              aria-label={t('addAria')}
               onChange={(e) => {
                 if (e.target.value) {
                   onAddGuestPresence(day.dateString, e.target.value);
@@ -371,12 +376,12 @@ export function PresenceCard({
               }}
             >
               <option value="" disabled>
-                + Aggiungi giocatore o ospite…
+                {t('addPlaceholder')}
               </option>
               {availableToAdd.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.full_name}
-                  {p.is_guest ? ' (ospite)' : ''}
+                  {p.is_guest ? t('guestSuffix') : ''}
                 </option>
               ))}
             </select>
@@ -387,7 +392,7 @@ export function PresenceCard({
               onClick={() => onResetDay(day.dateString)}
               className="text-[11px] text-rose-400/80 hover:text-danger underline"
             >
-              Azzera presenze del giorno
+              {t('resetDay')}
             </button>
           )}
         </div>
@@ -396,10 +401,10 @@ export function PresenceCard({
         <Sheet
           onClose={() => setActionsFor(null)}
           title={actionTarget.name}
-          subtitle={`${day.dayName} ${day.dayNumber} ${day.monthName} · ${actionTarget.status === 'confirmed' ? 'titolare' : 'in lista d’attesa'}`}
+          subtitle={`${dayText} · ${actionTarget.status === 'confirmed' ? t('sheetStarter') : t('sheetWaiting')}`}
           footer={
             <button type="button" onClick={() => setActionsFor(null)} className={sheetBtn.secondary}>
-              Annulla
+              {tc('cancel')}
             </button>
           }
         >
@@ -415,11 +420,11 @@ export function PresenceCard({
               >
                 {actionTarget.status === 'confirmed' ? (
                   <>
-                    <ArrowDown className="h-4 w-4 text-warning" /> Sposta in lista d&apos;attesa
+                    <ArrowDown className="h-4 w-4 text-warning" /> {t('toWaitlist')}
                   </>
                 ) : (
                   <>
-                    <ArrowUp className="h-4 w-4 text-accent-text" /> Fai titolare
+                    <ArrowUp className="h-4 w-4 text-accent-text" /> {t('makeStarter')}
                   </>
                 )}
               </button>
@@ -430,11 +435,11 @@ export function PresenceCard({
                 onClick={async () => {
                   const target = actionTarget;
                   setActionsFor(null);
-                  if (await askConfirm(`Rimuovere ${target.name} da ${day.dayName} ${day.dayNumber} ${day.monthName}?`)) onRemovePresence(target.id);
+                  if (await askConfirm(t('confirmRemove', { name: target.name, day: dayText }))) onRemovePresence(target.id);
                 }}
                 className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-app/60 hover:bg-card-hover text-sm font-medium text-danger"
               >
-                <UserX className="h-4 w-4" /> Rimuovi dal giorno
+                <UserX className="h-4 w-4" /> {t('removeFromDay')}
               </button>
             )}
           </div>

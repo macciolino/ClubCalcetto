@@ -151,3 +151,13 @@ export function shortDayParts(dateStr: string, locale: string = 'it'): { weekday
     month: d.toLocaleDateString(tag, { month: 'short' }).replace('.', ''),
   };
 }
+
+/** Calendar day with weekday / month names in the app language (Italian names are kept as they are). */
+export function localizeDay(day: CalendarDay, locale: string = 'it'): CalendarDay {
+  if (locale !== 'en') return day;
+  return {
+    ...day,
+    dayName: day.dateObj.toLocaleDateString('en-GB', { weekday: 'long' }),
+    monthName: day.dateObj.toLocaleDateString('en-GB', { month: 'short' }),
+  };
+}

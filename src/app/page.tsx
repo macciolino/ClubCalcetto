@@ -20,7 +20,9 @@ import {
 import { subscribeSportFields } from '@/lib/services/fieldService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { getOfficialMatchDate, isTimelockActive } from '@/lib/services/presenceService';
-import { formatItalianDate, isDateOpenForPlayers, toDateString } from '@/lib/utils/dateUtils';
+import { formatLongDate, isDateOpenForPlayers, toDateString } from '@/lib/utils/dateUtils';
+import { useTranslations } from 'next-intl';
+import { useLocaleSetting } from '@/i18n/I18nProvider';
 import { effectiveMatchLocation, effectiveMatchTime, matchCostFor, mvpVotingWindow } from '@/lib/utils/matchUtils';
 import { useDayFormat } from '@/lib/hooks/useMatchFormats';
 import { perHead } from '@/lib/utils/matchFormat';
@@ -35,20 +37,22 @@ import { notify, askConfirm } from '@/components/ui/Feedback';
 import { ArrowRight, Check, Clock, Lock, LogOut, MapPin } from 'lucide-react';
 import { btn, presenceBtn, textLink } from '@/components/ui/buttons';
 
-/** "oggi", "domani", the weekday within a week ("mercoledì"), otherwise "mer 18 nov". */
-function dayLabel(date: string, today: string): string {
+const tag = (locale: string) => (locale === 'en' ? 'en-GB' : 'it-IT');
+
+/** "oggi"/"today", "domani"/"tomorrow", the weekday within a week ("mercoledì"), otherwise "mer 18 nov". */
+function dayLabel(date: string, today: string, locale: string, words: { today: string; tomorrow: string }): string {
   const [y, m, d] = date.split('-').map(Number);
   const [ty, tm, td] = today.split('-').map(Number);
   const dt = new Date(y, m - 1, d);
   const diff = Math.round((dt.getTime() - new Date(ty, tm - 1, td).getTime()) / 86400000);
-  if (diff === 0) return 'oggi';
-  if (diff === 1) return 'domani';
-  if (diff > 1 && diff < 7) return dt.toLocaleDateString('it-IT', { weekday: 'long' });
-  return shortDate(date);
+  if (diff === 0) return words.today;
+  if (diff === 1) return words.tomorrow;
+  if (diff > 1 && diff < 7) return dt.toLocaleDateString(tag(locale), { weekday: 'long' });
+  return shortDate(date, locale);
 }
-function shortDate(date: string): string {
+function shortDate(date: string, locale: string): string {
   const [y, m, d] = date.split('-').map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '');
+  return new Date(y, m - 1, d).toLocaleDateString(tag(locale), { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '');
 }
 
 /**
@@ -69,6 +73,8 @@ export default function HomePage() {
   const [completedMatches, setCompletedMatches] = useState<Match[]>([]);
   const [votes, setVotes] = useState<MvpVote[]>([]);
   const { forms } = useForms();
+  const t = useTranslations('home');
+  const { locale } = useLocaleSetting();
   // Formato della partita (5vs5, 7vs7, 8vs8, 11vs11): titolari, posti liberi e quota
   const fmt = useDayFormat(date);
   const [now, setNow] = useState(() => Date.now());
@@ -107,7 +113,7 @@ export default function HomePage() {
 
   const today = toDateString(new Date());
   const admin = Boolean(isAdmin || profile?.role === 'admin');
-  const nameOf = (id: string) => profiles.find((p) => p.id === id)?.full_name || 'Giocatore';
+  const nameOf = (id: string) => profiles.find((p) => p.id === id)?.full_name || t('playerFallback');
   const starters = useMemo(() => (presences || []).filter((p) => p.status === 'confirmed'), [presences]);
   const waitlist = useMemo(() => (presences || []).filter((p) => p.status === 'waitlist'), [presences]);
   const mine = profile ? (presences || []).find((p) => p.player_id === profile.id) : undefined;
@@ -141,13 +147,13 @@ export default function HomePage() {
     try {
       if (mine) {
         await leavePresence(mine.id);
-        notify('Ti sei ritirato dalla partita.');
+        notify(t('withdrawn'));
       } else {
         await joinPresence(date, profile.id);
-        notify(isFull ? 'Sei in lista d’attesa.' : 'Presenza segnata: ci sei!');
+        notify(isFull ? t('onWaitlist') : t('joined'));
       }
     } catch {
-      notify('Operazione non riuscita. Controlla la connessione e riprova.');
+      notify(t('failed'));
     } finally {
       setBusy(false);
     }
@@ -167,7 +173,8 @@ export default function HomePage() {
   );
 
   // Intestazione: stato della partita in una frase (la prima condizione vera vince)
-  const day = dayLabel(date, today);
+  const day = dayLabel(date, today, locale, { today: t('today'), tomorrow: t('tomorrow') });
+  const sd = (d: string) => shortDate(d, locale);
   const isArchived = match?.status === 'completed';
   const { opensAt, closesAt } = mvpVotingWindow(date, time);
   const voteOpen = !isArchived && now >= opensAt.getTime() && now < closesAt.getTime();
@@ -175,74 +182,75 @@ export default function HomePage() {
   const playedRecently = date < today && date >= toDateString(new Date(now - 7 * 86400000));
   const closedForPlayers = !isDateOpenForPlayers(date, openUntil);
   const amStarter = myStarterIdx >= 0;
-  const closesLabel = `${closesAt.toDateString() === new Date(now).toDateString() ? 'oggi' : 'domani'} alle ${closesAt
-    .toTimeString()
-    .slice(0, 5)}`;
+  const closesLabel = t('closesAt', {
+    day: closesAt.toDateString() === new Date(now).toDateString() ? t('today') : t('tomorrow'),
+    time: closesAt.toTimeString().slice(0, 5),
+  });
   type Head = { title: string; detail: string; action?: { href: string; label: string } };
   const head: Head = (() => {
     const squadre = `/teams?date=${date}`;
     if (isArchived)
-      return { title: `Partita del ${shortDate(date)} conclusa`, detail: 'Risultato, marcatori e MVP sono nello Storico.', action: { href: '/history', label: 'Vai allo Storico' } };
+      return { title: t('hArchived', { date: sd(date) }), detail: t('hArchivedDetail'), action: { href: '/history', label: t('goHistory') } };
     if (voteOpen)
       return hasVoted
-        ? { title: 'Votazione MVP aperta', detail: `Hai già votato. Si chiude ${closesLabel}.` }
-        : { title: 'Votazione MVP aperta', detail: `Hai tempo fino a ${closesLabel} per votare.`, action: { href: squadre, label: 'Vota l’MVP' } };
+        ? { title: t('hVote'), detail: t('hVotedDetail', { when: closesLabel }) }
+        : { title: t('hVote'), detail: t('hVoteDetail', { when: closesLabel }), action: { href: squadre, label: t('voteMvp') } };
     if (playedRecently)
       return {
-        title: `Partita del ${shortDate(date)} giocata`,
-        detail: 'Il risultato sarà pubblicato a breve.',
-        action: admin ? { href: '/settings?sezione=partita', label: 'Chiudi la partita' } : undefined,
+        title: t('hPlayed', { date: sd(date) }),
+        detail: t('hPlayedDetail'),
+        action: admin ? { href: '/settings?sezione=partita', label: t('closeMatch') } : undefined,
       };
     if (!hasMatch)
       return {
-        title: 'Nessuna partita in programma',
-        detail: 'Il calendario delle presenze si apre a breve.',
-        action: admin ? { href: '/attendance', label: 'Apri le iscrizioni' } : undefined,
+        title: t('hNone'),
+        detail: t('hNoneDetail'),
+        action: admin ? { href: '/attendance', label: t('openSignups') } : undefined,
       };
     if (teamRecord?.confirmed)
       return amStarter
         ? {
-            title: `Si gioca ${day} alle ${time}`,
-            detail: `Partita confermata${myTeam === 'white' ? ' · Giochi con i Bianchi.' : myTeam === 'black' ? ' · Giochi con i Neri.' : '.'}`,
+            title: t('hPlaying', { day, time }),
+            detail: myTeam === 'white' ? t('hPlayingWhite') : myTeam === 'black' ? t('hPlayingBlack') : t('hPlayingConfirmed'),
           }
         : {
-            title: `Partita confermata per ${day}`,
-            detail: mine ? `Sei in lista d’attesa (n° ${myWaitIdx + 1}).` : 'Rosa completa: puoi entrare in lista d’attesa.',
+            title: t('hConfirmedFor', { day }),
+            detail: mine ? t('waitPos', { n: myWaitIdx + 1 }) : t('fullCanWait'),
           };
     if (teamRecord)
       return {
-        title: `Squadre pronte per ${day}`,
-        detail: admin ? 'Controlla le squadre e conferma la partita.' : 'In attesa della conferma.',
-        action: admin ? { href: squadre, label: 'Conferma la partita' } : undefined,
+        title: t('hTeamsReady', { day }),
+        detail: admin ? t('hTeamsReadyAdmin') : t('hTeamsReadyPlayer'),
+        action: admin ? { href: squadre, label: t('confirmMatch') } : undefined,
       };
     if (isFull)
       return amStarter
         ? {
-            title: `Rosa al completo per ${day}`,
-            detail: 'Le squadre saranno pubblicate a breve.',
-            action: admin ? { href: squadre, label: 'Genera le squadre' } : undefined,
+            title: t('hFull', { day }),
+            detail: t('hFullDetail'),
+            action: admin ? { href: squadre, label: t('generateTeams') } : undefined,
           }
         : {
-            title: `Posti esauriti per ${day}`,
-            detail: mine ? `Sei in lista d’attesa (n° ${myWaitIdx + 1}).` : 'Puoi entrare in lista d’attesa.',
-            action: admin ? { href: squadre, label: 'Genera le squadre' } : undefined,
+            title: t('hSoldOut', { day }),
+            detail: mine ? t('waitPos', { n: myWaitIdx + 1 }) : t('canWait'),
+            action: admin ? { href: squadre, label: t('generateTeams') } : undefined,
           };
     if (closedForPlayers)
       return {
-        title: 'Iscrizioni non ancora aperte',
-        detail: admin ? 'I giocatori non possono ancora iscriversi.' : `La partita di ${day} sarà disponibile a breve.`,
-        action: admin ? { href: '/attendance', label: 'Apri la settimana' } : undefined,
+        title: t('hNotOpen'),
+        detail: admin ? t('hNotOpenAdmin') : t('hNotOpenPlayer', { day }),
+        action: admin ? { href: '/attendance', label: t('openWeek') } : undefined,
       };
     const missing = fmt.players - starters.length;
     return mine
-      ? { title: `Sei iscritto per ${day}`, detail: `Siamo ${starters.length} su ${fmt.players}: ${missing === 1 ? 'manca 1 giocatore' : `mancano ${missing} giocatori`}.` }
-      : { title: `Iscrizioni aperte per ${day}`, detail: `Siamo ${starters.length} su ${fmt.players}. Conferma la tua presenza.` };
+      ? { title: t('hSignedUp', { day }), detail: t('hSignedUpDetail', { count: starters.length, max: fmt.players, missing }) }
+      : { title: t('hOpen', { day }), detail: t('hOpenDetail', { count: starters.length, max: fmt.players }) };
   })();
 
   return (
     <div className="space-y-8 pb-12 animate-in">
       <header className="space-y-1.5">
-        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-primary">Ciao {firstName}</h1>
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-primary">{t('hello', { name: firstName })}</h1>
         <p className="pt-1 text-lg sm:text-xl font-semibold text-primary first-letter:uppercase">{presences === null ? '\u00a0' : head.title}</p>
         <p className="text-sm text-secondary">{presences === null ? '\u00a0' : head.detail}</p>
         {presences !== null && head.action && (
@@ -262,26 +270,26 @@ export default function HomePage() {
           {/* Quando e dove */}
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
             <div className="space-y-2 min-w-0">
-              <p className="text-xs font-semibold text-accent-text">Prossima partita</p>
+              <p className="text-xs font-semibold text-accent-text">{t('nextMatch')}</p>
               <h2 id="next-match" className="text-xl sm:text-2xl font-bold text-primary">
-                {formatItalianDate(date)}
+                {formatLongDate(date, locale)}
               </h2>
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-secondary">
                 <span className="flex items-center gap-1.5">
-                  <Clock className="h-4 w-4 text-secondary" /> Ore {time}
+                  <Clock className="h-4 w-4 text-secondary" /> {t('at', { time })}
                 </span>
                 <span className="flex items-start gap-1.5 min-w-0">
                   <MapPin className="h-4 w-4 text-secondary flex-shrink-0 mt-0.5" />
                   <span className="break-words">{location}</span>
                 </span>
                 <span className="text-secondary">
-                  {fmt.label} · €{perHead(cost, fmt.players)} a testa
+                  {t('perHead', { format: fmt.label, amount: perHead(cost, fmt.players) })}
                 </span>
               </div>
             </div>
             {teamRecord?.confirmed && (
               <span className="self-start bg-accent/15 text-accent-text text-xs font-medium px-2.5 py-1 rounded-full">
-                Partita confermata
+                {t('confirmed')}
               </span>
             )}
           </div>
@@ -297,11 +305,11 @@ export default function HomePage() {
             >
               <span className={`text-base font-semibold flex items-center gap-2 ${myStarterIdx >= 0 ? 'text-accent-text' : 'text-warning'}`}>
                 <Check className="h-5 w-5" />
-                {myStarterIdx >= 0 ? `Sei titolare (n° ${myStarterIdx + 1})` : `In attesa (${myWaitIdx + 1}°)`}
+                {myStarterIdx >= 0 ? t('starter', { n: myStarterIdx + 1 }) : t('waiting', { n: myWaitIdx + 1 })}
               </span>
               {cancelLocked ? (
                 <span className="text-xs text-secondary flex items-center gap-1">
-                  <Lock className="h-3.5 w-3.5" /> Ritiri bloccati
+                  <Lock className="h-3.5 w-3.5" /> {t('withdrawLocked')}
                 </span>
               ) : (
                 <button
@@ -309,21 +317,21 @@ export default function HomePage() {
                   onClick={async () => {
                     const msg =
                       myStarterIdx >= 0
-                        ? "Vuoi ritirarti dalla partita? Il tuo posto passa al primo in lista d'attesa."
-                        : "Vuoi uscire dalla lista d'attesa?";
+                        ? t('confirmWithdraw')
+                        : t('confirmLeaveWait');
                     if (await askConfirm(msg)) handleToggle();
                   }}
                   disabled={busy}
                   className="flex-shrink-0 flex items-center gap-1.5 min-h-[36px] px-3 rounded-lg border border-line-strong text-sm font-medium text-secondary hover:text-danger hover:border-rose-500/40 disabled:opacity-50"
                 >
-                  <LogOut className="h-4 w-4" /> Ritirati
+                  <LogOut className="h-4 w-4" /> {t('withdraw')}
                 </button>
               )}
             </div>
           ) : locked ? (
             <div className="rounded-xl border border-line-strong bg-card-hover/60 px-4 py-3.5 text-center">
               <span className="text-base font-semibold text-secondary flex items-center justify-center gap-2">
-                <Lock className="h-4 w-4" /> Iscrizioni chiuse
+                <Lock className="h-4 w-4" /> {t('signupsClosed')}
               </span>
             </div>
           ) : (
@@ -333,7 +341,7 @@ export default function HomePage() {
               disabled={busy}
               className={presenceBtn(isFull)}
             >
-              {isFull ? 'Mettimi in attesa' : 'Ci sono'}
+              {isFull ? t('waitMe') : t('imIn')}
             </button>
           )}
 
@@ -342,24 +350,24 @@ export default function HomePage() {
             <div className="flex items-center gap-4 rounded-xl bg-app/50 p-4">
               <CountRing count={starters.length} max={fmt.players} />
               <div className="text-sm">
-                <p className="font-semibold text-primary">{isFull ? 'Al completo' : `${fmt.players - starters.length} posti liberi`}</p>
-                <p className="text-secondary">{waitlist.length > 0 ? `${waitlist.length} in lista d’attesa` : 'Nessuno in attesa'}</p>
+                <p className="font-semibold text-primary">{isFull ? t('full') : t('freeSpots', { count: fmt.players - starters.length })}</p>
+                <p className="text-secondary">{waitlist.length > 0 ? t('waitCount', { count: waitlist.length }) : t('noneWaiting')}</p>
               </div>
             </div>
             <div className="rounded-xl bg-app/50 p-4 text-sm flex flex-col justify-center gap-1">
               {teams && teams.white.length > 0 ? (
                 <>
                   <p className="font-semibold text-primary">
-                    {myTeam === 'white' ? 'Giochi con i Bianchi ⚪' : myTeam === 'black' ? 'Giochi con i Neri ⚫' : 'Squadre pronte'}
+                    {myTeam === 'white' ? t('playWhite') : myTeam === 'black' ? t('playBlack') : t('teamsReady')}
                   </p>
                   <Link href={`/teams?date=${date}`} className={textLink}>
-                    Vedi le squadre <ArrowRight className="h-4 w-4" />
+                    {t('seeTeams')} <ArrowRight className="h-4 w-4" />
                   </Link>
                 </>
               ) : (
                 <>
-                  <p className="font-semibold text-primary">Squadre non ancora fatte</p>
-                  <p className="text-secondary">Le prepara un admin quando ci sono {fmt.players} titolari.</p>
+                  <p className="font-semibold text-primary">{t('noTeamsYet')}</p>
+                  <p className="text-secondary">{t('noTeamsYetDetail', { n: fmt.players })}</p>
                 </>
               )}
             </div>
@@ -367,9 +375,9 @@ export default function HomePage() {
         </section>
       ) : (
         <section className="bg-card border border-line rounded-2xl p-6 text-center space-y-3">
-          <p className="text-sm text-secondary">Segna i giorni in cui puoi giocare: la partita si decide quando si arriva al completo.</p>
+          <p className="text-sm text-secondary">{t('markDays')}</p>
           <Link href="/attendance" className={btn.primary}>
-            Vai alle presenze <ArrowRight className="h-4 w-4" />
+            {t('goAttendance')} <ArrowRight className="h-4 w-4" />
           </Link>
         </section>
       )}
@@ -379,15 +387,15 @@ export default function HomePage() {
       {/* Colonna destra (sotto su telefono): rendimento personale e ultima partita */}
       <aside className="space-y-4">
         <section className="bg-card border border-line rounded-2xl p-5 space-y-4" aria-labelledby="my-form">
-          <h2 id="my-form" className="text-base font-semibold text-primary">Il tuo rendimento</h2>
+          <h2 id="my-form" className="text-base font-semibold text-primary">{t('myForm')}</h2>
           {myStats && myStats.played > 0 ? (
             <>
               <div className="grid grid-cols-3 text-center">
                 {(
                   [
-                    ['Partite', myStats.played],
-                    ['Gol', myStats.goals],
-                    ['MVP', myStats.mvp],
+                    [t('matches'), myStats.played],
+                    [t('goals'), myStats.goals],
+                    [t('mvp'), myStats.mvp],
                   ] as const
                 ).map(([label, v]) => (
                   <div key={label}>
@@ -398,49 +406,49 @@ export default function HomePage() {
               </div>
               <div className="flex items-center justify-between gap-3 text-sm pt-3 border-t border-line">
                 <span className="flex items-center gap-2">
-                  <span className="text-xs text-secondary">Ultime 5</span>
+                  <span className="text-xs text-secondary">{t('last5')}</span>
                   <FormDots playerId={profile.id} matches={recentMatches} size="sm" />
                 </span>
                 {forms.get(profile.id) ? (
                   <span className={`text-xs font-semibold ${(forms.get(profile.id) || 0) > 0 ? 'text-orange-700 dark:text-orange-300' : 'text-sky-700 dark:text-sky-300'}`}>
-                    Forma {(forms.get(profile.id) || 0) > 0 ? '🔥' : '❄️'} {formatForm(forms.get(profile.id) || 0)}
+                    {t('form')} {(forms.get(profile.id) || 0) > 0 ? '🔥' : '❄️'} {formatForm(forms.get(profile.id) || 0)}
                   </span>
                 ) : null}
               </div>
             </>
           ) : (
-            <p className="text-sm text-secondary">Le tue statistiche compaiono dopo la prima partita archiviata.</p>
+            <p className="text-sm text-secondary">{t('statsAfterFirst')}</p>
           )}
         </section>
 
         {lastMatch && (
           <section className="bg-card border border-line rounded-2xl p-5 space-y-3" aria-labelledby="last-match">
             <div className="flex items-baseline justify-between gap-2">
-              <h2 id="last-match" className="text-base font-semibold text-primary">Ultima partita</h2>
-              <span className="text-xs text-secondary capitalize">{shortDate(lastMatch.match_date || lastMatch.id)}</span>
+              <h2 id="last-match" className="text-base font-semibold text-primary">{t('lastMatch')}</h2>
+              <span className="text-xs text-secondary capitalize">{sd(lastMatch.match_date || lastMatch.id)}</span>
             </div>
             <div className="flex items-center justify-center gap-4 py-1">
-              <span className="text-sm text-secondary">Bianchi</span>
+              <span className="text-sm text-secondary">{t('white')}</span>
               <span className="text-2xl font-bold text-primary tabular-nums">
                 {lastMatch.score_white ?? 0} – {lastMatch.score_black ?? 0}
               </span>
-              <span className="text-sm text-secondary">Neri</span>
+              <span className="text-sm text-secondary">{t('black')}</span>
             </div>
             {(() => {
               const inWhite = lastMatch.team_white?.some((p) => p.id === profile.id);
               const inBlack = lastMatch.team_black?.some((p) => p.id === profile.id);
               const w = lastMatch.score_white ?? 0;
               const b = lastMatch.score_black ?? 0;
-              const mineRes = !inWhite && !inBlack ? null : w === b ? 'Pareggiata' : (inWhite ? w > b : b > w) ? 'Vinta' : 'Persa';
+              const mineRes = !inWhite && !inBlack ? null : w === b ? 'drawn' : (inWhite ? w > b : b > w) ? 'won' : 'lost';
               return (
                 <p className="text-sm text-secondary text-center">
-                  {lastMatch.mvp_player_id ? <>MVP <span className="text-primary font-medium">{nameOf(lastMatch.mvp_player_id)}</span></> : 'MVP non assegnato'}
-                  {mineRes && <> · La tua: <span className={mineRes === 'Vinta' ? 'text-accent-text' : mineRes === 'Persa' ? 'text-danger' : 'text-secondary'}>{mineRes.toLowerCase()}</span></>}
+                  {lastMatch.mvp_player_id ? <>MVP <span className="text-primary font-medium">{nameOf(lastMatch.mvp_player_id)}</span></> : t('mvpNone')}
+                  {mineRes && <> · {t('yours')} <span className={mineRes === 'won' ? 'text-accent-text' : mineRes === 'lost' ? 'text-danger' : 'text-secondary'}>{t(mineRes)}</span></>}
                 </p>
               );
             })()}
             <Link href="/history" className={`${textLink} w-full justify-center pt-1`}>
-              Vai allo Storico <ArrowRight className="h-4 w-4" />
+              {t('goHistory')} <ArrowRight className="h-4 w-4" />
             </Link>
           </section>
         )}

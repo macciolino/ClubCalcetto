@@ -30,8 +30,11 @@ import {
   getNextWeekEndDateString,
   isDateOpenForPlayers,
   toDateString,
-  formatItalianDate,
+  formatLongDate,
+  localizeDay,
 } from '@/lib/utils/dateUtils';
+import { useTranslations } from 'next-intl';
+import { useLocaleSetting } from '@/i18n/I18nProvider';
 import { PresenceCard } from '@/components/PresenceCard';
 import {
   ArrowRight,
@@ -45,7 +48,10 @@ import { btn } from '@/components/ui/buttons';
 export default function PresenzePage() {
   const { user, profile, isAdmin } = useAuth();
   const [mounted, setMounted] = useState(false);
-  const days = useMemo(() => getCalendarDays(), []);
+  const t = useTranslations('attendance');
+  const { locale } = useLocaleSetting();
+  const fmtDate = (d: string) => formatLongDate(d, locale);
+  const days = useMemo(() => getCalendarDays().map((d) => localizeDay(d, locale)), [locale]);
   const [presences, setPresences] = useState<Presence[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [openUntil, setOpenUntil] = useState<string>('');
@@ -113,12 +119,12 @@ export default function PresenzePage() {
   const handleTogglePresence = async (dateString: string) => {
     const currentId = profile?.id;
     if (!currentId) {
-      notify('Profilo non ancora caricato, riprova tra un attimo.');
+      notify(t('profileNotLoaded'));
       return;
     }
     const existing = presences.find((p) => p.date === dateString && p.player_id === currentId);
     if (!existing && isDayLocked(dateString)) {
-      notify('Le votazioni per questo giorno non sono ancora aperte.');
+      notify(t('notOpenYet'));
       return;
     }
     setBusyDate(dateString);
@@ -130,7 +136,7 @@ export default function PresenzePage() {
       }
     } catch (err) {
       console.warn('[Presenze] toggle error:', err);
-      notify('Operazione non riuscita. Controlla la connessione e riprova.');
+      notify(t('failed'));
     } finally {
       setBusyDate(null);
     }
@@ -142,7 +148,7 @@ export default function PresenzePage() {
       await joinPresence(dateString, guestId);
     } catch (err) {
       console.warn('[Presenze] add guest error:', err);
-      notify('Impossibile aggiungere il giocatore (forse è già iscritto).');
+      notify(t('addFailed'));
     }
   };
 
@@ -152,13 +158,13 @@ export default function PresenzePage() {
       await setPresenceOverride(presenceId, override);
     } catch (err) {
       console.warn('[Presenze] override error:', err);
-      notify('Impossibile spostare il giocatore.');
+      notify(t('moveFailed'));
     }
   };
 
   // Azione Admin: toglie tutte le iscrizioni di un giorno
   const handleResetDay = async (dateString: string) => {
-    if (!(await askConfirm(`Vuoi davvero azzerare tutte le presenze di ${formatItalianDate(dateString)}?`))) return;
+    if (!(await askConfirm(t('confirmReset', { date: fmtDate(dateString) })))) return;
     await clearPresencesForDate(dateString);
   };
 
@@ -168,7 +174,7 @@ export default function PresenzePage() {
       await leavePresence(presenceId);
     } catch (err) {
       console.warn('[Presenze] remove error:', err);
-      notify('Impossibile rimuovere la presenza.');
+      notify(t('removeFailed'));
     }
   };
 
@@ -176,8 +182,8 @@ export default function PresenzePage() {
   const handleToggleNextWeek = async () => {
     const next = isNextWeekOpen ? '' : nextWeekEnd;
     const msg = isNextWeekOpen
-      ? 'Richiudere le votazioni della settimana prossima? Chi è già iscritto resta iscritto.'
-      : `Aprire le votazioni fino a ${formatItalianDate(nextWeekEnd)}?`;
+      ? t('confirmCloseWeek')
+      : t('confirmOpenWeek', { date: fmtDate(nextWeekEnd) });
     if (!(await askConfirm(msg))) return;
     setIsSavingCalendar(true);
     try {
@@ -186,7 +192,7 @@ export default function PresenzePage() {
       if (next) callNotifyApi({ type: 'voting_open', until: next }).catch(() => undefined);
     } catch (err) {
       console.warn('[Presenze] calendar error:', err);
-      notify('Impossibile aggiornare il calendario.');
+      notify(t('calendarFailed'));
     } finally {
       setIsSavingCalendar(false);
     }
@@ -232,10 +238,9 @@ export default function PresenzePage() {
       {/* Titolo della pagina (senza riquadro) */}
       <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div className="space-y-1.5">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-primary">Presenze</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-primary">{t('title')}</h1>
           <p className="text-sm text-secondary max-w-xl leading-relaxed">
-            Segna i giorni in cui puoi giocare. I primi {selectedMax} sono titolari ({FORMAT_INFO[selectedFormat].label}), gli altri
-            vanno in lista d&apos;attesa e subentrano da soli.
+            {t('intro', { n: selectedMax, format: FORMAT_INFO[selectedFormat].label })}
           </p>
         </div>
 
@@ -248,10 +253,10 @@ export default function PresenzePage() {
               className={isNextWeekOpen ? btn.secondary : btn.primary}
             >
               {isNextWeekOpen ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
-              {isNextWeekOpen ? 'Chiudi la settimana prossima' : 'Apri la settimana prossima'}
+              {isNextWeekOpen ? t('closeWeek') : t('openWeek')}
             </button>
             <span className="text-xs text-secondary text-center sm:text-right">
-              {isNextWeekOpen ? `Iscrizioni aperte fino a ${formatItalianDate(openUntil)}` : 'Settimana prossima chiusa ai giocatori'}
+              {isNextWeekOpen ? t('openUntil', { date: fmtDate(openUntil) }) : t('weekClosed')}
             </span>
           </div>
         )}
@@ -263,9 +268,9 @@ export default function PresenzePage() {
           <div className="flex items-start gap-3">
             <Crown className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
             <div>
-              <h2 className="text-base font-semibold text-primary">Scegli il giorno ufficiale</h2>
+              <h2 className="text-base font-semibold text-primary">{t('chooseOfficial')}</h2>
               <p className="text-sm text-secondary mt-0.5">
-                {daysWithQuorum.length} giorni sono al completo. Il giorno scelto vale anche per Squadre e Admin.
+                {t('chooseOfficialHint', { count: daysWithQuorum.length })}
               </p>
             </div>
           </div>
@@ -283,7 +288,7 @@ export default function PresenzePage() {
                   }`}
                 >
                   {day.dayName} {day.dayNumber} {day.monthName}
-                  {isOfficial && <span className="ml-1.5 text-xs font-bold">· ufficiale</span>}
+                  {isOfficial && <span className="ml-1.5 text-xs font-bold">{t('official')}</span>}
                 </button>
               );
             })}
@@ -296,17 +301,17 @@ export default function PresenzePage() {
         <section className="rounded-2xl bg-card border border-line p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-base font-semibold text-primary flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-accent-text" /> Partita al completo
+              <CheckCircle2 className="h-5 w-5 text-accent-text" /> {t('matchFull')}
             </h2>
             <p className="text-sm text-secondary mt-0.5">
-              {formatItalianDate(selectedDayString)} · {FORMAT_INFO[selectedFormat].label} · {selectedMax} titolari su {selectedMax}
+              {t('matchFullDetail', { date: fmtDate(selectedDayString), format: FORMAT_INFO[selectedFormat].label, n: selectedMax })}
             </p>
           </div>
           <Link
             href={`/teams?date=${selectedDayString}`}
             className={btn.primary}
           >
-            Vai alle squadre
+            {t('goTeams')}
             <ArrowRight className="h-4 w-4" />
           </Link>
         </section>
@@ -315,7 +320,7 @@ export default function PresenzePage() {
       {/* Calendario: settimana corrente e prossima */}
       <section className="space-y-3" aria-labelledby="calendar-title">
         <h2 id="calendar-title" className="text-sm font-semibold text-secondary">
-          Calendario
+          {t('calendar')}
         </h2>
         <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-none">
           {days.map((day) => {
@@ -334,8 +339,8 @@ export default function PresenzePage() {
                   type="button"
                   onClick={() => handleSelectDay(day.dateString)}
                   aria-pressed={isSelected}
-                  aria-label={`${day.dayName} ${day.dayNumber} ${day.monthName}: ${locked ? 'chiuso' : `${confirmedCount} su ${dayMax}`}${isFirstToTen ? ', primo al completo' : ''}`}
-                  title={locked ? 'Iscrizioni non ancora aperte' : `${confirmedCount}/${dayMax}`}
+                  aria-label={`${t('dayAria', { day: day.dayName, number: day.dayNumber, month: day.monthName, state: locked ? t('closed') : t('countOf', { count: confirmedCount, max: dayMax }) })}${isFirstToTen ? t('firstFull') : ''}`}
+                  title={locked ? t('notOpenTitle') : `${confirmedCount}/${dayMax}`}
                   className={`flex-shrink-0 flex flex-col items-center w-14 sm:w-16 py-2.5 rounded-2xl transition-colors ${
                     isSelected ? 'bg-accent text-on-accent' : locked ? 'text-muted' : 'text-secondary hover:bg-card'
                   }`}
@@ -363,20 +368,20 @@ export default function PresenzePage() {
         </div>
         <p className="text-xs text-secondary flex flex-wrap items-center gap-x-4 gap-y-1">
           <span className="flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-slate-500" aria-hidden="true" /> iscritti
+            <span className="h-1.5 w-1.5 rounded-full bg-slate-500" aria-hidden="true" /> {t('legendSigned')}
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" /> completo
+            <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" /> {t('legendFull')}
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true" /> primo al completo della settimana
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true" /> {t('legendFirst')}
           </span>
         </p>
       </section>
 
       {/* Scheda del giorno scelto nel calendario */}
       {focusDay && (
-        <section aria-label="Giorno scelto" className="max-w-xl mx-auto w-full animate-in" key={focusDay.dateString}>
+        <section aria-label={t('selectedDay')} className="max-w-xl mx-auto w-full animate-in" key={focusDay.dateString}>
           <PresenceCard {...cardProps(focusDay)} />
         </section>
       )}
