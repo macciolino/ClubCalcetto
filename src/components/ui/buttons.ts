@@ -45,6 +45,6 @@ export const menu = {
 
 /** The big "Ci sono" / "Mettimi in attesa" button (Home and Presenze): same everywhere. */
 export const presenceBtn = (isFull: boolean) =>
-  `w-full py-3.5 px-4 rounded-xl font-semibold text-base transition-colors active:scale-[0.99] disabled:opacity-50 ${
+  `w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl font-semibold text-base transition-colors active:scale-[0.99] disabled:opacity-50 ${
     isFull ? 'bg-amber-400 hover:bg-amber-300 text-on-accent' : 'bg-accent hover:bg-accent/90 text-on-accent'
   }`;

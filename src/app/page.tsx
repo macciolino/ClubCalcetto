@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/context/AuthContext';
 import { AppSettings, GeneratedTeamRecord, Match, MvpVote, Presence, Profile, SportField } from '@/types/database';
@@ -34,7 +34,7 @@ import { reconcileTeams } from '@/lib/utils/teamUtils';
 import { CountRing } from '@/components/PresenceCard';
 import { PageSkeleton } from '@/components/ui/Skeleton';
 import { notify, askConfirm } from '@/components/ui/Feedback';
-import { ArrowRight, Check, Clock, Lock, LogOut, MapPin } from 'lucide-react';
+import { ArrowRight, Check, Clock, Loader2, Lock, LogOut, MapPin } from 'lucide-react';
 import { btn, presenceBtn, textLink } from '@/components/ui/buttons';
 
 const tag = (locale: string) => (locale === 'en' ? 'en-GB' : 'it-IT');
@@ -141,8 +141,11 @@ export default function HomePage() {
     [completedMatches]
   );
 
+  // Un solo invio alla volta: un secondo tocco prima che il pulsante si disattivi non scrive di nuovo
+  const toggling = useRef(false);
   const handleToggle = async () => {
-    if (!profile) return;
+    if (!profile || toggling.current) return;
+    toggling.current = true;
     setBusy(true);
     try {
       if (mine) {
@@ -155,6 +158,7 @@ export default function HomePage() {
     } catch {
       notify(t('failed'));
     } finally {
+      toggling.current = false;
       setBusy(false);
     }
   };
@@ -341,6 +345,7 @@ export default function HomePage() {
               disabled={busy}
               className={presenceBtn(isFull)}
             >
+              {busy && <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />}
               {isFull ? t('waitMe') : t('imIn')}
             </button>
           )}

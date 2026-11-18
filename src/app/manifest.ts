@@ -3,6 +3,8 @@ import type { MetadataRoute } from 'next';
 // Makes "Add to Home Screen" open ClubCalcetto as an app (needed on iPhone for web push notifications)
 export default function manifest(): MetadataRoute.Manifest {
   return {
+    // id stabile: il telefono riconosce sempre la stessa app installata anche se cambia start_url
+    id: '/',
     name: 'Club Soccer',
     short_name: 'Club Soccer',
     description: 'Presenze, squadre bilanciate e statistiche del calcetto.',

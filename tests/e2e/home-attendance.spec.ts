@@ -16,6 +16,18 @@ test.describe('Home e Presenze in italiano e in inglese', () => {
     await expect(page.getByRole('heading', { name: 'Calendario' })).toBeVisible();
   });
 
+  test('doppio tocco su "Ci sono": una sola iscrizione, nessun errore', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.getByRole('button', { name: 'Ci sono' }).dblclick();
+    await expect(page.getByText(/Sei titolare \(n° 1\)/)).toBeVisible();
+    await expect(page.getByText('Operazione non riuscita. Controlla la connessione e riprova.')).toHaveCount(0);
+    // la pagina si aggiorna subito (copia locale di Firestore): sul server si aspetta che la scrittura arrivi
+    const count = async () => (await db.collection('presences').where('player_id', '==', 'p-1').get()).size;
+    await expect.poll(count, { timeout: 10_000 }).toBe(1);
+    await page.waitForTimeout(1500);
+    expect(await count()).toBe(1);
+  });
+
   test('inglese: Home, iscrizione e Presenze tradotte', async ({ page }) => {
     await db.doc('profiles/p-1').update({ locale: 'en' });
     await loginAsAdmin(page);

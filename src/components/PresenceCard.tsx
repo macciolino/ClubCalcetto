@@ -6,7 +6,7 @@ import { CalendarDay } from '@/lib/utils/dateUtils';
 import { isTimelockActive } from '@/lib/services/presenceService';
 import { askConfirm } from '@/components/ui/Feedback';
 import { Sheet, sheetBtn } from '@/components/ui/Sheet';
-import { Lock, ArrowUp, ArrowDown, UserX, ChevronDown, ChevronRight, MoreHorizontal, Check, LogOut } from 'lucide-react';
+import { Lock, ArrowUp, ArrowDown, UserX, ChevronDown, ChevronRight, MoreHorizontal, Check, LogOut, Loader2 } from 'lucide-react';
 import { presenceBtn } from '@/components/ui/buttons';
 import { useTranslations } from 'next-intl';
 
@@ -228,6 +228,7 @@ export function PresenceCard({
             disabled={isToggling}
             className={`${presenceBtn(isFull)} disabled:cursor-wait`}
           >
+            {isToggling && <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />}
             {isFull ? t('waitMe') : t('imIn')}
           </button>
         )}

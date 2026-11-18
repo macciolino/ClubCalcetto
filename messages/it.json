@@ -149,7 +149,8 @@
     "confirmUpdate": "Questa partita è già archiviata. Aggiornare il risultato? Vittorie, pareggi e sconfitte vengono corretti, non sommati di nuovo.",
     "archivedDone": "Partita del {date} archiviata: la trovi nello Storico.",
     "saveFailed": "Salvataggio non riuscito. Controlla la connessione e riprova.",
-    "saveFailedShort": "Salvataggio non riuscito, riprova."
+    "saveFailedShort": "Salvataggio non riuscito, riprova.",
+    "paymentFailed": "Pagamento non salvato: controlla la connessione e riprova."
   },
   "result": {
     "finalScore": "Risultato finale",

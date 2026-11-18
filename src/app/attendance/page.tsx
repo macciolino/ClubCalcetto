@@ -116,7 +116,9 @@ export default function PresenzePage() {
   };
 
   // Iscrizione / ritiro dell'utente corrente
+  // Un solo invio alla volta (doppio tocco, rete lenta): finché uno è in corso gli altri tocchi non scrivono
   const handleTogglePresence = async (dateString: string) => {
+    if (busyDate) return;
     const currentId = profile?.id;
     if (!currentId) {
       notify(t('profileNotLoaded'));

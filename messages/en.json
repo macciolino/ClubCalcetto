@@ -149,7 +149,8 @@
     "confirmUpdate": "This match is already archived. Update the result? Wins, draws and losses are corrected, not added again.",
     "archivedDone": "Match on {date} archived: you will find it in History.",
     "saveFailed": "Saving failed. Check your connection and try again.",
-    "saveFailedShort": "Saving failed, try again."
+    "saveFailedShort": "Saving failed, try again.",
+    "paymentFailed": "Payment not saved: check your connection and try again."
   },
   "result": {
     "finalScore": "Final score",

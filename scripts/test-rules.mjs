@@ -308,6 +308,19 @@ console.log('\nCassa: ogni tocco scrive solo il giocatore toccato (merge sulla m
     if (ok) { passed++; console.log(`  ✔ ${label}`); } else { failed++; console.log(`  ✘ ${label}`, JSON.stringify(p)); }
   }
   await expectDenied('player B writes the cassa', () => setDoc(doc(playerB.db, 'match_payments', '2026-01-01'), { payments: { b: false } }, { merge: true }));
+  await expectDenied('player B marks himself paid', () => updateDoc(doc(playerB.db, 'match_payments', '2026-01-01'), { 'payments.b': true }));
+  await expectAllowed('player B reads the cassa', () => getDoc(doc(playerB.db, 'match_payments', '2026-01-01')));
+}
+
+console.log('\nChiusura partita e risultato: solo admin');
+{
+  await setDoc(doc(adminC.db, 'matches', '2026-01-01'), { id: '2026-01-01', match_date: '2026-01-01', status: 'scheduled' });
+  await expectDenied('player B closes the match', () => updateDoc(doc(playerB.db, 'matches', '2026-01-01'), { status: 'completed', score_white: 5, score_black: 0 }));
+  await expectDenied('player B changes the MVP', () => updateDoc(doc(playerB.db, 'matches', '2026-01-01'), { mvp_player_id: playerB.uid }));
+  await expectDenied('player B deletes the match', () => deleteDoc(doc(playerB.db, 'matches', '2026-01-01')));
+  await expectDenied('player B edits the teams', () => setDoc(doc(playerB.db, 'generated_teams', '2026-01-01'), { confirmed: true }, { merge: true }));
+  await expectAllowed('player B reads the match', () => getDoc(doc(playerB.db, 'matches', '2026-01-01')));
+  await expectAllowed('admin C closes the match', () => updateDoc(doc(adminC.db, 'matches', '2026-01-01'), { status: 'completed', score_white: 3, score_black: 2 }));
 }
 
 console.log('\nPreferenze personali (lingua e tema)');

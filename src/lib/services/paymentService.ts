@@ -55,7 +55,9 @@ export function setPlayersPaid(
   current: MatchPaymentRecord,
   playerIds: string[],
   paid: boolean,
-  cost: { totalCost: number; players: number }
+  cost: { totalCost: number; players: number },
+  /** Called if the write is refused or fails (e.g. offline for too long, rules): the screen shows the error */
+  onError?: (err: unknown) => void
 ): MatchPaymentRecord {
   const changes: Record<string, boolean> = {};
   playerIds.forEach((id) => (changes[id] = paid));
@@ -69,7 +71,10 @@ export function setPlayersPaid(
   if (isFirebaseConfigured && playerIds.length > 0) {
     // merge su una mappa annidata: cambiano SOLO le chiavi scritte, le altre restano come sono
     setDoc(doc(db, 'match_payments', current.date), { date: current.date, ...costInfo, payments: changes, updated_at: now }, { merge: true }).catch(
-      (err) => console.warn('[Firestore] Error saving payments:', err)
+      (err) => {
+        console.warn('[Firestore] Error saving payments:', err);
+        onError?.(err);
+      }
     );
   }
   return next;

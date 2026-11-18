@@ -252,14 +252,22 @@ export function TabOverviewMatch({
     const unsub = subscribeMatchPayments(date, (remote) => setPayments(remote || getCachedMatchPayments(date)));
     return () => unsub();
   }, [date]);
+  // Scrittura idempotente (merge delle sole chiavi toccate): doppi tocchi non duplicano nulla; se fallisce si avvisa
+  // e si torna allo stato salvato su Firestore
   const markPaid = (ids: string[], paid: boolean) =>
-    setPayments(setPlayersPaid(payments.date === date ? payments : getCachedMatchPayments(date), ids, paid, { totalCost, players: headCount }));
+    setPayments(
+      setPlayersPaid(payments.date === date ? payments : getCachedMatchPayments(date), ids, paid, { totalCost, players: headCount }, () => {
+        notify(t('paymentFailed'));
+        setPayments(getCachedMatchPayments(date));
+      })
+    );
   const { paidCount, unpaid, collected, progress } = cashSummary(payers, payments, totalCost, headCount);
   const [onlyUnpaid, setOnlyUnpaid] = useState(false);
 
   // ---------- risultato ----------
   const [result, setResult] = useState<MatchResultValue>(EMPTY_RESULT);
   const [isArchiving, setIsArchiving] = useState(false);
+  const archivingRef = useRef(false);
   const prefilledFor = useRef<string | null>(null);
   const proposedFor = useRef<string | null>(null);
   useEffect(() => {
@@ -297,6 +305,8 @@ export function TabOverviewMatch({
       !(await askConfirm(t('confirmUpdate')))
     )
       return;
+    if (archivingRef.current) return;
+    archivingRef.current = true;
     setIsArchiving(true);
     try {
       await saveMatchResult({
@@ -317,6 +327,7 @@ export function TabOverviewMatch({
       console.error('Archiviazione fallita:', err);
       notify(t('saveFailed'));
     } finally {
+      archivingRef.current = false;
       setIsArchiving(false);
     }
   };
