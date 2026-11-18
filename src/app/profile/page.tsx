@@ -222,7 +222,7 @@ export default function ProfiloPage() {
                 </label>
                 <div className="px-3.5 py-2.5 bg-app/60 border border-line rounded-xl text-secondary text-sm font-mono flex items-center gap-2">
                   <Mail className="h-4 w-4 text-muted" />
-                  <span className="truncate">{profile.email || t('noGoogle')}</span>
+                  <span className="truncate">{user?.email || profile.email || t('noGoogle')}</span>
                 </div>
               </div>
             </div>

@@ -14,6 +14,7 @@ Production data is REAL: never rewrite stats, no paid services, never print secr
   since 2026-11-10; Google sign-ups and older profiles have just full_name; the profile page edits only full_name), avatar_url, role, position (Portiere|Difensore|Esterno|Punta),
   stats `{<parameter>: 1..10}`, overall_rating, matches_won/drawn/lost (changed ONLY via increment in match transactions),
   `deactivated_at` / `deactivated_by` (set only by the server; `subscribeProfiles` hides deactivated profiles unless asked with `'deactivated'`).
+- `private_profiles/{profileId}` - C2 (2026-11-18): { email, updated_at }. Read: the player + admins; write: the player, only their own sign-in email (`ensurePrivateEmail` at every sign-in). Profiles NEVER get a new/changed `email` from clients (rules `profileEmailUntouched`, `saveProfileDoc` strips it). Old profiles keep `email` until the super admin runs Impostazioni → Admin e account → "Protezione delle email" (`/api/admin/email-privacy`, `migrateProfileEmails`, repeatable). Admin screens read emails with `useProfileEmails`; super admin in the UI = profile id `p-1`. Self-registration (C3, `isValidNewOwnProfile`): only app fields, stats 1..7, OVR <= 7.
 - `presences/{date}_{playerId}` - sign-up; order from `joined_at` (server time); status COMPUTED by `rankDayPresences`
   (first 10 = starters); `admin_override` 'starter'|'waitlist'.
 - `matches/{date}` - one match per day. `status: 'completed'` = archived: score_white/black, team_white/team_black

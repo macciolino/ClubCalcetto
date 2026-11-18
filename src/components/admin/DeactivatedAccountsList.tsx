@@ -6,6 +6,7 @@ import { Trash2 } from 'lucide-react';
 import { btnInline } from '@/components/ui/buttons';
 import { useTranslations } from 'next-intl';
 import { useLocaleSetting } from '@/i18n/I18nProvider';
+import { useProfileEmails } from '@/lib/hooks/useProfileEmails';
 
 interface DeactivatedAccountsListProps {
   deactivatedPlayers: Profile[];
@@ -21,6 +22,7 @@ export function DeactivatedAccountsList({
   onDeleteDeactivatedPlayer,
 }: DeactivatedAccountsListProps) {
   const t = useTranslations('deactivated');
+  const emailOf = useProfileEmails(true);
   const { locale } = useLocaleSetting();
   return (
       <ul className="space-y-2">
@@ -40,7 +42,7 @@ export function DeactivatedAccountsList({
                   </span>
                 )}
               </div>
-              <div className="text-xs text-secondary truncate">{p.email || t('noEmail')}</div>
+              <div className="text-xs text-secondary truncate">{emailOf(p) || t('noEmail')}</div>
               <div className="text-[11px] text-muted mt-0.5">
                 {p.deactivated_by === 'self' ? t('byPlayer') : t('byAdmin')}
                 {p.deactivated_at ? t('on', { date: new Date(p.deactivated_at).toLocaleDateString(locale === 'en' ? 'en-GB' : 'it-IT') }) : ''} · OVR{' '}

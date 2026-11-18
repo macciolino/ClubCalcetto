@@ -19,6 +19,7 @@ import {
   User as FirebaseUser,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { ensurePrivateEmail } from '@/lib/firebase/firestoreService';
 
 /**
  * SECURITY MODEL
@@ -138,7 +139,7 @@ function buildNewProfile(
   return {
     id: profileDocIdFor(fbUser),
     user_id: fbUser.uid,
-    email: fbUser.email,
+    // C2: no email in the public profile (saved in private_profiles by ensurePrivateEmail)
     full_name:
       (fullName && fullName.trim()) ||
       fbUser.displayName ||
@@ -266,6 +267,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           notify('Il link di invito non è più valido: chiedi un nuovo link all’amministratore.');
         }
       }
+      void ensurePrivateEmail(docId, fbUser.email);
       pendingSignUp.current = null;
       setProfile(resolved);
       setRoutingCookies(resolved);

@@ -20,18 +20,8 @@ const nextConfig = {
       { source: `/${from}/:path*`, destination: `/${to}/:path*`, statusCode: 301 },
     ]);
   },
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '**',
-      },
-      {
-        protocol: 'http',
-        hostname: '**',
-      },
-    ],
-  },
+  // No `images.remotePatterns`: next/image is not used (photos are plain <img>), so the optimizer must not fetch
+  // images from any site (C5: it turned the app into a free image proxy consuming the Vercel Hobby quota).
 };
 
 // next-intl è usato solo nel browser (src/i18n/I18nProvider.tsx, senza prefissi /it /en negli URL):

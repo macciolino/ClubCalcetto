@@ -7,8 +7,10 @@ import { initialsOf, uploadedPhoto } from '@/lib/utils/playerUtils';
 import { ShieldCheck, ShieldOff } from 'lucide-react';
 import { btn } from '@/components/ui/buttons';
 import { useTranslations } from 'next-intl';
+import { useProfileEmails } from '@/lib/hooks/useProfileEmails';
 
-const isSuper = (p: Profile) => Boolean(p.email?.toLowerCase().includes('macciolino84'));
+// Super admin = profile p-1 (the email is no longer in the public profile, C2)
+const isSuper = (p: Profile) => (p.id === 'p-1' || Boolean(p.email?.toLowerCase().includes('macciolino84')));
 
 /**
  * Admins (Impostazioni → Admin e account): who is admin (name + email), remove an admin,
@@ -19,6 +21,7 @@ export function AdminsCard({ players, onToggleRole }: { players: Profile[]; onTo
   const candidates = players.filter((p) => p.role !== 'admin' && !isSuper(p) && !p.is_guest).sort((a, b) => a.full_name.localeCompare(b.full_name));
   const [pick, setPick] = useState('');
   const t = useTranslations('admins');
+  const emailOf = useProfileEmails(true);
 
   const promote = async () => {
     const p = candidates.find((c) => c.id === pick);
@@ -49,7 +52,7 @@ export function AdminsCard({ players, onToggleRole }: { players: Profile[]; onTo
               )}
               <span className="flex-1 min-w-0">
                 <span className="block text-sm font-semibold text-primary truncate">{p.full_name}</span>
-                <span className="block text-xs text-secondary truncate">{p.email || t('noEmail')}</span>
+                <span className="block text-xs text-secondary truncate">{emailOf(p) || t('noEmail')}</span>
               </span>
               {isSuper(p) ? (
                 <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-500/15 text-warning">{t('superAdmin')}</span>
@@ -80,7 +83,7 @@ export function AdminsCard({ players, onToggleRole }: { players: Profile[]; onTo
           {candidates.map((p) => (
             <option key={p.id} value={p.id}>
               {p.full_name}
-              {p.email ? ` · ${p.email}` : ''}
+              {emailOf(p) ? ` · ${emailOf(p)}` : ''}
             </option>
           ))}
         </select>

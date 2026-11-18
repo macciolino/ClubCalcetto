@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { adminDb, isAdminConfigured } from '@/lib/firebase/admin';
 import { openRequest } from '@/lib/server/adminRequests';
+import { profileIdsByEmail } from '@/lib/server/emailPrivacy';
 
 export const runtime = 'nodejs';
 
@@ -17,11 +18,13 @@ export async function POST(request: Request) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean) || clean.length > 200) return NextResponse.json({ ok: true, pending: false });
 
     const db = adminDb();
-    const snap = await db.collection('profiles').where('email', '==', clean).get();
-    const closed = snap.docs.find((d) => d.data().deactivated_at && !d.data().archived_at);
+    // C2: the email is in private_profiles (or still in the profile, before the move)
+    const ids = await profileIdsByEmail(clean);
+    const docs = (await Promise.all(ids.map((id) => db.doc(`profiles/${id}`).get()))).filter((d) => d.exists);
+    const closed = docs.find((d) => d.data()?.deactivated_at && !d.data()?.archived_at);
     if (!closed) return NextResponse.json({ ok: true, pending: false });
 
-    const data = closed.data();
+    const data = closed.data() || {};
     const name = String(data.full_name || 'Giocatore');
     if (!data.restore_requested_at) await closed.ref.update({ restore_requested_at: new Date().toISOString() });
     await openRequest(

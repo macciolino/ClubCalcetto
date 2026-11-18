@@ -33,7 +33,7 @@ export async function deleteAccount(profileId: string): Promise<{ name: string; 
     new Set(presences.docs.map((d) => d.data().date as string).filter((d) => typeof d === 'string' && d >= today))
   );
 
-  const refs = [...presences.docs.map((d) => d.ref), ...tokens.docs.map((d) => d.ref), profileRef];
+  const refs = [...presences.docs.map((d) => d.ref), ...tokens.docs.map((d) => d.ref), db.doc(`private_profiles/${profileId}`), profileRef];
   for (let i = 0; i < refs.length; i += 400) {
     const batch = db.batch();
     refs.slice(i, i + 400).forEach((r) => batch.delete(r));

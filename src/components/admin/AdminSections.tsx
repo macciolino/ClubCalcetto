@@ -4,6 +4,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { notify, askConfirm } from '@/components/ui/Feedback';
 
 import { DeletionFeedbackCard } from '@/components/admin/DeletionFeedbackCard';
+import { EmailPrivacyCard } from '@/components/admin/EmailPrivacyCard';
 import { DeactivatedAccountsList } from '@/components/admin/DeactivatedAccountsList';
 import { manageAccountAsSuperAdmin } from '@/lib/services/accountService';
 import React, { useState, useEffect } from 'react';
@@ -218,7 +219,7 @@ export function AdminSections({ section }: { section: AdminSection }) {
       notify(t('onlyAdmins'));
       return;
     }
-    const isMarco = targetPlayer.email?.toLowerCase().includes('macciolino84');
+    const isMarco = targetPlayer.id === 'p-1' || targetPlayer.email?.toLowerCase().includes('macciolino84');
     if (isMarco && targetPlayer.role === 'admin') {
       notify(t('cannotDemoteMain'));
       return;
@@ -345,6 +346,7 @@ export function AdminSections({ section }: { section: AdminSection }) {
             onDeleteDeactivatedPlayer={handleDeleteDeactivatedPlayer}
           />
           {/* I motivi di chi lascia: solo il super admin */}
+          {isSuperAdmin && <EmailPrivacyCard />}
           {isSuperAdmin && <DeletionFeedbackCard />}
         </>
       )}

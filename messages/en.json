@@ -1362,5 +1362,18 @@
     "reviewsTitle": "Ratings to review · after the first match",
     "denied": "I can't read the requests: the updated Firestore rules don't seem to be published. Publish the firestore.rules file from the Firebase console (Firestore → Rules) and reopen this window.",
     "notificationsAria": "Notifications"
+  },
+  "emailPrivacy": {
+    "title": "Email protection",
+    "intro": "Only for you (super admin): moves the players' emails to a private area, visible only to each player and to admins. Stats and profiles stay visible to everyone.",
+    "check": "Check",
+    "move": "Move emails",
+    "working": "Working…",
+    "failed": "The operation failed. Did you publish the new rules and the code?",
+    "dryResult": "To move: {count} emails. No data changed.",
+    "done": "Done: {copied} emails moved, {removed} profiles cleaned.",
+    "nothing": "No emails to move: everything is already protected.",
+    "mismatched": "Check by hand (different email): {ids}",
+    "confirm": "Move {count} emails to the private area? It can be safely repeated."
   }
 }

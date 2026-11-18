@@ -118,7 +118,8 @@ export type PresenceStatus = 'confirmed' | 'waitlist';
 export interface Profile {
   id: string;
   user_id: string | null;
-  email: string | null;
+  /** C2: legacy only — emails now live in private_profiles/{id} (admins read them via useProfileEmails). */
+  email?: string | null;
   full_name: string;
   /** Given at email sign-up (full_name = first_name + ' ' + last_name). Missing for Google sign-ups and older profiles. */
   first_name?: string;

@@ -57,7 +57,7 @@ export async function POST(request: Request) {
       const name = String(profile.full_name || 'Nuovo giocatore');
       await openRequest(
         `signup_${caller.profileId}`,
-        { type: 'new_signup', profile_id: caller.profileId, name, email: profile.email || null },
+        { type: 'new_signup', profile_id: caller.profileId, name, email: caller.email || profile.email || null },
         { title: '🆕 Nuovo iscritto', body: `${name} si è registrato. È uno degli ospiti già in rosa?` }
       );
     }

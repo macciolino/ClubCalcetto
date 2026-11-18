@@ -7,7 +7,7 @@
  */
 import { initializeApp } from 'firebase/app';
 import {
-  getFirestore, connectFirestoreEmulator, doc, getDoc, setDoc, deleteDoc, collection, getDocs, serverTimestamp, updateDoc, increment, runTransaction,
+  getFirestore, connectFirestoreEmulator, doc, getDoc, setDoc, deleteDoc, collection, getDocs, serverTimestamp, updateDoc, increment, runTransaction, deleteField,
 } from 'firebase/firestore';
 import {
   getAuth, connectAuthEmulator, signInWithCredential, GoogleAuthProvider, createUserWithEmailAndPassword,
@@ -90,7 +90,7 @@ const join = (client, date, playerId, extra) =>
   setDoc(doc(client.db, 'presences', `${date}_${playerId}`), presence(date, playerId, extra));
 
 const baseProfile = (id, extra = {}) => ({
-  id, user_id: id, email: `${id}@example.com`, full_name: id, avatar_url: null, role: 'player',
+  id, user_id: id, full_name: id, avatar_url: null, role: 'player',
   position: 'Esterno', is_guest: false, stats: { Tiro: 6, Difesa: 6 }, overall_rating: 6,
   matches_won: 0, matches_drawn: 0, matches_lost: 0, created_at: 'x', updated_at: 'x', ...extra,
 });
@@ -103,11 +103,12 @@ const anon = await client(null);
 const superAdmin = await client({ google: { sub: 'super', email: 'macciolino84@gmail.com' } });
 const playerA = await client({ google: { sub: 'player-a', email: 'player.a@example.com' } });
 const playerB = await client({ google: { sub: 'player-b', email: 'player.b@example.com' } });
+const newbie = await client({ google: { sub: 'newbie', email: 'newbie@example.com' } }); // C3: no profile yet
 const adminC = await client({ google: { sub: 'admin-c', email: 'admin.c@example.com' } });
 // ---------- setup (by the super admin) ----------
 console.log('\nSetup');
 await expectAllowed('super admin creates its own profile p-1', () =>
-  setDoc(doc(superAdmin.db, 'profiles', 'p-1'), baseProfile('p-1', { role: 'admin', email: 'macciolino84@gmail.com' })));
+  setDoc(doc(superAdmin.db, 'profiles', 'p-1'), baseProfile('p-1', { role: 'admin' })));
 await expectAllowed('super admin creates an admin profile', () =>
   setDoc(doc(superAdmin.db, 'profiles', adminC.uid), baseProfile(adminC.uid, { role: 'admin' })));
 await expectAllowed('super admin creates a legacy "user" profile for player B', () =>
@@ -129,6 +130,20 @@ await expectDenied('creates own profile with fake match history', () =>
   setDoc(doc(playerA.db, 'profiles', playerA.uid), baseProfile(playerA.uid, { matches_won: 20 })));
 await expectAllowed('creates own profile as player', () =>
   setDoc(doc(playerA.db, 'profiles', playerA.uid), baseProfile(playerA.uid)));
+await expectDenied('C3: creates own profile with all parameters at 10', () =>
+  setDoc(doc(newbie.db, 'profiles', newbie.uid), baseProfile(newbie.uid, { stats: { Tiro: 10, Difesa: 10 } })));
+await expectDenied('C3: creates own profile with OVR 10', () =>
+  setDoc(doc(newbie.db, 'profiles', newbie.uid), baseProfile(newbie.uid, { overall_rating: 10 })));
+await expectDenied('C3: creates own profile with a server-only flag', () =>
+  setDoc(doc(newbie.db, 'profiles', newbie.uid), baseProfile(newbie.uid, { needs_stat_review: false })));
+await expectDenied('C3: creates own profile as guest', () =>
+  setDoc(doc(newbie.db, 'profiles', newbie.uid), baseProfile(newbie.uid, { is_guest: true })));
+await expectDenied('C3: creates own profile with an SVG avatar', () =>
+  setDoc(doc(newbie.db, 'profiles', newbie.uid), baseProfile(newbie.uid, { avatar_url: 'data:image/svg+xml;base64,AAAA' })));
+await expectAllowed('C3: creates own profile like the app (defaults 7, names, Google photo, OVR 7)', () =>
+  setDoc(doc(newbie.db, 'profiles', newbie.uid), baseProfile(newbie.uid, {
+    stats: { Tiro: 7, Difesa: 7 }, overall_rating: 7, first_name: 'B', last_name: 'B',
+    avatar_url: 'https://lh3.googleusercontent.com/a/photo' })));
 await expectDenied('creates a profile with someone else\'s id', () =>
   setDoc(doc(playerA.db, 'profiles', 'someone-else'), baseProfile('someone-else')));
 await expectAllowed('changes own name / avatar / position', () =>
@@ -312,6 +327,47 @@ console.log('\nSuper admin');
 await expectAllowed('promotes player A to admin', () =>
   setDoc(doc(superAdmin.db, 'profiles', playerA.uid), { role: 'admin' }, { merge: true }));
 await expectDenied('deletes its own super admin profile p-1', () => deleteDoc(doc(superAdmin.db, 'profiles', 'p-1')));
+
+console.log('\nC2: email in private_profiles, never added back to the public profile');
+// A profile not moved yet (still has its email), written bypassing the rules (emulator owner token)
+await fetch(`http://${FS_HOST}:${FS_PORT}/v1/projects/${PROJECT_ID}/databases/(default)/documents/profiles/legacy-1`, {
+  method: 'PATCH',
+  headers: { Authorization: 'Bearer owner', 'Content-Type': 'application/json' },
+  body: JSON.stringify({ fields: { id: { stringValue: 'legacy-1' }, full_name: { stringValue: 'Legacy' }, role: { stringValue: 'player' },
+    is_guest: { booleanValue: false }, email: { stringValue: 'legacy@example.com' } } }),
+});
+const newbie2 = await client({ google: { sub: 'newbie-2', email: 'newbie2@example.com' } });
+await expectDenied('new player creates own profile WITH email', () =>
+  setDoc(doc(newbie2.db, 'profiles', newbie2.uid), baseProfile(newbie2.uid, { email: 'newbie2@example.com' })));
+await expectAllowed('new player creates own profile without email (like the app)', () =>
+  setDoc(doc(newbie2.db, 'profiles', newbie2.uid), baseProfile(newbie2.uid)));
+await expectAllowed('admin edits a not-moved profile (email unchanged)', () =>
+  setDoc(doc(adminC.db, 'profiles', 'legacy-1'), { full_name: 'Legacy 2' }, { merge: true }));
+await expectDenied('admin changes the email in the public profile', () =>
+  setDoc(doc(adminC.db, 'profiles', 'legacy-1'), { email: 'other@example.com' }, { merge: true }));
+await expectDenied('admin adds an email to a profile without one', () =>
+  setDoc(doc(adminC.db, 'profiles', playerB.uid), { email: 'b@example.com' }, { merge: true }));
+await expectDenied('super admin adds an email to a profile', () =>
+  setDoc(doc(superAdmin.db, 'profiles', playerB.uid), { email: 'b@example.com' }, { merge: true }));
+await expectAllowed('admin removes the email from the public profile', () =>
+  updateDoc(doc(adminC.db, 'profiles', 'legacy-1'), { email: deleteField() }));
+await expectAllowed('player B saves own sign-in email privately', () =>
+  setDoc(doc(playerB.db, 'private_profiles', playerB.uid), { email: 'player.b@example.com', updated_at: 'x' }));
+await expectDenied('player B saves a different email privately', () =>
+  setDoc(doc(playerB.db, 'private_profiles', playerB.uid), { email: 'fake@example.com', updated_at: 'x' }));
+await expectDenied('player B adds other fields to the private doc', () =>
+  setDoc(doc(playerB.db, 'private_profiles', playerB.uid), { email: 'player.b@example.com', role: 'admin' }));
+await expectDenied('player B writes player A private doc', () =>
+  setDoc(doc(playerB.db, 'private_profiles', playerA.uid), { email: 'player.b@example.com' }));
+await expectAllowed('player B reads own private doc', () => getDoc(doc(playerB.db, 'private_profiles', playerB.uid)));
+await expectDenied('player B reads player A private doc', () => getDoc(doc(playerB.db, 'private_profiles', playerA.uid)));
+await expectDenied('player B lists all private emails', () => getDocs(collection(playerB.db, 'private_profiles')));
+await expectDenied('anonymous lists all private emails', () => getDocs(collection(anon.db, 'private_profiles')));
+await expectAllowed('admin lists all private emails', () => getDocs(collection(adminC.db, 'private_profiles')));
+await expectAllowed('super admin saves own email in p-1 private doc', () =>
+  setDoc(doc(superAdmin.db, 'private_profiles', 'p-1'), { email: 'macciolino84@gmail.com', updated_at: 'x' }));
+await expectDenied('impostor (not verified) reads p-1 private doc', () => getDoc(doc(impostor.db, 'private_profiles', 'p-1')));
+await expectDenied('admin deletes a private doc (only super admin)', () => deleteDoc(doc(adminC.db, 'private_profiles', playerB.uid)));
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

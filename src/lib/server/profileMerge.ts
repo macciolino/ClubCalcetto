@@ -158,7 +158,6 @@ export async function archiveAndReset(profileId: string): Promise<{ name: string
   await ref.set({
     id: profileId,
     user_id: old.user_id || profileId,
-    email: old.email || null,
     full_name: name,
     ...(old.first_name ? { first_name: old.first_name, last_name: old.last_name } : {}),
     avatar_url: old.avatar_url || null,
@@ -173,6 +172,11 @@ export async function archiveAndReset(profileId: string): Promise<{ name: string
     created_at: now,
     updated_at: now,
   });
+  // C2: the email stays only in private_profiles (copied there if the profile still had it)
+  if (typeof old.email === 'string' && old.email.trim()) {
+    const privRef = db.doc(`private_profiles/${profileId}`);
+    if (!(await privRef.get()).exists) await privRef.set({ email: old.email.trim().toLowerCase(), updated_at: now });
+  }
   await adminAuth().updateUser(String(old.user_id || profileId), { disabled: false }).catch(() => undefined);
   return { name };
 }

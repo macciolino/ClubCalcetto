@@ -62,22 +62,46 @@ service cloud.firestore {
     }
 
     // ---------- profiles ----------
+    // Self-registration (C3): only the fields written by the app (AuthContext buildNewProfile), not a guest,
+    // and starting parameters no higher than the club defaults (categories default to 6 or 7), so nobody can
+    // join with all 10s. Server-only flags (review, self-assessment, return request…) cannot be set here.
+    // If an admin ever raises a category default above 7, raise this cap too.
+    function isValidNewOwnProfile() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['id', 'user_id', 'email', 'full_name', 'first_name', 'last_name', 'avatar_url',
+              'role', 'position', 'is_guest', 'stats', 'overall_rating', 'matches_won', 'matches_drawn',
+              'matches_lost', 'created_at', 'updated_at'])
+        && d.get('is_guest', false) == false
+        && d.get('user_id', request.auth.uid) == request.auth.uid
+        && isValidAvatar(d.get('avatar_url', null))
+        && (!('stats' in d) || (d.stats is map && d.stats.values().hasOnly([1, 2, 3, 4, 5, 6, 7])))
+        && (!('overall_rating' in d) || (d.overall_rating is number && d.overall_rating >= 1 && d.overall_rating <= 7));
+    }
+
+    // C2: the email is personal data and lives in private_profiles. A client can never ADD or CHANGE it in the
+    // public profile (profiles not moved yet keep theirs until the super admin moves them; removing it is allowed).
+    function profileEmailUntouched() {
+      return request.resource.data.get('email', null) == null
+        || (resource != null && request.resource.data.get('email', null) == resource.data.get('email', null));
+    }
+
     match /profiles/{profileId} {
       allow read: if signedIn();
 
       // A user creates ONLY their own profile (doc id = their uid), always as a plain player with no match history.
       // Admins can create guest/manual players, but only the super admin can create another admin.
-      allow create: if isSuperAdmin()
+      allow create: if profileEmailUntouched() && (isSuperAdmin()
         || (isAdmin() && request.resource.data.role != 'admin')
         || (signedIn()
             && profileId == request.auth.uid
             && request.resource.data.role == 'player'
             && request.resource.data.get('matches_won', 0) == 0
             && request.resource.data.get('matches_drawn', 0) == 0
-            && request.resource.data.get('matches_lost', 0) == 0);
+            && request.resource.data.get('matches_lost', 0) == 0
+            && isValidNewOwnProfile()));
 
       // Super admin: everything. Admin: stats, records, data (not roles). Player: only cosmetic fields of their own profile.
-      allow update: if isSuperAdmin()
+      allow update: if profileEmailUntouched() && (isSuperAdmin()
         || (isAdmin() && (roleUntouchedOrLegacyFix() || adminRoleChange(profileId)))
         || (signedIn()
             && profileId == request.auth.uid
@@ -85,12 +109,23 @@ service cloud.firestore {
             && (!('avatar_url' in changedKeys()) || isValidAvatar(request.resource.data.avatar_url))
             // Preferenze personali: lingua dell'app e tema
             && (!('locale' in changedKeys()) || request.resource.data.locale in ['it', 'en'])
-            && (!('theme' in changedKeys()) || request.resource.data.theme in ['system', 'light', 'dark']));
+            && (!('theme' in changedKeys()) || request.resource.data.theme in ['system', 'light', 'dark'])));
 
       // The super admin profile can never be deleted. Admins delete only GUESTS (players without an account);
       // registered accounts are deleted only by the super admin, from the app via the server (login + data).
       allow delete: if profileId != 'p-1'
         && (isSuperAdmin() || (isAdmin() && resource.data.get('is_guest', false) == true));
+    }
+
+    // ---------- C2: private data of a profile (email) ----------
+    // Read: the player (own) and admins. Write: the player, only their own sign-in email; the server moves the old ones.
+    match /private_profiles/{profileId} {
+      allow read: if isAdmin() || isOwnProfile(profileId);
+      allow create, update: if isOwnProfile(profileId)
+        && request.resource.data.keys().hasOnly(['email', 'updated_at'])
+        && request.auth.token.email is string
+        && request.resource.data.email == request.auth.token.email.lower();
+      allow delete: if isSuperAdmin();
     }
 
     // ---------- in-app bell (profiles/{id}/notifications) ----------

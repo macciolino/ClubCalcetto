@@ -30,6 +30,7 @@ import {
 import { btnInline } from '@/components/ui/buttons';
 import { useTranslations } from 'next-intl';
 import { usePlayerLabels } from '@/i18n/usePlayerLabels';
+import { useProfileEmails } from '@/lib/hooks/useProfileEmails';
 
 const DEFAULT_CATEGORIES: StatCategory[] = DEFAULT_BASE_CATEGORIES;
 
@@ -72,6 +73,8 @@ export default function GiocatoriPage() {
 
   const isStrictAdmin = Boolean(mounted && user && (profile?.role === 'admin' || isAdmin));
   const isClientAdmin = isStrictAdmin;
+  // C2: emails only for admins, from private_profiles
+  const emailOf = useProfileEmails(isClientAdmin);
 
   useEffect(() => {
     setMounted(true);
@@ -592,8 +595,8 @@ ${link}`;
                                 >
                                   <span className="block">{firstName}</span>
                                   {surname && <span className="block">{surname}</span>}
-                                  {isClientAdmin && player.email && (
-                                    <span className="block text-[11px] font-normal text-muted mt-0.5">{player.email}</span>
+                                  {isClientAdmin && emailOf(player) && (
+                                    <span className="block text-[11px] font-normal text-muted mt-0.5">{emailOf(player)}</span>
                                   )}
                                 </button>
                                 {isClientAdmin && (
@@ -707,7 +710,7 @@ ${link}`;
         if (!dp) return null;
         return (
           <PlayerDetailSheet
-            player={dp}
+            player={isClientAdmin ? { ...dp, email: emailOf(dp) } : dp}
             categories={sortedCategories}
             form={forms.get(dp.id)}
             matchStats={matchStats.get(dp.id)}

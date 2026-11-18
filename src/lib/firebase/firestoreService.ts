@@ -79,9 +79,52 @@ export async function fetchProfiles(): Promise<Profile[]> {
 export async function saveProfileDoc(profile: Profile): Promise<void> {
   if (!isFirebaseConfigured) return;
   try {
-    await setDoc(doc(db, 'profiles', profile.id), profile, { merge: true });
+    // C2: the email never goes back into the public profile (it lives in private_profiles)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { email, ...data } = profile;
+    await setDoc(doc(db, 'profiles', profile.id), data, { merge: true });
   } catch (err) {
     console.warn('[Firestore] saveProfileDoc error:', err);
+  }
+}
+
+/**
+ * C2 — emails of all players (private_profiles), readable only by admins: { profileId: email }.
+ * For a player the subscription is simply denied by the rules (callback never called).
+ */
+export function subscribeProfileEmails(callback: (emails: Record<string, string>) => void): Unsubscribe | (() => void) {
+  if (!isFirebaseConfigured || typeof window === 'undefined') return () => {};
+  try {
+    return onSnapshot(
+      collection(db, 'private_profiles'),
+      (snapshot) => {
+        const map: Record<string, string> = {};
+        snapshot.forEach((d) => {
+          const email = d.data().email;
+          if (typeof email === 'string' && email) map[d.id] = email;
+        });
+        callback(map);
+      },
+      (err) => console.warn('[Firestore] subscribeProfileEmails warning:', err.message)
+    );
+  } catch (err) {
+    console.warn('[Firestore] subscribeProfileEmails exception:', err);
+    return () => {};
+  }
+}
+
+/** C2 — keeps the signed-in player's private email up to date (one read; a write only when missing or changed). */
+export async function ensurePrivateEmail(profileId: string, email: string | null | undefined): Promise<void> {
+  if (!isFirebaseConfigured || !email) return;
+  const clean = email.trim().toLowerCase();
+  try {
+    const ref = doc(db, 'private_profiles', profileId);
+    const snap = await getDoc(ref);
+    if (snap.exists() && snap.data().email === clean) return;
+    await setDoc(ref, { email: clean, updated_at: new Date().toISOString() });
+  } catch (err) {
+    // Rules not published yet, or offline: retried at the next sign-in
+    console.warn('[Firestore] ensurePrivateEmail warning:', err);
   }
 }
 

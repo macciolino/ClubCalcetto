@@ -1362,5 +1362,18 @@
     "reviewsTitle": "Valutazioni da rivedere · dopo la prima partita",
     "denied": "Non riesco a leggere le richieste: le regole Firestore aggiornate non risultano pubblicate. Pubblica il file firestore.rules dalla console Firebase (Firestore → Regole) e riapri questa finestra.",
     "notificationsAria": "Notifiche"
+  },
+  "emailPrivacy": {
+    "title": "Protezione delle email",
+    "intro": "Solo per te (super admin): sposta le email dei giocatori in un'area privata, visibile solo a ognuno e agli admin. Statistiche e profili restano visibili a tutti.",
+    "check": "Controlla",
+    "move": "Sposta le email",
+    "working": "In corso…",
+    "failed": "Operazione non riuscita. Hai pubblicato le nuove regole e il codice?",
+    "dryResult": "Da spostare: {count} email. Nessun dato modificato.",
+    "done": "Fatto: {copied} email spostate, {removed} profili ripuliti.",
+    "nothing": "Nessuna email da spostare: è tutto già protetto.",
+    "mismatched": "Da controllare a mano (email diversa): {ids}",
+    "confirm": "Sposto {count} email nell'area privata? L'operazione si può ripetere senza problemi."
   }
 }

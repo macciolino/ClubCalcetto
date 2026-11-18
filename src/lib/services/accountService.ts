@@ -52,3 +52,18 @@ export async function fetchDeletionFeedback(): Promise<DeletionFeedback[] | null
   const res = await authFetch('/api/account/feedback');
   return res.ok ? ((res.items as DeletionFeedback[]) || []) : null;
 }
+
+/** C2 — result of moving the players' emails to private_profiles (super admin). */
+export interface EmailPrivacyResult {
+  dryRun: boolean;
+  withEmail: number;
+  copied: number;
+  removed: number;
+  mismatched: string[];
+}
+
+/** Super admin only: dryRun = true only counts; false moves the emails (repeatable). null = request failed. */
+export async function runEmailPrivacy(dryRun: boolean): Promise<EmailPrivacyResult | null> {
+  const res = await authFetch('/api/admin/email-privacy', { method: 'POST', body: JSON.stringify({ dryRun }) });
+  return res.ok ? (res as unknown as EmailPrivacyResult) : null;
+}
