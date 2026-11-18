@@ -87,7 +87,7 @@ const presence = (date, playerId, extra = {}) => ({
   created_at: 'x', joined_at: serverTimestamp(), ...extra,
 });
 const join = (client, date, playerId, extra) =>
-  setDoc(doc(client.db, 'presences', `${date}_${playerId}`), presence(date, playerId, extra));
+  setDoc(doc(client.db, ...LG, 'presences', `${date}_${playerId}`), presence(date, playerId, extra));
 
 const baseProfile = (id, extra = {}) => ({
   id, user_id: id, full_name: id, avatar_url: null, role: 'player',
@@ -105,6 +105,38 @@ const playerA = await client({ google: { sub: 'player-a', email: 'player.a@examp
 const playerB = await client({ google: { sub: 'player-b', email: 'player.b@example.com' } });
 const newbie = await client({ google: { sub: 'newbie', email: 'newbie@example.com' } }); // C3: no profile yet
 const adminC = await client({ google: { sub: 'admin-c', email: 'admin.c@example.com' } });
+
+// ---------- multi-league (1B): owner writes (bypass rules) to seed memberships and player cards ----------
+const LG = ['leagues', 'calcettari'];
+const toValue = (v) => {
+  if (v === null) return { nullValue: null };
+  if (typeof v === 'boolean') return { booleanValue: v };
+  if (typeof v === 'number') return Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
+  if (typeof v === 'string') return { stringValue: v };
+  if (Array.isArray(v)) return { arrayValue: { values: v.map(toValue) } };
+  return { mapValue: { fields: Object.fromEntries(Object.entries(v).map(([k, x]) => [k, toValue(x)])) } };
+};
+const ownerSet = async (path, data) => {
+  const res = await fetch(`http://${FS_HOST}:${FS_PORT}/v1/projects/${PROJECT_ID}/databases/(default)/documents/${path}`, {
+    method: 'PATCH',
+    headers: { Authorization: 'Bearer owner', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields: toValue(data).mapValue.fields }),
+  });
+  if (!res.ok) throw new Error(`seed ${path}: ${res.status}`);
+};
+const card = (id, userId, leagueRole, extra = {}) =>
+  baseProfile(id, { user_id: userId, userId, leagueRole, isActivePlayer: true, role: leagueRole === 'PLAYER' ? 'player' : 'admin', ...extra });
+const joinLeague = async (who, playerId, leagueRole, league = 'calcettari', extra = {}) => {
+  await ownerSet(`leagues/${league}/players/${playerId}`, card(playerId, who.uid, leagueRole, extra));
+  await ownerSet(`memberships/${who.uid}`, { leagues: { [league]: { player_id: playerId, league_role: leagueRole, name: league } } });
+};
+await ownerSet('leagues/calcettari', { id: 'calcettari', name: 'I Calcettari', status: 'active', visibility: 'private' });
+await joinLeague(superAdmin, 'p-1', 'PRESIDENT');
+await joinLeague(adminC, adminC.uid, 'PRESIDENT');
+await joinLeague(playerA, playerA.uid, 'PLAYER');
+await joinLeague(playerB, playerB.uid, 'PLAYER', 'calcettari', { matches_won: 5 });
+await joinLeague(newbie, newbie.uid, 'PLAYER');
+await ownerSet('leagues/calcettari/players/guest-1', card('guest-1', null, 'PLAYER', { is_guest: true, user_id: null }));
 // ---------- setup (by the super admin) ----------
 console.log('\nSetup');
 await expectAllowed('super admin creates its own profile p-1', () =>
@@ -114,13 +146,13 @@ await expectAllowed('super admin creates an admin profile', () =>
 await expectAllowed('super admin creates a legacy "user" profile for player B', () =>
   setDoc(doc(superAdmin.db, 'profiles', playerB.uid), baseProfile(playerB.uid, { role: 'user', matches_won: 5 })));
 await expectAllowed('super admin writes settings', () =>
-  setDoc(doc(superAdmin.db, 'settings', 'official_match'), { date: '2026-11-10' }));
+  setDoc(doc(superAdmin.db, ...LG, 'settings', 'official_match'), { date: '2026-11-10' }));
 await expectAllowed('super admin signs up player B (today)', () => join(superAdmin, TODAY, playerB.uid));
 const presB = `${TODAY}_${playerB.uid}`;
 
 console.log('\nNot signed in');
 await expectDenied('anonymous reads profiles', () => getDocs(collection(anon.db, 'profiles')));
-await expectDenied('anonymous writes settings', () => setDoc(doc(anon.db, 'settings', 'x'), { a: 1 }));
+await expectDenied('anonymous writes settings', () => setDoc(doc(anon.db, ...LG, 'settings', 'x'), { a: 1 }));
 
 console.log('\nPlayer A (normal user)');
 await expectAllowed('reads profiles', () => getDocs(collection(playerA.db, 'profiles')));
@@ -160,28 +192,28 @@ await expectDenied('deletes player B\'s profile', () => deleteDoc(doc(playerA.db
 await expectAllowed(`signs up for this week (${THIS_SUNDAY})`, () => join(playerA, THIS_SUNDAY, playerA.uid));
 await expectDenied('signs up for next week before voting is open', () => join(playerA, NEXT_MONDAY, playerA.uid));
 await expectDenied('signs up with a non-standard doc id', () =>
-  setDoc(doc(playerA.db, 'presences', 'pres-a'), presence(TODAY, playerA.uid, { id: 'pres-a' })));
+  setDoc(doc(playerA.db, ...LG, 'presences', 'pres-a'), presence(TODAY, playerA.uid, { id: 'pres-a' })));
 await expectDenied('signs up with a fake (client) join time to jump the queue', () =>
   join(playerA, TODAY, playerA.uid, { joined_at: new Date('2020-01-01') }));
 await expectDenied('signs up with an admin override', () =>
   join(playerA, TODAY, playerA.uid, { admin_override: 'starter' }));
 await expectDenied('signs up player B', () => join(playerA, THIS_SUNDAY, playerB.uid));
 await expectDenied('changes B status (no more client-side promotions)', () =>
-  updateDoc(doc(playerA.db, 'presences', presB), { status: 'confirmed', order_index: 1 }));
+  updateDoc(doc(playerA.db, ...LG, 'presences', presB), { status: 'confirmed', order_index: 1 }));
 await expectDenied('reassigns B presence to someone else', () =>
-  updateDoc(doc(playerA.db, 'presences', presB), { player_id: playerA.uid }));
+  updateDoc(doc(playerA.db, ...LG, 'presences', presB), { player_id: playerA.uid }));
 await expectDenied('forces self into the starters', () =>
-  updateDoc(doc(playerA.db, 'presences', `${THIS_SUNDAY}_${playerA.uid}`), { admin_override: 'starter' }));
-await expectDenied('deletes B presence', () => deleteDoc(doc(playerA.db, 'presences', presB)));
-await expectAllowed('withdraws own presence', () => deleteDoc(doc(playerA.db, 'presences', `${THIS_SUNDAY}_${playerA.uid}`)));
+  updateDoc(doc(playerA.db, ...LG, 'presences', `${THIS_SUNDAY}_${playerA.uid}`), { admin_override: 'starter' }));
+await expectDenied('deletes B presence', () => deleteDoc(doc(playerA.db, ...LG, 'presences', presB)));
+await expectAllowed('withdraws own presence', () => deleteDoc(doc(playerA.db, ...LG, 'presences', `${THIS_SUNDAY}_${playerA.uid}`)));
 await expectDenied('opens next week voting', () =>
-  setDoc(doc(playerA.db, 'settings', 'calendar'), { open_until: NEXT_SUNDAY }));
+  setDoc(doc(playerA.db, ...LG, 'settings', 'calendar'), { open_until: NEXT_SUNDAY }));
 await expectDenied('adds a win to own record', () =>
   updateDoc(doc(playerA.db, 'profiles', playerA.uid), { matches_won: increment(1) }));
 for (const col of ['settings', 'stat_categories', 'matches', 'generated_teams', 'match_payments', 'sport_fields']) {
   await expectDenied(`writes ${col}`, () => setDoc(doc(playerA.db, col, 'hack'), { a: 1 }));
 }
-await expectAllowed('reads settings', () => getDoc(doc(playerA.db, 'settings', 'official_match')));
+await expectAllowed('reads settings', () => getDoc(doc(playerA.db, ...LG, 'settings', 'official_match')));
 
 console.log('\nAdmin C (promoted by the super admin)');
 await expectAllowed('edits player A\'s stats', () =>
@@ -202,26 +234,26 @@ await expectDenied('makes a guest admin', () =>
 await expectDenied('creates a guest as admin', () =>
   setDoc(doc(adminC.db, 'profiles', 'guest-2'), baseProfile('guest-2', { role: 'admin' })));
 await expectAllowed('writes settings', () =>
-  setDoc(doc(adminC.db, 'settings', 'app_config'), { standard_total_cost: 80 }, { merge: true }));
+  setDoc(doc(adminC.db, ...LG, 'settings', 'app_config'), { standard_total_cost: 80 }, { merge: true }));
 await expectAllowed('adds player B on a locked day (next week)', () => join(adminC, NEXT_MONDAY, playerB.uid));
 await expectAllowed('forces player B into the starters', () =>
-  updateDoc(doc(adminC.db, 'presences', presB), { admin_override: 'starter' }));
+  updateDoc(doc(adminC.db, ...LG, 'presences', presB), { admin_override: 'starter' }));
 await expectAllowed('opens next week voting', () =>
-  setDoc(doc(adminC.db, 'settings', 'calendar'), { open_until: NEXT_SUNDAY }));
+  setDoc(doc(adminC.db, ...LG, 'settings', 'calendar'), { open_until: NEXT_SUNDAY }));
 await expectAllowed('saves a match result + W/D/L increments in one transaction', () =>
   runTransaction(adminC.db, async (tx) => {
     const ref = doc(adminC.db, 'profiles', playerA.uid);
     await tx.get(ref);
     tx.update(ref, { matches_won: increment(1), updated_at: 'z' });
-    tx.set(doc(adminC.db, 'matches', TODAY), { id: TODAY, match_date: TODAY, status: 'completed', score_white: 3, score_black: 1, profile_effects: { [playerA.uid]: 'won' } }, { merge: true });
+    tx.set(doc(adminC.db, ...LG, 'matches', TODAY), { id: TODAY, match_date: TODAY, status: 'completed', score_white: 3, score_black: 1, profile_effects: { [playerA.uid]: 'won' } }, { merge: true });
   }));
-await expectDenied('player deletes a match from history', () => deleteDoc(doc(playerA.db, 'matches', TODAY)));
+await expectDenied('player deletes a match from history', () => deleteDoc(doc(playerA.db, ...LG, 'matches', TODAY)));
 await expectAllowed('admin deletes a match from history and undoes the win', () =>
   runTransaction(adminC.db, async (tx) => {
     const ref = doc(adminC.db, 'profiles', playerA.uid);
     await tx.get(ref);
     tx.update(ref, { matches_won: increment(-1), updated_at: 'z' });
-    tx.delete(doc(adminC.db, 'matches', TODAY));
+    tx.delete(doc(adminC.db, ...LG, 'matches', TODAY));
   }));
 await expectAllowed('deletes a guest player', () => deleteDoc(doc(adminC.db, 'profiles', 'guest-1')));
 await expectDenied('deletes a registered player (only the super admin can)', () => deleteDoc(doc(adminC.db, 'profiles', playerB.uid)));
@@ -232,24 +264,24 @@ await expectDenied('signs up beyond the opened range', () => join(playerA, IN_TW
 
 console.log('\nMVP votes');
 const vote = (c, date, voter, player) =>
-  setDoc(doc(c.db, 'mvp_votes', `${date}_${voter}`), { date, voter_id: voter, player_id: player, updated_at: serverTimestamp() });
+  setDoc(doc(c.db, ...LG, 'mvp_votes', `${date}_${voter}`), { date, voter_id: voter, player_id: player, updated_at: serverTimestamp() });
 await expectAllowed('player A votes MVP for today', () => vote(playerA, TODAY, playerA.uid, playerB.uid));
 await expectAllowed('player A changes own vote', () => vote(playerA, TODAY, playerA.uid, adminC.uid));
 await expectDenied('player A votes on behalf of player B', () => vote(playerA, TODAY, playerB.uid, playerA.uid));
 await expectDenied('player A votes for a future match', () => vote(playerA, NEXT_MONDAY, playerA.uid, playerB.uid));
 await expectDenied('player A votes with a fake time', () =>
-  setDoc(doc(playerA.db, 'mvp_votes', `${TODAY}_${playerA.uid}`), { date: TODAY, voter_id: playerA.uid, player_id: 'x', updated_at: 'yesterday' }));
-await expectDenied('player B deletes player A vote', () => deleteDoc(doc(playerB.db, 'mvp_votes', `${TODAY}_${playerA.uid}`)));
-await expectAllowed('player B reads the votes', () => getDocs(collection(playerB.db, 'mvp_votes')));
+  setDoc(doc(playerA.db, ...LG, 'mvp_votes', `${TODAY}_${playerA.uid}`), { date: TODAY, voter_id: playerA.uid, player_id: 'x', updated_at: 'yesterday' }));
+await expectDenied('player B deletes player A vote', () => deleteDoc(doc(playerB.db, ...LG, 'mvp_votes', `${TODAY}_${playerA.uid}`)));
+await expectAllowed('player B reads the votes', () => getDocs(collection(playerB.db, ...LG, 'mvp_votes')));
 await expectAllowed('admin C test-votes for a future match', () => vote(adminC, NEXT_MONDAY, adminC.uid, playerA.uid));
 await expectDenied('player A votes early for next week (no test)', () => vote(playerA, NEXT_MONDAY, playerA.uid, playerB.uid));
 await expectAllowed('admin C opens a test vote for everyone', () =>
-  setDoc(doc(adminC.db, 'generated_teams', NEXT_MONDAY), { id: NEXT_MONDAY, date: NEXT_MONDAY, team_white: [], team_black: [], created_at: 'x', mvp_vote_test: 'all' }));
+  setDoc(doc(adminC.db, ...LG, 'generated_teams', NEXT_MONDAY), { id: NEXT_MONDAY, date: NEXT_MONDAY, team_white: [], team_black: [], created_at: 'x', mvp_vote_test: 'all' }));
 await expectAllowed('player A votes early during the test for everyone', () => vote(playerA, NEXT_MONDAY, playerA.uid, playerB.uid));
 await expectAllowed('admin C ends the test', () =>
-  updateDoc(doc(adminC.db, 'generated_teams', NEXT_MONDAY), { mvp_vote_test: false }));
+  updateDoc(doc(adminC.db, ...LG, 'generated_teams', NEXT_MONDAY), { mvp_vote_test: false }));
 await expectDenied('player A votes early after the test ended', () => vote(playerA, NEXT_MONDAY, playerA.uid, adminC.uid));
-await expectAllowed('admin C clears player A test vote', () => deleteDoc(doc(adminC.db, 'mvp_votes', `${TODAY}_${playerA.uid}`)));
+await expectAllowed('admin C clears player A test vote', () => deleteDoc(doc(adminC.db, ...LG, 'mvp_votes', `${TODAY}_${playerA.uid}`)));
 
 console.log('\nPush devices');
 const regToken = (c, token, uid, profileId) =>
@@ -280,15 +312,15 @@ await expectDenied('admin C writes a notification for player A', () =>
   setDoc(doc(adminC.db, 'profiles', playerA.uid, 'notifications', 'n2'), { title: 'x', read: false }));
 
 console.log('\nAdmin requests and invites (server only)');
-await expectAllowed('admin C reads the admin requests', () => getDoc(doc(adminC.db, 'admin_requests', 'signup_x')));
-await expectDenied('player B reads the admin requests', () => getDoc(doc(playerB.db, 'admin_requests', 'signup_x')));
-await expectDenied('admin C writes an admin request', () => setDoc(doc(adminC.db, 'admin_requests', 'x'), { status: 'done' }));
+await expectAllowed('admin C reads the admin requests', () => getDoc(doc(adminC.db, ...LG, 'admin_requests', 'signup_x')));
+await expectDenied('player B reads the admin requests', () => getDoc(doc(playerB.db, ...LG, 'admin_requests', 'signup_x')));
+await expectDenied('admin C writes an admin request', () => setDoc(doc(adminC.db, ...LG, 'admin_requests', 'x'), { status: 'done' }));
 await expectDenied('player B reads an invite', () => getDoc(doc(playerB.db, 'invites', 'tok')));
 await expectDenied('admin C writes an invite', () => setDoc(doc(adminC.db, 'invites', 'tok'), { guest_id: 'g' }));
 
 console.log('\nCassa: ogni tocco scrive solo il giocatore toccato (merge sulla mappa payments)');
 {
-  const ref = doc(adminC.db, 'match_payments', '2026-01-01');
+  const ref = doc(adminC.db, ...LG, 'match_payments', '2026-01-01');
   const pay = (changes) => setDoc(ref, { date: '2026-01-01', payments: changes }, { merge: true });
   await pay({ a: true });
   await pay({ b: true }); // un secondo admin segna un altro giocatore
@@ -307,20 +339,20 @@ console.log('\nCassa: ogni tocco scrive solo il giocatore toccato (merge sulla m
   ]) {
     if (ok) { passed++; console.log(`  ✔ ${label}`); } else { failed++; console.log(`  ✘ ${label}`, JSON.stringify(p)); }
   }
-  await expectDenied('player B writes the cassa', () => setDoc(doc(playerB.db, 'match_payments', '2026-01-01'), { payments: { b: false } }, { merge: true }));
-  await expectDenied('player B marks himself paid', () => updateDoc(doc(playerB.db, 'match_payments', '2026-01-01'), { 'payments.b': true }));
-  await expectAllowed('player B reads the cassa', () => getDoc(doc(playerB.db, 'match_payments', '2026-01-01')));
+  await expectDenied('player B writes the cassa', () => setDoc(doc(playerB.db, ...LG, 'match_payments', '2026-01-01'), { payments: { b: false } }, { merge: true }));
+  await expectDenied('player B marks himself paid', () => updateDoc(doc(playerB.db, ...LG, 'match_payments', '2026-01-01'), { 'payments.b': true }));
+  await expectAllowed('player B reads the cassa', () => getDoc(doc(playerB.db, ...LG, 'match_payments', '2026-01-01')));
 }
 
 console.log('\nChiusura partita e risultato: solo admin');
 {
-  await setDoc(doc(adminC.db, 'matches', '2026-01-01'), { id: '2026-01-01', match_date: '2026-01-01', status: 'scheduled' });
-  await expectDenied('player B closes the match', () => updateDoc(doc(playerB.db, 'matches', '2026-01-01'), { status: 'completed', score_white: 5, score_black: 0 }));
-  await expectDenied('player B changes the MVP', () => updateDoc(doc(playerB.db, 'matches', '2026-01-01'), { mvp_player_id: playerB.uid }));
-  await expectDenied('player B deletes the match', () => deleteDoc(doc(playerB.db, 'matches', '2026-01-01')));
-  await expectDenied('player B edits the teams', () => setDoc(doc(playerB.db, 'generated_teams', '2026-01-01'), { confirmed: true }, { merge: true }));
-  await expectAllowed('player B reads the match', () => getDoc(doc(playerB.db, 'matches', '2026-01-01')));
-  await expectAllowed('admin C closes the match', () => updateDoc(doc(adminC.db, 'matches', '2026-01-01'), { status: 'completed', score_white: 3, score_black: 2 }));
+  await setDoc(doc(adminC.db, ...LG, 'matches', '2026-01-01'), { id: '2026-01-01', match_date: '2026-01-01', status: 'scheduled' });
+  await expectDenied('player B closes the match', () => updateDoc(doc(playerB.db, ...LG, 'matches', '2026-01-01'), { status: 'completed', score_white: 5, score_black: 0 }));
+  await expectDenied('player B changes the MVP', () => updateDoc(doc(playerB.db, ...LG, 'matches', '2026-01-01'), { mvp_player_id: playerB.uid }));
+  await expectDenied('player B deletes the match', () => deleteDoc(doc(playerB.db, ...LG, 'matches', '2026-01-01')));
+  await expectDenied('player B edits the teams', () => setDoc(doc(playerB.db, ...LG, 'generated_teams', '2026-01-01'), { confirmed: true }, { merge: true }));
+  await expectAllowed('player B reads the match', () => getDoc(doc(playerB.db, ...LG, 'matches', '2026-01-01')));
+  await expectAllowed('admin C closes the match', () => updateDoc(doc(adminC.db, ...LG, 'matches', '2026-01-01'), { status: 'completed', score_white: 3, score_black: 2 }));
 }
 
 console.log('\nPreferenze personali (lingua e tema)');
@@ -333,7 +365,7 @@ await expectDenied('player A sneaks a role change with the language', () =>
   updateDoc(doc(playerA.db, 'profiles', playerA.uid), { locale: 'it', role: 'admin' }));
 
 console.log('\nImpostor (email/password account using the super admin address, NOT verified)');
-await expectDenied('writes settings', () => setDoc(doc(impostor.db, 'settings', 'official_match'), { date: 'x' }));
+await expectDenied('writes settings', () => setDoc(doc(impostor.db, ...LG, 'settings', 'official_match'), { date: 'x' }));
 await expectDenied('edits p-1', () => setDoc(doc(impostor.db, 'profiles', 'p-1'), { full_name: 'x' }, { merge: true }));
 
 console.log('\nSuper admin');
@@ -344,17 +376,17 @@ await expectDenied('deletes its own super admin profile p-1', () => deleteDoc(do
 console.log('\nC12: withdrawal lock also in the rules');
 await expectAllowed('player (newbie) signs up today', () => join(newbie, TODAY, newbie.uid));
 await expectAllowed('admin turns the lock on (48h before)', () =>
-  setDoc(doc(adminC.db, 'settings', 'app_config'), { timelock_enabled: true, timelock_hours_before: 48 }, { merge: true }));
-await expectDenied('player (newbie) withdraws during the lock', () => deleteDoc(doc(newbie.db, 'presences', `${TODAY}_${newbie.uid}`)));
+  setDoc(doc(adminC.db, ...LG, 'settings', 'app_config'), { timelock_enabled: true, timelock_hours_before: 48 }, { merge: true }));
+await expectDenied('player (newbie) withdraws during the lock', () => deleteDoc(doc(newbie.db, ...LG, 'presences', `${TODAY}_${newbie.uid}`)));
 await expectAllowed('admin turns the lock off', () =>
-  setDoc(doc(adminC.db, 'settings', 'app_config'), { timelock_enabled: false }, { merge: true }));
-await expectAllowed('player (newbie) withdraws with the lock off', () => deleteDoc(doc(newbie.db, 'presences', `${TODAY}_${newbie.uid}`)));
+  setDoc(doc(adminC.db, ...LG, 'settings', 'app_config'), { timelock_enabled: false }, { merge: true }));
+await expectAllowed('player (newbie) withdraws with the lock off', () => deleteDoc(doc(newbie.db, ...LG, 'presences', `${TODAY}_${newbie.uid}`)));
 await expectAllowed('player (newbie) signs up today again', () => join(newbie, TODAY, newbie.uid));
 await expectAllowed('admin turns the lock on again', () =>
-  setDoc(doc(adminC.db, 'settings', 'app_config'), { timelock_enabled: true, timelock_hours_before: 48 }, { merge: true }));
-await expectAllowed('admin removes player (newbie) during the lock', () => deleteDoc(doc(adminC.db, 'presences', `${TODAY}_${newbie.uid}`)));
+  setDoc(doc(adminC.db, ...LG, 'settings', 'app_config'), { timelock_enabled: true, timelock_hours_before: 48 }, { merge: true }));
+await expectAllowed('admin removes player (newbie) during the lock', () => deleteDoc(doc(adminC.db, ...LG, 'presences', `${TODAY}_${newbie.uid}`)));
 await expectAllowed('admin turns the lock off (cleanup)', () =>
-  setDoc(doc(adminC.db, 'settings', 'app_config'), { timelock_enabled: false }, { merge: true }));
+  setDoc(doc(adminC.db, ...LG, 'settings', 'app_config'), { timelock_enabled: false }, { merge: true }));
 
 console.log('\nC1: partial save by an admin keeps what changed meanwhile');
 {
@@ -408,35 +440,70 @@ await expectAllowed('super admin saves own email in p-1 private doc', () =>
 await expectDenied('impostor (not verified) reads p-1 private doc', () => getDoc(doc(impostor.db, 'private_profiles', 'p-1')));
 await expectDenied('admin deletes a private doc (only super admin)', () => deleteDoc(doc(adminC.db, 'private_profiles', playerB.uid)));
 
-// ---------- multi-league (1A): read only for members, written only by the server ----------
-console.log('\nMulti-league (1A)');
-const ownerSet = (path, fields) =>
-  fetch(`http://${FS_HOST}:${FS_PORT}/v1/projects/${PROJECT_ID}/databases/(default)/documents/${path}`, {
-    method: 'PATCH',
-    headers: { Authorization: 'Bearer owner', 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fields }),
-  });
-await ownerSet('leagues/calcettari', { name: { stringValue: 'I Calcettari' } });
-await ownerSet('leagues/calcettari/matches/2026-01-01', { status: { stringValue: 'completed' } });
-await ownerSet('leagues/other/matches/2026-01-01', { status: { stringValue: 'completed' } });
-await ownerSet(`memberships/${playerB.uid}`, {
-  leagues: { mapValue: { fields: { calcettari: { mapValue: { fields: { player_id: { stringValue: playerB.uid }, league_role: { stringValue: 'PLAYER' } } } } } } },
-});
+// ---------- multi-league (1B): isolation, cards, league roles, legacy backup ----------
+console.log('\nMulti-league (1B)');
+const LC = (c, ...p) => doc(c.db, ...LG, ...p);
+await ownerSet('leagues/other', { id: 'other', name: 'Altra lega', status: 'active' });
+await ownerSet('leagues/other/matches/2026-01-01', { status: 'completed' });
+await ownerSet('matches/2026-01-01', { status: 'completed' });
+
 await expectAllowed('member B reads own memberships', () => getDoc(doc(playerB.db, 'memberships', playerB.uid)));
 await expectDenied('player A reads B memberships', () => getDoc(doc(playerA.db, 'memberships', playerB.uid)));
-await expectDenied('member B writes own memberships (becomes president)', () =>
-  setDoc(doc(playerB.db, 'memberships', playerB.uid), { leagues: { other: { league_role: 'PRESIDENT' } } }, { merge: true }));
-await expectAllowed('member B reads the league', () => getDoc(doc(playerB.db, 'leagues', 'calcettari')));
-await expectAllowed('member B reads a league match', () => getDoc(doc(playerB.db, 'leagues', 'calcettari', 'matches', '2026-01-01')));
+await expectDenied('member B writes own memberships (joins another league)', () =>
+  setDoc(doc(playerB.db, 'memberships', playerB.uid), { leagues: { other: { player_id: playerB.uid } } }, { merge: true }));
+await expectAllowed('member B reads the league and its players', async () => {
+  await getDoc(doc(playerB.db, 'leagues', 'calcettari'));
+  await getDocs(collection(playerB.db, ...LG, 'players'));
+});
 await expectDenied('member B reads another league match', () => getDoc(doc(playerB.db, 'leagues', 'other', 'matches', '2026-01-01')));
-await expectDenied('non-member A reads the league', () => getDoc(doc(playerA.db, 'leagues', 'calcettari')));
-await expectDenied('anonymous reads the league', () => getDoc(doc(anon.db, 'leagues', 'calcettari')));
-await expectDenied('admin C (not member) writes a league match', () =>
-  setDoc(doc(adminC.db, 'leagues', 'calcettari', 'matches', '2026-01-02'), { status: 'completed' }));
-await expectDenied('member B writes a league match', () =>
-  setDoc(doc(playerB.db, 'leagues', 'calcettari', 'matches', '2026-01-02'), { status: 'completed' }));
-await expectAllowed('super admin reads any league', () => getDoc(doc(superAdmin.db, 'leagues', 'other', 'matches', '2026-01-01')));
+await expectDenied('member B lists another league players', () => getDocs(collection(playerB.db, 'leagues', 'other', 'players')));
+await expectDenied('newbie-2 (no league) reads the league', () => getDoc(doc(newbie2.db, 'leagues', 'calcettari')));
+await expectDenied('admin C writes a match of a league it is not in', () =>
+  setDoc(doc(adminC.db, 'leagues', 'other', 'matches', '2026-01-02'), { status: 'completed' }));
+await expectAllowed('super admin reads any league (governance)', () => getDoc(doc(superAdmin.db, 'leagues', 'other', 'matches', '2026-01-01')));
+await expectDenied('super admin writes a league it is not in', () =>
+  setDoc(doc(superAdmin.db, 'leagues', 'other', 'matches', '2026-01-02'), { status: 'completed' }));
 await expectDenied('impostor (not verified) reads a league', () => getDoc(doc(impostor.db, 'leagues', 'calcettari')));
+await expectDenied('anyone creates a league from the app', () => setDoc(doc(adminC.db, 'leagues', 'new'), { name: 'x' }));
+
+console.log('\nPlayer cards');
+await expectAllowed('player B renames own card', () => updateDoc(LC(playerB, 'players', playerB.uid), { full_name: 'B nuovo', updated_at: 'y' }));
+await expectDenied('player B raises own parameters', () => updateDoc(LC(playerB, 'players', playerB.uid), { 'stats.Tiro': 10 }));
+await expectDenied('player B becomes president', () => updateDoc(LC(playerB, 'players', playerB.uid), { leagueRole: 'PRESIDENT' }));
+await expectDenied('player B edits player A card', () => updateDoc(LC(playerB, 'players', playerA.uid), { full_name: 'x' }));
+await expectAllowed('president C edits B parameters and W/D/L', () =>
+  updateDoc(LC(adminC, 'players', playerB.uid), { 'stats.Tiro': 8, matches_won: increment(1) }));
+await expectDenied('president C moves B card to another account', () => updateDoc(LC(adminC, 'players', playerB.uid), { userId: playerA.uid }));
+await expectDenied('president C demotes the super admin card', () => updateDoc(LC(adminC, 'players', 'p-1'), { leagueRole: 'PLAYER', role: 'player' }));
+await expectDenied('president C makes a guest president', () => updateDoc(LC(adminC, 'players', 'guest-1'), { leagueRole: 'PRESIDENT', role: 'admin' }));
+await expectDenied('president C sets an unknown role', () => updateDoc(LC(adminC, 'players', playerA.uid), { leagueRole: 'OWNER' }));
+await expectAllowed('president C makes B collaborator', () => updateDoc(LC(adminC, 'players', playerB.uid), { leagueRole: 'COLLABORATOR' }));
+await expectAllowed('collaborator B writes a match', () => setDoc(LC(playerB, 'matches', '2026-02-01'), { status: 'scheduled' }));
+await expectAllowed('collaborator B marks cash', () => setDoc(LC(playerB, 'match_payments', '2026-02-01'), { payments: { x: true } }, { merge: true }));
+await expectDenied('collaborator B promotes A (presidents only)', () => updateDoc(LC(playerB, 'players', playerA.uid), { leagueRole: 'COLLABORATOR' }));
+await expectAllowed('president C makes B player again', () => updateDoc(LC(adminC, 'players', playerB.uid), { leagueRole: 'PLAYER', role: 'player' }));
+await expectDenied('player B (no longer collaborator) writes a match', () => setDoc(LC(playerB, 'matches', '2026-02-02'), { status: 'scheduled' }));
+await expectAllowed('president C adds a guest card', () =>
+  setDoc(LC(adminC, 'players', 'guest-9'), card('guest-9', null, 'PLAYER', { is_guest: true, user_id: null })));
+await expectDenied('president C adds a card linked to an account', () =>
+  setDoc(LC(adminC, 'players', 'fake'), card('fake', playerA.uid, 'PLAYER')));
+await expectDenied('player A adds a guest card', () =>
+  setDoc(LC(playerA, 'players', 'guest-8'), card('guest-8', null, 'PLAYER', { is_guest: true, user_id: null })));
+await expectAllowed('president C deletes a guest card', () => deleteDoc(LC(adminC, 'players', 'guest-9')));
+await expectDenied('president C deletes a registered card', () => deleteDoc(LC(adminC, 'players', playerA.uid)));
+
+console.log('\nDeactivated president');
+await ownerSet(`leagues/calcettari/players/${adminC.uid}`, card(adminC.uid, adminC.uid, 'PRESIDENT', { deactivated_at: '2026-01-01' }));
+await expectDenied('deactivated president C writes a match', () => setDoc(LC(adminC, 'matches', '2026-02-03'), { status: 'scheduled' }));
+await ownerSet(`leagues/calcettari/players/${adminC.uid}`, card(adminC.uid, adminC.uid, 'PRESIDENT'));
+await expectAllowed('president C (active again) writes a match', () => setDoc(LC(adminC, 'matches', '2026-02-03'), { status: 'scheduled' }));
+
+console.log('\nOld single-group collections (backup, read-only)');
+await expectAllowed('admin C reads an old match', () => getDoc(doc(adminC.db, 'matches', '2026-01-01')));
+await expectDenied('admin C writes an old match', () => setDoc(doc(adminC.db, 'matches', '2026-01-01'), { status: 'scheduled' }));
+await expectDenied('super admin writes old settings', () => setDoc(doc(superAdmin.db, 'settings', 'app_config'), { a: 1 }));
+await expectDenied('player B reads an old match', () => getDoc(doc(playerB.db, 'matches', '2026-01-01')));
+await expectDenied('player B signs up in the old presences', () => setDoc(doc(playerB.db, 'presences', `${TODAY}_${playerB.uid}`), presence(TODAY, playerB.uid)));
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

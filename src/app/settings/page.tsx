@@ -4,7 +4,8 @@ import { PageSkeleton } from '@/components/ui/Skeleton';
 import React, { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { onSnapshot } from 'firebase/firestore';
+import { ldoc } from '@/lib/league/leagueRefs';
 import { useAuth } from '@/lib/context/AuthContext';
 import { NotificationGuide } from '@/components/NotificationGuide';
 import { AccountSettings } from '@/components/AccountSettings';
@@ -14,7 +15,7 @@ import { AdminSection, AdminSections } from '@/components/admin/AdminSections';
 import { AppSettings, Profile, SportField } from '@/types/database';
 import { subscribeAppSettings, subscribeOfficialMatchDate, subscribeProfiles } from '@/lib/firebase/firestoreService';
 import { subscribeSportFields } from '@/lib/services/fieldService';
-import { db, isFirebaseConfigured } from '@/lib/firebase/config';
+import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { useStatCategories } from '@/lib/hooks/useStatCategories';
 import { useFormSettings } from '@/lib/hooks/useForms';
 import { Bell, UserCog, Trophy, MapPin, Ruler, BarChart3, Megaphone, ShieldCheck, ChevronRight, ArrowLeft, ArrowRight } from 'lucide-react';
@@ -75,7 +76,7 @@ function useSummary(
       subscribeSportFields((list) => setFields(list || [])),
       subscribeOfficialMatchDate(setOfficialDate),
       onSnapshot(
-        doc(db, 'settings', 'notifications'),
+        ldoc('settings', 'notifications'),
         (snap) => setNotifyMode(String(snap.data()?.mode || 'admins')),
         () => undefined
       ),

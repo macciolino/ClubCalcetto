@@ -1,4 +1,6 @@
+import { FieldValue } from 'firebase-admin/firestore';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { leagueDb } from '@/lib/server/leagueScope';
 
 /**
  * Moving a player's history from one profile id to another.
@@ -50,17 +52,17 @@ async function commitOps(ops: Array<(b: FirebaseFirestore.WriteBatch) => void>) 
 
 /** Rewrites every reference to `fromId` into `toId` (matches, teams, payments, votes, sign-ups). */
 export async function moveReferences(fromId: string, toId: string): Promise<number> {
-  const db = adminDb();
   const ops: Array<(b: FirebaseFirestore.WriteBatch) => void> = [];
 
+  const L = leagueDb();
   for (const name of REF_COLLECTIONS) {
-    const snap = await db.collection(name).get();
+    const snap = await L.collection(name).get();
     for (const d of snap.docs) {
       const r = deepReplace(d.data(), fromId, toId);
       // I voti MVP hanno l'id di chi vota nel nome del documento
       const newId = name === 'mvp_votes' && d.id.endsWith(`_${fromId}`) ? d.id.slice(0, -fromId.length) + toId : d.id;
       if (newId !== d.id) {
-        const target = db.doc(`${name}/${newId}`);
+        const target = L.doc(`${name}/${newId}`);
         ops.push((b) => b.set(target, r.value as FirebaseFirestore.DocumentData));
         ops.push((b) => b.delete(d.ref));
       } else if (r.changed) {
@@ -70,10 +72,10 @@ export async function moveReferences(fromId: string, toId: string): Promise<numb
   }
 
   // Presenze: id del documento = `${date}_${playerId}`
-  const presences = await db.collection('presences').where('player_id', '==', fromId).get();
+  const presences = await leagueDb().collection('presences').where('player_id', '==', fromId).get();
   for (const d of presences.docs) {
     const data = d.data();
-    const target = db.doc(`presences/${String(data.date)}_${toId}`);
+    const target = leagueDb().doc(`presences/${String(data.date)}_${toId}`);
     const exists = (await target.get()).exists;
     if (!exists) {
       const r = deepReplace(data, fromId, toId);
@@ -95,8 +97,9 @@ const counters = ['matches_won', 'matches_drawn', 'matches_lost'] as const;
  */
 export async function claimGuest(guestId: string, toId: string): Promise<{ guestName: string }> {
   const db = adminDb();
-  const guestRef = db.doc(`profiles/${guestId}`);
-  const targetRef = db.doc(`profiles/${toId}`);
+  // Multi-league: guest and account are cards of the CURRENT league
+  const guestRef = leagueDb().doc(`players/${guestId}`);
+  const targetRef = leagueDb().doc(`players/${toId}`);
   const [guest, target] = await Promise.all([guestRef.get(), targetRef.get()]);
   if (!guest.exists || !guest.data()?.is_guest) throw new Error('not_a_guest');
   if (!target.exists) throw new Error('no_account');
@@ -138,9 +141,14 @@ export async function claimGuest(guestId: string, toId: string): Promise<{ guest
  */
 export async function archiveAndReset(profileId: string): Promise<{ name: string }> {
   const db = adminDb();
-  const ref = db.doc(`profiles/${profileId}`);
-  const old = (await ref.get()).data();
+  const L = leagueDb();
+  // Multi-league: the league card is archived and reset; the global account is only re-opened
+  const ref = L.doc(`players/${profileId}`);
+  const accountRef = db.doc(`profiles/${profileId}`);
+  const [cardSnap, accountSnap] = await Promise.all([ref.get(), accountRef.get()]);
+  const old = cardSnap.data();
   if (!old) throw new Error('not_found');
+  const account = accountSnap.data() || {};
   const name = String(old.full_name || 'Ex giocatore');
   const now = new Date().toISOString();
 
@@ -149,7 +157,7 @@ export async function archiveAndReset(profileId: string): Promise<{ name: string
   const archivedId = typeof old.archive_in_progress === 'string' ? old.archive_in_progress : `ex-${Date.now()}`;
   if (old.archive_in_progress !== archivedId) await ref.update({ archive_in_progress: archivedId });
 
-  const archiveRef = db.doc(`profiles/${archivedId}`);
+  const archiveRef = L.doc(`players/${archivedId}`);
   if (!(await archiveRef.get()).exists) {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { restore_requested_at, sessions_revoked_at, archive_in_progress, ...rest } = old;
@@ -157,7 +165,8 @@ export async function archiveAndReset(profileId: string): Promise<{ name: string
       ...rest,
       id: archivedId,
       user_id: null,
-      email: null,
+      userId: null,
+      leagueRole: 'PLAYER',
       avatar_url: null,
       is_guest: true,
       archived_at: now,
@@ -167,13 +176,17 @@ export async function archiveAndReset(profileId: string): Promise<{ name: string
   }
   await moveReferences(profileId, archivedId);
 
-  const cats = await db.collection('stat_categories').get();
+  const cats = await leagueDb().collection('stat_categories').get();
   const stats: Record<string, number> = {};
   cats.docs.forEach((c) => (stats[String(c.data().name)] = Number(c.data().default_value ?? 6)));
   const values = Object.values(stats);
+  const uid = String(old.userId || old.user_id || account.user_id || profileId);
   await ref.set({
     id: profileId,
-    user_id: old.user_id || profileId,
+    user_id: uid,
+    userId: uid,
+    leagueRole: 'PLAYER',
+    isActivePlayer: true,
     full_name: name,
     ...(old.first_name ? { first_name: old.first_name, last_name: old.last_name } : {}),
     avatar_url: old.avatar_url || null,
@@ -188,11 +201,25 @@ export async function archiveAndReset(profileId: string): Promise<{ name: string
     created_at: now,
     updated_at: now,
   });
-  // C2: the email stays only in private_profiles (copied there if the profile still had it)
-  if (typeof old.email === 'string' && old.email.trim()) {
+  // Global account open again (closed state, return request and old sessions cleared), role in the league = player
+  await accountRef.set(
+    {
+      role: 'player',
+      updated_at: now,
+      deactivated_at: FieldValue.delete(),
+      deactivated_by: FieldValue.delete(),
+      restore_requested_at: FieldValue.delete(),
+      sessions_revoked_at: FieldValue.delete(),
+    },
+    { merge: true }
+  );
+  await db.doc(`memberships/${uid}`).set({ leagues: { [L.id]: { league_role: 'PLAYER' } }, updated_at: now }, { merge: true });
+  // C2: the email stays only in private_profiles (copied there if the account still had it)
+  if (typeof account.email === 'string' && account.email.trim()) {
     const privRef = db.doc(`private_profiles/${profileId}`);
-    if (!(await privRef.get()).exists) await privRef.set({ email: old.email.trim().toLowerCase(), updated_at: now });
+    if (!(await privRef.get()).exists) await privRef.set({ email: account.email.trim().toLowerCase(), updated_at: now });
+    await accountRef.update({ email: FieldValue.delete() });
   }
-  await adminAuth().updateUser(String(old.user_id || profileId), { disabled: false }).catch(() => undefined);
+  await adminAuth().updateUser(uid, { disabled: false }).catch(() => undefined);
   return { name };
 }

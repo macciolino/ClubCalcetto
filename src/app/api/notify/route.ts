@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminAuth, adminDb, isAdminConfigured } from '@/lib/firebase/admin';
+import { isLeagueManager, leagueDb, memberCard, scoped } from '@/lib/server/leagueScope';
 import { Message, adminProfileIds, deliver, italianDate, registeredProfileIds, sendToProfiles, sendToTokens } from '@/lib/server/push';
 import { checkPromotions } from '@/lib/server/presenceWatch';
 import { reconcileTeams } from '@/lib/utils/teamUtils';
@@ -55,10 +56,10 @@ function buildMessage(
  */
 async function reconcile(date: string) {
   const db = adminDb();
-  const teamsRef = db.doc(`generated_teams/${date}`);
+  const teamsRef = leagueDb().doc(`generated_teams/${date}`);
   const { starterIds, players } = await checkPromotions(date);
 
-  const profileSnaps = starterIds.length ? await db.getAll(...starterIds.map((id) => db.doc(`profiles/${id}`))) : [];
+  const profileSnaps = starterIds.length ? await db.getAll(...starterIds.map((id) => leagueDb().doc(`players/${id}`))) : [];
   // Come nell'app: solo presenze con un profilo esistente, al massimo i giocatori del formato
   const starters = starterIds
     .map((id, i) => (profileSnaps[i]?.exists ? { id, name: (profileSnaps[i].data()?.full_name as string) || 'Giocatore' } : null))
@@ -68,7 +69,7 @@ async function reconcile(date: string) {
   const result = await db.runTransaction(async (tx) => {
     const snap = await tx.get(teamsRef);
     if (!snap.exists) return null;
-    const matchSnap = await tx.get(db.doc(`matches/${date}`));
+    const matchSnap = await tx.get(leagueDb().doc(`matches/${date}`));
     if (matchSnap.exists && matchSnap.data()?.status === 'completed') return null;
     const record = snap.data() as GeneratedTeamRecord;
     const r = reconcileTeams(record, starters);
@@ -90,7 +91,7 @@ async function reconcile(date: string) {
   return { substitutions: result.substitutions.length };
 }
 
-export async function POST(request: Request) {
+async function handlePost(request: Request) {
   if (!isAdminConfigured()) {
     return NextResponse.json({ ok: false, error: 'not_configured' }, { status: 503 });
   }
@@ -106,16 +107,17 @@ export async function POST(request: Request) {
 
     // Chiunque abbia fatto l'accesso può chiedere il controllo sostituzioni (il server decide da solo)
     if (body.type === 'reconcile') {
+      const isSuperCaller = caller.email === SUPER_ADMIN_EMAIL && caller.email_verified === true;
+      if (!isSuperCaller && !(await memberCard(caller.uid))) return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
       if (!isDate(body.date)) return NextResponse.json({ ok: false, error: 'bad_request' }, { status: 400 });
       // C11: only days that can still change (yesterday … 30 days ahead): any other date costs reads for nothing
       if (!isReconcileDate(body.date)) return NextResponse.json({ ok: true, substitutions: 0, skipped: true });
       return NextResponse.json({ ok: true, ...(await reconcile(body.date)) });
     }
 
-    // Tutto il resto solo per gli admin
+    // Tutto il resto solo per chi gestisce la lega (presidenti e collaboratori) o il super admin
     const isSuper = caller.email === SUPER_ADMIN_EMAIL && caller.email_verified === true;
-    const profile = await adminDb().doc(`profiles/${caller.uid}`).get();
-    if (!isSuper && profile.data()?.role !== 'admin') {
+    if (!isSuper && !(await isLeagueManager(caller.uid))) {
       return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
     }
 
@@ -130,7 +132,7 @@ export async function POST(request: Request) {
 
     if (body.type === 'admin_devices' || body.type === 'test_admins') {
       const ids = await adminProfileIds();
-      const profiles = await adminDb().getAll(...ids.map((id) => adminDb().doc(`profiles/${id}`)));
+      const profiles = ids.length ? await adminDb().getAll(...ids.map((id) => leagueDb().doc(`players/${id}`))) : [];
       const devices: { name: string; count: number; platforms: string[]; last: string | null }[] = [];
       let sent = 0;
       for (let i = 0; i < ids.length; i++) {
@@ -160,13 +162,13 @@ export async function POST(request: Request) {
 
     if (body.type === 'first_match') {
       if (!isDate(body.date)) return NextResponse.json({ ok: false, error: 'bad_request' }, { status: 400 });
-      const match = (await adminDb().doc(`matches/${body.date}`).get()).data();
+      const match = (await leagueDb().doc(`matches/${body.date}`).get()).data();
       if (!match || match.status !== 'completed') return NextResponse.json({ ok: true, sent: 0 });
       const ids = Array.from(
         new Set([...(match.team_white || []), ...(match.team_black || [])].map((p: { id?: string }) => String(p?.id || '')).filter(Boolean))
       );
       if (ids.length === 0) return NextResponse.json({ ok: true, sent: 0 });
-      const snaps = await adminDb().getAll(...ids.map((id) => adminDb().doc(`profiles/${id}`)));
+      const snaps = await adminDb().getAll(...ids.map((id) => leagueDb().doc(`players/${id}`)));
       // Una sola notifica per giocatore (stat_review_notified_at), anche se il risultato viene risalvato
       const fresh = snaps.filter((s) => {
         const d = s.data();
@@ -192,7 +194,7 @@ export async function POST(request: Request) {
 
     if (body.type === 'voting_open') {
       if (!isDate(body.until)) return NextResponse.json({ ok: false, error: 'bad_request' }, { status: 400 });
-      const calRef = adminDb().doc('settings/calendar');
+      const calRef = leagueDb().doc('settings/calendar');
       const cal = await calRef.get();
       // Solo se le iscrizioni sono davvero aperte fino a quella data. Ogni (ri)apertura avvisa di nuovo:
       // si salta solo un secondo invio entro 2 minuti (doppio clic).
@@ -220,3 +222,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: 'server_error' }, { status: 500 });
   }
 }
+
+/** Multi-league: runs in the league the app is using (header x-league-id). */
+export const POST = scoped(handlePost);

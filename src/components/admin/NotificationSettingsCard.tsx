@@ -3,8 +3,9 @@
 import { askConfirm } from '@/components/ui/Feedback';
 
 import React, { useEffect, useState } from 'react';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { db, isFirebaseConfigured } from '@/lib/firebase/config';
+import { onSnapshot, setDoc } from 'firebase/firestore';
+import { ldoc } from '@/lib/league/leagueRefs';
+import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { useAuth } from '@/lib/context/AuthContext';
 import { callNotifyApi } from '@/lib/services/pushService';
 import { Bell, Loader2, Send, ChevronDown } from 'lucide-react';
@@ -29,7 +30,7 @@ export function NotificationSettingsCard({ defaultOpen = false }: { defaultOpen?
   useEffect(() => {
     if (!isFirebaseConfigured) return;
     return onSnapshot(
-      doc(db, 'settings', 'notifications'),
+      ldoc('settings', 'notifications'),
       (snap) => {
         const m = snap.data()?.mode;
         setMode(m === 'off' || m === 'all' ? m : 'admins');
@@ -44,7 +45,7 @@ export function NotificationSettingsCard({ defaultOpen = false }: { defaultOpen?
     setSaving(true);
     try {
       await setDoc(
-        doc(db, 'settings', 'notifications'),
+        ldoc('settings', 'notifications'),
         { mode: next, updated_at: new Date().toISOString(), updated_by: profile?.id || '' },
         { merge: true }
       );

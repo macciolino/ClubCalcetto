@@ -9,6 +9,7 @@ import { Sheet, sheetBtn } from '@/components/ui/Sheet';
 import { notify } from '@/components/ui/Feedback';
 import { StatRatingFields, ovrOf, orderedCategories } from '@/components/StatRatingFields';
 import { Check, Loader2 } from 'lucide-react';
+import { currentLeagueId } from '@/lib/league/leagueRefs';
 
 const LATER_KEY = 'cc_self_rating_later';
 
@@ -59,7 +60,7 @@ export function SelfRatingPrompt() {
       orderedCategories(categories).forEach((c) => (stats[c.name] = Number(values[c.name] ?? c.default_value ?? 6)));
       const res = await fetch('/api/account/self-rating', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await firebaseAuth.currentUser?.getIdToken()}` },
+        headers: { 'Content-Type': 'application/json', 'x-league-id': currentLeagueId(), Authorization: `Bearer ${await firebaseAuth.currentUser?.getIdToken()}` },
         body: JSON.stringify({ stats }),
       });
       const data = await res.json();

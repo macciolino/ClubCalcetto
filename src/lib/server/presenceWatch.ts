@@ -1,4 +1,5 @@
 import { adminDb } from '@/lib/firebase/admin';
+import { leagueDb } from '@/lib/server/leagueScope';
 import { deliver, deliverToAdmins, italianDate } from '@/lib/server/push';
 import { rankDayPresences } from '@/lib/utils/presenceRanking';
 import { DayFormats, FORMAT_INFO, MatchFormat, dayFormat, proposedFormat } from '@/lib/utils/matchFormat';
@@ -6,7 +7,7 @@ import { openRequest } from '@/lib/server/adminRequests';
 
 /** Format of a day as saved by the admins (5vs5 when nothing was chosen). */
 export async function loadDayFormat(date: string): Promise<{ format: MatchFormat; formation: string; players: number }> {
-  const snap = await adminDb().doc('settings/match_formats').get();
+  const snap = await leagueDb().doc('settings/match_formats').get();
   const f = dayFormat((snap.data()?.days as DayFormats) || {}, date);
   return { ...f, players: FORMAT_INFO[f.format].players };
 }
@@ -17,7 +18,7 @@ export async function loadRankedPresences(
   date: string
 ): Promise<{ starterIds: string[]; waitlistIds: string[]; players: number; format: MatchFormat }> {
   const fmt = await loadDayFormat(date);
-  const snap = await adminDb().collection('presences').where('date', '==', date).get();
+  const snap = await leagueDb().collection('presences').where('date', '==', date).get();
   const presences: Presence[] = snap.docs.map((d) => {
     const data = d.data() as Presence & { joined_at?: { toMillis?: () => number } };
     const { joined_at, ...rest } = data;
@@ -41,7 +42,7 @@ export async function loadRankedPresences(
 async function notifyPromoted(date: string, starterIds: string[], waitlistIds: string[], players: number) {
   const db = adminDb();
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' });
-  const stateRef = db.doc(`notify_state/${date}`);
+  const stateRef = leagueDb().doc(`notify_state/${date}`);
   const { promoted, tenReached } = await db.runTransaction(async (tx) => {
     const snap = await tx.get(stateRef);
     const prevWaitlist = new Set<string>(snap.exists ? (snap.data()?.waitlist as string[]) || [] : []);
@@ -102,7 +103,7 @@ async function proposeBiggerFormat(date: string, current: MatchFormat, signedUp:
   const next = proposedFormat(current, signedUp);
   if (!next) return;
   const id = `format_${date}_${next}`;
-  if ((await adminDb().doc(`admin_requests/${id}`).get()).exists) return;
+  if ((await leagueDb().doc(`admin_requests/${id}`).get()).exists) return;
   const info = FORMAT_INFO[next];
   await openRequest(
     id,

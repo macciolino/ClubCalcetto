@@ -156,7 +156,7 @@ Production data is REAL: never rewrite stats, no paid services, never print secr
 - Saved by `savePreferences()` from Impostazioni → Lingua / Tema (`components/settings/*`), applied on sign-in on any device
   by `PreferencesSync` (layout). The device keeps its own copy (localStorage `cc_locale`, `cc_theme`) for the first paint.
 
-## Multi-league (in progress, step 1A done 2026-11-18)
+## Multi-league (steps 1A + 1B done 2026-11-18)
 - Target: every club collection lives under `leagues/{leagueId}/<same name>/<same id>` (matches, presences, generated_teams,
   match_payments, mvp_votes, sport_fields, stat_categories, settings, admin_requests, notify_state) + `players/{playerId}`
   (league card: OVR, stats, W/D/L, guests; SAME id as the profile, so every reference stays valid; `userId` = auth uid or
@@ -168,4 +168,13 @@ Production data is REAL: never rewrite stats, no paid services, never print secr
 - Migration "I Calcettari" (id `calcettari`): `lib/server/leagueMigration.ts`, route `/api/admin/league-migration` (super admin,
   dryRun default), card Impostazioni → Admin e account. Only COPIES, never overwrites (batch `create`), never deletes old data; repeatable.
   Today's admins + p-1 → PRESIDENT. Permission helpers: `lib/utils/leaguePermissions.ts`.
-- 1A rules: leagues readable by members + super admin, no client writes. Step 1B switches the app to the league paths.
+- 1B (2026-11-18): the app reads/writes ONLY `leagues/{active}/…`. Client: `lcol/ldoc` (`lib/league/leagueRefs.ts`, active id set by
+  `ActiveLeagueProvider` in `lib/context/ActiveLeagueContext.tsx`, `cc_league` on the device; pages remount on league change).
+  `useAuth().profile` = global account merged with the active card; `isAdmin` = PRESIDENT|COLLABORATOR of the active league;
+  `isSuperAdmin` = platform. "Rendi/Togli admin" writes `leagueRole` PRESIDENT/PLAYER (+ legacy `role`). Own name/photo/position: profile + card.
+- Server: `lib/server/leagueScope.ts` — `inLeague(id, fn)` (AsyncLocalStorage), `leagueDb()`, `isLeagueManager(uid)`, `memberCard`,
+  `mirrorOnCards` (deactivation / return request copied on every card), `scoped(handler)` = route runs in the league of header
+  `x-league-id` (sent by every client API call). Cron runs per active league. New accounts: `ensureDefaultLeagueCard` → "I Calcettari" (until step 3 invites).
+- Rules: club collections only under `leagues/{id}`: members read (verified email required), managers write, presidents change roles
+  (never p-1, guests never managers), own card = name/photo/position. Old top-level collections = read-only backup (admins).
+- Re-run "Crea la lega" after deploying 1B to copy anything written to the old paths in between (it never overwrites).

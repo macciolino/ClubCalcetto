@@ -15,6 +15,10 @@ const app = getApps()[0] || initializeApp({ projectId: PROJECT });
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 
+/** A document of the test league "I Calcettari" (multi-league: club data lives in leagues/calcettari/…). */
+export const LEAGUE = 'leagues/calcettari';
+export const lg = (path: string) => db.doc(`${LEAGUE}/${path}`);
+
 export const ADMIN = { email: 'macciolino84@gmail.com', password: 'password123' };
 export const PLAYERS = ['Uno', 'Due', 'Tre', 'Quattro', 'Cinque', 'Sei', 'Sette', 'Otto', 'Nove', 'Dieci'].map((n, i) => ({
   id: `t${i + 1}`,
@@ -43,10 +47,17 @@ export async function seedMatchDay(): Promise<{ date: string }> {
   await auth.createUser({ uid: 'e2e-super', email: ADMIN.email, password: ADMIN.password, emailVerified: true, displayName: 'Marco Test' });
 
   const batch = db.batch();
+  // Multi-league: account in profiles/, league data in leagues/calcettari/ (card = same id as the profile)
+  batch.set(db.doc('leagues/calcettari'), { id: 'calcettari', name: 'I Calcettari', slug: 'i-calcettari', status: 'active', visibility: 'private', createdAt: now, createdBy: 'p-1' });
+  batch.set(db.doc('memberships/e2e-super'), { leagues: { calcettari: { player_id: 'p-1', league_role: 'PRESIDENT', name: 'I Calcettari' } } });
   const base = { avatar_url: null, position: 'Esterno', is_guest: false, stats: { Velocità: 6, Tiro: 6, Difesa: 6 }, overall_rating: 6, matches_won: 0, matches_drawn: 0, matches_lost: 0, created_at: now, updated_at: now };
-  batch.set(db.doc('profiles/p-1'), { ...base, id: 'p-1', user_id: 'e2e-super', email: ADMIN.email, full_name: 'Marco Test', role: 'admin' });
-  PLAYERS.forEach((p) => batch.set(db.doc(`profiles/${p.id}`), { ...base, id: p.id, user_id: p.id, email: `${p.id}@example.com`, full_name: p.name, role: 'player' }));
-  batch.set(db.doc(`generated_teams/${date}`), {
+  batch.set(db.doc('profiles/p-1'), { ...base, id: 'p-1', user_id: 'e2e-super', email: ADMIN.email, full_name: 'Marco Test', role: 'admin', platformRole: 'SUPER_ADMIN' });
+  batch.set(lg('players/p-1'), { ...base, id: 'p-1', user_id: 'e2e-super', full_name: 'Marco Test', role: 'admin', userId: 'e2e-super', leagueRole: 'PRESIDENT', isActivePlayer: true });
+  PLAYERS.forEach((p) => {
+    batch.set(db.doc(`profiles/${p.id}`), { ...base, id: p.id, user_id: p.id, email: `${p.id}@example.com`, full_name: p.name, role: 'player' });
+    batch.set(lg(`players/${p.id}`), { ...base, id: p.id, user_id: p.id, full_name: p.name, role: 'player', userId: p.id, leagueRole: 'PLAYER', isActivePlayer: true });
+  });
+  batch.set(lg(`generated_teams/${date}`), {
     id: date,
     date,
     team_white: PLAYERS.slice(0, 5),
@@ -56,11 +67,11 @@ export async function seedMatchDay(): Promise<{ date: string }> {
   });
   // Come nella realtà: chi è in squadra era anche iscritto a quel giorno (10 titolari)
   PLAYERS.forEach((p, i) =>
-    batch.set(db.doc(`presences/${date}_${p.id}`), { id: `${date}_${p.id}`, date, player_id: p.id, status: 'confirmed', order_index: i + 1, created_at: new Date(Date.now() - (20 - i) * 60_000).toISOString() })
+    batch.set(lg(`presences/${date}_${p.id}`), { id: `${date}_${p.id}`, date, player_id: p.id, status: 'confirmed', order_index: i + 1, created_at: new Date(Date.now() - (20 - i) * 60_000).toISOString() })
   );
-  batch.set(db.doc('settings/official_match'), { date: romeDay(1), updated_at: now });
-  batch.set(db.doc('settings/app_config'), { standard_total_cost: 80, standard_match_time: '20:30', default_field_id: 'f1' });
-  batch.set(db.doc('sport_fields/f1'), { id: 'f1', name: 'Campo Test', address: 'Via dei Test 1', cost: 80 });
+  batch.set(lg('settings/official_match'), { date: romeDay(1), updated_at: now });
+  batch.set(lg('settings/app_config'), { standard_total_cost: 80, standard_match_time: '20:30', default_field_id: 'f1' });
+  batch.set(lg('sport_fields/f1'), { id: 'f1', name: 'Campo Test', address: 'Via dei Test 1', cost: 80 });
   await batch.commit();
   return { date };
 }

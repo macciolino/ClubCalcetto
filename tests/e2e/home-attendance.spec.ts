@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { db, loginAsAdmin, seedMatchDay } from './seed';
+import { LEAGUE, db, loginAsAdmin, seedMatchDay } from './seed';
 
 /** Home and Presenze: Italian unchanged, English translates texts, weekdays and months. */
 test.describe('Home e Presenze in italiano e in inglese', () => {
@@ -22,7 +22,7 @@ test.describe('Home e Presenze in italiano e in inglese', () => {
     await expect(page.getByText(/Sei titolare \(n° 1\)/)).toBeVisible();
     await expect(page.getByText('Operazione non riuscita. Controlla la connessione e riprova.')).toHaveCount(0);
     // la pagina si aggiorna subito (copia locale di Firestore): sul server si aspetta che la scrittura arrivi
-    const count = async () => (await db.collection('presences').where('player_id', '==', 'p-1').get()).size;
+    const count = async () => (await db.collection(`${LEAGUE}/presences`).where('player_id', '==', 'p-1').get()).size;
     await expect.poll(count, { timeout: 10_000 }).toBe(1);
     await page.waitForTimeout(1500);
     expect(await count()).toBe(1);

@@ -19,6 +19,7 @@ import {
   FieldPath,
   deleteField,
 } from 'firebase/firestore';
+import { lcol, ldoc } from '@/lib/league/leagueRefs';
 import { db, isFirebaseConfigured } from './config';
 import { reportWriteError } from '@/lib/utils/writeErrors';
 import { Profile, Presence, StatCategory, Match, GeneratedTeamRecord, AppSettings, CalendarSettings, MatchOutcome, MatchScorer, MatchTeamPlayer, TeamSubstitution, MvpVote, MatchPenaltySave } from '@/types/database';
@@ -27,7 +28,7 @@ import { DayFormats, MatchFormat, maxPlayersFor } from '@/lib/utils/matchFormat'
 import { requestTeamsCheck, requestFirstMatchCheck } from '@/lib/services/notificationService';
 
 // ==========================================
-// 1. PROFILI & GIOCATORI (Collection: 'profiles')
+// 1. GIOCATORI DELLA LEGA (leagues/{active}/players; account in 'profiles')
 // ==========================================
 
 export function subscribeProfiles(
@@ -40,7 +41,7 @@ export function subscribeProfiles(
   }
 
   try {
-    const colRef = collection(db, 'profiles');
+    const colRef = lcol('players');
     return onSnapshot(
       colRef,
       (snapshot) => {
@@ -67,7 +68,7 @@ export function subscribeProfiles(
 export async function fetchProfiles(): Promise<Profile[]> {
   if (!isFirebaseConfigured) return [];
   try {
-    const snap = await getDocs(collection(db, 'profiles'));
+    const snap = await getDocs(lcol('players'));
     const list: Profile[] = [];
     snap.forEach((d) => list.push(d.data() as Profile));
     return list;
@@ -77,13 +78,14 @@ export async function fetchProfiles(): Promise<Profile[]> {
   }
 }
 
+/** New player card in the active league (guests created by admins): no account, plain player. */
 export async function saveProfileDoc(profile: Profile): Promise<void> {
   if (!isFirebaseConfigured) return;
   try {
-    // C2: the email never goes back into the public profile (it lives in private_profiles)
+    // C2: the email never goes into the league card (it lives in private_profiles)
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { email, ...data } = profile;
-    await setDoc(doc(db, 'profiles', profile.id), data, { merge: true });
+    await setDoc(ldoc('players', profile.id), { ...data, userId: null, leagueRole: 'PLAYER', isActivePlayer: true }, { merge: true });
   } catch (err) {
     console.warn('[Firestore] saveProfileDoc error:', err);
     reportWriteError(err);
@@ -142,6 +144,8 @@ export async function updateProfileFields(
 ): Promise<void> {
   if (!isFirebaseConfigured) return;
   const pairs: unknown[] = [];
+  // Multi-league: "Rendi / Togli admin" = president / player in the active league (`role` kept for older screens)
+  if (fields.role !== undefined) pairs.push(new FieldPath('leagueRole'), fields.role === 'admin' ? 'PRESIDENT' : 'PLAYER');
   Object.entries(fields).forEach(([k, v]) => {
     if (v !== undefined) pairs.push(new FieldPath(k), v);
   });
@@ -149,7 +153,7 @@ export async function updateProfileFields(
   if (pairs.length === 0) return;
   try {
     const [first, value, ...rest] = pairs;
-    await updateDoc(doc(db, 'profiles', profileId), first as FieldPath, value, ...rest);
+    await updateDoc(ldoc('players', profileId), first as FieldPath, value, ...rest);
   } catch (err) {
     console.warn('[Firestore] updateProfileFields error:', err);
     reportWriteError(err);
@@ -160,7 +164,7 @@ export async function updateProfileFields(
 export async function deleteProfileDoc(id: string): Promise<void> {
   if (!isFirebaseConfigured) return;
   try {
-    await deleteDoc(doc(db, 'profiles', id));
+    await deleteDoc(ldoc('players', id));
   } catch (err) {
     console.warn('[Firestore] deleteProfileDoc error:', err);
     reportWriteError(err);
@@ -187,7 +191,7 @@ export function subscribeMatchFormats(callback: (days: DayFormats) => void): Uns
   if (!isFirebaseConfigured || typeof window === 'undefined') return () => {};
   try {
     return onSnapshot(
-      doc(db, 'settings', 'match_formats'),
+      ldoc('settings', 'match_formats'),
       (snap) => callback(((snap.data()?.days as DayFormats) || {}) as DayFormats),
       (err) => {
         console.warn('[Firestore] subscribeMatchFormats warning:', err.message);
@@ -212,7 +216,7 @@ export async function savePreferences(profileId: string, prefs: Partial<Pick<Pro
 export async function saveDayFormat(date: string, format: MatchFormat, formation: string, by: string): Promise<void> {
   if (!isFirebaseConfigured) return;
   await setDoc(
-    doc(db, 'settings', 'match_formats'),
+    ldoc('settings', 'match_formats'),
     { days: { [date]: { format, formation, updated_at: new Date().toISOString(), updated_by: by } } },
     { merge: true }
   );
@@ -260,7 +264,7 @@ export function subscribePresences(
     return () => {};
   }
   try {
-    const q = query(collection(db, 'presences'), where('date', '==', date));
+    const q = query(lcol('presences'), where('date', '==', date));
     return subscribeRanked(q, (list, f) => rankDayPresences(list, maxPlayersFor(f, date)), callback, 'subscribePresences');
   } catch (err) {
     console.warn('[Firestore] subscribePresences exception:', err);
@@ -278,7 +282,7 @@ export function subscribePresencesRange(
     return () => {};
   }
   try {
-    const q = query(collection(db, 'presences'), where('date', '>=', fromDate), where('date', '<=', toDate));
+    const q = query(lcol('presences'), where('date', '>=', fromDate), where('date', '<=', toDate));
     return subscribeRanked(
       q,
       (list, f) => rankPresencesByDate(list, (d) => maxPlayersFor(f, d)),
@@ -304,7 +308,7 @@ export function presenceDocId(date: string, playerId: string): string {
 export async function joinPresence(date: string, playerId: string): Promise<void> {
   if (!isFirebaseConfigured) return;
   const id = presenceDocId(date, playerId);
-  await setDoc(doc(db, 'presences', id), {
+  await setDoc(ldoc('presences', id), {
     id,
     date,
     player_id: playerId,
@@ -325,7 +329,7 @@ function checkTeamsForPresence(presenceId: string) {
 /** Withdraws a presence (own, or anyone's for admins). The waitlist moves up automatically. */
 export async function leavePresence(presenceId: string): Promise<void> {
   if (!isFirebaseConfigured) return;
-  await deleteDoc(doc(db, 'presences', presenceId));
+  await deleteDoc(ldoc('presences', presenceId));
   checkTeamsForPresence(presenceId);
 }
 
@@ -335,14 +339,14 @@ export async function setPresenceOverride(
   override: 'starter' | 'waitlist' | null
 ): Promise<void> {
   if (!isFirebaseConfigured) return;
-  await updateDoc(doc(db, 'presences', presenceId), { admin_override: override });
+  await updateDoc(ldoc('presences', presenceId), { admin_override: override });
   checkTeamsForPresence(presenceId);
 }
 
 export async function clearPresencesForDate(date: string): Promise<void> {
   if (!isFirebaseConfigured) return;
   try {
-    const q = query(collection(db, 'presences'), where('date', '==', date));
+    const q = query(lcol('presences'), where('date', '==', date));
     const snap = await getDocs(q);
     const batch = writeBatch(db);
     snap.forEach((d) => batch.delete(d.ref));
@@ -365,7 +369,7 @@ export function subscribeStatCategories(
   }
 
   try {
-    const colRef = collection(db, 'stat_categories');
+    const colRef = lcol('stat_categories');
     return onSnapshot(
       colRef,
       (snapshot) => {
@@ -397,14 +401,14 @@ export async function addStatParameter(name: string, defaultValue: number): Prom
   if (!isFirebaseConfigured) return 0;
   const clean = name.trim();
   const id = `cat-${Date.now()}`;
-  await setDoc(doc(db, 'stat_categories', id), {
+  await setDoc(ldoc('stat_categories', id), {
     id,
     name: clean,
     label: clean,
     default_value: defaultValue,
     created_at: new Date().toISOString(),
   });
-  const profiles = await getDocs(collection(db, 'profiles'));
+  const profiles = await getDocs(lcol('players'));
   const missing = profiles.docs.filter((d) => typeof (d.data().stats || {})[clean] !== 'number');
   for (let i = 0; i < missing.length; i += 400) {
     const batch = writeBatch(db);
@@ -419,13 +423,13 @@ export async function addStatParameter(name: string, defaultValue: number): Prom
 /** Removes a parameter from the app. Players' values stay saved (hidden): adding it again brings them back. */
 export async function removeStatParameter(id: string): Promise<void> {
   if (!isFirebaseConfigured) return;
-  await deleteDoc(doc(db, 'stat_categories', id));
+  await deleteDoc(ldoc('stat_categories', id));
 }
 
 export async function saveStatCategoryDoc(cat: StatCategory): Promise<void> {
   if (!isFirebaseConfigured) return;
   try {
-    await setDoc(doc(db, 'stat_categories', cat.id), cat, { merge: true });
+    await setDoc(ldoc('stat_categories', cat.id), cat, { merge: true });
   } catch (err) {
     console.warn('[Firestore] saveStatCategoryDoc error:', err);
     reportWriteError(err);
@@ -435,7 +439,7 @@ export async function saveStatCategoryDoc(cat: StatCategory): Promise<void> {
 export async function deleteStatCategoryDoc(id: string): Promise<void> {
   if (!isFirebaseConfigured) return;
   try {
-    await deleteDoc(doc(db, 'stat_categories', id));
+    await deleteDoc(ldoc('stat_categories', id));
   } catch (err) {
     console.warn('[Firestore] deleteStatCategoryDoc error:', err);
     reportWriteError(err);
@@ -454,7 +458,7 @@ export function subscribeOfficialMatchDate(
   }
 
   try {
-    const docRef = doc(db, 'settings', 'official_match');
+    const docRef = ldoc('settings', 'official_match');
     return onSnapshot(
       docRef,
       (snap) => {
@@ -474,7 +478,7 @@ export function subscribeOfficialMatchDate(
 export async function saveOfficialMatchDateDoc(date: string): Promise<void> {
   if (!isFirebaseConfigured) return;
   try {
-    await setDoc(doc(db, 'settings', 'official_match'), { date, updated_at: new Date().toISOString() }, { merge: true });
+    await setDoc(ldoc('settings', 'official_match'), { date, updated_at: new Date().toISOString() }, { merge: true });
   } catch (err) {
     console.warn('[Firestore] saveOfficialMatchDateDoc error:', err);
     reportWriteError(err);
@@ -490,7 +494,7 @@ export function subscribeCalendarSettings(
   }
   try {
     return onSnapshot(
-      doc(db, 'settings', 'calendar'),
+      ldoc('settings', 'calendar'),
       (snap) => callback(snap.exists() ? (snap.data() as CalendarSettings) : {}),
       (err) => console.warn('[Firestore] subscribeCalendarSettings warning:', err.message)
     );
@@ -504,7 +508,7 @@ export function subscribeCalendarSettings(
 export async function saveCalendarOpenUntil(openUntil: string, updatedBy: string): Promise<void> {
   if (!isFirebaseConfigured) return;
   await setDoc(
-    doc(db, 'settings', 'calendar'),
+    ldoc('settings', 'calendar'),
     { open_until: openUntil, updated_at: new Date().toISOString(), updated_by: updatedBy },
     { merge: true }
   );
@@ -523,7 +527,7 @@ export function subscribeMatch(
   }
 
   try {
-    const docRef = doc(db, 'matches', date);
+    const docRef = ldoc('matches', date);
     return onSnapshot(
       docRef,
       (snap) => {
@@ -546,7 +550,7 @@ export function subscribeMatch(
 export async function saveMatchDoc(match: Match): Promise<void> {
   if (!isFirebaseConfigured) return;
   try {
-    await setDoc(doc(db, 'matches', match.match_date), match, { merge: true });
+    await setDoc(ldoc('matches', match.match_date), match, { merge: true });
   } catch (err) {
     console.warn('[Firestore] saveMatchDoc error:', err);
     reportWriteError(err);
@@ -561,7 +565,7 @@ export async function saveMatchFields(date: string, fields: Partial<Match>): Pro
   if (!isFirebaseConfigured) return;
   const now = new Date().toISOString();
   await setDoc(
-    doc(db, 'matches', date),
+    ldoc('matches', date),
     { ...fields, id: date, match_date: date, updated_at: now },
     { merge: true }
   );
@@ -574,7 +578,7 @@ export function subscribeMatches(callback: (matches: Match[]) => void): Unsubscr
   }
   try {
     return onSnapshot(
-      collection(db, 'matches'),
+      lcol('matches'),
       (snapshot) => {
         const list = snapshot.docs.map((d) => ({ ...(d.data() as Match), id: d.id }));
         list.sort((a, b) => (b.match_date || b.id).localeCompare(a.match_date || a.id));
@@ -629,7 +633,7 @@ export async function saveMatchResult(input: MatchResultInput): Promise<void> {
   teamBlack.forEach((p) => (newEffects[p.id] = outcomeFor('black')));
 
   await runTransaction(db, async (tx) => {
-    const matchRef = doc(db, 'matches', date);
+    const matchRef = ldoc('matches', date);
     const matchSnap = await tx.get(matchRef);
     const oldEffects: Record<string, MatchOutcome> =
       (matchSnap.exists() && (matchSnap.data() as Match).profile_effects) || {};
@@ -648,7 +652,7 @@ export async function saveMatchResult(input: MatchResultInput): Promise<void> {
     const ids = Array.from(deltas.keys()).filter((id) =>
       Object.values(deltas.get(id) || {}).some((n) => n !== 0)
     );
-    const snaps = await Promise.all(ids.map((id) => tx.get(doc(db, 'profiles', id))));
+    const snaps = await Promise.all(ids.map((id) => tx.get(ldoc('players', id))));
     const appliedEffects: Record<string, MatchOutcome> = { ...newEffects };
 
     snaps.forEach((snap, i) => {
@@ -702,12 +706,12 @@ export async function saveMatchResult(input: MatchResultInput): Promise<void> {
 export async function deleteMatchResult(date: string): Promise<void> {
   if (!isFirebaseConfigured) return;
   await runTransaction(db, async (tx) => {
-    const matchRef = doc(db, 'matches', date);
+    const matchRef = ldoc('matches', date);
     const matchSnap = await tx.get(matchRef);
     if (!matchSnap.exists()) return;
     const effects: Record<string, MatchOutcome> = (matchSnap.data() as Match).profile_effects || {};
     const ids = Object.keys(effects);
-    const snaps = await Promise.all(ids.map((id) => tx.get(doc(db, 'profiles', id))));
+    const snaps = await Promise.all(ids.map((id) => tx.get(ldoc('players', id))));
     snaps.forEach((snap, i) => {
       if (!snap.exists()) return;
       tx.update(snap.ref, {
@@ -732,7 +736,7 @@ export function subscribeGeneratedTeams(
   }
 
   try {
-    const docRef = doc(db, 'generated_teams', date);
+    const docRef = ldoc('generated_teams', date);
     return onSnapshot(
       docRef,
       (snap) => {
@@ -764,7 +768,7 @@ export function subscribeTeamDatesSince(fromDate: string, callback: (dates: stri
   if (!isFirebaseConfigured || typeof window === 'undefined') return () => {};
   try {
     return onSnapshot(
-      query(collection(db, 'generated_teams'), where('date', '>=', fromDate)),
+      query(lcol('generated_teams'), where('date', '>=', fromDate)),
       (snap) => callback(snap.docs.map((d) => (d.data() as GeneratedTeamRecord).date).filter(Boolean)),
       (err) => console.warn('[Firestore] subscribeTeamDatesSince warning:', err.message)
     );
@@ -782,7 +786,7 @@ export async function saveTeams(
 ): Promise<void> {
   if (!isFirebaseConfigured) return;
   const now = new Date().toISOString();
-  const ref = doc(db, 'generated_teams', date);
+  const ref = ldoc('generated_teams', date);
   const snap = await getDoc(ref);
   const existing = snap.exists() ? (snap.data() as GeneratedTeamRecord) : null;
   const record: GeneratedTeamRecord = {
@@ -807,7 +811,7 @@ export async function saveTeams(
 /** Admin confirms the match: from now on these are the teams (players get notified). */
 export async function confirmTeams(date: string, confirmedBy: string, confirmed = true): Promise<void> {
   if (!isFirebaseConfigured) return;
-  await updateDoc(doc(db, 'generated_teams', date), {
+  await updateDoc(ldoc('generated_teams', date), {
     confirmed,
     confirmed_at: confirmed ? new Date().toISOString() : null,
     confirmed_by: confirmed ? confirmedBy : null,
@@ -827,7 +831,7 @@ export async function applyTeamSubstitutions(
   substitutions: Omit<TeamSubstitution, 'at'>[]
 ): Promise<boolean> {
   if (!isFirebaseConfigured || substitutions.length === 0) return false;
-  const ref = doc(db, 'generated_teams', date);
+  const ref = ldoc('generated_teams', date);
   return runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
     if (!snap.exists()) return false;
@@ -854,7 +858,7 @@ export function subscribeMvpVotes(date: string, callback: (votes: MvpVote[]) => 
   if (!isFirebaseConfigured || typeof window === 'undefined' || !date) return () => {};
   try {
     return onSnapshot(
-      query(collection(db, 'mvp_votes'), where('date', '==', date)),
+      query(lcol('mvp_votes'), where('date', '==', date)),
       (snap) => callback(snap.docs.map((d) => d.data() as MvpVote)),
       (err) => console.warn('[Firestore] subscribeMvpVotes warning:', err.message)
     );
@@ -867,7 +871,7 @@ export function subscribeMvpVotes(date: string, callback: (votes: MvpVote[]) => 
 /** One vote per person per match: voting again replaces the previous choice. */
 export async function castMvpVote(date: string, voterUid: string, playerId: string): Promise<void> {
   if (!isFirebaseConfigured) return;
-  await setDoc(doc(db, 'mvp_votes', `${date}_${voterUid}`), {
+  await setDoc(ldoc('mvp_votes', `${date}_${voterUid}`), {
     date,
     voter_id: voterUid,
     player_id: playerId,
@@ -878,13 +882,13 @@ export async function castMvpVote(date: string, voterUid: string, playerId: stri
 /** Admin test mode of the MVP vote for a match day (only admins see it open early). */
 export async function setMvpVoteTest(date: string, mode: 'admins' | 'all' | false): Promise<void> {
   if (!isFirebaseConfigured) return;
-  await updateDoc(doc(db, 'generated_teams', date), { mvp_vote_test: mode, updated_at: new Date().toISOString() });
+  await updateDoc(ldoc('generated_teams', date), { mvp_vote_test: mode, updated_at: new Date().toISOString() });
 }
 
 /** Deletes all MVP votes of a match day (admins, e.g. after a test). */
 export async function clearMvpVotes(date: string): Promise<void> {
   if (!isFirebaseConfigured) return;
-  const snap = await getDocs(query(collection(db, 'mvp_votes'), where('date', '==', date)));
+  const snap = await getDocs(query(lcol('mvp_votes'), where('date', '==', date)));
   const batch = writeBatch(db);
   snap.docs.forEach((d) => batch.delete(d.ref));
   await batch.commit();
@@ -911,7 +915,7 @@ export function subscribeAppSettings(
   }
 
   try {
-    const docRef = doc(db, 'settings', 'app_config');
+    const docRef = ldoc('settings', 'app_config');
     return onSnapshot(
       docRef,
       (snap) => {
@@ -937,13 +941,13 @@ export async function saveStandardCostsDoc(costs: AppSettings['standard_costs'])
     const v = costs?.[f];
     out[f] = Number(v) > 0 ? Number(v) : deleteField();
   });
-  await setDoc(doc(db, 'settings', 'app_config'), { standard_costs: out }, { merge: true });
+  await setDoc(ldoc('settings', 'app_config'), { standard_costs: out }, { merge: true });
 }
 
 export async function saveAppSettingsDoc(settings: Partial<AppSettings>): Promise<void> {
   if (!isFirebaseConfigured) return;
   try {
-    await setDoc(doc(db, 'settings', 'app_config'), settings, { merge: true });
+    await setDoc(ldoc('settings', 'app_config'), settings, { merge: true });
   } catch (err) {
     console.warn('[Firestore] saveAppSettingsDoc error:', err);
     reportWriteError(err);

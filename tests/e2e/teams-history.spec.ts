@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { PLAYERS, db, loginAsAdmin, seedMatchDay } from './seed';
+import { LEAGUE, PLAYERS, db, loginAsAdmin, seedMatchDay } from './seed';
 
 /** Squadre and Storico: Italian stays as it was, English translates labels, pitch places and dates. */
 test.describe('Squadre e Storico in italiano e in inglese', () => {
@@ -41,7 +41,7 @@ test.describe('Squadre e Storico in italiano e in inglese', () => {
 
   test('Storico in inglese: classifica, partite, calendario e dettaglio', async ({ page }) => {
     const toTeam = (list: typeof PLAYERS) => list.map((p) => ({ id: p.id, name: p.name }));
-    await db.doc(`matches/${date}`).set({
+    await db.doc(`${LEAGUE}/matches/${date}`).set({
       id: date,
       match_date: date,
       status: 'completed',

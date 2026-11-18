@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminDb, isAdminConfigured } from '@/lib/firebase/admin';
+import { inLeague, leagueDb } from '@/lib/server/leagueScope';
 import { checkPromotions } from '@/lib/server/presenceWatch';
 import { deliver, italianDate, registeredProfileIds, romeDateTime, romeTimeLabel } from '@/lib/server/push';
 import { MATCH_DURATION_MIN, MVP_VOTE_DELAY_MIN, MVP_VOTE_OPEN_HOURS } from '@/lib/utils/matchUtils';
@@ -27,67 +28,73 @@ async function run(request: Request) {
   const romeDay = (d: Date) => d.toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' });
   const dates = Array.from(new Set([romeDay(now), romeDay(new Date(now.getTime() - 24 * 3600 * 1000))]));
 
-  const settings = (await db.doc('settings/app_config').get()).data() || {};
-  const standardTime: string = settings.standard_match_time || '20:30';
+  // Multi-league: the same work for every active league (each in its own scope)
   const report: Record<string, string> = {};
-
-  for (const date of dates) {
-    const teamsRef = db.doc(`generated_teams/${date}`);
-    const teamsSnap = await teamsRef.get();
-    const match = (await db.doc(`matches/${date}`).get()).data() as Match | undefined;
-    const record = teamsSnap.data() as GeneratedTeamRecord | undefined;
-    if (!record && match?.status !== 'completed') {
-      report[date] = 'nessuna partita';
-      continue;
-    }
-    if (!record?.confirmed && match?.status !== 'completed') {
-      report[date] = 'partita non confermata';
-      continue;
-    }
-    if (record?.mvp_vote_notified_at) {
-      report[date] = 'già avvisati';
-      continue;
-    }
-    const time = match?.time_override && match.match_time ? match.match_time.slice(0, 5) : standardTime;
-    const opensAt = new Date(romeDateTime(date, time).getTime() + (MATCH_DURATION_MIN + MVP_VOTE_DELAY_MIN) * 60000);
-    const closesAt = new Date(opensAt.getTime() + MVP_VOTE_OPEN_HOURS * 3600000);
-    if (now < opensAt) {
-      report[date] = `voto alle ${romeTimeLabel(opensAt)}`;
-      continue;
-    }
-    if (now >= closesAt) {
-      report[date] = 'voto già chiuso';
-      continue;
-    }
-
-    // Segna "avvisati" PRIMA di inviare: se lo scheduler parte due volte, la notifica parte una volta sola
-    const claimed = await db.runTransaction(async (tx) => {
-      const fresh = await tx.get(teamsRef);
-      if (fresh.exists && fresh.data()?.mvp_vote_notified_at) return false;
-      tx.set(teamsRef, { mvp_vote_notified_at: now.toISOString() }, { merge: true });
-      return true;
-    });
-    if (!claimed) {
-      report[date] = 'già avvisati';
-      continue;
-    }
-    const result = await deliver(await registeredProfileIds(), {
-      title: '⭐ Vota l’MVP',
-      body: `La partita di ${italianDate(date)} è finita: vota il migliore in campo entro le ${romeTimeLabel(closesAt)} di domani.`,
-      url: `/teams?date=${date}`,
-    });
-    report[date] = `inviata (${result.mode}, ${result.sent} dispositivi)`;
-  }
-  // Rete di sicurezza, una volta all'ora (per non consumare letture del piano gratuito): chi è passato dalla
-  // lista d'attesa ai titolari nei prossimi giorni, se l'avviso immediato dopo il ritiro è sfuggito
   let promotionsChecked = 0;
-  const hourly = now.getUTCMinutes() < 10 || new URL(request.url).searchParams.get('full') === '1';
-  for (let i = 0; hourly && i < 14; i++) {
-    const date = romeDay(new Date(now.getTime() + i * 24 * 3600 * 1000));
-    const any = await db.collection('presences').where('date', '==', date).limit(1).get();
-    if (any.empty) continue;
-    await checkPromotions(date);
-    promotionsChecked += 1;
+  const leagues = await db.collection('leagues').where('status', '==', 'active').select().get();
+  for (const league of leagues.docs) {
+    await inLeague(league.id, async () => {
+    const settings = (await leagueDb().doc('settings/app_config').get()).data() || {};
+    const standardTime: string = settings.standard_match_time || '20:30';
+
+    for (const date of dates) {
+      const teamsRef = leagueDb().doc(`generated_teams/${date}`);
+      const teamsSnap = await teamsRef.get();
+      const match = (await leagueDb().doc(`matches/${date}`).get()).data() as Match | undefined;
+      const record = teamsSnap.data() as GeneratedTeamRecord | undefined;
+      if (!record && match?.status !== 'completed') {
+        report[`${leagueDb().id}:${date}`] = 'nessuna partita';
+        continue;
+      }
+      if (!record?.confirmed && match?.status !== 'completed') {
+        report[`${leagueDb().id}:${date}`] = 'partita non confermata';
+        continue;
+      }
+      if (record?.mvp_vote_notified_at) {
+        report[`${leagueDb().id}:${date}`] = 'già avvisati';
+        continue;
+      }
+      const time = match?.time_override && match.match_time ? match.match_time.slice(0, 5) : standardTime;
+      const opensAt = new Date(romeDateTime(date, time).getTime() + (MATCH_DURATION_MIN + MVP_VOTE_DELAY_MIN) * 60000);
+      const closesAt = new Date(opensAt.getTime() + MVP_VOTE_OPEN_HOURS * 3600000);
+      if (now < opensAt) {
+        report[`${leagueDb().id}:${date}`] = `voto alle ${romeTimeLabel(opensAt)}`;
+        continue;
+      }
+      if (now >= closesAt) {
+        report[`${leagueDb().id}:${date}`] = 'voto già chiuso';
+        continue;
+      }
+
+      // Segna "avvisati" PRIMA di inviare: se lo scheduler parte due volte, la notifica parte una volta sola
+      const claimed = await db.runTransaction(async (tx) => {
+        const fresh = await tx.get(teamsRef);
+        if (fresh.exists && fresh.data()?.mvp_vote_notified_at) return false;
+        tx.set(teamsRef, { mvp_vote_notified_at: now.toISOString() }, { merge: true });
+        return true;
+      });
+      if (!claimed) {
+        report[`${leagueDb().id}:${date}`] = 'già avvisati';
+        continue;
+      }
+      const result = await deliver(await registeredProfileIds(), {
+        title: '⭐ Vota l’MVP',
+        body: `La partita di ${italianDate(date)} è finita: vota il migliore in campo entro le ${romeTimeLabel(closesAt)} di domani.`,
+        url: `/teams?date=${date}`,
+      });
+      report[`${leagueDb().id}:${date}`] = `inviata (${result.mode}, ${result.sent} dispositivi)`;
+    }
+    // Rete di sicurezza, una volta all'ora (per non consumare letture del piano gratuito): chi è passato dalla
+    // lista d'attesa ai titolari nei prossimi giorni, se l'avviso immediato dopo il ritiro è sfuggito
+    const hourly = now.getUTCMinutes() < 10 || new URL(request.url).searchParams.get('full') === '1';
+    for (let i = 0; hourly && i < 14; i++) {
+      const date = romeDay(new Date(now.getTime() + i * 24 * 3600 * 1000));
+      const any = await leagueDb().collection('presences').where('date', '==', date).limit(1).get();
+      if (any.empty) continue;
+      await checkPromotions(date);
+      promotionsChecked += 1;
+    }
+    });
   }
 
   // Una volta al giorno (verso le 4 di notte): via dalla campanella le notifiche più vecchie di 60 giorni

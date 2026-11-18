@@ -1,6 +1,7 @@
 'use client';
 
 import { auth } from '@/lib/firebase/config';
+import { currentLeagueId } from '@/lib/league/leagueRefs';
 
 /** Reasons shown to the player (same list as the server, src/lib/server/accountDeletion.ts). */
 export const DELETE_REASONS = [
@@ -17,7 +18,7 @@ async function authFetch(url: string, init: RequestInit = {}) {
   if (!user) return { ok: false, error: 'unauthenticated' } as Record<string, unknown>;
   const res = await fetch(url, {
     ...init,
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}`, ...(init.headers || {}) },
+    headers: { 'Content-Type': 'application/json', 'x-league-id': currentLeagueId(), Authorization: `Bearer ${await user.getIdToken()}`, ...(init.headers || {}) },
   });
   return (await res.json().catch(() => ({ ok: false, error: 'bad_response' }))) as Record<string, unknown>;
 }

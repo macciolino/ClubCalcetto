@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
 import { adminDb, isAdminConfigured } from '@/lib/firebase/admin';
 import { adminCaller } from '@/lib/server/adminRequests';
+import { leagueDb, scoped } from '@/lib/server/leagueScope';
 
 export const runtime = 'nodejs';
 
@@ -12,14 +13,15 @@ const DAYS = 30;
  * POST { guestId } (admin) → { token }: invite link for a guest (reuses the guest's still-valid link).
  * GET ?token=… (public)    → { name }: who the link belongs to, for the banner on the sign-up page.
  */
-export async function POST(request: Request) {
+async function handlePost(request: Request) {
   if (!isAdminConfigured()) return NextResponse.json({ ok: false, error: 'not_configured' }, { status: 503 });
   try {
     const caller = await adminCaller(request);
     if (!caller) return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
     const { guestId } = (await request.json()) as { guestId?: string };
     const db = adminDb();
-    const guest = guestId ? await db.doc(`profiles/${guestId}`).get() : null;
+    const league = leagueDb();
+    const guest = guestId ? await league.doc(`players/${guestId}`).get() : null; // the guest's card in the league
     if (!guest?.exists || !guest.data()?.is_guest || guest.data()?.archived_at) {
       return NextResponse.json({ ok: false, error: 'not_a_guest' }, { status: 400 });
     }
@@ -31,6 +33,7 @@ export async function POST(request: Request) {
     const token = randomBytes(24).toString('base64url');
     await db.doc(`invites/${token}`).set({
       guest_id: guestId,
+      league_id: league.id,
       guest_name: guest.data()?.full_name || 'Ospite',
       created_by: caller.profileId,
       created_at: now.toISOString(),
@@ -55,3 +58,6 @@ export async function GET(request: Request) {
   }
   return NextResponse.json({ ok: true, name: d.guest_name });
 }
+
+/** Multi-league: runs in the league the app is using (header x-league-id). */
+export const POST = scoped(handlePost);

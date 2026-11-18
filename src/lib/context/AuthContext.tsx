@@ -3,7 +3,7 @@
 import { markJustSignedIn } from '@/components/SplashScreen';
 import { notify } from '@/components/ui/Feedback';
 
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Profile, UserRole, FieldPosition } from '@/types/database';
 import { updateStoredPlayer, addStoredPlayer, getStoredPlayers } from '@/lib/services/playerService';
 import { getStoredCategories } from '@/lib/services/statCategoryService';
@@ -18,7 +18,9 @@ import {
   reload,
   User as FirebaseUser,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot, updateDoc } from 'firebase/firestore';
+import { ldoc } from '@/lib/league/leagueRefs';
+import { ActiveLeagueProvider, useActiveLeague } from '@/lib/context/ActiveLeagueContext';
 import { ensurePrivateEmail } from '@/lib/firebase/firestoreService';
 
 /**
@@ -515,6 +517,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (isFirebaseConfigured) {
       await setDoc(doc(db, 'profiles', profile.id), patch, { merge: true });
+      // Multi-league: the same name / photo / position on the card in the active league (the one the pages show)
+      await updateDoc(ldoc('players', profile.id), patch).catch((e) => console.warn('Scheda di lega non aggiornata:', e));
     }
     const merged: Profile = { ...profile, ...patch };
     setProfile(merged);
@@ -545,15 +549,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         authProvider,
       }}
     >
-      {children}
+      <ActiveLeagueProvider uid={user?.uid ?? null} isSuperAdmin={isSuperAdmin}>
+        {children}
+      </ActiveLeagueProvider>
     </AuthContext.Provider>
   );
 }
 
+/** Account fields that stay those of the global profile; everything else comes from the card in the active league. */
+const LEAGUE_ONLY_KEYS = ['userId', 'leagueRole', 'isActivePlayer'] as const;
+
+/**
+ * Signed-in user. Multi-league (1B): `profile` = global account merged with the card of the ACTIVE league
+ * (stats, OVR, W/D/L, position, name shown in the league); `isAdmin` = president or collaborator of that league.
+ * `isSuperAdmin` stays the platform role.
+ */
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth deve essere utilizzato all’interno di un AuthProvider');
   }
-  return context;
+  const league = useActiveLeague();
+  const { profile: account, isLoading } = context;
+  const { member, canManageMatchesAndCash: manages, isLoading: leagueLoading } = league;
+  const profile = useMemo<Profile | null>(() => {
+    if (!account) return null;
+    const card: Record<string, unknown> = { ...(member || {}) };
+    LEAGUE_ONLY_KEYS.forEach((k) => delete card[k]);
+    return {
+      ...account,
+      ...(card as Partial<Profile>),
+      id: account.id,
+      user_id: account.user_id,
+      locale: account.locale,
+      theme: account.theme,
+      role: manages ? 'admin' : 'player',
+    };
+  }, [account, member, manages]);
+  return useMemo(
+    () => ({ ...context, profile, isAdmin: Boolean(context.user && manages), isLoading: isLoading || leagueLoading }),
+    [context, profile, manages, isLoading, leagueLoading]
+  );
 }

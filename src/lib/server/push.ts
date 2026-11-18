@@ -1,4 +1,5 @@
 import { adminDb, adminMessaging } from '@/lib/firebase/admin';
+import { leagueDb } from '@/lib/server/leagueScope';
 
 /** Server-only helpers to send push notifications (used by /api/notify and /api/cron/mvp-vote). */
 
@@ -25,14 +26,15 @@ export function italianDate(date: string): string {
 }
 
 export async function getMode(): Promise<NotifyMode> {
-  const snap = await adminDb().doc('settings/notifications').get();
+  const snap = await leagueDb().doc('settings/notifications').get();
   const mode = snap.exists ? (snap.data()?.mode as NotifyMode) : undefined;
   return mode === 'off' || mode === 'all' ? mode : 'admins';
 }
 
+/** Presidents and collaborators of the current league (multi-league: no longer every admin of the app). */
 export async function adminProfileIds(): Promise<string[]> {
-  const snap = await adminDb().collection('profiles').where('role', '==', 'admin').get();
-  return Array.from(new Set([SUPER_ADMIN_PROFILE_ID, ...snap.docs.map((d) => d.id)]));
+  const snap = await leagueDb().collection('players').where('leagueRole', 'in', ['PRESIDENT', 'COLLABORATOR']).get();
+  return snap.docs.filter((d) => !d.data().deactivated_at).map((d) => d.id);
 }
 
 /**
@@ -105,15 +107,16 @@ export async function deliver(playerIds: string[], msg: Message): Promise<{ sent
 }
 
 /**
- * Every registered account (not guests, not closed accounts): they all get the in-app notification,
+ * Every registered account of the current league (not guests, not closed accounts): they all get the in-app notification,
  * and those with a registered device also the push.
  */
 export async function registeredProfileIds(): Promise<string[]> {
-  const [profiles, tokens] = await Promise.all([adminDb().collection('profiles').get(), adminDb().collection('push_tokens').get()]);
-  const active = profiles.docs
+  const [players, tokens] = await Promise.all([leagueDb().collection('players').get(), adminDb().collection('push_tokens').get()]);
+  const active = players.docs
     .filter((d) => !d.data().is_guest && !d.data().deactivated_at && !d.data().archived_at)
     .map((d) => d.id);
-  const withDevice = tokens.docs.map((d) => d.data().profile_id as string).filter(Boolean);
+  const members = new Set(players.docs.map((d) => d.id));
+  const withDevice = tokens.docs.map((d) => d.data().profile_id as string).filter((id) => id && members.has(id));
   return Array.from(new Set([...active, ...withDevice]));
 }
 

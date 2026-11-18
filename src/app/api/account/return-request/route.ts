@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminDb, isAdminConfigured } from '@/lib/firebase/admin';
+import { mirrorOnCards } from '@/lib/server/leagueScope';
 import { openRequest } from '@/lib/server/adminRequests';
 import { profileIdsByEmail } from '@/lib/server/emailPrivacy';
 
@@ -28,7 +29,11 @@ export async function POST(request: Request) {
 
     const data = closed.data() || {};
     const name = String(data.full_name || 'Giocatore');
-    if (!data.restore_requested_at) await closed.ref.update({ restore_requested_at: new Date().toISOString() });
+    if (!data.restore_requested_at) {
+      const mark = { restore_requested_at: new Date().toISOString() };
+      await closed.ref.update(mark);
+      await mirrorOnCards(closed.id, mark); // the admins' lists read the league cards
+    }
     await openRequest(
       `restore_${closed.id}`,
       { type: 'restore', profile_id: closed.id, name, email: clean },

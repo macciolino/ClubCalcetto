@@ -107,6 +107,8 @@ describe('Migrazione nella lega "I Calcettari"', () => {
     expect((await call(leagueMigration, {})).status).toBe(401);
 
     const sup = await makeUser('super', { role: 'admin' }, { email: 'macciolino84@gmail.com' });
+    // makeUser also joins the test league: start from the single-group data only
+    await db().recursiveDelete(db().doc(L));
     const dry = await call(leagueMigration, {}, sup.token);
     expect(dry.data).toMatchObject({ ok: true, dryRun: true, leagueCreated: true });
     expect(await get(L)).toBeUndefined();

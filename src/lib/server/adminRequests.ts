@@ -1,4 +1,5 @@
-import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { adminAuth } from '@/lib/firebase/admin';
+import { isLeagueManager, leagueDb } from '@/lib/server/leagueScope';
 import { adminProfileIds, sendToProfiles } from '@/lib/server/push';
 
 import { SUPER_ADMIN_EMAIL } from '@/lib/superAdmin';
@@ -39,7 +40,7 @@ export async function openRequest(
   data: Omit<AdminRequestDoc, 'status' | 'created_at'>,
   push: { title: string; body: string }
 ): Promise<void> {
-  const ref = adminDb().doc(`admin_requests/${id}`);
+  const ref = leagueDb().doc(`admin_requests/${id}`);
   const prev = await ref.get();
   if (prev.exists && prev.data()?.status === 'open') return; // già in attesa: niente doppioni né notifiche ripetute
   await ref.set({ ...data, status: 'open', created_at: new Date().toISOString() });
@@ -49,7 +50,7 @@ export async function openRequest(
 }
 
 export async function closeRequest(id: string, by: string, resolution: string): Promise<void> {
-  await adminDb()
+  await leagueDb()
     .doc(`admin_requests/${id}`)
     .set({ status: 'done', resolved_at: new Date().toISOString(), resolved_by: by, resolution }, { merge: true });
 }
@@ -68,11 +69,10 @@ export async function callerFrom(request: Request) {
   return { uid: decoded.uid, email: decoded.email || null, isSuper, profileId };
 }
 
-/** Caller that is an admin (role 'admin' on their profile) or the super admin; null otherwise. */
+/** Caller that manages the current league (president / collaborator) or the super admin; null otherwise. */
 export async function adminCaller(request: Request) {
   const caller = await callerFrom(request);
   if (!caller) return null;
   if (caller.isSuper) return caller;
-  const snap = await adminDb().doc(`profiles/${caller.profileId}`).get();
-  return snap.exists && snap.data()?.role === 'admin' && !snap.data()?.deactivated_at ? caller : null;
+  return (await isLeagueManager(caller.uid)) ? caller : null;
 }

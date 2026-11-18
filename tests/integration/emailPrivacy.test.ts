@@ -8,7 +8,7 @@ import { POST as returnRequest } from '@/app/api/account/return-request/route';
 import { migrateProfileEmails } from '@/lib/server/emailPrivacy';
 import { deleteAccount } from '@/lib/server/accountDeletion';
 import { archiveAndReset } from '@/lib/server/profileMerge';
-import { assertEmulators, call, db, makeUser, profileDoc, resetEmulators } from './helpers';
+import { assertEmulators, call, db, ldb, makeUser, profileDoc, resetEmulators } from './helpers';
 
 assertEmulators();
 
@@ -94,7 +94,9 @@ describe('Spostamento delle email (C2)', () => {
     await archiveAndReset('z1');
     const fresh = await profile('z1');
     expect(fresh?.email).toBeUndefined();
-    expect(fresh?.matches_won).toBe(0);
+    expect(fresh?.deactivated_at).toBeUndefined();
+    // multi-league: the fresh start is on the card in the league
+    expect((await ldb().doc('players/z1').get()).data()?.matches_won).toBe(0);
     expect(await privateEmail('z1')).toBe('z1@example.com');
   });
 });

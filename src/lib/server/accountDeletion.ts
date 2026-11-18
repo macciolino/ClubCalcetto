@@ -1,5 +1,6 @@
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { leagueDb, leaguesWithPlayer, mirrorOnCards } from '@/lib/server/leagueScope';
 import { sendToProfiles } from '@/lib/server/push';
 
 import { SUPER_ADMIN_EMAIL, SUPER_ADMIN_PROFILE_ID } from '@/lib/superAdmin';
@@ -26,14 +27,19 @@ export async function deleteAccount(profileId: string): Promise<{ name: string; 
   const data = profile.data() || {};
   const name = (data.full_name as string) || 'Giocatore';
 
-  const presences = await db.collection('presences').where('player_id', '==', profileId).get();
+  // Multi-league: sign-ups and the player card in EVERY league of the account
+  const leagues = await leaguesWithPlayer(profileId);
+  const presences = (await Promise.all(leagues.map((l) => leagueDb(l).collection('presences').where('player_id', '==', profileId).get()))).flatMap((q) => q.docs);
+  const cards = leagues.map((l) => leagueDb(l).doc(`players/${profileId}`));
   const tokens = await db.collection('push_tokens').where('profile_id', '==', profileId).get();
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' });
   const dates = Array.from(
-    new Set(presences.docs.map((d) => d.data().date as string).filter((d) => typeof d === 'string' && d >= today))
+    new Set(presences.map((d) => d.data().date as string).filter((d) => typeof d === 'string' && d >= today))
   );
 
-  const refs = [...presences.docs.map((d) => d.ref), ...tokens.docs.map((d) => d.ref), db.doc(`private_profiles/${profileId}`), profileRef];
+  const uidForIndex = (data.user_id as string) || (data.is_guest ? '' : profileId);
+  const refs = [...presences.map((d) => d.ref), ...tokens.docs.map((d) => d.ref), ...cards, db.doc(`private_profiles/${profileId}`), profileRef];
+  if (uidForIndex) refs.push(db.doc(`memberships/${uidForIndex}`));
   for (let i = 0; i < refs.length; i += 400) {
     const batch = db.batch();
     refs.slice(i, i + 400).forEach((r) => batch.delete(r));
@@ -67,12 +73,16 @@ export async function deactivateAccount(
   const name = (data.full_name as string) || 'Giocatore';
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' });
 
-  const presences = await db.collection('presences').where('player_id', '==', profileId).get();
-  const future = presences.docs.filter((d) => String(d.data().date || '') >= today);
+  const leagues = await leaguesWithPlayer(profileId);
+  const presences = (await Promise.all(leagues.map((l) => leagueDb(l).collection('presences').where('player_id', '==', profileId).get()))).flatMap((q) => q.docs);
+  const future = presences.filter((d) => String(d.data().date || '') >= today);
   const tokens = await db.collection('push_tokens').where('profile_id', '==', profileId).get();
   const batch = db.batch();
+  const mark = { deactivated_at: new Date().toISOString(), deactivated_by: by };
   [...future, ...tokens.docs].forEach((d) => batch.delete(d.ref));
-  batch.update(profileRef, { deactivated_at: new Date().toISOString(), deactivated_by: by });
+  batch.update(profileRef, mark);
+  // hidden in every league too (the lists read the league cards)
+  leagues.forEach((l) => batch.update(leagueDb(l).doc(`players/${profileId}`), mark));
   await batch.commit();
 
   const uid = (data.user_id as string) || profileId;
@@ -90,7 +100,9 @@ export async function reactivateAccount(profileId: string): Promise<void> {
   const profileRef = adminDb().doc(`profiles/${profileId}`);
   const data = (await profileRef.get()).data() || {};
   await adminAuth().updateUser((data.user_id as string) || profileId, { disabled: false });
-  await profileRef.update({ deactivated_at: FieldValue.delete(), deactivated_by: FieldValue.delete() });
+  const clear = { deactivated_at: FieldValue.delete(), deactivated_by: FieldValue.delete() };
+  await profileRef.update(clear);
+  await mirrorOnCards(profileId, clear);
 }
 
 /** Saves the reason in account_feedback (server only) and tells the developer (super admin) with a notification. */

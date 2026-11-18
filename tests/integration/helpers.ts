@@ -24,6 +24,25 @@ export async function resetEmulators() {
 
 export const db = () => adminDb();
 
+/** Multi-league: club data of the test league "I Calcettari" (leagues/calcettari/…). */
+export const LEAGUE = 'leagues/calcettari';
+export const ldb = () => ({
+  doc: (path: string) => adminDb().doc(`${LEAGUE}/${path}`),
+  collection: (path: string) => adminDb().collection(`${LEAGUE}/${path}`),
+});
+
+/** The card of a profile in the test league (+ the membership of its account), like the migration makes it. */
+export async function joinTestLeague(id: string, profile: Record<string, unknown>, uid: string | null = id) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { email, ...data } = profile;
+  const leagueRole = profile.role === 'admin' ? 'PRESIDENT' : 'PLAYER';
+  await db().doc(LEAGUE).set({ id: 'calcettari', name: 'I Calcettari', status: 'active', visibility: 'private' }, { merge: true });
+  await ldb().doc(`players/${id}`).set({ ...data, id, userId: profile.is_guest ? null : uid, leagueRole, isActivePlayer: true });
+  if (uid && !profile.is_guest) {
+    await db().doc(`memberships/${uid}`).set({ leagues: { calcettari: { player_id: id, league_role: leagueRole, name: 'I Calcettari' } } }, { merge: true });
+  }
+}
+
 /** Profile as the app writes it. */
 export function profileDoc(id: string, extra: Record<string, unknown> = {}) {
   const now = new Date().toISOString();
@@ -51,7 +70,11 @@ export function profileDoc(id: string, extra: Record<string, unknown> = {}) {
 export async function makeUser(uid: string, profile: Record<string, unknown> = {}, opts: { email?: string; withProfile?: boolean } = {}) {
   const email = opts.email || `${uid}@example.com`;
   await adminAuth().createUser({ uid, email, password: 'password123', emailVerified: true });
-  if (opts.withProfile !== false) await db().doc(`profiles/${uid}`).set(profileDoc(uid, { email, ...profile }));
+  if (opts.withProfile !== false) {
+    const data = profileDoc(uid, { email, ...profile });
+    await db().doc(`profiles/${uid}`).set(data);
+    await joinTestLeague(uid, data);
+  }
   return { uid, email, token: await idToken(email) };
 }
 
@@ -70,11 +93,11 @@ export async function idToken(email: string, password = 'password123'): Promise<
 type Handler = (req: Request) => Promise<Response>;
 
 /** Calls an API route handler like the browser would. */
-export async function call(handler: Handler, body?: unknown, token?: string, url = 'http://localhost/api/test') {
+export async function call(handler: Handler, body?: unknown, token?: string, url = 'http://localhost/api/test', headers: Record<string, string> = {}) {
   const res = await handler(
     new Request(url, {
       method: body === undefined ? 'GET' : 'POST',
-      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...headers },
       body: body === undefined ? undefined : JSON.stringify(body),
     })
   );

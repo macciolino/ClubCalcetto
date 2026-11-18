@@ -4,6 +4,7 @@ import { getMessaging, getToken, deleteToken, isSupported } from 'firebase/messa
 import { doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { getApp } from 'firebase/app';
 import { auth, db, isFirebaseConfigured } from '@/lib/firebase/config';
+import { currentLeagueId } from '@/lib/league/leagueRefs';
 
 let vapidKeyCache: string | null = null;
 /** Public VAPID key: read from the server (/api/push-config), so it needs no NEXT_PUBLIC_ variable. */
@@ -118,7 +119,7 @@ export async function callNotifyApi(body: Record<string, unknown>): Promise<{ ok
   if (!user) return { ok: false, error: 'unauthenticated' };
   const res = await fetch('/api/notify', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}` },
+    headers: { 'Content-Type': 'application/json', 'x-league-id': currentLeagueId(), Authorization: `Bearer ${await user.getIdToken()}` },
     body: JSON.stringify(body),
   });
   return res.json().catch(() => ({ ok: false, error: 'bad_response' }));

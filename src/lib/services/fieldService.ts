@@ -2,16 +2,15 @@
 
 import { SportField } from '@/types/database';
 import { reportWriteError } from '@/lib/utils/writeErrors';
-import { db, isFirebaseConfigured } from '@/lib/firebase/config';
+import { isFirebaseConfigured } from '@/lib/firebase/config';
 import {
-  collection,
-  doc,
   setDoc,
   deleteDoc,
   deleteField,
   onSnapshot,
   Unsubscribe,
 } from 'firebase/firestore';
+import { lcol, ldoc } from '@/lib/league/leagueRefs';
 
 export const DEFAULT_SPORT_FIELDS: SportField[] = [
   {
@@ -114,7 +113,7 @@ export async function addStoredField(field: Omit<SportField, 'id'>): Promise<Spo
 
   if (isFirebaseConfigured) {
     try {
-      await setDoc(doc(db, 'sport_fields', newField.id), toFirestore(newField, false), { merge: true });
+      await setDoc(ldoc('sport_fields', newField.id), toFirestore(newField, false), { merge: true });
     } catch (e) {
       console.warn('[Firestore] Error saving field:', e);
       reportWriteError(e);
@@ -131,7 +130,7 @@ export async function updateStoredField(field: SportField): Promise<SportField> 
 
   if (isFirebaseConfigured) {
     try {
-      await setDoc(doc(db, 'sport_fields', field.id), toFirestore(field, true), { merge: true });
+      await setDoc(ldoc('sport_fields', field.id), toFirestore(field, true), { merge: true });
     } catch (e) {
       console.warn('[Firestore] Error updating field:', e);
       reportWriteError(e);
@@ -148,7 +147,7 @@ export async function removeStoredField(id: string): Promise<void> {
 
   if (isFirebaseConfigured) {
     try {
-      await deleteDoc(doc(db, 'sport_fields', id));
+      await deleteDoc(ldoc('sport_fields', id));
     } catch (e) {
       console.warn('[Firestore] Error deleting field:', e);
       reportWriteError(e);
@@ -164,7 +163,7 @@ export function subscribeSportFields(
   }
 
   try {
-    const colRef = collection(db, 'sport_fields');
+    const colRef = lcol('sport_fields');
     return onSnapshot(
       colRef,
       (snapshot) => {

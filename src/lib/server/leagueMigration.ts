@@ -1,4 +1,4 @@
-import type { DocumentReference, DocumentSnapshot } from 'firebase-admin/firestore';
+import type { DocumentReference } from 'firebase-admin/firestore';
 import { adminDb } from '@/lib/firebase/admin';
 import { SUPER_ADMIN_PROFILE_ID } from '@/lib/superAdmin';
 import { leagueRoleFromLegacy, leagueSlug } from '@/lib/utils/leaguePermissions';
@@ -71,17 +71,38 @@ async function commit(writes: Write[]) {
 }
 
 /** League card of a legacy profile (same id). */
-export function playerFromProfile(p: DocumentSnapshot): Record<string, unknown> {
-  const data = { ...(p.data() || {}) };
+export function playerFromProfile(id: string, profile: Record<string, unknown>): Record<string, unknown> {
+  const data = { ...profile };
   for (const k of ACCOUNT_ONLY_FIELDS) delete data[k];
   const isGuest = data.is_guest === true;
   return {
     ...data,
-    id: p.id,
+    id,
     userId: isGuest ? null : (typeof data.user_id === 'string' && data.user_id) || null,
-    leagueRole: leagueRoleFromLegacy({ id: p.id, role: data.role as string }, SUPER_ADMIN_PROFILE_ID),
+    leagueRole: leagueRoleFromLegacy({ id, role: data.role as string }, SUPER_ADMIN_PROFILE_ID),
     isActivePlayer: true,
   };
+}
+
+/**
+ * Multi-league 1B (until invites arrive in step 3): a NEW account joins "I Calcettari" as before, as a player.
+ * Creates its card (from the global profile) and the membership entry; nothing if they already exist.
+ */
+export async function ensureDefaultLeagueCard(profileId: string, uid: string, profile: Record<string, unknown>): Promise<boolean> {
+  const db = adminDb();
+  const leagueId = CALCETTARI_LEAGUE_ID;
+  const cardRef = db.doc(`leagues/${leagueId}/players/${profileId}`);
+  if ((await cardRef.get()).exists) return false;
+  const card = playerFromProfile(profileId, { ...profile, user_id: uid });
+  const batch = db.batch();
+  batch.create(cardRef, card);
+  batch.set(
+    db.doc(`memberships/${uid}`),
+    { leagues: { [leagueId]: { player_id: profileId, league_role: card.leagueRole, name: CALCETTARI_LEAGUE_NAME } }, updated_at: new Date().toISOString() },
+    { merge: true }
+  );
+  await batch.commit();
+  return true;
 }
 
 export async function migrateToCalcettari(dryRun: boolean): Promise<LeagueMigrationResult> {
@@ -133,7 +154,7 @@ export async function migrateToCalcettari(dryRun: boolean): Promise<LeagueMigrat
   const todoPlayers = await missing(playerRefs);
   const memberships = new Map<string, LeagueMembershipEntry>();
   profiles.docs.forEach((p, i) => {
-    const card = playerFromProfile(p);
+    const card = playerFromProfile(p.id, p.data());
     if (card.leagueRole === 'PRESIDENT') result.presidents++;
     if (todoPlayers.has(playerRefs[i].path)) writes.push({ ref: playerRefs[i], data: card });
     // archived records (`ex-…`) share nothing with the account any more: no membership for them

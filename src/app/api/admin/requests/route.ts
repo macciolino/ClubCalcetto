@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminDb, isAdminConfigured } from '@/lib/firebase/admin';
+import { leagueDb, mirrorOnCards, scoped } from '@/lib/server/leagueScope';
 import { adminCaller, closeRequest } from '@/lib/server/adminRequests';
 import { reactivateAccount } from '@/lib/server/accountDeletion';
 import { archiveAndReset, claimGuest } from '@/lib/server/profileMerge';
@@ -16,7 +17,7 @@ export const runtime = 'nodejs';
  *  account_closed: 'dismiss' (read)
  *  format_proposal: 'apply_format' (the day switches to the proposed format) | 'dismiss' (keep the current one)
  */
-export async function POST(request: Request) {
+async function handlePost(request: Request) {
   if (!isAdminConfigured()) return NextResponse.json({ ok: false, error: 'not_configured' }, { status: 503 });
   try {
     const caller = await adminCaller(request);
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
     const { id, action, guestId } = (await request.json()) as { id?: string; action?: string; guestId?: string };
     if (!id) return NextResponse.json({ ok: false, error: 'bad_request' }, { status: 400 });
     const db = adminDb();
-    const req = (await db.doc(`admin_requests/${id}`).get()).data();
+    const req = (await leagueDb().doc(`admin_requests/${id}`).get()).data();
     if (!req || req.status !== 'open') return NextResponse.json({ ok: false, error: 'already_done' }, { status: 409 });
     const by = caller.profileId;
     const profileId = String(req.profile_id);
@@ -41,6 +42,7 @@ export async function POST(request: Request) {
     if (req.type === 'restore' && action === 'restore') {
       await reactivateAccount(profileId);
       await db.doc(`profiles/${profileId}`).update({ restore_requested_at: FieldValue.delete() });
+      await mirrorOnCards(profileId, { restore_requested_at: FieldValue.delete() });
       await closeRequest(id, by, 'restored');
       return NextResponse.json({ ok: true });
     }
@@ -51,7 +53,7 @@ export async function POST(request: Request) {
     }
     if (req.type === 'format_proposal' && action === 'apply_format' && isMatchFormat(req.format) && req.date) {
       const date = String(req.date);
-      await db.doc('settings/match_formats').set(
+      await leagueDb().doc('settings/match_formats').set(
         {
           days: {
             [date]: { format: req.format, formation: FORMAT_INFO[req.format].formations[0], updated_at: new Date().toISOString(), updated_by: by },
@@ -74,3 +76,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: 'server_error' }, { status: 500 });
   }
 }
+
+/** Multi-league: runs in the league the app is using (header x-league-id). */
+export const POST = scoped(handlePost);

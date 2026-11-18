@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminAuth, adminDb, isAdminConfigured } from '@/lib/firebase/admin';
+import { isLeagueManager, mirrorOnCards, scoped } from '@/lib/server/leagueScope';
 import {
   DELETE_REASONS,
   SUPER_ADMIN_EMAIL,
@@ -26,7 +27,7 @@ export const runtime = 'nodejs';
  * POST { mode, targetProfileId }       → an admin deactivates, deletes or reactivates someone else's account (never p-1)
  * The super admin account (p-1) can never be deleted.
  */
-export async function POST(request: Request) {
+async function handlePost(request: Request) {
   if (!isAdminConfigured()) return NextResponse.json({ ok: false, error: 'not_configured' }, { status: 503 });
   try {
     const idToken = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
@@ -48,8 +49,8 @@ export async function POST(request: Request) {
 
     // Account di un altro: tutti gli admin (mai il super admin)
     if (body.targetProfileId && body.targetProfileId !== caller.uid) {
-      const callerProfile = isSuper ? null : (await adminDb().doc(`profiles/${caller.uid}`).get()).data();
-      const isAdmin = isSuper || (callerProfile?.role === 'admin' && !callerProfile?.deactivated_at);
+      // Multi-league: president / collaborator of the league (or the super admin)
+      const isAdmin = isSuper || (await isLeagueManager(caller.uid));
       if (!isAdmin) return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
       if (body.targetProfileId === SUPER_ADMIN_PROFILE_ID) {
         return NextResponse.json({ ok: false, error: 'super_admin' }, { status: 400 });
@@ -61,6 +62,7 @@ export async function POST(request: Request) {
         // Se aveva chiesto di rientrare, la richiesta nella campanella si chiude
         if (exists.data()?.restore_requested_at) {
           await adminDb().doc(`profiles/${body.targetProfileId}`).update({ restore_requested_at: FieldValue.delete() });
+          await mirrorOnCards(body.targetProfileId, { restore_requested_at: FieldValue.delete() });
           await closeRequest(`restore_${body.targetProfileId}`, isSuper ? 'p-1' : caller.uid, 'restored').catch(() => undefined);
         }
         return NextResponse.json({ ok: true });
@@ -103,3 +105,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: 'server_error' }, { status: 500 });
   }
 }
+
+/** Multi-league: runs in the league the app is using (header x-league-id). */
+export const POST = scoped(handlePost);

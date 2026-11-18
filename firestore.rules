@@ -5,7 +5,8 @@ rules_version = '2';
 // ----------------------------------------------------------------------------
 // Roles
 //  - Super admin : the verified account macciolino84@gmail.com (profile doc 'p-1')
-//  - Admin       : a profile whose role == 'admin' (promoted ONLY by the super admin)
+//  - Admin       : (global profiles only) a profile whose role == 'admin'
+//  - League roles: PRESIDENT / COLLABORATOR / PLAYER on leagues/{id}/players (see "Multi-league" below)
 //  - Player      : any other signed-in user
 // Nobody who is not signed in can read or write anything.
 // ============================================================================
@@ -139,14 +140,6 @@ service cloud.firestore {
       allow create: if false;
     }
 
-    // ---------- presences ----------
-    // Titolari / waitlist are COMPUTED by the app from the sign-up order (joined_at = server time),
-    // so a player only ever creates or deletes their OWN presence, never edits anyone else's.
-
-    function calendarPath() {
-      return /databases/$(database)/documents/settings/calendar;
-    }
-
     // 'YYYY-MM-DD' -> timestamp (midnight UTC)
     function dateToTimestamp(d) {
       let parts = d.split('-');
@@ -166,105 +159,6 @@ service cloud.firestore {
       return isItalianSummerTime(t) ? t + duration.value(2, 'h') : t + duration.value(1, 'h');
     }
 
-    // Start of next week (Monday 00:00, Italian time)
-    function nextMondayStart() {
-      let now = toItalianTime(request.time);
-      return now.date() + duration.value(8 - now.dayOfWeek(), 'd');
-    }
-
-    // C12: withdrawal lock (Impostazioni → Campi & Parametri), same as the app: from N hours before 20:30
-    // (Italian time) of the match day a player can no longer withdraw; admins still can.
-    function appConfigPath() {
-      return /databases/$(database)/documents/settings/app_config;
-    }
-    function matchStartUtc(d) {
-      let localStart = dateToTimestamp(d) + duration.value(20, 'h') + duration.value(30, 'm');
-      return isItalianSummerTime(localStart) ? localStart - duration.value(2, 'h') : localStart - duration.value(1, 'h');
-    }
-    function isWithdrawLocked(d) {
-      return exists(appConfigPath())
-        && get(appConfigPath()).data.get('timelock_enabled', false) == true
-        && request.time >= matchStartUtc(d) - duration.value(int(get(appConfigPath()).data.get('timelock_hours_before', 4)), 'h');
-    }
-
-    // Current week is always open; later days only up to settings/calendar.open_until (set by an admin)
-    function isDateOpenForPlayers(d) {
-      return dateToTimestamp(d) < nextMondayStart()
-        || (exists(calendarPath()) && d <= get(calendarPath()).data.get('open_until', ''));
-    }
-
-    function isValidNewPresence(presenceId) {
-      let data = request.resource.data;
-      return data.date is string
-        && data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
-        && data.player_id is string
-        && presenceId == data.date + '_' + data.player_id   // one presence per player per day
-        && data.joined_at == request.time                   // queue position = server time, cannot be faked
-        && data.keys().hasOnly(['id', 'date', 'player_id', 'status', 'order_index', 'created_at', 'joined_at']);
-    }
-
-    match /presences/{presenceId} {
-      allow read: if signedIn();
-
-      // Players sign up only themselves, only on open days. Admins can add anyone on any day.
-      allow create: if signedIn()
-        && isValidNewPresence(presenceId)
-        && (isAdmin()
-            || (request.resource.data.player_id == request.auth.uid
-                && isDateOpenForPlayers(request.resource.data.date)));
-
-      // Withdraw: own presence (not during the withdrawal lock, C12), or anyone's for admins
-      // (the waitlist moves up automatically)
-      allow delete: if isAdmin()
-        || (signedIn() && resource.data.player_id == request.auth.uid && !isWithdrawLocked(resource.data.date));
-
-      // Only admins edit a presence (e.g. admin_override to force starter / waitlist)
-      allow update: if isAdmin();
-    }
-
-    // ---------- club data: everyone signed in reads, only admins write ----------
-    match /stat_categories/{id} {
-      allow read: if signedIn();
-      allow write: if isAdmin();
-    }
-    match /settings/{id} {
-      allow read: if signedIn();
-      allow write: if isAdmin();
-    }
-    match /matches/{id} {
-      allow read: if signedIn();
-      allow write: if isAdmin();
-    }
-    match /generated_teams/{id} {
-      allow read: if signedIn();
-      allow write: if isAdmin();
-    }
-
-    // ---------- MVP votes (one per person per match day, doc id = date_uid) ----------
-    // Everyone signed in can vote; the app opens the vote 45 minutes after the end of the match, for 24 hours.
-    // Rules allow it from the match day up to 3 days later; earlier only for admins or during an
-    // admin "test with everyone" on that day;
-    // the vote can be changed, never cast on behalf of someone else.
-    function isValidMvpVote(voteId) {
-      let data = request.resource.data;
-      return data.keys().hasOnly(['date', 'voter_id', 'player_id', 'updated_at'])
-        && data.date is string
-        && data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
-        && data.voter_id == request.auth.uid
-        && voteId == data.date + '_' + request.auth.uid
-        && data.player_id is string
-        && data.player_id.size() > 0
-        && data.updated_at == request.time
-        && (isAdmin()
-            || isMvpTestForAll(data.date)
-            || (request.time >= dateToTimestamp(data.date)
-                && request.time < dateToTimestamp(data.date) + duration.value(3, 'd')));
-    }
-    // An admin opened a test vote for everyone on that match day ("Prova con tutti")
-    function isMvpTestForAll(d) {
-      let teams = /databases/$(database)/documents/generated_teams/$(d);
-      return exists(teams) && get(teams).data.get('mvp_vote_test', false) == 'all';
-    }
     // ---------- push notification devices (doc id = FCM token) ----------
     // Each person registers only their own devices (linked to their own profile); notifications are sent
     // by the server with the Admin SDK, which ignores these rules. Nobody reads other people's tokens.
@@ -280,32 +174,103 @@ service cloud.firestore {
       allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
     }
 
-    match /mvp_votes/{voteId} {
-      allow read: if signedIn();
-      allow create, update: if signedIn() && isValidMvpVote(voteId);
-      allow delete: if isAdmin() || (signedIn() && resource.data.voter_id == request.auth.uid);
-    }
-    match /match_payments/{id} {
-      allow read: if signedIn();
-      allow write: if isAdmin();
-    }
-    match /sport_fields/{id} {
-      allow read: if signedIn();
-      allow write: if isAdmin();
-    }
 
-    // Admins' notification centre: written only by the server (Admin SDK); admins read it.
-    // Invite links (`invites`) are server only: no rule, so denied.
-    match /admin_requests/{id} {
-      allow read: if isAdmin();
-      allow write: if false;
+    // ============================================================================
+    // Multi-league (1B). Every club collection lives in leagues/{leagueId}/…
+    //  - memberships/{uid}.leagues.{leagueId}.player_id : the user's card in that league (written by the server)
+    //  - leagues/{leagueId}/players/{playerId}.leagueRole : PRESIDENT | COLLABORATOR | PLAYER (the real role)
+    // Members read their league; presidents and collaborators ("managers") write matches, teams, cash, settings;
+    // presidents change roles. The platform super admin reads every league (governance), writes only where member.
+    // ============================================================================
+    function membershipPath() {
+      return /databases/$(database)/documents/memberships/$(request.auth.uid);
     }
-
-    // ---------- multi-league (step 1A: read only, everything written by the server) ----------
-    // memberships/{uid}.leagues.{leagueId} = { player_id, league_role, name }: the index of who belongs where.
+    // Verified email required (Google accounts always are): an unverified account using someone's address gets nothing
     function isLeagueMember(leagueId) {
-      let m = /databases/$(database)/documents/memberships/$(request.auth.uid);
-      return signedIn() && exists(m) && leagueId in get(m).data.get('leagues', {});
+      return signedIn() && request.auth.token.email_verified == true && exists(membershipPath()) && leagueId in get(membershipPath()).data.get('leagues', {});
+    }
+    function myPlayerId(leagueId) {
+      return get(membershipPath()).data.leagues[leagueId].player_id;
+    }
+    function myCard(leagueId) {
+      return get(/databases/$(database)/documents/leagues/$(leagueId)/players/$(myPlayerId(leagueId))).data;
+    }
+    function hasLeagueRole(leagueId, roles) {
+      return isLeagueMember(leagueId)
+        && myCard(leagueId).get('leagueRole', 'PLAYER') in roles
+        && myCard(leagueId).get('deactivated_at', null) == null;
+    }
+    function isLeagueManager(leagueId) {
+      return hasLeagueRole(leagueId, ['PRESIDENT', 'COLLABORATOR']);
+    }
+    function isLeaguePresident(leagueId) {
+      return hasLeagueRole(leagueId, ['PRESIDENT']);
+    }
+    function canReadLeague(leagueId) {
+      return isLeagueMember(leagueId) || isSuperAdmin();
+    }
+
+    // Current week is always open; later days only up to settings/calendar.open_until (set by a manager)
+    function nextMondayStart() {
+      let now = toItalianTime(request.time);
+      return now.date() + duration.value(8 - now.dayOfWeek(), 'd');
+    }
+    function isDateOpenForPlayers(leagueId, d) {
+      let cal = /databases/$(database)/documents/leagues/$(leagueId)/settings/calendar;
+      return dateToTimestamp(d) < nextMondayStart()
+        || (exists(cal) && d <= get(cal).data.get('open_until', ''));
+    }
+    // C12: withdrawal lock, same as the app: from N hours before 20:30 (Italian time) of the match day
+    function matchStartUtc(d) {
+      let localStart = dateToTimestamp(d) + duration.value(20, 'h') + duration.value(30, 'm');
+      return isItalianSummerTime(localStart) ? localStart - duration.value(2, 'h') : localStart - duration.value(1, 'h');
+    }
+    function isWithdrawLocked(leagueId, d) {
+      let cfg = /databases/$(database)/documents/leagues/$(leagueId)/settings/app_config;
+      return exists(cfg)
+        && get(cfg).data.get('timelock_enabled', false) == true
+        && request.time >= matchStartUtc(d) - duration.value(int(get(cfg).data.get('timelock_hours_before', 4)), 'h');
+    }
+
+    function isValidNewPresence(presenceId) {
+      let data = request.resource.data;
+      return data.date is string
+        && data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && data.player_id is string
+        && presenceId == data.date + '_' + data.player_id   // one presence per player per day
+        && data.joined_at == request.time                   // queue position = server time, cannot be faked
+        && data.keys().hasOnly(['id', 'date', 'player_id', 'status', 'order_index', 'created_at', 'joined_at']);
+    }
+
+    // MVP votes: everyone in the league votes (doc id = date_uid), from the match day up to 3 days later;
+    // earlier only for managers or during a "test with everyone" on that day; never on behalf of someone else.
+    function isMvpTestForAll(leagueId, d) {
+      let teams = /databases/$(database)/documents/leagues/$(leagueId)/generated_teams/$(d);
+      return exists(teams) && get(teams).data.get('mvp_vote_test', false) == 'all';
+    }
+    function isValidMvpVote(leagueId, voteId) {
+      let data = request.resource.data;
+      return data.keys().hasOnly(['date', 'voter_id', 'player_id', 'updated_at'])
+        && data.date is string
+        && data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && data.voter_id == request.auth.uid
+        && voteId == data.date + '_' + request.auth.uid
+        && data.player_id is string
+        && data.player_id.size() > 0
+        && data.updated_at == request.time
+        && (isLeagueManager(leagueId)
+            || isMvpTestForAll(leagueId, data.date)
+            || (request.time >= dateToTimestamp(data.date)
+                && request.time < dateToTimestamp(data.date) + duration.value(3, 'd')));
+    }
+
+    // Role changes on a card: presidents only; never the platform super admin's card, guests never become managers.
+    function leagueRoleChange(leagueId, playerId) {
+      return isLeaguePresident(leagueId)
+        && playerId != 'p-1'
+        && request.resource.data.get('leagueRole', 'PLAYER') in ['PRESIDENT', 'COLLABORATOR', 'PLAYER']
+        && request.resource.data.get('role', 'player') in ['admin', 'player']
+        && (request.resource.data.get('leagueRole', 'PLAYER') == 'PLAYER' || resource.data.get('is_guest', false) == false);
     }
 
     match /memberships/{uid} {
@@ -314,14 +279,98 @@ service cloud.firestore {
     }
 
     match /leagues/{leagueId} {
-      allow read: if isLeagueMember(leagueId) || isSuperAdmin();
-      allow write: if false;
+      allow read: if canReadLeague(leagueId);
+      allow write: if false; // created by the server (step 2: create league)
 
-      match /{document=**} {
-        allow read: if isLeagueMember(leagueId) || isSuperAdmin();
+      // ---------- player cards ----------
+      match /players/{playerId} {
+        allow read: if canReadLeague(leagueId);
+        // Managers add guests (players without an account)
+        allow create: if isLeagueManager(leagueId)
+          && request.resource.data.get('userId', null) == null
+          && request.resource.data.get('is_guest', false) == true
+          && request.resource.data.get('leagueRole', 'PLAYER') == 'PLAYER';
+        // Managers: parameters, records, data (the account link never; roles only presidents).
+        // The player: only name, photo and position of their own card.
+        allow update: if (isLeagueManager(leagueId)
+              && !('userId' in changedKeys())
+              && (!changedKeys().hasAny(['leagueRole', 'role']) || leagueRoleChange(leagueId, playerId)))
+          || (signedIn()
+              && resource.data.get('userId', null) == request.auth.uid
+              && onlyChanges(['full_name', 'avatar_url', 'position', 'updated_at'])
+              && (!('avatar_url' in changedKeys()) || isValidAvatar(request.resource.data.avatar_url)));
+        allow delete: if isLeagueManager(leagueId)
+          && playerId != 'p-1'
+          && resource.data.get('userId', null) == null
+          && resource.data.get('is_guest', false) == true;
+      }
+
+      // ---------- presences ----------
+      // Titolari / waitlist are COMPUTED by the app from the sign-up order (joined_at = server time).
+      match /presences/{presenceId} {
+        allow read: if canReadLeague(leagueId);
+        // Players sign up only themselves (their card), only on open days. Managers add anyone on any day.
+        allow create: if isLeagueMember(leagueId)
+          && isValidNewPresence(presenceId)
+          && (isLeagueManager(leagueId)
+              || (request.resource.data.player_id == myPlayerId(leagueId)
+                  && isDateOpenForPlayers(leagueId, request.resource.data.date)));
+        // Withdraw: own presence (not during the withdrawal lock, C12), or anyone's for managers
+        allow delete: if isLeagueManager(leagueId)
+          || (isLeagueMember(leagueId)
+              && resource.data.player_id == myPlayerId(leagueId)
+              && !isWithdrawLocked(leagueId, resource.data.date));
+        allow update: if isLeagueManager(leagueId);
+      }
+
+      // ---------- club data: members read, managers write ----------
+      match /stat_categories/{id} {
+        allow read: if canReadLeague(leagueId);
+        allow write: if isLeagueManager(leagueId);
+      }
+      match /settings/{id} {
+        allow read: if canReadLeague(leagueId);
+        allow write: if isLeagueManager(leagueId);
+      }
+      match /matches/{id} {
+        allow read: if canReadLeague(leagueId);
+        allow write: if isLeagueManager(leagueId);
+      }
+      match /generated_teams/{id} {
+        allow read: if canReadLeague(leagueId);
+        allow write: if isLeagueManager(leagueId);
+      }
+      match /match_payments/{id} {
+        allow read: if canReadLeague(leagueId);
+        allow write: if isLeagueManager(leagueId);
+      }
+      match /sport_fields/{id} {
+        allow read: if canReadLeague(leagueId);
+        allow write: if isLeagueManager(leagueId);
+      }
+      match /mvp_votes/{voteId} {
+        allow read: if canReadLeague(leagueId);
+        allow create, update: if isLeagueMember(leagueId) && isValidMvpVote(leagueId, voteId);
+        allow delete: if isLeagueManager(leagueId) || (signedIn() && resource.data.voter_id == request.auth.uid);
+      }
+      // Managers' notification centre: written only by the server. notify_state / invites: server only (denied).
+      match /admin_requests/{id} {
+        allow read: if isLeagueManager(leagueId) || isSuperAdmin();
         allow write: if false;
       }
     }
+
+    // ---------- single-group collections (before multi-league): read-only backup ----------
+    // The app now uses leagues/{leagueId}/…; nobody writes here any more (the migration copied them).
+    match /stat_categories/{id} { allow read: if isAdmin(); }
+    match /settings/{id} { allow read: if isAdmin(); }
+    match /matches/{id} { allow read: if isAdmin(); }
+    match /generated_teams/{id} { allow read: if isAdmin(); }
+    match /presences/{id} { allow read: if isAdmin(); }
+    match /mvp_votes/{id} { allow read: if isAdmin(); }
+    match /match_payments/{id} { allow read: if isAdmin(); }
+    match /sport_fields/{id} { allow read: if isAdmin(); }
+    match /admin_requests/{id} { allow read: if isAdmin(); }
 
     // Anything else is denied by default.
   }

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { collection, doc, limit, onSnapshot, orderBy, query, updateDoc, where, writeBatch } from 'firebase/firestore';
+import { lcol, ldoc, currentLeagueId } from '@/lib/league/leagueRefs';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useLocaleSetting } from '@/i18n/I18nProvider';
@@ -63,7 +64,7 @@ async function resolve(msg: Msg, id: string, action: string, guestId?: string): 
     const token = await firebaseAuth.currentUser?.getIdToken();
     const res = await fetch('/api/admin/requests', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json', 'x-league-id': currentLeagueId(), Authorization: `Bearer ${token}` },
       body: JSON.stringify({ id, action, guestId }),
     });
     const data = await res.json();
@@ -110,7 +111,7 @@ function StatReviewCard({ player, categories, reviewerId }: { player: Profile; c
       const stats: Record<string, number> = { ...(player.stats || {}) };
       orderedCategories(categories).forEach((c) => (stats[c.name] = Number(values[c.name])));
       const now = new Date().toISOString();
-      await updateDoc(doc(db, 'profiles', player.id), {
+      await updateDoc(ldoc('players', player.id), {
         stats,
         overall_rating: ovrOf(values),
         needs_stat_review: false,
@@ -204,7 +205,7 @@ export function RequestsBell() {
   useEffect(() => {
     if (!admin || !isFirebaseConfigured) return;
     const unsub = onSnapshot(
-      query(collection(db, 'admin_requests'), where('status', '==', 'open')),
+      query(lcol('admin_requests'), where('status', '==', 'open')),
       (snap) => {
         setDenied(false);
         setRequests(

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { adminDb, isAdminConfigured } from '@/lib/firebase/admin';
+import { isAdminConfigured } from '@/lib/firebase/admin';
+import { leagueDb, scoped } from '@/lib/server/leagueScope';
 import { callerFrom } from '@/lib/server/adminRequests';
 import { STAT_DETAILS } from '@/types/database';
 
@@ -11,18 +12,17 @@ export const runtime = 'nodejs';
  * `needs_stat_review` stays true: after the first match an admin checks and corrects the values.
  * Only possible while `self_rating_pending` is true (set by the server at sign-up).
  */
-export async function POST(request: Request) {
+async function handlePost(request: Request) {
   if (!isAdminConfigured()) return NextResponse.json({ ok: false, error: 'not_configured' }, { status: 503 });
   try {
     const caller = await callerFrom(request);
     if (!caller) return NextResponse.json({ ok: false, error: 'unauthenticated' }, { status: 401 });
-    const db = adminDb();
-    const ref = db.doc(`profiles/${caller.profileId}`);
+    const ref = leagueDb().doc(`players/${caller.profileId}`); // multi-league: the card in the league
     const profile = (await ref.get()).data();
     if (!profile?.self_rating_pending) return NextResponse.json({ ok: false, error: 'not_pending' }, { status: 409 });
 
     const body = (await request.json()) as { stats?: Record<string, unknown> };
-    const cats = await db.collection('stat_categories').get();
+    const cats = await leagueDb().collection('stat_categories').get();
     // Parametri del club (se non ancora salvati su Firestore, quelli di base dell'app)
     const names = cats.empty ? Object.keys(STAT_DETAILS) : cats.docs.map((c) => String(c.data().name));
     const stats: Record<string, number> = {};
@@ -48,3 +48,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: 'server_error' }, { status: 500 });
   }
 }
+
+/** Multi-league: runs in the league the app is using (header x-league-id). */
+export const POST = scoped(handlePost);

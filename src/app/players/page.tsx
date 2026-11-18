@@ -31,6 +31,7 @@ import { btnInline } from '@/components/ui/buttons';
 import { useTranslations } from 'next-intl';
 import { usePlayerLabels } from '@/i18n/usePlayerLabels';
 import { useProfileEmails } from '@/lib/hooks/useProfileEmails';
+import { currentLeagueId } from '@/lib/league/leagueRefs';
 
 const DEFAULT_CATEGORIES: StatCategory[] = DEFAULT_BASE_CATEGORIES;
 
@@ -169,7 +170,7 @@ export default function GiocatoriPage() {
     try {
       const res = await fetch('/api/invite', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await firebaseAuth.currentUser?.getIdToken()}` },
+        headers: { 'Content-Type': 'application/json', 'x-league-id': currentLeagueId(), Authorization: `Bearer ${await firebaseAuth.currentUser?.getIdToken()}` },
         body: JSON.stringify({ guestId: p.id }),
       });
       const data = await res.json();

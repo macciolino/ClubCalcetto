@@ -1,8 +1,9 @@
 'use client';
 
 import { MatchPaymentRecord } from '@/types/database';
-import { db, isFirebaseConfigured } from '@/lib/firebase/config';
-import { doc, setDoc, onSnapshot, Unsubscribe } from 'firebase/firestore';
+import { isFirebaseConfigured } from '@/lib/firebase/config';
+import { setDoc, onSnapshot, Unsubscribe } from 'firebase/firestore';
+import { ldoc } from '@/lib/league/leagueRefs';
 
 /**
  * Cassa of a match (collection match_payments, doc id = date): `payments[playerId] = true` when paid.
@@ -70,7 +71,7 @@ export function setPlayersPaid(
   if (typeof window !== 'undefined') cache(next);
   if (isFirebaseConfigured && playerIds.length > 0) {
     // merge su una mappa annidata: cambiano SOLO le chiavi scritte, le altre restano come sono
-    setDoc(doc(db, 'match_payments', current.date), { date: current.date, ...costInfo, payments: changes, updated_at: now }, { merge: true }).catch(
+    setDoc(ldoc('match_payments', current.date), { date: current.date, ...costInfo, payments: changes, updated_at: now }, { merge: true }).catch(
       (err) => {
         console.warn('[Firestore] Error saving payments:', err);
         onError?.(err);
@@ -89,7 +90,7 @@ export function subscribeMatchPayments(
   }
   try {
     return onSnapshot(
-      doc(db, 'match_payments', date),
+      ldoc('match_payments', date),
       (snap) => {
         if (snap.exists()) {
           const data = { ...emptyRecord(date), ...(snap.data() as MatchPaymentRecord) };
