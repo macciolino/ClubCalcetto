@@ -722,7 +722,11 @@
     "yours": "La tua:",
     "won": "vinta",
     "drawn": "pareggiata",
-    "lost": "persa"
+    "lost": "persa",
+    "place": "Campo",
+    "openMaps": "Apri in Google Maps",
+    "scoreboard": "Risultato",
+    "winner": "Vincitori"
   },
   "attendance": {
     "profileNotLoaded": "Profilo non ancora caricato, riprova tra un attimo.",

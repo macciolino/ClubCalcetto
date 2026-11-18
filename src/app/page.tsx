@@ -23,7 +23,9 @@ import { getOfficialMatchDate, isTimelockActive } from '@/lib/services/presenceS
 import { formatLongDate, isDateOpenForPlayers, toDateString } from '@/lib/utils/dateUtils';
 import { useTranslations } from 'next-intl';
 import { useLocaleSetting } from '@/i18n/I18nProvider';
-import { effectiveMatchLocation, effectiveMatchTime, matchCostFor, mvpVotingWindow } from '@/lib/utils/matchUtils';
+import { effectiveMatchTime, matchCostFor, matchPlace, mvpVotingWindow } from '@/lib/utils/matchUtils';
+import { MatchPlaceInfo } from '@/components/home/MatchPlaceInfo';
+import { LastMatchCard } from '@/components/home/LastMatchCard';
 import { useDayFormat } from '@/lib/hooks/useMatchFormats';
 import { perHead } from '@/lib/utils/matchFormat';
 import { computeMatchStats } from '@/lib/utils/statUtils';
@@ -34,7 +36,7 @@ import { reconcileTeams } from '@/lib/utils/teamUtils';
 import { CountRing } from '@/components/PresenceCard';
 import { PageSkeleton } from '@/components/ui/Skeleton';
 import { notify, askConfirm } from '@/components/ui/Feedback';
-import { ArrowRight, Check, Clock, Loader2, Lock, LogOut, MapPin } from 'lucide-react';
+import { ArrowRight, Check, Clock, Loader2, Lock, LogOut } from 'lucide-react';
 import { btn, presenceBtn, textLink } from '@/components/ui/buttons';
 
 const tag = (locale: string) => (locale === 'en' ? 'en-GB' : 'it-IT');
@@ -168,7 +170,7 @@ export default function HomePage() {
   const firstName = profile.full_name.trim().split(/\s+/)[0];
   const hasMatch = date >= today;
   const time = effectiveMatchTime(match, standard.time);
-  const location = effectiveMatchLocation(match, fields, standard.fieldId);
+  const place = matchPlace(match, fields, standard.fieldId);
   const cost = matchCostFor(
     match,
     { standard_total_cost: standard.cost, standard_costs: standard.costs, default_field_id: standard.fieldId },
@@ -282,13 +284,12 @@ export default function HomePage() {
                 <span className="flex items-center gap-1.5">
                   <Clock className="h-4 w-4 text-secondary" /> {t('at', { time })}
                 </span>
-                <span className="flex items-start gap-1.5 min-w-0">
-                  <MapPin className="h-4 w-4 text-secondary flex-shrink-0 mt-0.5" />
-                  <span className="break-words">{location}</span>
-                </span>
                 <span className="text-secondary">
                   {t('perHead', { format: fmt.label, amount: perHead(cost, fmt.players) })}
                 </span>
+              </div>
+              <div className="pt-1">
+                <MatchPlaceInfo place={place} />
               </div>
             </div>
             {teamRecord?.confirmed && (
@@ -427,35 +428,7 @@ export default function HomePage() {
         </section>
 
         {lastMatch && (
-          <section className="bg-card border border-line rounded-2xl p-5 space-y-3" aria-labelledby="last-match">
-            <div className="flex items-baseline justify-between gap-2">
-              <h2 id="last-match" className="text-base font-semibold text-primary">{t('lastMatch')}</h2>
-              <span className="text-xs text-secondary capitalize">{sd(lastMatch.match_date || lastMatch.id)}</span>
-            </div>
-            <div className="flex items-center justify-center gap-4 py-1">
-              <span className="text-sm text-secondary">{t('white')}</span>
-              <span className="text-2xl font-bold text-primary tabular-nums">
-                {lastMatch.score_white ?? 0} – {lastMatch.score_black ?? 0}
-              </span>
-              <span className="text-sm text-secondary">{t('black')}</span>
-            </div>
-            {(() => {
-              const inWhite = lastMatch.team_white?.some((p) => p.id === profile.id);
-              const inBlack = lastMatch.team_black?.some((p) => p.id === profile.id);
-              const w = lastMatch.score_white ?? 0;
-              const b = lastMatch.score_black ?? 0;
-              const mineRes = !inWhite && !inBlack ? null : w === b ? 'drawn' : (inWhite ? w > b : b > w) ? 'won' : 'lost';
-              return (
-                <p className="text-sm text-secondary text-center">
-                  {lastMatch.mvp_player_id ? <>MVP <span className="text-primary font-medium">{nameOf(lastMatch.mvp_player_id)}</span></> : t('mvpNone')}
-                  {mineRes && <> · {t('yours')} <span className={mineRes === 'won' ? 'text-accent-text' : mineRes === 'lost' ? 'text-danger' : 'text-secondary'}>{t(mineRes)}</span></>}
-                </p>
-              );
-            })()}
-            <Link href="/history" className={`${textLink} w-full justify-center pt-1`}>
-              {t('goHistory')} <ArrowRight className="h-4 w-4" />
-            </Link>
-          </section>
+          <LastMatchCard match={lastMatch} playerId={profile.id} dateLabel={sd(lastMatch.match_date || lastMatch.id)} nameOf={nameOf} />
         )}
       </aside>
       </div>

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { LEAGUE, db, loginAsAdmin, seedMatchDay } from './seed';
+import { LEAGUE, PLAYERS, db, lg, loginAsAdmin, romeDay, seedMatchDay } from './seed';
 
 /** Home and Presenze: Italian unchanged, English translates texts, weekdays and months. */
 test.describe('Home e Presenze in italiano e in inglese', () => {
@@ -14,6 +14,36 @@ test.describe('Home e Presenze in italiano e in inglese', () => {
     await page.goto('/attendance');
     await expect(page.getByRole('heading', { name: 'Presenze', level: 1 })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Calendario' })).toBeVisible();
+  });
+
+  test('campo riga per riga e card "Ultima partita" con vincitori e badge', async ({ page }) => {
+    await lg('sport_fields/f1').update({ notes: 'Parcheggio interno' });
+    const day = romeDay(-8);
+    await lg(`matches/${day}`).set({
+      id: day,
+      match_date: day,
+      status: 'completed',
+      score_white: 3,
+      score_black: 5,
+      team_white: PLAYERS.slice(0, 5),
+      team_black: [{ id: 'p-1', name: 'Marco Test' }, ...PLAYERS.slice(5, 9)],
+      mvp_player_id: 't1',
+    });
+    await loginAsAdmin(page);
+
+    const place = page.getByRole('group', { name: 'Campo' });
+    await expect(place.getByText('Campo Test', { exact: true })).toBeVisible();
+    await expect(place.getByText('Via dei Test 1', { exact: true })).toBeVisible();
+    await expect(place.getByText('Parcheggio interno')).toBeVisible();
+    await expect(place.getByRole('link', { name: 'Apri in Google Maps' })).toHaveAttribute('href', /google\.com\/maps.*Campo%20Test/);
+    await expect(page.getByText('(Via dei Test 1)')).toHaveCount(0);
+
+    const last = page.getByRole('region', { name: 'Ultima partita' });
+    const board = last.getByRole('group', { name: 'Risultato' });
+    await expect(board).toContainText('3–5');
+    await expect(board.getByText('Vincitori')).toBeVisible();
+    await expect(last.getByText('MVP Test Uno')).toBeVisible();
+    await expect(last.getByText('La tua: vinta')).toBeVisible();
   });
 
   test('doppio tocco su "Ci sono": una sola iscrizione, nessun errore', async ({ page }) => {

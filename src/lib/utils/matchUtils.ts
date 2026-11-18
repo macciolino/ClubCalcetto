@@ -101,3 +101,49 @@ export function mvpVotingWindow(date: string, matchTime: string): { opensAt: Dat
   const closesAt = new Date(opensAt.getTime() + MVP_VOTE_OPEN_HOURS * 3600000);
   return { opensAt, closesAt };
 }
+
+/** What the Home shows about the pitch: name, address, Google Maps link and notes (free-text locations have only a name). */
+export interface MatchPlace {
+  name: string;
+  address?: string;
+  mapsUrl: string;
+  notes?: string;
+}
+
+const mapsSearch = (q: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+
+export function matchPlace(match: Match | null | undefined, fields: SportField[], defaultFieldId?: string): MatchPlace {
+  const field = matchField(match, fields, defaultFieldId);
+  if (!field) {
+    const name = effectiveMatchLocation(match, fields, defaultFieldId);
+    return { name, mapsUrl: mapsSearch(name) };
+  }
+  const address = field.address?.trim() || undefined;
+  return {
+    name: field.name,
+    address,
+    mapsUrl: field.maps_url?.trim() || mapsSearch(address ? `${field.name} ${address}` : field.name),
+    notes: field.notes?.trim() || undefined,
+  };
+}
+
+export type MatchOutcome = 'won' | 'drawn' | 'lost';
+
+/** Winning team of an archived match (null = draw) and the result for `playerId` (null = did not play). */
+export function lastMatchOutcome(
+  match: Pick<Match, 'score_white' | 'score_black' | 'team_white' | 'team_black'>,
+  playerId?: string
+): { winner: 'white' | 'black' | null; mine: MatchOutcome | null } {
+  const w = match.score_white ?? 0;
+  const b = match.score_black ?? 0;
+  const winner = w === b ? null : w > b ? 'white' : 'black';
+  const side = !playerId
+    ? null
+    : match.team_white?.some((p) => p.id === playerId)
+      ? 'white'
+      : match.team_black?.some((p) => p.id === playerId)
+        ? 'black'
+        : null;
+  const mine = !side ? null : winner === null ? 'drawn' : winner === side ? 'won' : 'lost';
+  return { winner, mine };
+}

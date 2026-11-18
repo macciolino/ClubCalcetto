@@ -722,7 +722,11 @@
     "yours": "Yours:",
     "won": "won",
     "drawn": "drawn",
-    "lost": "lost"
+    "lost": "lost",
+    "place": "Pitch",
+    "openMaps": "Open in Google Maps",
+    "scoreboard": "Score",
+    "winner": "Winners"
   },
   "attendance": {
     "profileNotLoaded": "Profile not loaded yet, try again in a moment.",
