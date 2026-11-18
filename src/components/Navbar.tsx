@@ -21,6 +21,7 @@ import { menu } from '@/components/ui/buttons';
 import { useTranslations } from 'next-intl';
 import { RequestsBell } from '@/components/admin/RequestsCenter';
 import { SelfRatingPrompt } from '@/components/SelfRatingPrompt';
+import { LeagueSwitcher } from '@/components/league/LeagueSwitcher';
 
 export function Navbar() {
   const pathname = usePathname();
@@ -92,12 +93,17 @@ export function Navbar() {
       <header className="relative z-20 w-full border-b border-line bg-app/90 backdrop-blur-md pt-safe">
         {/* Logo con nome a sinistra, profilo a destra */}
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
-          <Link href="/" className="flex items-center gap-2.5 min-w-0 hover:opacity-90">
-            <BrandLogo />
-            <span className="text-lg sm:text-xl font-black tracking-tight text-primary whitespace-nowrap">
-              Club <span className="text-accent-text">Soccer</span>
-            </span>
-          </Link>
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <Link href="/" className="flex items-center gap-2.5 shrink-0 hover:opacity-90" aria-label="Club Soccer">
+              <BrandLogo />
+              {/* Phone: just the logo, the league name takes the space */}
+              <span className="hidden md:inline text-lg sm:text-xl font-black tracking-tight text-primary whitespace-nowrap">
+                Club <span className="text-accent-text">Soccer</span>
+              </span>
+            </Link>
+            {/* Multi-league: active league + role, tap to switch or create one */}
+            <LeagueSwitcher />
+          </div>
           {/* User Info & Actions */}
           <div className="flex items-center justify-end gap-3 min-w-0">
             {/* Campanella: notifiche per tutti, più le richieste da gestire per gli admin */}

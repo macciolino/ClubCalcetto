@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '@/lib/firebase/config';
 import { setActiveLeagueForData } from '@/lib/league/leagueRefs';
@@ -14,6 +15,36 @@ import { CALCETTARI_LEAGUE_ID, type LeagueMemberPlayer, type LeagueMembershipEnt
  * The pages are remounted when the active league changes, so every subscription restarts on the new league.
  */
 const STORAGE_KEY = 'cc_league';
+/** Which league the local caches (players, fields, settings, cash…) belong to: emptied when the league changes. */
+const CACHE_OWNER_KEY = 'cc_cache_league';
+const LEAGUE_CACHE_KEYS = [
+  'clubcalcetto_players_list',
+  'clubcalcetto_sport_fields',
+  'clubcalcetto_official_match_date',
+  'clubcalcetto_app_settings',
+  'clubcalcetto_stat_categories',
+];
+const LEAGUE_CACHE_PREFIXES = ['clubcalcetto_payments_'];
+
+function claimLocalCaches(leagueId: string) {
+  try {
+    const owner = localStorage.getItem(CACHE_OWNER_KEY);
+    if (owner === leagueId) return;
+    // First run after the update (no owner yet): the cache is the one of the only league there was
+    if (owner) {
+      LEAGUE_CACHE_KEYS.forEach((k) => localStorage.removeItem(k));
+      Object.keys(localStorage)
+        .filter((k) => LEAGUE_CACHE_PREFIXES.some((p) => k.startsWith(p)))
+        .forEach((k) => localStorage.removeItem(k));
+    }
+    localStorage.setItem(CACHE_OWNER_KEY, leagueId);
+  } catch {
+    /* storage not available: nothing cached */
+  }
+}
+
+/** Pages that work without a league (sign-in, invite links). */
+const NO_LEAGUE_PATHS = ['/login', '/join'];
 
 export interface LeagueSummary {
   id: string;
@@ -46,7 +77,22 @@ const readStored = () => {
   }
 };
 
-export function ActiveLeagueProvider({ uid, isSuperAdmin, children }: { uid: string | null; isSuperAdmin: boolean; children: React.ReactNode }) {
+export function ActiveLeagueProvider({
+  uid,
+  isSuperAdmin,
+  accountReady,
+  noLeague,
+  children,
+}: {
+  uid: string | null;
+  isSuperAdmin: boolean;
+  /** The account profile is loaded (so an empty membership list really means "no league yet") */
+  accountReady: boolean;
+  /** Shown instead of the pages to a signed-in account that belongs to no league */
+  noLeague: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const pathname = usePathname() || '/';
   const [memberships, setMemberships] = useState<{ uid: string; leagues: LeagueSummary[] } | null>(null);
   const [chosen, setChosen] = useState<string | null>(null);
   const [card, setCard] = useState<{ key: string; member: LeagueMemberPlayer | null } | null>(null);
@@ -75,6 +121,7 @@ export function ActiveLeagueProvider({ uid, isSuperAdmin, children }: { uid: str
 
   // Services read the active league from here; set before the children render
   setActiveLeagueForData(activeLeagueId ?? CALCETTARI_LEAGUE_ID);
+  if (activeLeagueId) claimLocalCaches(activeLeagueId);
 
   useEffect(() => {
     if (!active || !isFirebaseConfigured) return;
@@ -115,9 +162,12 @@ export function ActiveLeagueProvider({ uid, isSuperAdmin, children }: { uid: str
     [leagues, activeLeagueId, setActiveLeague, member, leagueRole, isSuperAdmin, membershipsReady, cardReady]
   );
 
+  const showWelcome =
+    Boolean(uid) && accountReady && membershipsReady && leagues.length === 0 && !NO_LEAGUE_PATHS.some((p) => pathname.startsWith(p));
+
   return (
     <ActiveLeagueContext.Provider value={value}>
-      <React.Fragment key={activeLeagueId ?? 'none'}>{children}</React.Fragment>
+      {showWelcome ? noLeague : <React.Fragment key={activeLeagueId ?? 'none'}>{children}</React.Fragment>}
     </ActiveLeagueContext.Provider>
   );
 }

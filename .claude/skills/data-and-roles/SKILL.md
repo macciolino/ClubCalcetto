@@ -156,7 +156,7 @@ Production data is REAL: never rewrite stats, no paid services, never print secr
 - Saved by `savePreferences()` from Impostazioni → Lingua / Tema (`components/settings/*`), applied on sign-in on any device
   by `PreferencesSync` (layout). The device keeps its own copy (localStorage `cc_locale`, `cc_theme`) for the first paint.
 
-## Multi-league (steps 1A + 1B done 2026-11-18)
+## Multi-league (steps 1A, 1B, 2 done 2026-11-18)
 - Target: every club collection lives under `leagues/{leagueId}/<same name>/<same id>` (matches, presences, generated_teams,
   match_payments, mvp_votes, sport_fields, stat_categories, settings, admin_requests, notify_state) + `players/{playerId}`
   (league card: OVR, stats, W/D/L, guests; SAME id as the profile, so every reference stays valid; `userId` = auth uid or
@@ -178,3 +178,9 @@ Production data is REAL: never rewrite stats, no paid services, never print secr
 - Rules: club collections only under `leagues/{id}`: members read (verified email required), managers write, presidents change roles
   (never p-1, guests never managers), own card = name/photo/position. Old top-level collections = read-only backup (admins).
 - Re-run "Crea la lega" after deploying 1B to copy anything written to the old paths in between (it never overwrites).
+- Step 2 (2026-11-18): `POST /api/leagues` (`lib/server/leagueCreation.ts`): verified account, max 5 created each; id = slug + 6 hex;
+  creator card PRESIDENT (`isActivePlayer` = "Gioco anch'io"), 8 default parameters (`lib/utils/defaultCategories.ts`), optional field f1
+  + default_field_id, membership merged. `defaultFormat` is only stored for now (days still default to 5vs5).
+  Header: `components/league/LeagueSwitcher.tsx` (sheet < 1024px, popover ≥ 1024px), `CreateLeagueSheet`, `LeagueWelcome`
+  (no league → shown by ActiveLeagueProvider instead of the pages, except /login and /join). `/join/[code]` = placeholder until step 3.
+  Local caches are emptied when the active league changes (`cc_cache_league`). Cards with `isActivePlayer: false` are hidden from player lists.

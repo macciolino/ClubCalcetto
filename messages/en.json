@@ -1402,5 +1402,61 @@
     "done": "Done: {writes} documents copied into the league \"I Calcettari\".",
     "nothing": "Nothing to copy: the league is already complete.",
     "confirm": "Copy {writes} documents into the league \"I Calcettari\"? Current data stays where it is."
+  },
+  "league": {
+    "switcherLabel": "Active league: {name}. Change league",
+    "yourLeagues": "Your leagues",
+    "current": "Active",
+    "createNew": "Create new league",
+    "roles": {
+      "PRESIDENT": "President",
+      "COLLABORATOR": "Collaborator",
+      "PLAYER": "Player"
+    },
+    "switched": "League: {name}",
+    "create": {
+      "title": "New league",
+      "subtitle": "You become president: you can invite friends and appoint other presidents or collaborators.",
+      "name": "League name",
+      "namePlaceholder": "E.g. Thursday five-a-side",
+      "nameHint": "2 to 48 characters.",
+      "visibility": "Visibility",
+      "private": "Private",
+      "privateHint": "Join only with an invite",
+      "public": "Public",
+      "publicHint": "Visible to people looking for a league (coming soon)",
+      "format": "Usual format (optional)",
+      "formatNone": "None",
+      "location": "Usual pitch (optional)",
+      "locationPlaceholder": "E.g. Rossi sports centre",
+      "asPlayer": "I play too",
+      "asPlayerHint": "You will be listed among the league players. Turn it off to be organiser only.",
+      "submit": "Create league",
+      "cancel": "Cancel",
+      "creating": "Creating…",
+      "done": "League \"{name}\" created: you are now its president.",
+      "errors": {
+        "bad_request": "Check the league name.",
+        "too_many": "You have already created the maximum number of leagues (5).",
+        "email_not_verified": "Please confirm your email first.",
+        "failed": "League not created: check your connection and try again."
+      }
+    },
+    "welcome": {
+      "title": "Welcome to Club Soccer",
+      "subtitle": "You are not in a league yet. Create one for your group or join with a friend’s invite.",
+      "create": "Create a new league",
+      "join": "Join with invite code or link",
+      "codeLabel": "Invite code or link",
+      "codePlaceholder": "Paste the link or the code",
+      "go": "Join",
+      "badCode": "Invalid code: paste the link you received or the code.",
+      "logout": "Sign out"
+    },
+    "join": {
+      "title": "League invite",
+      "invalid": "This invite is not valid or has expired. Ask the league organiser for a new link.",
+      "home": "Go to Home"
+    }
   }
 }

@@ -1402,5 +1402,61 @@
     "done": "Fatto: {writes} documenti copiati nella lega \"I Calcettari\".",
     "nothing": "Niente da copiare: la lega è già completa.",
     "confirm": "Copio {writes} documenti nella lega \"I Calcettari\"? I dati attuali restano dove sono."
+  },
+  "league": {
+    "switcherLabel": "Lega attiva: {name}. Cambia lega",
+    "yourLeagues": "Le tue leghe",
+    "current": "Attiva",
+    "createNew": "Crea nuova lega",
+    "roles": {
+      "PRESIDENT": "Presidente",
+      "COLLABORATOR": "Collaboratore",
+      "PLAYER": "Giocatore"
+    },
+    "switched": "Lega: {name}",
+    "create": {
+      "title": "Nuova lega",
+      "subtitle": "Diventi presidente: potrai invitare gli amici e nominare altri presidenti o collaboratori.",
+      "name": "Nome della lega",
+      "namePlaceholder": "Es. Calcetto del giovedì",
+      "nameHint": "Da 2 a 48 caratteri.",
+      "visibility": "Visibilità",
+      "private": "Privata",
+      "privateHint": "Si entra solo con un invito",
+      "public": "Pubblica",
+      "publicHint": "Visibile a chi cerca una lega (in arrivo)",
+      "format": "Formato abituale (facoltativo)",
+      "formatNone": "Nessuno",
+      "location": "Campo abituale (facoltativo)",
+      "locationPlaceholder": "Es. Centro sportivo Rossi",
+      "asPlayer": "Gioco anch’io",
+      "asPlayerHint": "Comparirai tra i giocatori della lega. Se lo spegni resti solo organizzatore.",
+      "submit": "Crea la lega",
+      "cancel": "Annulla",
+      "creating": "Creazione…",
+      "done": "Lega \"{name}\" creata: ora sei il presidente.",
+      "errors": {
+        "bad_request": "Controlla il nome della lega.",
+        "too_many": "Hai già creato il numero massimo di leghe (5).",
+        "email_not_verified": "Conferma prima la tua email.",
+        "failed": "Lega non creata: controlla la connessione e riprova."
+      }
+    },
+    "welcome": {
+      "title": "Benvenuto in Club Soccer",
+      "subtitle": "Non fai ancora parte di una lega. Creane una per il tuo gruppo o entra con l’invito di un amico.",
+      "create": "Crea una nuova lega",
+      "join": "Unisciti con codice o link invito",
+      "codeLabel": "Codice o link di invito",
+      "codePlaceholder": "Incolla il link o il codice",
+      "go": "Entra",
+      "badCode": "Codice non valido: incolla il link ricevuto o il codice.",
+      "logout": "Esci"
+    },
+    "join": {
+      "title": "Invito alla lega",
+      "invalid": "Questo invito non è valido o è scaduto. Chiedi un nuovo link a chi organizza la lega.",
+      "home": "Vai alla Home"
+    }
   }
 }

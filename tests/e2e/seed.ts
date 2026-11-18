@@ -96,3 +96,23 @@ export async function waitForDoc(path: string, check: (data: FirebaseFirestore.D
   }
   throw new Error(`${path} non è arrivato allo stato atteso: ${JSON.stringify(last)}`);
 }
+
+/** An account (verified, with its profile) that belongs to NO league: sees the welcome screen. */
+export async function seedAccountWithoutLeague(email = 'nolega@example.com', password = 'password123') {
+  const now = new Date().toISOString();
+  await auth.createUser({ uid: 'e2e-nolega', email, password, emailVerified: true, displayName: 'Nuovo Arrivato' });
+  await db.doc('profiles/e2e-nolega').set({
+    id: 'e2e-nolega', user_id: 'e2e-nolega', full_name: 'Nuovo Arrivato', avatar_url: null, role: 'player', position: 'Esterno',
+    is_guest: false, stats: {}, overall_rating: 6, matches_won: 0, matches_drawn: 0, matches_lost: 0, created_at: now, updated_at: now,
+  });
+  return { email, password };
+}
+
+/** Logs in with any email/password account through the real login form. */
+export async function loginAs(page: Page, email: string, password: string) {
+  await page.goto('/login');
+  await page.locator('#auth-email').fill(email);
+  await page.locator('#auth-password').fill(password);
+  await page.getByRole('button', { name: 'Login', exact: true }).click();
+  await page.waitForURL((url) => url.pathname === '/', { timeout: 60_000 });
+}

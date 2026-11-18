@@ -49,7 +49,9 @@ export function subscribeProfiles(
         if (!snapshot.empty) {
           const list: Profile[] = [];
           snapshot.forEach((docSnap) => {
-            const p = docSnap.data() as Profile;
+            const p = docSnap.data() as Profile & { isActivePlayer?: boolean };
+            // Multi-league: a president / collaborator who only organises (isActivePlayer false) is not in the player lists
+            if (which === 'active' && p.isActivePlayer === false) return;
             if (Boolean(p.deactivated_at) === (which === 'deactivated')) list.push(p);
           });
           callback(list);

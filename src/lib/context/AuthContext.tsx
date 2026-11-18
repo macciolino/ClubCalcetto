@@ -21,6 +21,7 @@ import {
 import { doc, getDoc, setDoc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { ldoc } from '@/lib/league/leagueRefs';
 import { ActiveLeagueProvider, useActiveLeague } from '@/lib/context/ActiveLeagueContext';
+import { LeagueWelcome } from '@/components/league/LeagueWelcome';
 import { ensurePrivateEmail } from '@/lib/firebase/firestoreService';
 
 /**
@@ -549,7 +550,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         authProvider,
       }}
     >
-      <ActiveLeagueProvider uid={user?.uid ?? null} isSuperAdmin={isSuperAdmin}>
+      <ActiveLeagueProvider
+        uid={user?.uid ?? null}
+        isSuperAdmin={isSuperAdmin}
+        accountReady={!isLoading && Boolean(profile)}
+        noLeague={
+          <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-6">
+            <LeagueWelcome />
+          </main>
+        }
+      >
         {children}
       </ActiveLeagueProvider>
     </AuthContext.Provider>

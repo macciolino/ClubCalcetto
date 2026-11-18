@@ -66,7 +66,9 @@ export async function callerFrom(request: Request) {
   if (!decoded) return null;
   const isSuper = decoded.email === SUPER_ADMIN_EMAIL && decoded.email_verified === true;
   const profileId = isSuper ? 'p-1' : decoded.uid;
-  return { uid: decoded.uid, email: decoded.email || null, isSuper, profileId };
+  // Google accounts are always verified; email/password accounts after the link in the email
+  const emailVerified = decoded.email_verified === true;
+  return { uid: decoded.uid, email: decoded.email || null, isSuper, profileId, emailVerified };
 }
 
 /** Caller that manages the current league (president / collaborator) or the super admin; null otherwise. */
