@@ -1390,5 +1390,17 @@
     "home": "Back to Home",
     "notFoundTitle": "Page not found",
     "notFoundBody": "The address you opened does not exist or has been moved."
+  },
+  "leagueMigration": {
+    "title": "Move to leagues",
+    "intro": "Only for you (super admin): copies players, matches, attendance, teams, cash and settings into the league \"I Calcettari\". Current data is not touched and you can run it again: it only copies what is missing.",
+    "check": "Check",
+    "run": "Create the league",
+    "working": "Working…",
+    "failed": "Operation failed. Did you publish the code and the new rules?",
+    "dryResult": "To copy: {writes} documents ({players} players, {presidents} presidents). No data changed.",
+    "done": "Done: {writes} documents copied into the league \"I Calcettari\".",
+    "nothing": "Nothing to copy: the league is already complete.",
+    "confirm": "Copy {writes} documents into the league \"I Calcettari\"? Current data stays where it is."
   }
 }

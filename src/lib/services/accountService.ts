@@ -67,3 +67,19 @@ export async function runEmailPrivacy(dryRun: boolean): Promise<EmailPrivacyResu
   const res = await authFetch('/api/admin/email-privacy', { method: 'POST', body: JSON.stringify({ dryRun }) });
   return res.ok ? (res as unknown as EmailPrivacyResult) : null;
 }
+
+export interface LeagueMigrationResult {
+  dryRun: boolean;
+  leagueCreated: boolean;
+  collections: Record<string, { source: number; toCreate: number }>;
+  players: { source: number; toCreate: number };
+  presidents: number;
+  memberships: { source: number; toCreate: number };
+  writes: number;
+}
+
+/** Super admin only (multi-league 1A): dryRun = true only counts; false copies the data into "I Calcettari". null = failed. */
+export async function runLeagueMigration(dryRun: boolean): Promise<LeagueMigrationResult | null> {
+  const res = await authFetch('/api/admin/league-migration', { method: 'POST', body: JSON.stringify({ dryRun }) });
+  return res.ok ? (res as unknown as LeagueMigrationResult) : null;
+}

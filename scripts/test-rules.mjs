@@ -408,5 +408,35 @@ await expectAllowed('super admin saves own email in p-1 private doc', () =>
 await expectDenied('impostor (not verified) reads p-1 private doc', () => getDoc(doc(impostor.db, 'private_profiles', 'p-1')));
 await expectDenied('admin deletes a private doc (only super admin)', () => deleteDoc(doc(adminC.db, 'private_profiles', playerB.uid)));
 
+// ---------- multi-league (1A): read only for members, written only by the server ----------
+console.log('\nMulti-league (1A)');
+const ownerSet = (path, fields) =>
+  fetch(`http://${FS_HOST}:${FS_PORT}/v1/projects/${PROJECT_ID}/databases/(default)/documents/${path}`, {
+    method: 'PATCH',
+    headers: { Authorization: 'Bearer owner', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields }),
+  });
+await ownerSet('leagues/calcettari', { name: { stringValue: 'I Calcettari' } });
+await ownerSet('leagues/calcettari/matches/2026-01-01', { status: { stringValue: 'completed' } });
+await ownerSet('leagues/other/matches/2026-01-01', { status: { stringValue: 'completed' } });
+await ownerSet(`memberships/${playerB.uid}`, {
+  leagues: { mapValue: { fields: { calcettari: { mapValue: { fields: { player_id: { stringValue: playerB.uid }, league_role: { stringValue: 'PLAYER' } } } } } } },
+});
+await expectAllowed('member B reads own memberships', () => getDoc(doc(playerB.db, 'memberships', playerB.uid)));
+await expectDenied('player A reads B memberships', () => getDoc(doc(playerA.db, 'memberships', playerB.uid)));
+await expectDenied('member B writes own memberships (becomes president)', () =>
+  setDoc(doc(playerB.db, 'memberships', playerB.uid), { leagues: { other: { league_role: 'PRESIDENT' } } }, { merge: true }));
+await expectAllowed('member B reads the league', () => getDoc(doc(playerB.db, 'leagues', 'calcettari')));
+await expectAllowed('member B reads a league match', () => getDoc(doc(playerB.db, 'leagues', 'calcettari', 'matches', '2026-01-01')));
+await expectDenied('member B reads another league match', () => getDoc(doc(playerB.db, 'leagues', 'other', 'matches', '2026-01-01')));
+await expectDenied('non-member A reads the league', () => getDoc(doc(playerA.db, 'leagues', 'calcettari')));
+await expectDenied('anonymous reads the league', () => getDoc(doc(anon.db, 'leagues', 'calcettari')));
+await expectDenied('admin C (not member) writes a league match', () =>
+  setDoc(doc(adminC.db, 'leagues', 'calcettari', 'matches', '2026-01-02'), { status: 'completed' }));
+await expectDenied('member B writes a league match', () =>
+  setDoc(doc(playerB.db, 'leagues', 'calcettari', 'matches', '2026-01-02'), { status: 'completed' }));
+await expectAllowed('super admin reads any league', () => getDoc(doc(superAdmin.db, 'leagues', 'other', 'matches', '2026-01-01')));
+await expectDenied('impostor (not verified) reads a league', () => getDoc(doc(impostor.db, 'leagues', 'calcettari')));
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

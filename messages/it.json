@@ -1390,5 +1390,17 @@
     "home": "Torna alla Home",
     "notFoundTitle": "Pagina non trovata",
     "notFoundBody": "L’indirizzo che hai aperto non esiste o è stato spostato."
+  },
+  "leagueMigration": {
+    "title": "Passaggio alle leghe",
+    "intro": "Solo per te (super admin): copia giocatori, partite, presenze, squadre, cassa e impostazioni nella lega \"I Calcettari\". I dati attuali non vengono toccati e l'operazione si può ripetere: copia solo ciò che manca.",
+    "check": "Controlla",
+    "run": "Crea la lega",
+    "working": "In corso…",
+    "failed": "Operazione non riuscita. Hai pubblicato il codice e le nuove regole?",
+    "dryResult": "Da copiare: {writes} documenti ({players} giocatori, {presidents} presidenti). Nessun dato modificato.",
+    "done": "Fatto: {writes} documenti copiati nella lega \"I Calcettari\".",
+    "nothing": "Niente da copiare: la lega è già completa.",
+    "confirm": "Copio {writes} documenti nella lega \"I Calcettari\"? I dati attuali restano dove sono."
   }
 }

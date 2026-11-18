@@ -5,6 +5,7 @@ import { notify, askConfirm } from '@/components/ui/Feedback';
 
 import { DeletionFeedbackCard } from '@/components/admin/DeletionFeedbackCard';
 import { EmailPrivacyCard } from '@/components/admin/EmailPrivacyCard';
+import { LeagueMigrationCard } from '@/components/admin/LeagueMigrationCard';
 import { DeactivatedAccountsList } from '@/components/admin/DeactivatedAccountsList';
 import { manageAccountAsSuperAdmin } from '@/lib/services/accountService';
 import React, { useState, useEffect } from 'react';
@@ -353,6 +354,7 @@ export function AdminSections({ section }: { section: AdminSection }) {
           />
           {/* I motivi di chi lascia: solo il super admin */}
           {isSuperAdmin && <EmailPrivacyCard />}
+          {isSuperAdmin && <LeagueMigrationCard />}
           {isSuperAdmin && <DeletionFeedbackCard />}
         </>
       )}

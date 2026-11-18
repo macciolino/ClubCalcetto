@@ -301,6 +301,28 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ---------- multi-league (step 1A: read only, everything written by the server) ----------
+    // memberships/{uid}.leagues.{leagueId} = { player_id, league_role, name }: the index of who belongs where.
+    function isLeagueMember(leagueId) {
+      let m = /databases/$(database)/documents/memberships/$(request.auth.uid);
+      return signedIn() && exists(m) && leagueId in get(m).data.get('leagues', {});
+    }
+
+    match /memberships/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isSuperAdmin());
+      allow write: if false;
+    }
+
+    match /leagues/{leagueId} {
+      allow read: if isLeagueMember(leagueId) || isSuperAdmin();
+      allow write: if false;
+
+      match /{document=**} {
+        allow read: if isLeagueMember(leagueId) || isSuperAdmin();
+        allow write: if false;
+      }
+    }
+
     // Anything else is denied by default.
   }
 }

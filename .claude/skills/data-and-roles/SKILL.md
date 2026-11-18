@@ -155,3 +155,17 @@ Production data is REAL: never rewrite stats, no paid services, never print secr
   profile (rules: added to the self-update whitelist with value checks; tested in `scripts/test-rules.mjs`).
 - Saved by `savePreferences()` from Impostazioni → Lingua / Tema (`components/settings/*`), applied on sign-in on any device
   by `PreferencesSync` (layout). The device keeps its own copy (localStorage `cc_locale`, `cc_theme`) for the first paint.
+
+## Multi-league (in progress, step 1A done 2026-11-18)
+- Target: every club collection lives under `leagues/{leagueId}/<same name>/<same id>` (matches, presences, generated_teams,
+  match_payments, mvp_votes, sport_fields, stat_categories, settings, admin_requests, notify_state) + `players/{playerId}`
+  (league card: OVR, stats, W/D/L, guests; SAME id as the profile, so every reference stays valid; `userId` = auth uid or
+  null for a ghost, `leagueRole` PRESIDENT|COLLABORATOR|PLAYER, `isActivePlayer`). Types in `src/types/league.ts`.
+- Global stays: `profiles/{id}` = account (name, photo, locale, theme, sessions, deactivation, `platformRole` 'SUPER_ADMIN' only on p-1),
+  `private_profiles`, `push_tokens`, inbox `profiles/{id}/notifications`, `account_feedback`.
+- `memberships/{uid}.leagues.{leagueId} = { player_id, league_role, name }`: server-written index (profile id ≠ uid for p-1);
+  rules use it (`isLeagueMember`). Role changes must update BOTH the player card and this index.
+- Migration "I Calcettari" (id `calcettari`): `lib/server/leagueMigration.ts`, route `/api/admin/league-migration` (super admin,
+  dryRun default), card Impostazioni → Admin e account. Only COPIES, never overwrites (batch `create`), never deletes old data; repeatable.
+  Today's admins + p-1 → PRESIDENT. Permission helpers: `lib/utils/leaguePermissions.ts`.
+- 1A rules: leagues readable by members + super admin, no client writes. Step 1B switches the app to the league paths.
