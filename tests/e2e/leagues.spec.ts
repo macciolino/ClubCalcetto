@@ -95,6 +95,20 @@ test.describe('Inviti e ruoli', () => {
     await expect(page.getByRole('textbox', { name: 'Invita nella lega' })).toHaveValue(/\/join\/[A-Za-z0-9_-]{12}$/, { timeout: 15_000 });
     await expect(page.getByRole('button', { name: 'Copia link' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Condividi su WhatsApp' })).toHaveAttribute('href', /wa\.me/);
+    // "Gioco anch'io" sta sopra la lista dei membri (sul telefono non si scorre tutta la rosa per trovarlo)
+    const playing = page.getByRole('checkbox', { name: /Gioco anch’io in questa lega/ });
+    await expect(playing).toBeChecked();
+    const playingBox = await playing.boundingBox();
+    const membersBox = await page.getByRole('heading', { name: 'Membri e ruoli' }).boundingBox();
+    expect(playingBox!.y).toBeLessThan(membersBox!.y);
+    // ricerca per nome (senza accenti e maiuscole)
+    const search = page.getByRole('searchbox', { name: 'Cerca un membro' });
+    await search.fill('UNO');
+    await expect(page.getByRole('combobox', { name: /^Ruolo di / })).toHaveCount(1);
+    await expect(page.getByRole('combobox', { name: 'Ruolo di Test Uno' })).toBeVisible();
+    await search.fill('nessuno-così');
+    await expect(page.getByText('Nessun membro con questo nome.')).toBeVisible();
+    await search.fill('');
     // membri registrati con il loro ruolo (gli ospiti senza account no)
     await expect(page.getByRole('combobox', { name: 'Ruolo di Marco Test' })).toHaveValue('PRESIDENT');
     await expect(page.getByRole('combobox', { name: 'Ruolo di Ospite Luca' })).toHaveCount(0);

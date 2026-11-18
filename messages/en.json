@@ -948,7 +948,6 @@
     "groups": {
       "account": "Your account",
       "match": "Match management",
-      "club": "Club",
       "access": "Access",
       "league": "League"
     },
@@ -978,8 +977,8 @@
         "description": "Radar ratings and current form"
       },
       "notifiche-club": {
-        "label": "Club notifications",
-        "description": "Who gets notifications, test, admins' phones"
+        "label": "League notifications",
+        "description": "Who gets the league notifications, test, phones of presidents and collaborators"
       },
       "accessi": {
         "label": "Admins and accounts",
@@ -1522,7 +1521,10 @@
         "suspended": "The league is suspended: no changes possible."
       },
       "playing": "I play in this league too",
-      "playingHint": "If you turn it off you are not listed among the players (attendance, teams) but you stay in the league."
+      "playingHint": "If you turn it off you are not listed among the players (attendance, teams) but you stay in the league.",
+      "search": "Search a member",
+      "searchPlaceholder": "Search by name",
+      "noResults": "No member with this name."
     }
   },
   "superAdmin": {

@@ -32,7 +32,7 @@ export function leagueRoleFromLegacy(profile: { id: string; role?: string | null
 export function leagueSlug(name: string): string {
   return name
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')

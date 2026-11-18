@@ -12,9 +12,15 @@ test.describe('Impostazioni in inglese', () => {
     await loginAsAdmin(page);
     await page.goto('/settings');
     await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
-    for (const group of ['Your account', 'Match management', 'Club', 'Access']) {
+    for (const group of ['Your account', 'League · I Calcettari', 'Match management', 'Access']) {
       await expect(page.getByRole('region', { name: group })).toBeVisible();
     }
+    // one group for the active league (no separate "Club"): league, pitches, rules, ratings, league notifications
+    const league = page.getByRole('region', { name: 'League · I Calcettari' });
+    for (const item of ['League', 'Pitches and costs', 'Game rules', 'Ratings and form', 'League notifications']) {
+      await expect(league.getByRole('link', { name: new RegExp(`^${item}`) }).first()).toBeVisible();
+    }
+    await expect(page.getByRole('region', { name: 'Club' })).toHaveCount(0);
     await expect(page.getByRole('link', { name: /Match of the week/ })).toBeVisible();
 
     await page.goto('/settings?sezione=regole');

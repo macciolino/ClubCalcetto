@@ -31,23 +31,23 @@ interface SectionDef {
   id: SectionId;
   icon: React.ElementType;
   access: 'all' | 'admin' | 'super';
-  group: 'account' | 'league' | 'match' | 'club' | 'access';
+  group: 'account' | 'league' | 'match' | 'access';
 }
 
 /** Sections of Impostazioni, in menu order, grouped (names: settings.sections.<id>, settings.groups.<group>). */
 const SECTIONS: SectionDef[] = [
   { id: 'notifiche', icon: Bell, access: 'all', group: 'account' },
   { id: 'account', icon: UserCog, access: 'all', group: 'account' },
-  // Multi-league: invite link, league name, members and roles (managers; members see it read-only from step 3)
+  // Multi-league: everything about the ACTIVE league in one group (heading = "Lega · <name>"); no separate "Club" any more
   { id: 'lega', icon: Shield, access: 'all', group: 'league' },
+  { id: 'campi', icon: MapPin, access: 'admin', group: 'league' },
+  { id: 'regole', icon: Ruler, access: 'admin', group: 'league' },
+  { id: 'parametri', icon: BarChart3, access: 'admin', group: 'league' },
+  { id: 'notifiche-club', icon: Megaphone, access: 'admin', group: 'league' },
   { id: 'partita', icon: Trophy, access: 'admin', group: 'match' },
-  { id: 'campi', icon: MapPin, access: 'admin', group: 'club' },
-  { id: 'regole', icon: Ruler, access: 'admin', group: 'club' },
-  { id: 'parametri', icon: BarChart3, access: 'admin', group: 'club' },
-  { id: 'notifiche-club', icon: Megaphone, access: 'admin', group: 'club' },
   { id: 'accessi', icon: ShieldCheck, access: 'admin', group: 'access' },
 ];
-const GROUPS: SectionDef['group'][] = ['account', 'league', 'match', 'club', 'access'];
+const GROUPS: SectionDef['group'][] = ['account', 'league', 'match', 'access'];
 
 /** Live values shown on the right of each row of the overview ("how the club is set up" at a glance). */
 function useSummary(
@@ -129,6 +129,10 @@ function SettingsContent() {
 
   const raw = params.get('sezione') || '';
   const t = useTranslations('settings');
+  const { leagues: myLeagues, activeLeagueId: currentLeagueId } = useActiveLeague();
+  const activeLeagueName = myLeagues.find((l) => l.id === currentLeagueId)?.name;
+  // The league group carries the active league's name ("Lega · I Calcettari")
+  const groupTitle = (g: SectionDef['group']) => (g === 'league' && activeLeagueName ? `${t('groups.league')} · ${activeLeagueName}` : t(`groups.${g}`));
   const label = (s: SectionDef) => t(`sections.${s.id}.label`);
 
   if (isLoading) return <PageSkeleton />;
@@ -183,8 +187,8 @@ function SettingsContent() {
   const groupList = (withValue: boolean) => (
     <div className="space-y-5">
       {groups.map((g) => (
-        <section key={g.title} className="space-y-1.5" aria-label={t(`groups.${g.title}`)}>
-          <h2 className="px-1 text-xs font-semibold text-muted">{t(`groups.${g.title}`)}</h2>
+        <section key={g.title} className="space-y-1.5" aria-label={groupTitle(g.title)}>
+          <h2 className="px-1 text-xs font-semibold text-muted truncate">{groupTitle(g.title)}</h2>
           <div className="bg-card rounded-2xl overflow-hidden divide-y divide-line">
             {g.items.map((s) => (
               <div key={s.id}>{row(s, withValue)}</div>

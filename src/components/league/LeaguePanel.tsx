@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { Copy, Link2, Loader2, RefreshCw, Save, Share2, Users } from 'lucide-react';
+import { Copy, Link2, Loader2, RefreshCw, Save, Search, Share2, UserCheck, Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { db, isFirebaseConfigured } from '@/lib/firebase/config';
 import { lcol } from '@/lib/league/leagueRefs';
@@ -35,6 +35,8 @@ export function LeaguePanel() {
     <div className="space-y-4">
       {canManageMatchesAndCash && <InviteCard leagueName={league?.name || ''} />}
       <LeagueDetailsCard league={league} editable={isPresident} />
+      {/* Own playing status on top: on a phone nobody has to scroll a 30-player list to find it */}
+      <PlayingCard />
       <MembersCard editable={isPresident} />
     </div>
   );
@@ -173,6 +175,7 @@ function MembersCard({ editable }: { editable: boolean }) {
   const { member } = useActiveLeague();
   const [cards, setCards] = useState<LeagueMemberPlayer[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
 
   useEffect(() => {
     if (!isFirebaseConfigured) return;
@@ -189,19 +192,15 @@ function MembersCard({ editable }: { editable: boolean }) {
     );
   }, []);
 
+  const needle = normalizeName(query);
+  const shown = needle ? cards.filter((p) => normalizeName(p.full_name).includes(needle)) : cards;
+
   const changeRole = async (p: LeagueMemberPlayer, role: LeagueRole) => {
     if (busyId || role === p.leagueRole) return;
     setBusyId(p.id);
     const res = await leagueAdminRequest({ action: 'role', playerId: p.id, role });
     setBusyId(null);
     notify(res === 'ok' ? t('changed', { name: p.full_name, role: tr(role) }) : t(`errors.${res}`));
-  };
-  const togglePlaying = async (active: boolean) => {
-    if (busyId) return;
-    setBusyId('me');
-    const res = await leagueAdminRequest({ action: 'playing', active });
-    setBusyId(null);
-    if (res !== 'ok') notify(t('errors.failed'));
   };
 
   return (
@@ -212,8 +211,22 @@ function MembersCard({ editable }: { editable: boolean }) {
         </h2>
         <p className="text-xs text-secondary mt-0.5">{t('intro')}</p>
       </div>
+      {cards.length > 6 && (
+        <label className="relative block">
+          <span className="sr-only">{t('search')}</span>
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" aria-hidden="true" />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t('searchPlaceholder')}
+            className={`${field} pl-9`}
+          />
+        </label>
+      )}
+      {shown.length === 0 && <p className="text-xs text-muted">{t('noResults')}</p>}
       <ul className="divide-y divide-line">
-        {cards.map((p) => (
+        {shown.map((p) => (
           <li key={p.id} className="flex items-center gap-3 py-2.5">
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-primary truncate">
@@ -243,21 +256,49 @@ function MembersCard({ editable }: { editable: boolean }) {
           </li>
         ))}
       </ul>
-      {member && (
-        <label className="flex items-start gap-3 rounded-xl border border-line px-3 py-2.5 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={member.isActivePlayer !== false}
-            disabled={busyId !== null}
-            onChange={(e) => togglePlaying(e.target.checked)}
-            className="mt-0.5 h-4 w-4 accent-[rgb(var(--accent-primary))]"
-          />
-          <span>
-            <span className="block text-sm font-semibold text-primary">{t('playing')}</span>
-            <span className="block text-xs text-secondary">{t('playingHint')}</span>
+    </section>
+  );
+}
+
+/** Name search ignoring case and accents ("nicolo" finds "Nicolò"). */
+const normalizeName = (v: string) =>
+  v
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
+/** "Gioco anch'io": the member's own playing status in the active league (any role). */
+function PlayingCard() {
+  const t = useTranslations('league.members');
+  const { member } = useActiveLeague();
+  const [saving, setSaving] = useState(false);
+  if (!member) return null;
+  const toggle = async (active: boolean) => {
+    if (saving) return;
+    setSaving(true);
+    const res = await leagueAdminRequest({ action: 'playing', active });
+    setSaving(false);
+    if (res !== 'ok') notify(t(`errors.${res}`));
+  };
+  return (
+    <section className={card} aria-labelledby="playing-title">
+      <label className="flex items-start gap-3 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={member.isActivePlayer !== false}
+          disabled={saving}
+          onChange={(e) => toggle(e.target.checked)}
+          className="mt-0.5 h-4 w-4 accent-[rgb(var(--accent-primary))]"
+        />
+        <span className="flex-1">
+          <span id="playing-title" className="text-sm font-semibold text-primary flex items-center gap-2">
+            <UserCheck className="h-4 w-4 text-accent-text" aria-hidden="true" /> {t('playing')}
           </span>
-        </label>
-      )}
+          <span className="block text-xs text-secondary mt-0.5">{t('playingHint')}</span>
+        </span>
+        {saving && <Loader2 className="h-4 w-4 animate-spin text-secondary" aria-hidden="true" />}
+      </label>
     </section>
   );
 }

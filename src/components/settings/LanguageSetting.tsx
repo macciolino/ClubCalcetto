@@ -11,7 +11,7 @@ import type { Locale } from '@/i18n/locale';
 import { PreferenceRow, PreferenceSheet } from './PreferenceSheet';
 
 /**
- * Impostazioni → Tuo account → "Lingua / Language": Italiano / English. Applied at once (I18nProvider) and saved on the
+ * Impostazioni → Tuo account → "Lingua" ("Language" in English): Italiano / English. Applied at once (I18nProvider) and saved on the
  * profile, so it follows the person on every device. Language names are written in their own language.
  */
 export function LanguageSetting() {
@@ -35,7 +35,7 @@ export function LanguageSetting() {
 
   return (
     <>
-      <PreferenceRow icon={<Languages className="h-4 w-4" />} label={`${t('label')}${locale === 'it' ? ' / Language' : ' / Lingua'}`} value={t(locale)} onClick={() => setOpen(true)} />
+      <PreferenceRow icon={<Languages className="h-4 w-4" />} label={t('label')} value={t(locale)} onClick={() => setOpen(true)} />
       {open && (
         <PreferenceSheet<Locale>
           title={t('title')}

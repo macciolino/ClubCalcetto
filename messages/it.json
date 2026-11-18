@@ -948,7 +948,6 @@
     "groups": {
       "account": "Tuo account",
       "match": "Gestione partita",
-      "club": "Club",
       "access": "Accessi",
       "league": "Lega"
     },
@@ -978,8 +977,8 @@
         "description": "Parametri dell’ottagono e stato forma"
       },
       "notifiche-club": {
-        "label": "Notifiche del club",
-        "description": "Chi riceve le notifiche, prova, telefoni degli admin"
+        "label": "Notifiche della lega",
+        "description": "Chi riceve le notifiche della lega, prova, telefoni di presidenti e collaboratori"
       },
       "accessi": {
         "label": "Admin e account",
@@ -1522,7 +1521,10 @@
         "suspended": "La lega è sospesa: nessuna modifica possibile."
       },
       "playing": "Gioco anch’io in questa lega",
-      "playingHint": "Se lo spegni non compari tra i giocatori (presenze, squadre) ma resti nella lega."
+      "playingHint": "Se lo spegni non compari tra i giocatori (presenze, squadre) ma resti nella lega.",
+      "search": "Cerca un membro",
+      "searchPlaceholder": "Cerca per nome",
+      "noResults": "Nessun membro con questo nome."
     }
   },
   "superAdmin": {

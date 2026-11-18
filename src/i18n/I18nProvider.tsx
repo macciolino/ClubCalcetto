@@ -16,7 +16,7 @@ interface LocaleContextValue {
 
 const LocaleContext = createContext<LocaleContextValue>({ locale: DEFAULT_LOCALE, setLocale: () => undefined });
 
-/** Current language and the function to change it (e.g. the "Lingua / Language" setting). */
+/** Current language and the function to change it (e.g. the "Lingua" setting). */
 export const useLocaleSetting = () => useContext(LocaleContext);
 
 function remember(locale: Locale) {

@@ -10,14 +10,14 @@ test.describe('Preferenze personali (lingua e tema sul profilo)', () => {
   test('cambio lingua: subito applicata e salvata sul profilo', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/settings');
-    const row = page.getByRole('button', { name: /^Lingua \/ Language/ });
+    const row = page.getByRole('button', { name: /^Lingua/ });
     await expect(row).toContainText('Italiano');
     await row.click();
     const sheet = page.getByRole('dialog');
     await expect(sheet.getByRole('radio')).toHaveCount(2);
     await sheet.getByRole('radio', { name: /English/ }).click();
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-    await expect(page.getByRole('button', { name: /^Language \/ Lingua/ })).toContainText('English');
+    await expect(page.getByRole('button', { name: /^Language/ })).toContainText('English');
     await waitForDoc('profiles/p-1', (d) => d?.locale === 'en');
     // Modulo 1 tradotto: barra di navigazione e campanella in inglese
     const nav = page.getByRole('navigation', { name: 'Main navigation' }).last();
@@ -25,7 +25,7 @@ test.describe('Preferenze personali (lingua e tema sul profilo)', () => {
     await expect(page.getByRole('button', { name: /^Notifications/ })).toBeVisible();
 
     // e si torna all'italiano
-    await page.getByRole('button', { name: /^Language \/ Lingua/ }).click();
+    await page.getByRole('button', { name: /^Language/ }).click();
     await page.getByRole('dialog').getByRole('radio', { name: /Italiano/ }).click();
     await expect(page.locator('html')).toHaveAttribute('lang', 'it');
     await waitForDoc('profiles/p-1', (d) => d?.locale === 'it');
