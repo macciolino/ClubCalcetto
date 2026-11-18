@@ -50,6 +50,7 @@ Le chiavi segrete (`FIREBASE_ADMIN_*`, `CRON_SECRET`, chiave VAPID) vanno impost
 | `npm run test:rules` | regole Firestore sugli emulatori |
 | `npm run test:integration` | route e logica del server sugli emulatori |
 | `npm run test:e2e` | app vera nel browser (Playwright) sugli emulatori; chiudere prima `dev:emulators` |
+| `npm run check:server` | le librerie del server si caricano come sulle funzioni Vercel (senza `require()` di moduli ES): da lanciare dopo ogni aggiornamento di `firebase-admin` |
 | `npm run build` | build di produzione |
 | `npm run test:all` | tutti i test |
 

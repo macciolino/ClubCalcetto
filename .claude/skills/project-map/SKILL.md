@@ -18,7 +18,7 @@ After login (and email verified) `/login` redirects to `/` (the Home).
 
 Next.js 16 App Router + React 19.3 + TypeScript strict + Tailwind (light/dark themes). Firebase JS SDK 13 (Google Auth,
 Firestore realtime). Deploy: `git push` on `main` → Vercel. Routes are still Italian (English routes are a TODO), UI text Italian.
-Checks: `npx tsc --noEmit -p .`, `npm run lint`, `npm run test:unit`, `npm run test:rules`, `npm run test:integration`, `npm run test:e2e`, `npm run build` (all on emulators). CI: `.github/workflows/ci.yml` (types, lint, unit, rules, integration on every push). Error pages: `app/error.tsx`, `global-error.tsx`, `not-found.tsx` (`ErrorState`). Super admin constants: `src/lib/superAdmin.ts` (rules keep their own copy).
+Checks: `npx tsc --noEmit -p .`, `npm run lint`, `npm run test:unit`, `npm run test:rules`, `npm run test:integration`, `npm run test:e2e`, `npm run build` (all on emulators). CI: `.github/workflows/ci.yml` (server-module load check, types, lint, unit, rules, integration on every push). `npm run check:server` loads firebase-admin with `--no-experimental-require-module` like the Vercel functions: run it after ANY server dependency update (firebase-admin 14 passed every local test but broke all API routes on Vercel with ERR_REQUIRE_ESM). Error pages: `app/error.tsx`, `global-error.tsx`, `not-found.tsx` (`ErrorState`). Super admin constants: `src/lib/superAdmin.ts` (rules keep their own copy).
 
 ## Pages (`src/app/<route>/page.tsx`, all client components)
 

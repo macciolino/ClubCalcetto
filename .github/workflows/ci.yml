@@ -39,6 +39,11 @@ jobs:
       - name: Installa le dipendenze
         run: npm ci --ignore-scripts
 
+      # Server libraries (firebase-admin) loaded the way the Vercel functions load them: no require() of ES
+      # modules. A recent Node.js accepts it locally, Vercel does not (firebase-admin 14 broke every API route).
+      - name: Librerie del server caricabili come su Vercel
+        run: npm run check:server
+
       - name: Controllo dei tipi
         run: npx tsc --noEmit -p .
 

@@ -13,6 +13,7 @@
     "test:rules": "firebase emulators:exec --config firebase.test.json --only auth,firestore --project demo-clubcalcetto \"node scripts/test-rules.mjs\"",
     "test": "npm run test:unit",
     "test:unit": "node scripts/vitest.mjs run tests/unit",
+    "check:server": "node --no-experimental-require-module scripts/check-server-modules.cjs",
     "test:integration": "firebase emulators:exec --config firebase.test.json --only auth,firestore --project demo-clubcalcetto \"node scripts/vitest.mjs run tests/integration\"",
     "test:e2e": "playwright test",
     "test:all": "npm run test:unit && npm run test:rules && npm run test:integration && npm run test:e2e"
