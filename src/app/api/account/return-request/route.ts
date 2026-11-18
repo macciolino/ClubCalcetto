@@ -8,7 +8,8 @@ export const runtime = 'nodejs';
 /**
  * POST { email } (public): someone whose account was closed (deactivated, data kept) tries to sign in or sign up again.
  * The account goes "waiting for restore" and the admins get a request: restore profile and history, or start from zero.
- * The player does not choose. Answers { pending: true } only for a closed account with that email.
+ * The player does not choose. C10: always answers { pending: true } for a valid email (no name, no hint whether
+ * the account exists); the request reaches the admins only for a real closed account.
  */
 export async function POST(request: Request) {
   if (!isAdminConfigured()) return NextResponse.json({ ok: false, error: 'not_configured' }, { status: 503 });
@@ -22,7 +23,8 @@ export async function POST(request: Request) {
     const ids = await profileIdsByEmail(clean);
     const docs = (await Promise.all(ids.map((id) => db.doc(`profiles/${id}`).get()))).filter((d) => d.exists);
     const closed = docs.find((d) => d.data()?.deactivated_at && !d.data()?.archived_at);
-    if (!closed) return NextResponse.json({ ok: true, pending: false });
+    // C10: same answer whether or not the email belongs to a closed account (nobody can find out who left the club)
+    if (!closed) return NextResponse.json({ ok: true, pending: true });
 
     const data = closed.data() || {};
     const name = String(data.full_name || 'Giocatore');
@@ -32,7 +34,7 @@ export async function POST(request: Request) {
       { type: 'restore', profile_id: closed.id, name, email: clean },
       { title: '↩️ Richiesta di rientro', body: `${name} vuole tornare nel club: scegli se ripristinare il profilo o ripartire da zero.` }
     );
-    return NextResponse.json({ ok: true, pending: true, name: name.split(' ')[0] });
+    return NextResponse.json({ ok: true, pending: true });
   } catch (err) {
     console.error('[account/return-request] errore:', err instanceof Error ? err.message : err);
     return NextResponse.json({ ok: false, error: 'server_error' }, { status: 500 });

@@ -18,7 +18,7 @@ import {
   subscribeProfiles,
   subscribeStatCategories,
   subscribePresencesRange,
-  saveProfileDoc,
+  updateProfileFields,
   saveOfficialMatchDateDoc,
   subscribeOfficialMatchDate,
   subscribeAppSettings,
@@ -52,6 +52,7 @@ import {
 } from '@/lib/services/fieldService';
 import { getCalendarDays, toDateString } from '@/lib/utils/dateUtils';
 import { useTranslations } from 'next-intl';
+import { isSuperAdminProfile } from '@/lib/superAdmin';
 
 /** Admin sections shown in Impostazioni (each one was a part of the old /admin page). */
 export type AdminSection = 'partita' | 'campi' | 'regole' | 'parametri' | 'notifiche-club' | 'accessi';
@@ -219,7 +220,7 @@ export function AdminSections({ section }: { section: AdminSection }) {
       notify(t('onlyAdmins'));
       return;
     }
-    const isMarco = targetPlayer.id === 'p-1' || targetPlayer.email?.toLowerCase().includes('macciolino84');
+    const isMarco = isSuperAdminProfile(targetPlayer);
     if (isMarco && targetPlayer.role === 'admin') {
       notify(t('cannotDemoteMain'));
       return;
@@ -232,9 +233,14 @@ export function AdminSections({ section }: { section: AdminSection }) {
       updated_at: new Date().toISOString(),
     };
 
+    // C1: only the role (a whole stale copy could overwrite W/D/L or server flags)
+    try {
+      await updateProfileFields(targetPlayer.id, { role: nextRole, updated_at: updated.updated_at });
+    } catch {
+      return; // error already shown
+    }
     updateStoredPlayer(updated);
     setPlayers(getStoredPlayers());
-    await saveProfileDoc(updated);
   };
 
   const handleReactivatePlayer = async (player: Profile) => {

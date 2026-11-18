@@ -51,7 +51,7 @@ export default function LoginPage() {
   // Link di invito per un ospite (/login?invite=…): nome dell'ospite per il banner
   const [inviteName, setInviteName] = useState('');
   // Account chiuso che prova a tornare: schermata "Bentornato", decide l'admin
-  const [returning, setReturning] = useState<{ name?: string; askEmail?: boolean } | null>(null);
+  const [returning, setReturning] = useState<{ name?: string; askEmail?: boolean; typed?: boolean } | null>(null);
   const [returnEmail, setReturnEmail] = useState('');
   const [returnError, setReturnError] = useState('');
   const [returnBusy, setReturnBusy] = useState(false);
@@ -410,9 +410,11 @@ export default function LoginPage() {
               e.preventDefault();
               setReturnError('');
               setReturnBusy(true);
-              const ok = await checkReturn(returnEmail);
+              // C10: the server answers the same for any email; the request reaches the admins only for a closed account
+              const r = await requestReturn(returnEmail);
               setReturnBusy(false);
-              if (!ok) setReturnError(t('noClosedAccount'));
+              if (r.pending) setReturning({ typed: true });
+              else setReturnError(t('returnFailed'));
             }}
           >
             <p className="text-sm text-secondary leading-relaxed">
@@ -457,7 +459,7 @@ export default function LoginPage() {
                 <Hourglass className="h-5 w-5 text-accent-text" />
               </span>
               <div className="space-y-2 text-sm leading-relaxed">
-                <p className="text-primary">{t('adminConfiguring')}</p>
+                <p className="text-primary">{returning.typed ? t('returnRequestSent') : t('adminConfiguring')}</p>
                 <p className="text-secondary">
                   {t('nothingToDo')}
                 </p>

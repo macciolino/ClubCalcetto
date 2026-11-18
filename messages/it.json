@@ -937,7 +937,9 @@
     "submitSignUp": "Registrati",
     "verifyNote": "Ti invieremo un'email per confermare l'indirizzo.",
     "noAccount": "Non hai un account? ",
-    "haveAccount": "Hai già un account? "
+    "haveAccount": "Hai già un account? ",
+    "returnRequestSent": "Se questa email appartiene a un account chiuso del club, gli amministratori hanno ricevuto la tua richiesta di rientro.",
+    "returnFailed": "Richiesta non inviata: controlla l’email e la connessione, poi riprova."
   },
   "settings": {
     "title": "Impostazioni",
@@ -1375,5 +1377,17 @@
     "nothing": "Nessuna email da spostare: è tutto già protetto.",
     "mismatched": "Da controllare a mano (email diversa): {ids}",
     "confirm": "Sposto {count} email nell'area privata? L'operazione si può ripetere senza problemi."
+  },
+  "saveErrors": {
+    "failed": "Salvataggio non riuscito: controlla la connessione e riprova.",
+    "denied": "Salvataggio rifiutato dal database (permessi). Ricarica la pagina e riprova."
+  },
+  "errorPage": {
+    "title": "Qualcosa è andato storto",
+    "body": "Si è verificato un errore imprevisto. I tuoi dati sono al sicuro: riprova, oppure torna alla Home.",
+    "retry": "Riprova",
+    "home": "Torna alla Home",
+    "notFoundTitle": "Pagina non trovata",
+    "notFoundBody": "L’indirizzo che hai aperto non esiste o è stato spostato."
   }
 }

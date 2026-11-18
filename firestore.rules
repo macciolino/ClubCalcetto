@@ -153,10 +153,38 @@ service cloud.firestore {
       return timestamp.date(int(parts[0]), int(parts[1]), int(parts[2]));
     }
 
-    // Start of next week (Monday 00:00), using Italian time approximated as UTC+1
+    // C14: Italian time. Summer time (UTC+2) runs from the last Sunday of March to the last Sunday of October,
+    // both at 01:00 UTC; otherwise UTC+1. March and October have 31 days; dayOfWeek: Monday = 1 … Sunday = 7.
+    function lastSundayAt1Utc(year, month) {
+      let last = timestamp.date(year, month, 31);
+      return last - duration.value(last.dayOfWeek() % 7, 'd') + duration.value(1, 'h');
+    }
+    function isItalianSummerTime(t) {
+      return t >= lastSundayAt1Utc(t.year(), 3) && t < lastSundayAt1Utc(t.year(), 10);
+    }
+    function toItalianTime(t) {
+      return isItalianSummerTime(t) ? t + duration.value(2, 'h') : t + duration.value(1, 'h');
+    }
+
+    // Start of next week (Monday 00:00, Italian time)
     function nextMondayStart() {
-      let now = request.time + duration.value(1, 'h');
+      let now = toItalianTime(request.time);
       return now.date() + duration.value(8 - now.dayOfWeek(), 'd');
+    }
+
+    // C12: withdrawal lock (Impostazioni → Campi & Parametri), same as the app: from N hours before 20:30
+    // (Italian time) of the match day a player can no longer withdraw; admins still can.
+    function appConfigPath() {
+      return /databases/$(database)/documents/settings/app_config;
+    }
+    function matchStartUtc(d) {
+      let localStart = dateToTimestamp(d) + duration.value(20, 'h') + duration.value(30, 'm');
+      return isItalianSummerTime(localStart) ? localStart - duration.value(2, 'h') : localStart - duration.value(1, 'h');
+    }
+    function isWithdrawLocked(d) {
+      return exists(appConfigPath())
+        && get(appConfigPath()).data.get('timelock_enabled', false) == true
+        && request.time >= matchStartUtc(d) - duration.value(int(get(appConfigPath()).data.get('timelock_hours_before', 4)), 'h');
     }
 
     // Current week is always open; later days only up to settings/calendar.open_until (set by an admin)
@@ -185,9 +213,10 @@ service cloud.firestore {
             || (request.resource.data.player_id == request.auth.uid
                 && isDateOpenForPlayers(request.resource.data.date)));
 
-      // Withdraw: own presence, or anyone's for admins (the waitlist moves up automatically)
+      // Withdraw: own presence (not during the withdrawal lock, C12), or anyone's for admins
+      // (the waitlist moves up automatically)
       allow delete: if isAdmin()
-        || (signedIn() && resource.data.player_id == request.auth.uid);
+        || (signedIn() && resource.data.player_id == request.auth.uid && !isWithdrawLocked(resource.data.date));
 
       // Only admins edit a presence (e.g. admin_override to force starter / waitlist)
       allow update: if isAdmin();

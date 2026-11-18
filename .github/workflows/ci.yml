@@ -1,0 +1,55 @@
+# C16: automatic checks on every push and pull request (free on public repositories).
+# Type check, lint, unit tests, Firestore rules tests and integration tests — the last two on the LOCAL
+# Firebase emulators of the fake project "demo-clubcalcetto" (production is never touched, no secrets needed).
+# The end-to-end tests (Playwright, slower) stay local: `npm run test:e2e`.
+name: Controlli automatici
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      # Firebase emulators need Java
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      # Same as on the development PC: install scripts are not run (none is needed by the app or the tests)
+      - name: Installa le dipendenze
+        run: npm ci --ignore-scripts
+
+      - name: Controllo dei tipi
+        run: npx tsc --noEmit -p .
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test di unità
+        run: npm run test:unit
+
+      - name: Test delle regole Firestore (emulatori)
+        run: npm run test:rules
+
+      - name: Test di integrazione (emulatori)
+        run: npm run test:integration

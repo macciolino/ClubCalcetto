@@ -28,8 +28,8 @@ import { ensurePrivateEmail } from '@/lib/firebase/firestoreService';
  * - Other admins are profiles with role === 'admin', promoted only by the super admin.
  * - Everything here is UI logic: the real enforcement is in firestore.rules.
  */
-export const SUPER_ADMIN_PROFILE_ID = 'p-1';
-export const SUPER_ADMIN_EMAIL = 'macciolino84@gmail.com';
+import { SUPER_ADMIN_EMAIL, SUPER_ADMIN_PROFILE_ID, isSuperAdminEmail } from '@/lib/superAdmin';
+export { SUPER_ADMIN_EMAIL, SUPER_ADMIN_PROFILE_ID, isSuperAdminEmail };
 
 // Backward-compatible aliases
 export const MARCO_ADMIN_ID = SUPER_ADMIN_PROFILE_ID;
@@ -52,9 +52,6 @@ async function isSessionExpired(fbUser: FirebaseUser): Promise<boolean> {
   }
 }
 
-export function isSuperAdminEmail(email?: string | null): boolean {
-  return (email || '').toLowerCase().trim() === SUPER_ADMIN_EMAIL;
-}
 
 const INVITE_KEY = 'cc_invite';
 

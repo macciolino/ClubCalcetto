@@ -1,7 +1,8 @@
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { adminProfileIds, sendToProfiles } from '@/lib/server/push';
 
-export const SUPER_ADMIN_EMAIL = 'macciolino84@gmail.com';
+import { SUPER_ADMIN_EMAIL } from '@/lib/superAdmin';
+export { SUPER_ADMIN_EMAIL };
 
 /**
  * Requests for the admins (collection `admin_requests`, written ONLY by the server; admins read them in the app).

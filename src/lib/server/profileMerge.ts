@@ -101,24 +101,33 @@ export async function claimGuest(guestId: string, toId: string): Promise<{ guest
   if (!guest.exists || !guest.data()?.is_guest) throw new Error('not_a_guest');
   if (!target.exists) throw new Error('no_account');
   const g = guest.data() || {};
-  const t = target.data() || {};
 
+  // Step 1 (repeatable): references already moved are simply not found again
   await moveReferences(guestId, toId);
 
-  // I parametri dell'ospite li aveva già messi un admin: niente autovalutazione né revisione
-  const patch: Record<string, unknown> = {
-    is_guest: false,
-    updated_at: new Date().toISOString(),
-    linked_guest_id: guestId,
-    needs_stat_review: false,
-    self_rating_pending: false,
-  };
-  if (g.stats) patch.stats = g.stats;
-  if (typeof g.overall_rating === 'number') patch.overall_rating = g.overall_rating;
-  if (g.position) patch.position = g.position;
-  counters.forEach((c) => (patch[c] = Number(t[c] || 0) + Number(g[c] || 0)));
-  await targetRef.update(patch);
-  await guestRef.delete();
+  // Step 2, C8: W/D/L added AND guest removed in ONE transaction. If it is interrupted before, a retry does it once;
+  // after it, the guest no longer exists (not_a_guest) — the counters can never be added twice.
+  await db.runTransaction(async (tx) => {
+    const [gs, ts] = await Promise.all([tx.get(guestRef), tx.get(targetRef)]);
+    if (!gs.exists || !gs.data()?.is_guest) throw new Error('not_a_guest');
+    if (!ts.exists) throw new Error('no_account');
+    const gd = gs.data() || {};
+    const td = ts.data() || {};
+    // I parametri dell'ospite li aveva già messi un admin: niente autovalutazione né revisione
+    const patch: Record<string, unknown> = {
+      is_guest: false,
+      updated_at: new Date().toISOString(),
+      linked_guest_id: guestId,
+      needs_stat_review: false,
+      self_rating_pending: false,
+    };
+    if (gd.stats) patch.stats = gd.stats;
+    if (typeof gd.overall_rating === 'number') patch.overall_rating = gd.overall_rating;
+    if (gd.position) patch.position = gd.position;
+    counters.forEach((c) => (patch[c] = Number(td[c] || 0) + Number(gd[c] || 0)));
+    tx.update(targetRef, patch);
+    tx.delete(guestRef);
+  });
   return { guestName: String(g.full_name || 'Ospite') };
 }
 
@@ -133,22 +142,29 @@ export async function archiveAndReset(profileId: string): Promise<{ name: string
   const old = (await ref.get()).data();
   if (!old) throw new Error('not_found');
   const name = String(old.full_name || 'Ex giocatore');
-  const archivedId = `ex-${Date.now()}`;
   const now = new Date().toISOString();
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { restore_requested_at, sessions_revoked_at, ...rest } = old;
-  await db.doc(`profiles/${archivedId}`).set({
-    ...rest,
-    id: archivedId,
-    user_id: null,
-    email: null,
-    avatar_url: null,
-    is_guest: true,
-    archived_at: now,
-    deactivated_at: old.deactivated_at || now,
-    deactivated_by: old.deactivated_by || 'self',
-  });
+  // C8: the archive id is written on the profile BEFORE anything else. If the operation stops halfway, a retry
+  // reuses the same archive (no duplicate "ex-" records) and just finishes moving the references.
+  const archivedId = typeof old.archive_in_progress === 'string' ? old.archive_in_progress : `ex-${Date.now()}`;
+  if (old.archive_in_progress !== archivedId) await ref.update({ archive_in_progress: archivedId });
+
+  const archiveRef = db.doc(`profiles/${archivedId}`);
+  if (!(await archiveRef.get()).exists) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { restore_requested_at, sessions_revoked_at, archive_in_progress, ...rest } = old;
+    await archiveRef.set({
+      ...rest,
+      id: archivedId,
+      user_id: null,
+      email: null,
+      avatar_url: null,
+      is_guest: true,
+      archived_at: now,
+      deactivated_at: old.deactivated_at || now,
+      deactivated_by: old.deactivated_by || 'self',
+    });
+  }
   await moveReferences(profileId, archivedId);
 
   const cats = await db.collection('stat_categories').get();

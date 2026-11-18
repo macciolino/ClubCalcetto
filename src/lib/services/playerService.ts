@@ -1,6 +1,7 @@
 'use client';
 
 import { Profile } from '@/types/database';
+import { isSuperAdminEmail, isSuperAdminProfile } from '@/lib/superAdmin';
 
 export interface PlayerMatchRecord {
   won: number;
@@ -41,7 +42,7 @@ export function getStoredPlayers(): Profile[] {
           const lost = p.matches_lost ?? 0;
           const position = p.position || 'Esterno';
 
-          if (p.email && p.email.toLowerCase().includes('macciolino84')) {
+          if (isSuperAdminProfile(p)) {
             return {
               ...p,
               role: 'admin',
@@ -84,9 +85,8 @@ export function isPlayerMatch(p: Profile, target: Partial<Profile>): boolean {
   if (target.user_id && p.user_id && p.user_id === target.user_id) return true;
   if (target.email && p.email && target.email.toLowerCase().trim() === p.email.toLowerCase().trim()) return true;
   if (
-    target.email &&
-    target.email.toLowerCase().includes('macciolino84') &&
-    (p.id === 'p-1' || (p.email && p.email.toLowerCase().includes('macciolino84')))
+    isSuperAdminEmail(target.email) &&
+    isSuperAdminProfile(p)
   ) {
     return true;
   }
@@ -95,9 +95,9 @@ export function isPlayerMatch(p: Profile, target: Partial<Profile>): boolean {
 
 export function findPlayerByAuth(authId?: string | null, authEmail?: string | null): Profile | undefined {
   const current = getStoredPlayers();
-  if (authEmail && authEmail.toLowerCase().includes('macciolino84')) {
+  if (isSuperAdminEmail(authEmail)) {
     const marco = current.find(
-      (p) => p.id === 'p-1' || (p.email && p.email.toLowerCase().includes('macciolino84'))
+      (p) => isSuperAdminProfile(p)
     );
     if (marco) return marco;
   }
@@ -168,7 +168,7 @@ export function removeStoredPlayer(playerId: string): Profile[] {
   const current = getStoredPlayers();
   // Proteggi Marco B. dall'eliminazione
   const updated = current.filter(
-    (p) => p.id !== playerId || (p.email && p.email.toLowerCase().includes('macciolino84'))
+    (p) => p.id !== playerId || isSuperAdminProfile(p)
   );
   saveStoredPlayers(updated);
   return updated;

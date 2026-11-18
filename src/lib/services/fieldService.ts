@@ -1,6 +1,7 @@
 'use client';
 
 import { SportField } from '@/types/database';
+import { reportWriteError } from '@/lib/utils/writeErrors';
 import { db, isFirebaseConfigured } from '@/lib/firebase/config';
 import {
   collection,
@@ -116,6 +117,7 @@ export async function addStoredField(field: Omit<SportField, 'id'>): Promise<Spo
       await setDoc(doc(db, 'sport_fields', newField.id), toFirestore(newField, false), { merge: true });
     } catch (e) {
       console.warn('[Firestore] Error saving field:', e);
+      reportWriteError(e);
     }
   }
 
@@ -132,6 +134,7 @@ export async function updateStoredField(field: SportField): Promise<SportField> 
       await setDoc(doc(db, 'sport_fields', field.id), toFirestore(field, true), { merge: true });
     } catch (e) {
       console.warn('[Firestore] Error updating field:', e);
+      reportWriteError(e);
     }
   }
 
@@ -148,6 +151,7 @@ export async function removeStoredField(id: string): Promise<void> {
       await deleteDoc(doc(db, 'sport_fields', id));
     } catch (e) {
       console.warn('[Firestore] Error deleting field:', e);
+      reportWriteError(e);
     }
   }
 }

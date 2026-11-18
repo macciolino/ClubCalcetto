@@ -8,7 +8,8 @@ import { GeneratedTeamRecord } from '@/types/database';
 
 export const runtime = 'nodejs';
 
-const SUPER_ADMIN_EMAIL = 'macciolino84@gmail.com';
+import { SUPER_ADMIN_EMAIL } from '@/lib/superAdmin';
+import { isReconcileDate } from '@/lib/utils/reconcileWindow';
 
 
 type NotifyRequest =
@@ -106,6 +107,8 @@ export async function POST(request: Request) {
     // Chiunque abbia fatto l'accesso può chiedere il controllo sostituzioni (il server decide da solo)
     if (body.type === 'reconcile') {
       if (!isDate(body.date)) return NextResponse.json({ ok: false, error: 'bad_request' }, { status: 400 });
+      // C11: only days that can still change (yesterday … 30 days ahead): any other date costs reads for nothing
+      if (!isReconcileDate(body.date)) return NextResponse.json({ ok: true, substitutions: 0, skipped: true });
       return NextResponse.json({ ok: true, ...(await reconcile(body.date)) });
     }
 

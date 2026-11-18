@@ -2,8 +2,8 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { sendToProfiles } from '@/lib/server/push';
 
-export const SUPER_ADMIN_EMAIL = 'macciolino84@gmail.com';
-export const SUPER_ADMIN_PROFILE_ID = 'p-1';
+import { SUPER_ADMIN_EMAIL, SUPER_ADMIN_PROFILE_ID } from '@/lib/superAdmin';
+export { SUPER_ADMIN_EMAIL, SUPER_ADMIN_PROFILE_ID };
 
 export const DELETE_REASONS = [
   'Non gioco più con il gruppo',

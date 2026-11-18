@@ -16,9 +16,9 @@ separate bar BELOW the header, as wide as the cards (same `max-w-6xl px-4 sm:px-
 are wrapped in ONE sticky container so both stay at the top while scrolling; phones use the bottom bar.
 After login (and email verified) `/login` redirects to `/` (the Home).
 
-Next.js 16 App Router + React 19 + TypeScript strict + Tailwind (dark only). Firebase JS SDK v9 (Google Auth,
+Next.js 16 App Router + React 19.3 + TypeScript strict + Tailwind (light/dark themes). Firebase JS SDK 13 (Google Auth,
 Firestore realtime). Deploy: `git push` on `main` → Vercel. Routes are still Italian (English routes are a TODO), UI text Italian.
-Checks: `npx tsc --noEmit -p .`, `npx next build`, `npm run test:rules` (Firestore rules on emulators). No ESLint config.
+Checks: `npx tsc --noEmit -p .`, `npm run lint`, `npm run test:unit`, `npm run test:rules`, `npm run test:integration`, `npm run test:e2e`, `npm run build` (all on emulators). CI: `.github/workflows/ci.yml` (types, lint, unit, rules, integration on every push). Error pages: `app/error.tsx`, `global-error.tsx`, `not-found.tsx` (`ErrorState`). Super admin constants: `src/lib/superAdmin.ts` (rules keep their own copy).
 
 ## Pages (`src/app/<route>/page.tsx`, all client components)
 

@@ -7,7 +7,7 @@
  */
 import { initializeApp } from 'firebase/app';
 import {
-  getFirestore, connectFirestoreEmulator, doc, getDoc, setDoc, deleteDoc, collection, getDocs, serverTimestamp, updateDoc, increment, runTransaction, deleteField,
+  getFirestore, connectFirestoreEmulator, doc, getDoc, setDoc, deleteDoc, collection, getDocs, serverTimestamp, updateDoc, increment, runTransaction, deleteField, FieldPath,
 } from 'firebase/firestore';
 import {
   getAuth, connectAuthEmulator, signInWithCredential, GoogleAuthProvider, createUserWithEmailAndPassword,
@@ -327,6 +327,32 @@ console.log('\nSuper admin');
 await expectAllowed('promotes player A to admin', () =>
   setDoc(doc(superAdmin.db, 'profiles', playerA.uid), { role: 'admin' }, { merge: true }));
 await expectDenied('deletes its own super admin profile p-1', () => deleteDoc(doc(superAdmin.db, 'profiles', 'p-1')));
+
+console.log('\nC12: withdrawal lock also in the rules');
+await expectAllowed('player (newbie) signs up today', () => join(newbie, TODAY, newbie.uid));
+await expectAllowed('admin turns the lock on (48h before)', () =>
+  setDoc(doc(adminC.db, 'settings', 'app_config'), { timelock_enabled: true, timelock_hours_before: 48 }, { merge: true }));
+await expectDenied('player (newbie) withdraws during the lock', () => deleteDoc(doc(newbie.db, 'presences', `${TODAY}_${newbie.uid}`)));
+await expectAllowed('admin turns the lock off', () =>
+  setDoc(doc(adminC.db, 'settings', 'app_config'), { timelock_enabled: false }, { merge: true }));
+await expectAllowed('player (newbie) withdraws with the lock off', () => deleteDoc(doc(newbie.db, 'presences', `${TODAY}_${newbie.uid}`)));
+await expectAllowed('player (newbie) signs up today again', () => join(newbie, TODAY, newbie.uid));
+await expectAllowed('admin turns the lock on again', () =>
+  setDoc(doc(adminC.db, 'settings', 'app_config'), { timelock_enabled: true, timelock_hours_before: 48 }, { merge: true }));
+await expectAllowed('admin removes player (newbie) during the lock', () => deleteDoc(doc(adminC.db, 'presences', `${TODAY}_${newbie.uid}`)));
+await expectAllowed('admin turns the lock off (cleanup)', () =>
+  setDoc(doc(adminC.db, 'settings', 'app_config'), { timelock_enabled: false }, { merge: true }));
+
+console.log('\nC1: partial save by an admin keeps what changed meanwhile');
+{
+  await expectAllowed('server-like update: W/D/L 3 → 4 meanwhile', () =>
+    setDoc(doc(superAdmin.db, 'profiles', playerB.uid), { matches_won: 4, stats: { Tiro: 6, Difesa: 6 } }, { merge: true }));
+  await expectAllowed('admin saves only position + one parameter', () =>
+    updateDoc(doc(adminC.db, 'profiles', playerB.uid), new FieldPath('position'), 'Punta', new FieldPath('stats', 'Tiro'), 8));
+  const p = (await getDoc(doc(adminC.db, 'profiles', playerB.uid))).data();
+  const ok = p.matches_won === 4 && p.position === 'Punta' && p.stats.Tiro === 8 && p.stats.Difesa === 6;
+  if (ok) { passed++; console.log('  ✔ W/D/L and untouched parameter kept'); } else { failed++; console.log('  ✘ W/D/L or parameter lost', JSON.stringify(p)); }
+}
 
 console.log('\nC2: email in private_profiles, never added back to the public profile');
 // A profile not moved yet (still has its email), written bypassing the rules (emulator owner token)

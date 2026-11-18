@@ -5,8 +5,9 @@ import { getStatValue } from '@/lib/utils/statUtils';
 import React, { useState, useEffect } from 'react';
 import { Profile, StatCategory, FieldPosition, FIELD_POSITIONS, STAT_CANONICAL_ORDER } from '@/types/database';
 import { addStoredPlayer, updateStoredPlayer } from '@/lib/services/playerService';
-import { saveProfileDoc } from '@/lib/firebase/firestoreService';
+import { saveProfileDoc, updateProfileFields } from '@/lib/firebase/firestoreService';
 import { photoToAvatarDataUrl } from '@/lib/utils/imageUtils';
+import { profileChanges } from '@/lib/utils/profileChanges';
 import { Upload, Save, Loader2 } from 'lucide-react';
 import { Sheet, sheetBtn } from '@/components/ui/Sheet';
 import { useTranslations } from 'next-intl';
@@ -147,8 +148,13 @@ export function PlayerModal({
           updated_at: new Date().toISOString(),
         };
 
+        // C1: only what the admin changed in this window (the profile may have changed meanwhile, e.g. a match
+        // closed: its W/D/L and the server flags must not be overwritten with the copy opened earlier)
+        const { fields: changed, stats: changedStats } = profileChanges(playerToEdit, updated, stats, statCategories);
+        if (Object.keys(changed).length > 0 || Object.keys(changedStats).length > 0) {
+          await updateProfileFields(playerToEdit.id, { ...changed, updated_at: updated.updated_at }, changedStats);
+        }
         updateStoredPlayer(updated);
-        saveProfileDoc(updated);
         onSaved(updated);
       } else {
         // Crea nuovo giocatore manuale / ospite (default role: 'player')
@@ -179,7 +185,8 @@ export function PlayerModal({
       onClose();
     } catch (err: unknown) {
       console.error('Submit player error:', err);
-      const msg = err instanceof Error ? err.message : t('saveFailed');
+      // Firestore errors (rules, connection) are already shown as a message: here the generic, translated text
+      const msg = err instanceof Error && !(err as { code?: string }).code ? err.message : t('saveFailed');
       setErrorMsg(msg);
     } finally {
       setIsSubmitting(false);

@@ -20,6 +20,7 @@ import {
   deleteField,
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './config';
+import { reportWriteError } from '@/lib/utils/writeErrors';
 import { Profile, Presence, StatCategory, Match, GeneratedTeamRecord, AppSettings, CalendarSettings, MatchOutcome, MatchScorer, MatchTeamPlayer, TeamSubstitution, MvpVote, MatchPenaltySave } from '@/types/database';
 import { rankDayPresences, rankPresencesByDate } from '@/lib/services/presenceService';
 import { DayFormats, MatchFormat, maxPlayersFor } from '@/lib/utils/matchFormat';
@@ -85,6 +86,7 @@ export async function saveProfileDoc(profile: Profile): Promise<void> {
     await setDoc(doc(db, 'profiles', profile.id), data, { merge: true });
   } catch (err) {
     console.warn('[Firestore] saveProfileDoc error:', err);
+    reportWriteError(err);
   }
 }
 
@@ -128,12 +130,40 @@ export async function ensurePrivateEmail(profileId: string, email: string | null
   }
 }
 
+/**
+ * C1 — saves ONLY the given fields of an existing profile (never a whole, possibly stale copy): match counters,
+ * server flags (self-assessment, review, return request…) and parameters nobody touched stay as they are.
+ * `stats` are written one parameter at a time. Throws after showing the error (the caller must not say "saved").
+ */
+export async function updateProfileFields(
+  profileId: string,
+  fields: Partial<Omit<Profile, 'id' | 'stats' | 'email'>>,
+  stats: Record<string, number> = {}
+): Promise<void> {
+  if (!isFirebaseConfigured) return;
+  const pairs: unknown[] = [];
+  Object.entries(fields).forEach(([k, v]) => {
+    if (v !== undefined) pairs.push(new FieldPath(k), v);
+  });
+  Object.entries(stats).forEach(([name, v]) => pairs.push(new FieldPath('stats', name), v));
+  if (pairs.length === 0) return;
+  try {
+    const [first, value, ...rest] = pairs;
+    await updateDoc(doc(db, 'profiles', profileId), first as FieldPath, value, ...rest);
+  } catch (err) {
+    console.warn('[Firestore] updateProfileFields error:', err);
+    reportWriteError(err);
+    throw err;
+  }
+}
+
 export async function deleteProfileDoc(id: string): Promise<void> {
   if (!isFirebaseConfigured) return;
   try {
     await deleteDoc(doc(db, 'profiles', id));
   } catch (err) {
     console.warn('[Firestore] deleteProfileDoc error:', err);
+    reportWriteError(err);
   }
 }
 
@@ -319,6 +349,7 @@ export async function clearPresencesForDate(date: string): Promise<void> {
     await batch.commit();
   } catch (err) {
     console.warn('[Firestore] clearPresencesForDate error:', err);
+    reportWriteError(err);
   }
 }
 
@@ -397,6 +428,7 @@ export async function saveStatCategoryDoc(cat: StatCategory): Promise<void> {
     await setDoc(doc(db, 'stat_categories', cat.id), cat, { merge: true });
   } catch (err) {
     console.warn('[Firestore] saveStatCategoryDoc error:', err);
+    reportWriteError(err);
   }
 }
 
@@ -406,6 +438,7 @@ export async function deleteStatCategoryDoc(id: string): Promise<void> {
     await deleteDoc(doc(db, 'stat_categories', id));
   } catch (err) {
     console.warn('[Firestore] deleteStatCategoryDoc error:', err);
+    reportWriteError(err);
   }
 }
 
@@ -444,6 +477,7 @@ export async function saveOfficialMatchDateDoc(date: string): Promise<void> {
     await setDoc(doc(db, 'settings', 'official_match'), { date, updated_at: new Date().toISOString() }, { merge: true });
   } catch (err) {
     console.warn('[Firestore] saveOfficialMatchDateDoc error:', err);
+    reportWriteError(err);
   }
 }
 
@@ -515,6 +549,7 @@ export async function saveMatchDoc(match: Match): Promise<void> {
     await setDoc(doc(db, 'matches', match.match_date), match, { merge: true });
   } catch (err) {
     console.warn('[Firestore] saveMatchDoc error:', err);
+    reportWriteError(err);
   }
 }
 
@@ -911,6 +946,7 @@ export async function saveAppSettingsDoc(settings: Partial<AppSettings>): Promis
     await setDoc(doc(db, 'settings', 'app_config'), settings, { merge: true });
   } catch (err) {
     console.warn('[Firestore] saveAppSettingsDoc error:', err);
+    reportWriteError(err);
   }
 }
 

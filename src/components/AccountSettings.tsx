@@ -6,12 +6,13 @@ import { askConfirm } from '@/components/ui/Feedback';
 import { DeleteAccountSection } from '@/components/DeleteAccountSection';
 import { LogOut } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { isSuperAdminEmail } from '@/lib/superAdmin';
 
 /** Impostazioni → Account: who you are signed in as, logout from every device, deactivate / delete the account. */
 export function AccountSettings() {
   const { user, profile, signOut } = useAuth();
   const t = useTranslations('account');
-  const isSuper = Boolean(user?.emailVerified && user?.email?.toLowerCase() === 'macciolino84@gmail.com');
+  const isSuper = Boolean(user?.emailVerified && isSuperAdminEmail(user?.email));
   return (
     <div className="space-y-4">
       <section className="bg-card rounded-2xl p-4 sm:p-5 space-y-4">

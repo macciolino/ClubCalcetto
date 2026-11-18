@@ -11,7 +11,7 @@ import { lastCompletedMatches } from '@/components/FormDots';
 import { PlayerCompare } from '@/components/PlayerCompare';
 import { useAuth } from '@/lib/context/AuthContext';
 import { Profile, StatCategory, Match, STAT_CANONICAL_ORDER } from '@/types/database';
-import { subscribeProfiles, subscribeStatCategories, subscribeMatches, deleteProfileDoc, saveProfileDoc } from '@/lib/firebase/firestoreService';
+import { subscribeProfiles, subscribeStatCategories, subscribeMatches, deleteProfileDoc, updateProfileFields } from '@/lib/firebase/firestoreService';
 import { isFirebaseConfigured, auth as firebaseAuth } from '@/lib/firebase/config';
 import { getStoredPlayers, removeStoredPlayer, updateStoredPlayer, saveStoredPlayers, getPlayerMatchRecord } from '@/lib/services/playerService';
 import { getStoredCategories, saveStoredCategories, DEFAULT_BASE_CATEGORIES } from '@/lib/services/statCategoryService';
@@ -197,12 +197,13 @@ ${link}`;
     if (!(await askConfirm(msg))) return;
     const updated: Profile = { ...p, role: next, updated_at: new Date().toISOString() };
     try {
-      await saveProfileDoc(updated);
+      // C1: only the role (a whole stale copy could overwrite W/D/L or server flags)
+      await updateProfileFields(p.id, { role: next, updated_at: updated.updated_at });
       updateStoredPlayer(updated);
       setPlayers(getStoredPlayers());
       notify(next === 'admin' ? t('nowAdmin', { name: p.full_name }) : t('noLongerAdmin', { name: p.full_name }));
     } catch {
-      notify(t('failed'));
+      /* the error is already shown by updateProfileFields (C7) */
     }
   };
 

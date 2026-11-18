@@ -2,12 +2,20 @@
 # sends the notification (once). Free for public repositories. Needs two repository secrets:
 #   APP_URL      e.g. https://your-app.vercel.app   (no final slash)
 #   CRON_SECRET  same value as the CRON_SECRET variable on Vercel
+#
+# C6: GitHub turns off the scheduled workflows of a public repository after 60 days without activity.
+# Once a day (during 03:00–03:59 UTC, or when started by hand) the workflow re-enables itself through the GitHub API,
+# which keeps it alive without dummy commits. Only this workflow is touched.
 name: Notifica voto MVP
 
 on:
   schedule:
     - cron: '*/10 * * * *'
   workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
 
 jobs:
   check:
@@ -21,3 +29,14 @@ jobs:
         run: |
           if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then echo "Segreti APP_URL / CRON_SECRET non impostati"; exit 0; fi
           curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/cron/mvp-vote"
+
+      - name: Tieni attivo il workflow (una volta al giorno)
+        if: always() # also when the app did not answer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          # 03:00–03:59 UTC (scheduled runs can start a few minutes late, so the whole hour)
+          if [ "$EVENT" != "workflow_dispatch" ] && [ "$(date -u +%H)" != "03" ]; then exit 0; fi
+          gh api -X PUT "repos/$REPO/actions/workflows/mvp-vote-notify.yml/enable" && echo "Workflow mantenuto attivo"

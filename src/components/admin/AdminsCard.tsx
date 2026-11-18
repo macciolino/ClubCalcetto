@@ -8,9 +8,10 @@ import { ShieldCheck, ShieldOff } from 'lucide-react';
 import { btn } from '@/components/ui/buttons';
 import { useTranslations } from 'next-intl';
 import { useProfileEmails } from '@/lib/hooks/useProfileEmails';
+import { isSuperAdminProfile } from '@/lib/superAdmin';
 
 // Super admin = profile p-1 (the email is no longer in the public profile, C2)
-const isSuper = (p: Profile) => (p.id === 'p-1' || Boolean(p.email?.toLowerCase().includes('macciolino84')));
+const isSuper = (p: Profile) => isSuperAdminProfile(p);
 
 /**
  * Admins (Impostazioni → Admin e account): who is admin (name + email), remove an admin,

@@ -186,11 +186,20 @@ describe('Account chiuso (soft delete) e rientro', () => {
     expect((await db().doc('matches/2026-09-01').get()).data()?.team_white[0].id).toBe(archived[0].id);
   });
 
-  it('email sconosciuta o account attivo: nessuna attesa ripristino', async () => {
+  it('email sconosciuta o account attivo: stessa risposta (C10), ma nessuna richiesta e nessun flag', async () => {
     await makeUser('active1', {});
-    expect((await call(returnRequest, { email: 'active1@example.com' })).data.pending).toBe(false);
-    expect((await call(returnRequest, { email: 'nessuno@example.com' })).data.pending).toBe(false);
+    const a = await call(returnRequest, { email: 'active1@example.com' });
+    const b = await call(returnRequest, { email: 'nessuno@example.com' });
+    expect(a.data).toEqual({ ok: true, pending: true });
+    expect(b.data).toEqual({ ok: true, pending: true });
+    expect((await db().doc('profiles/active1').get()).data()?.restore_requested_at).toBeUndefined();
+    expect((await db().collection('admin_requests').where('type', '==', 'restore').get()).size).toBe(0);
     expect((await call(returnRequest, { email: 'non-una-email' })).data.pending).toBe(false);
+  });
+
+  it('account chiuso: la risposta non contiene il nome (C10)', async () => {
+    const u = await closeOwnAccount('m9');
+    expect((await call(returnRequest, { email: u.email })).data).toEqual({ ok: true, pending: true });
   });
 
   it('il giocatore non può decidere da solo: niente ripristino senza admin', async () => {

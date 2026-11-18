@@ -12,8 +12,8 @@ import { Edit3, Trash2, ShieldCheck, ShieldOff, MoreHorizontal, MessageCircle } 
 import { menu } from '@/components/ui/buttons';
 import { useTranslations } from 'next-intl';
 import { usePlayerLabels } from '@/i18n/usePlayerLabels';
+import { isSuperAdminProfile } from '@/lib/superAdmin';
 
-const isSuperAdminProfile = (p: Profile) => (p.id === 'p-1' || Boolean(p.email?.toLowerCase().includes('macciolino84')));
 
 function Avatar({ player, size = 'md' }: { player: Profile; size?: 'md' | 'lg' }) {
   const t = useTranslations('playerCard');

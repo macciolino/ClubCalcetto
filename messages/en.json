@@ -937,7 +937,9 @@
     "submitSignUp": "Sign up",
     "verifyNote": "We'll send you an email to confirm the address.",
     "noAccount": "Don't have an account? ",
-    "haveAccount": "Already have an account? "
+    "haveAccount": "Already have an account? ",
+    "returnRequestSent": "If this email belongs to a closed club account, the admins have received your request to come back.",
+    "returnFailed": "Request not sent: check the email and your connection, then try again."
   },
   "settings": {
     "title": "Settings",
@@ -1375,5 +1377,17 @@
     "nothing": "No emails to move: everything is already protected.",
     "mismatched": "Check by hand (different email): {ids}",
     "confirm": "Move {count} emails to the private area? It can be safely repeated."
+  },
+  "saveErrors": {
+    "failed": "Save failed: check your connection and try again.",
+    "denied": "Save refused by the database (permissions). Reload the page and try again."
+  },
+  "errorPage": {
+    "title": "Something went wrong",
+    "body": "An unexpected error occurred. Your data is safe: try again, or go back to Home.",
+    "retry": "Try again",
+    "home": "Back to Home",
+    "notFoundTitle": "Page not found",
+    "notFoundBody": "The address you opened does not exist or has been moved."
   }
 }
