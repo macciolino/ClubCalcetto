@@ -86,12 +86,19 @@ service cloud.firestore {
         || (resource != null && request.resource.data.get('email', null) == resource.data.get('email', null));
     }
 
+    // Step 4: the platform role (governance) is written only by the server — never from the app, not even by admins.
+    function platformRoleUntouched() {
+      return resource == null
+        ? !('platformRole' in request.resource.data)
+        : request.resource.data.get('platformRole', null) == resource.data.get('platformRole', null);
+    }
+
     match /profiles/{profileId} {
       allow read: if signedIn();
 
       // A user creates ONLY their own profile (doc id = their uid), always as a plain player with no match history.
       // Admins can create guest/manual players, but only the super admin can create another admin.
-      allow create: if profileEmailUntouched() && (isSuperAdmin()
+      allow create: if profileEmailUntouched() && platformRoleUntouched() && (isSuperAdmin()
         || (isAdmin() && request.resource.data.role != 'admin')
         || (signedIn()
             && profileId == request.auth.uid
@@ -102,7 +109,7 @@ service cloud.firestore {
             && isValidNewOwnProfile()));
 
       // Super admin: everything. Admin: stats, records, data (not roles). Player: only cosmetic fields of their own profile.
-      allow update: if profileEmailUntouched() && (isSuperAdmin()
+      allow update: if profileEmailUntouched() && platformRoleUntouched() && (isSuperAdmin()
         || (isAdmin() && (roleUntouchedOrLegacyFix() || adminRoleChange(profileId)))
         || (signedIn()
             && profileId == request.auth.uid
@@ -181,6 +188,7 @@ service cloud.firestore {
     //  - leagues/{leagueId}/players/{playerId}.leagueRole : PRESIDENT | COLLABORATOR | PLAYER (the real role)
     // Members read their league; presidents and collaborators ("managers") write matches, teams, cash, settings;
     // presidents change roles. The platform super admin reads every league (governance), writes only where member.
+    // Suspended league (step 4): everyone still reads, nobody writes. Invite codes (league_invites): server only.
     // ============================================================================
     function membershipPath() {
       return /databases/$(database)/documents/memberships/$(request.auth.uid);
@@ -195,8 +203,15 @@ service cloud.firestore {
     function myCard(leagueId) {
       return get(/databases/$(database)/documents/leagues/$(leagueId)/players/$(myPlayerId(leagueId))).data;
     }
+    // Step 4: a league suspended by the platform super admin is read-only for everyone (the server too stops writing)
+    function isLeagueActive(leagueId) {
+      return get(/databases/$(database)/documents/leagues/$(leagueId)).data.get('status', 'active') == 'active';
+    }
+    function canWriteLeague(leagueId) {
+      return isLeagueMember(leagueId) && isLeagueActive(leagueId);
+    }
     function hasLeagueRole(leagueId, roles) {
-      return isLeagueMember(leagueId)
+      return canWriteLeague(leagueId)
         && myCard(leagueId).get('leagueRole', 'PLAYER') in roles
         && myCard(leagueId).get('deactivated_at', null) == null;
     }
@@ -295,7 +310,7 @@ service cloud.firestore {
         allow update: if (isLeagueManager(leagueId)
               && !('userId' in changedKeys())
               && (!changedKeys().hasAny(['leagueRole', 'role']) || leagueRoleChange(leagueId, playerId)))
-          || (signedIn()
+          || (canWriteLeague(leagueId)
               && resource.data.get('userId', null) == request.auth.uid
               && onlyChanges(['full_name', 'avatar_url', 'position', 'updated_at'])
               && (!('avatar_url' in changedKeys()) || isValidAvatar(request.resource.data.avatar_url)));
@@ -310,14 +325,14 @@ service cloud.firestore {
       match /presences/{presenceId} {
         allow read: if canReadLeague(leagueId);
         // Players sign up only themselves (their card), only on open days. Managers add anyone on any day.
-        allow create: if isLeagueMember(leagueId)
+        allow create: if canWriteLeague(leagueId)
           && isValidNewPresence(presenceId)
           && (isLeagueManager(leagueId)
               || (request.resource.data.player_id == myPlayerId(leagueId)
                   && isDateOpenForPlayers(leagueId, request.resource.data.date)));
         // Withdraw: own presence (not during the withdrawal lock, C12), or anyone's for managers
         allow delete: if isLeagueManager(leagueId)
-          || (isLeagueMember(leagueId)
+          || (canWriteLeague(leagueId)
               && resource.data.player_id == myPlayerId(leagueId)
               && !isWithdrawLocked(leagueId, resource.data.date));
         allow update: if isLeagueManager(leagueId);
@@ -350,8 +365,8 @@ service cloud.firestore {
       }
       match /mvp_votes/{voteId} {
         allow read: if canReadLeague(leagueId);
-        allow create, update: if isLeagueMember(leagueId) && isValidMvpVote(leagueId, voteId);
-        allow delete: if isLeagueManager(leagueId) || (signedIn() && resource.data.voter_id == request.auth.uid);
+        allow create, update: if canWriteLeague(leagueId) && isValidMvpVote(leagueId, voteId);
+        allow delete: if isLeagueManager(leagueId) || (canWriteLeague(leagueId) && resource.data.voter_id == request.auth.uid);
       }
       // Managers' notification centre: written only by the server. notify_state / invites: server only (denied).
       match /admin_requests/{id} {

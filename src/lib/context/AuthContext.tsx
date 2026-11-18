@@ -597,8 +597,10 @@ export function useAuth() {
       role: manages ? 'admin' : 'player',
     };
   }, [account, member, manages]);
+  // Step 4: platform governance (/super-admin) = platformRole on the GLOBAL profile (server-written) + verified email
+  const isPlatformSuperAdmin = Boolean(context.user?.emailVerified && account?.platformRole === 'SUPER_ADMIN');
   return useMemo(
-    () => ({ ...context, profile, isAdmin: Boolean(context.user && manages), isLoading: isLoading || leagueLoading }),
-    [context, profile, manages, isLoading, leagueLoading]
+    () => ({ ...context, profile, isAdmin: Boolean(context.user && manages), isPlatformSuperAdmin, isLoading: isLoading || leagueLoading }),
+    [context, profile, manages, isPlatformSuperAdmin, isLoading, leagueLoading]
   );
 }

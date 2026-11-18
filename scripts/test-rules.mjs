@@ -511,5 +511,27 @@ await expectDenied('president C reads an invite code', () => getDoc(doc(adminC.d
 await expectDenied('player B lists invite codes', () => getDocs(collection(playerB.db, 'league_invites')));
 await expectDenied('player B creates an invite code', () => setDoc(doc(playerB.db, 'league_invites', 'mine123456'), { leagueId: 'calcettari', revoked: false }));
 
+console.log('\nPlatform role (step 4): server only');
+await expectDenied('player A gives itself platformRole SUPER_ADMIN', () => updateDoc(doc(playerA.db, 'profiles', playerA.uid), { platformRole: 'SUPER_ADMIN' }));
+await expectDenied('admin C gives player B platformRole SUPER_ADMIN', () => setDoc(doc(adminC.db, 'profiles', playerB.uid), { platformRole: 'SUPER_ADMIN' }, { merge: true }));
+await expectDenied('super admin writes a platformRole from the app', () => setDoc(doc(superAdmin.db, 'profiles', playerB.uid), { platformRole: 'SUPER_ADMIN' }, { merge: true }));
+const newbie3 = await client({ google: { sub: 'newbie-3', email: 'newbie3@example.com' } });
+await expectDenied('newbie-3 creates its own profile already SUPER_ADMIN', () =>
+  setDoc(doc(newbie3.db, 'profiles', newbie3.uid), baseProfile(newbie3.uid, { platformRole: 'SUPER_ADMIN' })));
+await expectAllowed('newbie-3 creates its own profile normally', () => setDoc(doc(newbie3.db, 'profiles', newbie3.uid), baseProfile(newbie3.uid)));
+await expectAllowed('admin C still edits other profile fields', () => setDoc(doc(adminC.db, 'profiles', playerB.uid), { full_name: 'B ok' }, { merge: true }));
+
+console.log('\nSuspended league (step 4): read-only for everyone');
+await ownerSet('leagues/calcettari', { id: 'calcettari', name: 'I Calcettari', status: 'suspended', visibility: 'private' });
+await expectAllowed('member B still reads the matches', () => getDocs(collection(playerB.db, ...LG, 'matches')));
+await expectAllowed('super admin reads the suspended league', () => getDoc(doc(superAdmin.db, 'leagues', 'calcettari')));
+await expectDenied('president C writes a match', () => setDoc(LC(adminC, 'matches', '2026-03-01'), { status: 'scheduled' }));
+await expectDenied('president C marks cash', () => setDoc(LC(adminC, 'match_payments', '2026-03-01'), { payments: { x: true } }, { merge: true }));
+await expectDenied('president C changes a role', () => updateDoc(LC(adminC, 'players', playerA.uid), { leagueRole: 'COLLABORATOR' }));
+await expectDenied('player B signs up today', () => join(playerB, TODAY, playerB.uid));
+await expectDenied('player B renames own card', () => updateDoc(LC(playerB, 'players', playerB.uid), { full_name: 'B sospeso', updated_at: 'z' }));
+await ownerSet('leagues/calcettari', { id: 'calcettari', name: 'I Calcettari', status: 'active', visibility: 'private' });
+await expectAllowed('re-activated: president C writes a match again', () => setDoc(LC(adminC, 'matches', '2026-03-01'), { status: 'scheduled' }));
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

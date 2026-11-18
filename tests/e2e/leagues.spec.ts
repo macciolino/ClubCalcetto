@@ -143,3 +143,43 @@ test.describe('Inviti e ruoli', () => {
     await expect(page.getByText('Fai già parte di questa lega.')).toBeVisible();
   });
 });
+
+/** Multi-league step 4: platform super admin console (menu item + /super-admin), suspended league banner. */
+test.describe('Super admin della piattaforma', () => {
+  test.beforeEach(async () => {
+    await seedMatchDay();
+  });
+
+  test('voce "Super admin" nel menu, elenco delle leghe, sospende e riattiva', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.locator('button[aria-controls="user-menu"]').click();
+    await page.getByRole('menuitem', { name: 'Super admin' }).click();
+    await expect(page).toHaveURL(/\/super-admin$/);
+    await expect(page.getByRole('heading', { name: 'Console super admin' })).toBeVisible();
+    const row = page.getByRole('listitem', { name: 'I Calcettari' });
+    await expect(row).toContainText('Attiva');
+    await expect(row).toContainText('11 membri');
+
+    await row.getByRole('button', { name: 'Sospendi' }).click();
+    await page.getByRole('button', { name: 'Conferma', exact: true }).click();
+    await expect(row).toContainText('Sospesa', { timeout: 15_000 });
+    expect((await db.doc('leagues/calcettari').get()).data()?.status).toBe('suspended');
+    // tutta l'app lo segnala: sola lettura
+    await expect(page.getByText(/Questa lega è sospesa/)).toBeVisible();
+
+    await row.getByRole('button', { name: 'Riattiva' }).click();
+    await page.getByRole('button', { name: 'Conferma', exact: true }).click();
+    await expect(row).toContainText('Attiva', { timeout: 15_000 });
+    await expect(page.getByText(/Questa lega è sospesa/)).toHaveCount(0);
+  });
+
+  test('presidente senza ruolo di piattaforma: niente voce nel menu e pagina chiusa', async ({ page }) => {
+    await db.doc('profiles/p-1').update({ platformRole: 'USER' });
+    await loginAsAdmin(page);
+    await page.locator('button[aria-controls="user-menu"]').click();
+    await expect(page.getByRole('menuitem', { name: 'Impostazioni' })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: 'Super admin' })).toHaveCount(0);
+    await page.goto('/super-admin');
+    await expect(page.getByText('Questa pagina è riservata ai super admin della piattaforma.')).toBeVisible();
+  });
+});

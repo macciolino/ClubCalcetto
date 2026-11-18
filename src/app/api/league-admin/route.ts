@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { isAdminConfigured } from '@/lib/firebase/admin';
 import { callerFrom } from '@/lib/server/adminRequests';
-import { currentLeague, memberCard, scoped } from '@/lib/server/leagueScope';
+import { currentLeague, isLeagueActive, memberCard, scoped } from '@/lib/server/leagueScope';
 import { setActivePlayer, setMemberRole, updateLeagueSettings } from '@/lib/server/leagueMembers';
 
 export const runtime = 'nodejs';
@@ -21,6 +21,7 @@ async function handlePost(request: Request) {
     const leagueId = currentLeague();
     const card = await memberCard(caller.uid, leagueId);
     if (!card || card.data.deactivated_at) return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
+    if (!(await isLeagueActive(leagueId))) return NextResponse.json({ ok: false, error: 'suspended' }, { status: 423 });
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
 
     if (body.action === 'playing') {

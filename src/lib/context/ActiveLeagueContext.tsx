@@ -64,6 +64,8 @@ interface ActiveLeagueValue {
   canManageMatchesAndCash: boolean;
   /** Platform governance (not a league role) */
   isSuperAdmin: boolean;
+  /** Step 4: the platform super admin suspended the active league (read-only) */
+  isSuspended: boolean;
   isLoading: boolean;
 }
 
@@ -133,6 +135,18 @@ export function ActiveLeagueProvider({
     );
   }, [active?.id, active?.playerId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Status of the active league (suspended = read-only banner)
+  const [status, setStatus] = useState<{ id: string; suspended: boolean } | null>(null);
+  useEffect(() => {
+    if (!activeLeagueId || !isFirebaseConfigured) return;
+    return onSnapshot(
+      doc(db, 'leagues', activeLeagueId),
+      (snap) => setStatus({ id: activeLeagueId, suspended: snap.data()?.status === 'suspended' }),
+      () => undefined
+    );
+  }, [activeLeagueId]);
+  const isSuspended = Boolean(status && status.id === activeLeagueId && status.suspended);
+
   const setActiveLeague = useCallback((leagueId: string) => {
     try {
       localStorage.setItem(STORAGE_KEY, leagueId);
@@ -157,9 +171,10 @@ export function ActiveLeagueProvider({
       canManageLeague: canManageLeague(leagueRole),
       canManageMatchesAndCash: canManageMatchesAndCash(leagueRole),
       isSuperAdmin,
+      isSuspended,
       isLoading: !membershipsReady || !cardReady,
     }),
-    [leagues, activeLeagueId, setActiveLeague, member, leagueRole, isSuperAdmin, membershipsReady, cardReady]
+    [leagues, activeLeagueId, setActiveLeague, member, leagueRole, isSuperAdmin, isSuspended, membershipsReady, cardReady]
   );
 
   const showWelcome =

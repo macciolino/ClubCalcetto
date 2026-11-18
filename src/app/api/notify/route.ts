@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminAuth, adminDb, isAdminConfigured } from '@/lib/firebase/admin';
-import { isLeagueManager, leagueDb, memberCard, scoped } from '@/lib/server/leagueScope';
+import { isLeagueActive, isLeagueManager, leagueDb, memberCard, scoped } from '@/lib/server/leagueScope';
 import { Message, adminProfileIds, deliver, italianDate, registeredProfileIds, sendToProfiles, sendToTokens } from '@/lib/server/push';
 import { checkPromotions } from '@/lib/server/presenceWatch';
 import { reconcileTeams } from '@/lib/utils/teamUtils';
@@ -109,6 +109,7 @@ async function handlePost(request: Request) {
     if (body.type === 'reconcile') {
       const isSuperCaller = caller.email === SUPER_ADMIN_EMAIL && caller.email_verified === true;
       if (!isSuperCaller && !(await memberCard(caller.uid))) return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
+      if (!(await isLeagueActive())) return NextResponse.json({ ok: true, substitutions: 0, skipped: true }); // lega sospesa: niente scritture
       if (!isDate(body.date)) return NextResponse.json({ ok: false, error: 'bad_request' }, { status: 400 });
       // C11: only days that can still change (yesterday … 30 days ahead): any other date costs reads for nothing
       if (!isReconcileDate(body.date)) return NextResponse.json({ ok: true, substitutions: 0, skipped: true });

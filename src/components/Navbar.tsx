@@ -16,7 +16,9 @@ import {
   Home,
   Settings,
   ChevronDown,
+  ShieldCheck,
 } from 'lucide-react';
+import { useActiveLeague } from '@/lib/context/ActiveLeagueContext';
 import { menu } from '@/components/ui/buttons';
 import { useTranslations } from 'next-intl';
 import { RequestsBell } from '@/components/admin/RequestsCenter';
@@ -26,7 +28,9 @@ import { LeagueSwitcher } from '@/components/league/LeagueSwitcher';
 export function Navbar() {
   const pathname = usePathname();
   const t = useTranslations('nav');
-  const { user, profile, isAdmin, signOut } = useAuth();
+  const { user, profile, isAdmin, isPlatformSuperAdmin, signOut } = useAuth();
+  const { isSuspended } = useActiveLeague();
+  const ts = useTranslations('superAdmin');
 
   // Rinnova la registrazione per le notifiche a ogni avvio (i telefoni cambiano il codice ogni tanto)
   const profileId = profile?.id;
@@ -179,6 +183,15 @@ export function Navbar() {
                   >
                     <Settings className="h-4 w-4 text-accent-text" /> {t('settings')}
                   </Link>
+                  {/* Step 4: platform governance, separated from the personal items */}
+                  {isPlatformSuperAdmin && (
+                    <>
+                      <div className={menu.divider} />
+                      <Link href="/super-admin" role="menuitem" onClick={() => setMenuOpen(false)} className={menu.item}>
+                        <ShieldCheck className="h-4 w-4 text-warning" /> {t('superAdmin')}
+                      </Link>
+                    </>
+                  )}
                   <div className={menu.divider} />
                   <button
                     type="button"
@@ -198,6 +211,12 @@ export function Navbar() {
         </div>
 
       </header>
+      {/* Step 4: active league suspended by the platform → read-only */}
+      {isSuspended && (
+        <div role="status" className="relative z-10 border-b border-amber-500/30 bg-amber-500/10">
+          <p className="mx-auto max-w-6xl px-4 sm:px-6 py-2 text-xs sm:text-sm font-semibold text-warning">{ts('suspendedBanner')}</p>
+        </div>
+      )}
 
       {/* Menu delle pagine (PC e tablet): sotto l'header, largo come le card */}
       <div className="relative z-10 hidden md:block bg-app/90 backdrop-blur-md">

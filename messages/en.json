@@ -22,7 +22,8 @@
     "guest": "Guest",
     "administrator": "Administrator",
     "userMenu": "User menu",
-    "mainNav": "Main navigation"
+    "mainNav": "Main navigation",
+    "superAdmin": "Super admin"
   },
   "language": {
     "label": "Language",
@@ -1517,10 +1518,36 @@
         "forbidden": "Only presidents change roles.",
         "bad_request": "Invalid role.",
         "not_found": "Player not found.",
-        "failed": "Role not changed: check your connection and try again."
+        "failed": "Role not changed: check your connection and try again.",
+        "suspended": "The league is suspended: no changes possible."
       },
       "playing": "I play in this league too",
       "playingHint": "If you turn it off you are not listed among the players (attendance, teams) but you stay in the league."
     }
+  },
+  "superAdmin": {
+    "title": "Super admin console",
+    "subtitle": "Every league of the platform: you can suspend or re-activate them. You do not join other people’s leagues.",
+    "loading": "Loading leagues…",
+    "failed": "Leagues not loaded: check your connection and try again.",
+    "forbidden": "This page is only for platform super admins.",
+    "empty": "No leagues.",
+    "count": "{count, plural, one {# league} other {# leagues}}",
+    "members": "{count, plural, one {# member} other {# members}}",
+    "guests": "{count, plural, one {# guest} other {# guests}}",
+    "created": "Created on {date}",
+    "active": "Active",
+    "suspended": "Suspended",
+    "private": "Private",
+    "public": "Public",
+    "suspend": "Suspend",
+    "activate": "Re-activate",
+    "confirmSuspend": "Suspend \"{name}\"? Members will only be able to look at the data: no sign-ups, matches, cash or new members.",
+    "confirmActivate": "Re-activate \"{name}\"?",
+    "doneSuspended": "\"{name}\" suspended.",
+    "doneActivated": "\"{name}\" re-activated.",
+    "changeFailed": "Status not changed: try again.",
+    "suspendedBanner": "This league is suspended: you can look at the data, but sign-ups, matches and cash are blocked.",
+    "home": "Go to Home"
   }
 }

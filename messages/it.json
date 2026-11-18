@@ -22,7 +22,8 @@
     "guest": "Ospite",
     "administrator": "Amministratore",
     "userMenu": "Menu utente",
-    "mainNav": "Navigazione principale"
+    "mainNav": "Navigazione principale",
+    "superAdmin": "Super admin"
   },
   "language": {
     "label": "Lingua",
@@ -1517,10 +1518,36 @@
         "forbidden": "Solo i presidenti cambiano i ruoli.",
         "bad_request": "Ruolo non valido.",
         "not_found": "Giocatore non trovato.",
-        "failed": "Ruolo non cambiato: controlla la connessione e riprova."
+        "failed": "Ruolo non cambiato: controlla la connessione e riprova.",
+        "suspended": "La lega è sospesa: nessuna modifica possibile."
       },
       "playing": "Gioco anch’io in questa lega",
       "playingHint": "Se lo spegni non compari tra i giocatori (presenze, squadre) ma resti nella lega."
     }
+  },
+  "superAdmin": {
+    "title": "Console super admin",
+    "subtitle": "Tutte le leghe della piattaforma: puoi sospenderle o riattivarle. Non entri nelle leghe degli altri.",
+    "loading": "Carico le leghe…",
+    "failed": "Leghe non caricate: controlla la connessione e riprova.",
+    "forbidden": "Questa pagina è riservata ai super admin della piattaforma.",
+    "empty": "Nessuna lega.",
+    "count": "{count, plural, one {# lega} other {# leghe}}",
+    "members": "{count, plural, one {# membro} other {# membri}}",
+    "guests": "{count, plural, one {# ospite} other {# ospiti}}",
+    "created": "Creata il {date}",
+    "active": "Attiva",
+    "suspended": "Sospesa",
+    "private": "Privata",
+    "public": "Pubblica",
+    "suspend": "Sospendi",
+    "activate": "Riattiva",
+    "confirmSuspend": "Sospendo \"{name}\"? I membri potranno solo consultare i dati: niente iscrizioni, partite, cassa né nuovi ingressi.",
+    "confirmActivate": "Riattivo \"{name}\"?",
+    "doneSuspended": "\"{name}\" sospesa.",
+    "doneActivated": "\"{name}\" riattivata.",
+    "changeFailed": "Stato non cambiato: riprova.",
+    "suspendedBanner": "Questa lega è sospesa: puoi consultare i dati, ma iscrizioni, partite e cassa sono bloccate.",
+    "home": "Vai alla Home"
   }
 }

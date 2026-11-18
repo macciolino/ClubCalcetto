@@ -87,7 +87,7 @@ export async function joinLeagueRequest(code: string, claimPlayerId: string | nu
   return { error: known.includes(data.error as JoinError) ? (data.error as JoinError) : 'failed' };
 }
 
-export type LeagueAdminError = 'bad_request' | 'not_found' | 'guest' | 'last_president' | 'protected' | 'forbidden' | 'failed';
+export type LeagueAdminError = 'bad_request' | 'not_found' | 'guest' | 'last_president' | 'protected' | 'forbidden' | 'suspended' | 'failed';
 
 /** Active league: name / visibility (presidents), member roles (presidents), own "I play too". */
 export async function leagueAdminRequest(
@@ -95,6 +95,31 @@ export async function leagueAdminRequest(
 ): Promise<'ok' | LeagueAdminError> {
   const { data } = await leagueFetch('/api/league-admin', { method: 'POST', body: JSON.stringify(body) });
   if (data.ok) return 'ok';
-  const known: LeagueAdminError[] = ['bad_request', 'not_found', 'guest', 'last_president', 'protected', 'forbidden'];
+  const known: LeagueAdminError[] = ['bad_request', 'not_found', 'guest', 'last_president', 'protected', 'forbidden', 'suspended'];
   return known.includes(data.error as LeagueAdminError) ? (data.error as LeagueAdminError) : 'failed';
+}
+
+// ---------- step 4: platform super admin ----------
+
+export interface PlatformLeague {
+  id: string;
+  name: string;
+  status: 'active' | 'suspended';
+  visibility: string;
+  createdAt: string;
+  createdBy: string;
+  members: number;
+  guests: number;
+}
+
+/** Every league of the platform (platform super admins only); null = failed, 'forbidden' = not a super admin. */
+export async function fetchPlatformLeagues(): Promise<PlatformLeague[] | null | 'forbidden'> {
+  const { status, data } = await leagueFetch('/api/super-admin/leagues');
+  if (status === 403) return 'forbidden';
+  return data.ok && Array.isArray(data.leagues) ? (data.leagues as PlatformLeague[]) : null;
+}
+
+export async function setPlatformLeagueStatus(leagueId: string, status: 'active' | 'suspended'): Promise<boolean> {
+  const { data } = await leagueFetch('/api/super-admin/leagues', { method: 'POST', body: JSON.stringify({ leagueId, status }) });
+  return data.ok === true;
 }

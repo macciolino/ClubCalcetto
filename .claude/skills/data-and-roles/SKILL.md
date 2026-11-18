@@ -156,7 +156,7 @@ Production data is REAL: never rewrite stats, no paid services, never print secr
 - Saved by `savePreferences()` from Impostazioni → Lingua / Tema (`components/settings/*`), applied on sign-in on any device
   by `PreferencesSync` (layout). The device keeps its own copy (localStorage `cc_locale`, `cc_theme`) for the first paint.
 
-## Multi-league (steps 1A, 1B, 2, 3 done 2026-11-18)
+## Multi-league (steps 1A–4 done 2026-11-18)
 - Target: every club collection lives under `leagues/{leagueId}/<same name>/<same id>` (matches, presences, generated_teams,
   match_payments, mvp_votes, sport_fields, stat_categories, settings, admin_requests, notify_state) + `players/{playerId}`
   (league card: OVR, stats, W/D/L, guests; SAME id as the profile, so every reference stays valid; `userId` = auth uid or
@@ -193,3 +193,9 @@ Production data is REAL: never rewrite stats, no paid services, never print secr
   role (presidents; `setMemberRole` never leaves 0 presidents, guests never managers, p-1 only by the super admin; also updates the
   membership `league_role`), playing (own `isActivePlayer`). UI: Impostazioni → Lega (`components/league/LeaguePanel.tsx`); "Rendi/Togli admin"
   in Giocatori and Accessi use the same server route.
+- Step 4 (2026-11-18): platform governance = `profiles/{id}.platformRole == 'SUPER_ADMIN'` (server-written; rules `platformRoleUntouched`
+  refuse it from the app, even for admins) + verified email. Client `useAuth().isPlatformSuperAdmin` → user menu "Super admin"
+  (after a divider) → `/super-admin` (`GET/POST /api/super-admin/leagues`, `lib/server/platformAdmin.ts`: every league with members /
+  guests (count queries), status, date; suspend / re-activate). Suspended league: rules `isLeagueActive` → read-only for everyone
+  (no presences, votes, cards, manager writes); server `isLeagueManager` false, invites invalid, reconcile skipped, league-admin 423,
+  cron skips it; amber banner under the header (`ActiveLeagueProvider.isSuspended`).

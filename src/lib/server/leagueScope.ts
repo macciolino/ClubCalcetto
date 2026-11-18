@@ -43,8 +43,15 @@ export async function memberCard(uid: string, leagueId = currentLeague()) {
   return card.exists ? { playerId, data: card.data() || {} } : null;
 }
 
-/** President or collaborator of the current league (not deactivated). */
+/** The league exists and is not suspended by the platform super admin (step 4). */
+export async function isLeagueActive(leagueId = currentLeague()): Promise<boolean> {
+  const league = await adminDb().doc(`leagues/${leagueId}`).get();
+  return league.exists && league.data()?.status !== 'suspended';
+}
+
+/** President or collaborator of the current league (not deactivated), in a league that is not suspended. */
 export async function isLeagueManager(uid: string, leagueId = currentLeague()): Promise<boolean> {
+  if (!(await isLeagueActive(leagueId))) return false;
   const card = await memberCard(uid, leagueId);
   const role = card?.data.leagueRole as LeagueRoleOnServer | undefined;
   return Boolean(card && !card.data.deactivated_at && (role === 'PRESIDENT' || role === 'COLLABORATOR'));
