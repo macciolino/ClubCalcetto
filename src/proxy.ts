@@ -23,6 +23,8 @@ export function proxy(request: NextRequest) {
   const hasSession = request.cookies.get('cc_session')?.value === '1';
   const isPublicRoute =
     pathname.startsWith('/login') ||
+    // Invite links: the page shows the league and asks to sign in (then comes back)
+    pathname.startsWith('/join') ||
     pathname.startsWith('/auth') ||
     pathname.startsWith('/api') ||
     pathname.startsWith('/_next') ||

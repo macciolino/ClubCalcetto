@@ -505,5 +505,11 @@ await expectDenied('super admin writes old settings', () => setDoc(doc(superAdmi
 await expectDenied('player B reads an old match', () => getDoc(doc(playerB.db, 'matches', '2026-01-01')));
 await expectDenied('player B signs up in the old presences', () => setDoc(doc(playerB.db, 'presences', `${TODAY}_${playerB.uid}`), presence(TODAY, playerB.uid)));
 
+console.log('\nInvite links (step 3): server only');
+await ownerSet('league_invites/abc123def456', { code: 'abc123def456', leagueId: 'calcettari', revoked: false });
+await expectDenied('president C reads an invite code', () => getDoc(doc(adminC.db, 'league_invites', 'abc123def456')));
+await expectDenied('player B lists invite codes', () => getDocs(collection(playerB.db, 'league_invites')));
+await expectDenied('player B creates an invite code', () => setDoc(doc(playerB.db, 'league_invites', 'mine123456'), { leagueId: 'calcettari', revoked: false }));
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

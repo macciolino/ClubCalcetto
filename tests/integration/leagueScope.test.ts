@@ -4,14 +4,12 @@
  * Real route handlers on the Firestore and Auth EMULATORS.
  */
 import { beforeEach, describe, expect, it } from 'vitest';
-import { adminAuth } from '@/lib/firebase/admin';
-import { POST as registered } from '@/app/api/account/registered/route';
 import { POST as resolveRequest } from '@/app/api/admin/requests/route';
 import { POST as closeAccount } from '@/app/api/account/delete/route';
 import { POST as notify } from '@/app/api/notify/route';
 import { adminProfileIds } from '@/lib/server/push';
 import { inLeague } from '@/lib/server/leagueScope';
-import { assertEmulators, call, db, idToken, ldb, makeUser, profileDoc, resetEmulators } from './helpers';
+import { assertEmulators, call, db, ldb, makeUser, resetEmulators } from './helpers';
 
 assertEmulators();
 
@@ -20,24 +18,6 @@ beforeEach(async () => {
 });
 
 describe('Lega attiva sul server', () => {
-  it('nuovo account: scheda e iscrizione in "I Calcettari" come giocatore (una volta sola)', async () => {
-    await adminAuth().createUser({ uid: 'n1', email: 'n1@example.com', password: 'password123', emailVerified: true });
-    await db().doc('profiles/n1').set(profileDoc('n1', { full_name: 'Nuovo Uno', locale: 'en' }));
-    const token = await idToken('n1@example.com');
-    expect((await call(registered, {}, token)).data.ok).toBe(true);
-
-    const card = (await ldb().doc('players/n1').get()).data();
-    expect(card).toMatchObject({ id: 'n1', userId: 'n1', leagueRole: 'PLAYER', isActivePlayer: true, full_name: 'Nuovo Uno', self_rating_pending: true });
-    expect(card).not.toHaveProperty('email');
-    expect(card).not.toHaveProperty('locale');
-    expect((await db().doc('memberships/n1').get()).data()?.leagues.calcettari).toMatchObject({ player_id: 'n1', league_role: 'PLAYER' });
-
-    // una seconda chiamata non ricrea né cambia la scheda
-    await ldb().doc('players/n1').update({ leagueRole: 'COLLABORATOR' });
-    await call(registered, {}, token);
-    expect((await ldb().doc('players/n1').get()).data()?.leagueRole).toBe('COLLABORATOR');
-  });
-
   it('il ruolo vale nella lega: admin "globale" ma giocatore nella lega → niente; collaboratore → sì', async () => {
     const u = await makeUser('c1', { role: 'player' });
     await db().doc('profiles/c1').update({ role: 'admin' }); // vecchio ruolo globale: non conta più

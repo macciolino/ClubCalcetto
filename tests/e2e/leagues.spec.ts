@@ -75,3 +75,71 @@ test.describe('Leghe', () => {
     await expect(page.getByRole('heading', { name: 'Benvenuto in Club Soccer' })).toHaveCount(0);
   });
 });
+
+/** Multi-league step 3: invite link, joining as new or as a ghost player, league settings and roles. */
+test.describe('Inviti e ruoli', () => {
+  const CODE = 'e2einvite123';
+  test.beforeEach(async () => {
+    await seedMatchDay();
+    await db.doc(`league_invites/${CODE}`).set({ code: CODE, leagueId: 'calcettari', createdBy: 'p-1', createdAt: new Date().toISOString(), revoked: false });
+    await db.doc('leagues/calcettari/players/guest-luca').set({
+      id: 'guest-luca', user_id: null, userId: null, full_name: 'Ospite Luca', is_guest: true, role: 'player', leagueRole: 'PLAYER', isActivePlayer: true,
+      position: 'Punta', avatar_url: null, stats: { Tiro: 9 }, overall_rating: 8, matches_won: 4, matches_drawn: 0, matches_lost: 0, created_at: 'x', updated_at: 'x',
+    });
+  });
+
+  test('Impostazioni → Lega: link di invito, membri con i ruoli, rinomina della lega', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/settings?sezione=lega');
+    await expect(page.getByRole('heading', { name: 'Invita nella lega' })).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Invita nella lega' })).toHaveValue(/\/join\/[A-Za-z0-9_-]{12}$/, { timeout: 15_000 });
+    await expect(page.getByRole('button', { name: 'Copia link' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Condividi su WhatsApp' })).toHaveAttribute('href', /wa\.me/);
+    // membri registrati con il loro ruolo (gli ospiti senza account no)
+    await expect(page.getByRole('combobox', { name: 'Ruolo di Marco Test' })).toHaveValue('PRESIDENT');
+    await expect(page.getByRole('combobox', { name: 'Ruolo di Ospite Luca' })).toHaveCount(0);
+    // l'unico presidente non può scendere
+    await page.getByRole('combobox', { name: 'Ruolo di Marco Test' }).selectOption('PLAYER');
+    await expect(page.getByText('Non si può: la lega resterebbe senza presidente.')).toBeVisible();
+    // Test Uno diventa collaboratore
+    await page.getByRole('combobox', { name: 'Ruolo di Test Uno' }).selectOption('COLLABORATOR');
+    await expect.poll(async () => (await db.doc('leagues/calcettari/players/t1').get()).data()?.leagueRole, { timeout: 10_000 }).toBe('COLLABORATOR');
+    // nuovo nome: arriva anche nel selettore in alto
+    await page.getByLabel('Nome', { exact: true }).fill('I Calcettari FC');
+    await page.getByRole('button', { name: 'Salva', exact: true }).click();
+    await expect(page.getByRole('button', { name: /Lega attiva: I Calcettari FC/ })).toBeVisible({ timeout: 15_000 });
+  });
+
+  test('senza account entrato: il link mostra la lega, si accede e si torna all’invito; "sono io" prende la scheda dell’ospite', async ({ page }) => {
+    const acc = await seedAccountWithoutLeague();
+    await page.goto(`/join/${CODE}`);
+    await expect(page.getByText('I Calcettari', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Accedi o registrati per entrare' }).click();
+    await page.locator('#auth-email').fill(acc.email);
+    await page.locator('#auth-password').fill(acc.password);
+    await page.getByRole('button', { name: 'Login', exact: true }).click();
+    await page.waitForURL(new RegExp(`/join/${CODE}$`), { timeout: 60_000 });
+
+    const me = page.getByRole('radio', { name: /Ospite Luca/ });
+    await me.click();
+    await expect(me).toHaveAttribute('aria-checked', 'true');
+    await page.getByRole('button', { name: 'Entra nella lega' }).click();
+    await expect(page.getByText(/il profilo di Ospite Luca ora è tuo/)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('button', { name: /Lega attiva: I Calcettari/ })).toBeVisible({ timeout: 15_000 });
+    const card = (await db.doc('leagues/calcettari/players/e2e-nolega').get()).data();
+    expect(card).toMatchObject({ userId: 'e2e-nolega', matches_won: 4, overall_rating: 8 });
+    expect((await db.doc('leagues/calcettari/players/guest-luca').get()).exists).toBe(false);
+  });
+
+  test('già entrato e senza leghe: "sono nuovo" crea la scheda; riaprendo il link risulta già membro', async ({ page }) => {
+    const acc = await seedAccountWithoutLeague();
+    await loginAs(page, acc.email, acc.password);
+    await page.goto(`/join/${CODE}`);
+    await expect(page.getByRole('radio', { name: /Sono nuovo/ })).toHaveAttribute('aria-checked', 'true');
+    await page.getByRole('button', { name: 'Entra nella lega' }).click();
+    await expect(page.getByRole('button', { name: /Lega attiva: I Calcettari/ })).toBeVisible({ timeout: 15_000 });
+    expect((await db.doc('leagues/calcettari/players/e2e-nolega').get()).data()).toMatchObject({ leagueRole: 'PLAYER', matches_won: 0 });
+    await page.goto(`/join/${CODE}`);
+    await expect(page.getByText('Fai già parte di questa lega.')).toBeVisible();
+  });
+});

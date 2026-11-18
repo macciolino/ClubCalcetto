@@ -19,7 +19,6 @@ import {
   subscribeProfiles,
   subscribeStatCategories,
   subscribePresencesRange,
-  updateProfileFields,
   saveOfficialMatchDateDoc,
   subscribeOfficialMatchDate,
   subscribeAppSettings,
@@ -27,6 +26,7 @@ import {
   saveStandardCostsDoc,
   subscribeGeneratedTeams,
 } from '@/lib/firebase/firestoreService';
+import { leagueAdminRequest } from '@/lib/services/leagueService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import {
   getStoredPlayers,
@@ -62,6 +62,7 @@ export function AdminSections({ section }: { section: AdminSection }) {
   const { user, profile, isAdmin, isSuperAdmin, isLoading } = useAuth();
   const [mounted, setMounted] = useState(false);
   const t = useTranslations('adminSections');
+  const tm = useTranslations('league.members');
 
   // Stato Dati Globali
   const [upcomingDays] = useState(() => getCalendarDays());
@@ -234,12 +235,9 @@ export function AdminSections({ section }: { section: AdminSection }) {
       updated_at: new Date().toISOString(),
     };
 
-    // C1: only the role (a whole stale copy could overwrite W/D/L or server flags)
-    try {
-      await updateProfileFields(targetPlayer.id, { role: nextRole, updated_at: updated.updated_at });
-    } catch {
-      return; // error already shown
-    }
+    // Multi-league: admin = president of the league; the server keeps at least one president
+    const res = await leagueAdminRequest({ action: 'role', playerId: targetPlayer.id, role: nextRole === 'admin' ? 'PRESIDENT' : 'PLAYER' });
+    if (res !== 'ok') return notify(tm(`errors.${res}`));
     updateStoredPlayer(updated);
     setPlayers(getStoredPlayers());
   };

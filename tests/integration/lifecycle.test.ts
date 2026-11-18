@@ -99,15 +99,11 @@ describe('Invito ospite (profile claiming con invite token)', () => {
 });
 
 describe('Iscrizione senza link', () => {
-  it('con ospiti in rosa: richiesta "nuovo iscritto" agli admin; l’admin collega l’ospite', async () => {
+  it('richiesta "nuovo iscritto" ancora aperta (di prima delle leghe): l’admin collega l’ospite', async () => {
     await seedGuestWithHistory();
-    const user = await makeUser('spont', { full_name: 'Luca Spontaneo' });
-    await call(registered, {}, user.token);
-
-    const req = await ldb().doc('admin_requests/signup_spont').get();
-    expect(req.data()).toMatchObject({ type: 'new_signup', status: 'open', profile_id: 'spont' });
-    // nuovo giocatore: si autovaluta e dopo la prima partita un admin rivede
-    expect((await ldb().doc('players/spont').get()).data()).toMatchObject({ self_rating_pending: true, needs_stat_review: true });
+    await makeUser('spont', { full_name: 'Luca Spontaneo' });
+    // Multi-league step 3: new sign-ups no longer open it (they join with /join links); old open ones still work
+    await ldb().doc('admin_requests/signup_spont').set({ type: 'new_signup', status: 'open', profile_id: 'spont', name: 'Luca Spontaneo', created_at: 'x' });
 
     const link = await call(resolveRequest, { id: 'signup_spont', action: 'link', guestId: 'guest-1' }, admin.token);
     expect(link.data.ok).toBe(true);
@@ -127,7 +123,7 @@ describe('Iscrizione senza link', () => {
   it('solo un admin risolve le richieste', async () => {
     await seedGuestWithHistory();
     const user = await makeUser('spont2', {});
-    await call(registered, {}, user.token);
+    await ldb().doc('admin_requests/signup_spont2').set({ type: 'new_signup', status: 'open', profile_id: 'spont2', name: 'x', created_at: 'x' });
     expect((await call(resolveRequest, { id: 'signup_spont2', action: 'new' }, user.token)).status).toBe(403);
   });
 });

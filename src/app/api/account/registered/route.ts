@@ -1,16 +1,17 @@
 import { NextResponse } from 'next/server';
 import { adminDb, isAdminConfigured } from '@/lib/firebase/admin';
-import { inLeague, leagueDb } from '@/lib/server/leagueScope';
-import { callerFrom, closeRequest, openRequest } from '@/lib/server/adminRequests';
+import { cleanLeagueId, inLeague } from '@/lib/server/leagueScope';
+import { callerFrom, closeRequest } from '@/lib/server/adminRequests';
 import { claimGuest } from '@/lib/server/profileMerge';
-import { ensureDefaultLeagueCard } from '@/lib/server/leagueMigration';
+import { ensureLeagueCard } from '@/lib/server/leagueMembers';
 
 export const runtime = 'nodejs';
 
 /**
- * Called by the app right after a NEW profile is created (first sign-in).
- *  - with { invite }: the account takes over the guest's profile (matches, stats, sign-ups); the link is then used up.
- *  - without: if there are guests without an account, the admins get a "new sign-up" request to link it by hand.
+ * Called by the app right after a NEW profile is created (first sign-in), or when an old guest invite is opened.
+ *  - with { invite } (old guest link `/login?invite=…`, made from a guest in Giocatori): the account joins THAT league
+ *    and takes over the guest's card (matches, stats, sign-ups); the link is then used up.
+ *  - without: multi-league step 3 — the account is in no league yet (welcome screen, then `/join/{code}` links).
  */
 export async function POST(request: Request) {
   if (!isAdminConfigured()) return NextResponse.json({ ok: false, error: 'not_configured' }, { status: 503 });
@@ -21,10 +22,6 @@ export async function POST(request: Request) {
     const profile = (await db.doc(`profiles/${caller.profileId}`).get()).data();
     if (!profile) return NextResponse.json({ ok: false, error: 'no_profile' }, { status: 404 });
     const { invite } = (await request.json().catch(() => ({}))) as { invite?: string };
-    // Multi-league 1B: the account's card in "I Calcettari" (league data: parameters, W/D/L, review flags)
-    await ensureDefaultLeagueCard(caller.profileId, caller.uid, profile);
-    const cardRef = leagueDb().doc(`players/${caller.profileId}`);
-    const card = (await cardRef.get()).data() || profile;
 
     if (invite && /^[A-Za-z0-9_-]{20,64}$/.test(invite)) {
       const ref = db.doc(`invites/${invite}`);
@@ -37,35 +34,16 @@ export async function POST(request: Request) {
       });
       if (!inv) return NextResponse.json({ ok: false, error: 'invite_invalid' }, { status: 400 });
       try {
-        const { guestName } = await inLeague(inv.league_id, () => claimGuest(String(inv.guest_id), caller.profileId));
-        await closeRequest(`signup_${caller.profileId}`, 'invite', `linked:${inv.guest_id}`).catch(() => undefined);
-        return NextResponse.json({ ok: true, claimed: true, guestName });
+        const leagueId = cleanLeagueId(inv.league_id);
+        const league = (await db.doc(`leagues/${leagueId}`).get()).data();
+        await ensureLeagueCard(leagueId, caller, String(league?.name || ''));
+        const { guestName } = await inLeague(leagueId, () => claimGuest(String(inv.guest_id), caller.profileId));
+        await inLeague(leagueId, () => closeRequest(`signup_${caller.profileId}`, 'invite', `linked:${inv.guest_id}`)).catch(() => undefined);
+        return NextResponse.json({ ok: true, claimed: true, guestName, leagueId });
       } catch (err) {
         await ref.update({ used_at: null, used_by: null }); // non riuscito: il link resta valido
         throw err;
       }
-    }
-
-    // Solo per profili appena creati (non si riapre la richiesta a ogni accesso)
-    const createdMs = Date.parse(String(profile.created_at || ''));
-    if (!createdMs || Date.now() - createdMs > 30 * 60 * 1000) return NextResponse.json({ ok: true, claimed: false });
-
-    // Nuovo giocatore: si autovaluta (una volta) e dopo la prima partita un admin rivede i valori
-    const played = Number(card.matches_won || 0) + Number(card.matches_drawn || 0) + Number(card.matches_lost || 0);
-    if (card.needs_stat_review === undefined && played === 0 && !card.is_guest) {
-      await cardRef.update({ needs_stat_review: true, self_rating_pending: true });
-    }
-    if ((await leagueDb().doc(`admin_requests/signup_${caller.profileId}`).get()).exists) return NextResponse.json({ ok: true, claimed: false });
-
-    const guests = await leagueDb().collection('players').where('is_guest', '==', true).get();
-    const unlinked = guests.docs.filter((d) => !d.data().deactivated_at && !d.data().archived_at);
-    if (unlinked.length > 0) {
-      const name = String(profile.full_name || 'Nuovo giocatore');
-      await openRequest(
-        `signup_${caller.profileId}`,
-        { type: 'new_signup', profile_id: caller.profileId, name, email: caller.email || profile.email || null },
-        { title: '🆕 Nuovo iscritto', body: `${name} si è registrato. È uno degli ospiti già in rosa?` }
-      );
     }
     return NextResponse.json({ ok: true, claimed: false });
   } catch (err) {

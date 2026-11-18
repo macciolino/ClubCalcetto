@@ -9,6 +9,8 @@ import { ldoc } from '@/lib/league/leagueRefs';
 import { useAuth } from '@/lib/context/AuthContext';
 import { NotificationGuide } from '@/components/NotificationGuide';
 import { AccountSettings } from '@/components/AccountSettings';
+import { LeaguePanel } from '@/components/league/LeaguePanel';
+import { useActiveLeague } from '@/lib/context/ActiveLeagueContext';
 import { ThemeSetting } from '@/components/settings/ThemeSetting';
 import { LanguageSetting } from '@/components/settings/LanguageSetting';
 import { AdminSection, AdminSections } from '@/components/admin/AdminSections';
@@ -18,24 +20,26 @@ import { subscribeSportFields } from '@/lib/services/fieldService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { useStatCategories } from '@/lib/hooks/useStatCategories';
 import { useFormSettings } from '@/lib/hooks/useForms';
-import { Bell, UserCog, Trophy, MapPin, Ruler, BarChart3, Megaphone, ShieldCheck, ChevronRight, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Bell, UserCog, Shield, Trophy, MapPin, Ruler, BarChart3, Megaphone, ShieldCheck, ChevronRight, ArrowLeft, ArrowRight } from 'lucide-react';
 import { btn } from '@/components/ui/buttons';
 import { useTranslations } from 'next-intl';
 import { useLocaleSetting } from '@/i18n/I18nProvider';
 
-type SectionId = 'notifiche' | 'account' | AdminSection;
+type SectionId = 'notifiche' | 'account' | 'lega' | AdminSection;
 
 interface SectionDef {
   id: SectionId;
   icon: React.ElementType;
   access: 'all' | 'admin' | 'super';
-  group: 'account' | 'match' | 'club' | 'access';
+  group: 'account' | 'league' | 'match' | 'club' | 'access';
 }
 
 /** Sections of Impostazioni, in menu order, grouped (names: settings.sections.<id>, settings.groups.<group>). */
 const SECTIONS: SectionDef[] = [
   { id: 'notifiche', icon: Bell, access: 'all', group: 'account' },
   { id: 'account', icon: UserCog, access: 'all', group: 'account' },
+  // Multi-league: invite link, league name, members and roles (managers; members see it read-only from step 3)
+  { id: 'lega', icon: Shield, access: 'all', group: 'league' },
   { id: 'partita', icon: Trophy, access: 'admin', group: 'match' },
   { id: 'campi', icon: MapPin, access: 'admin', group: 'club' },
   { id: 'regole', icon: Ruler, access: 'admin', group: 'club' },
@@ -43,7 +47,7 @@ const SECTIONS: SectionDef[] = [
   { id: 'notifiche-club', icon: Megaphone, access: 'admin', group: 'club' },
   { id: 'accessi', icon: ShieldCheck, access: 'admin', group: 'access' },
 ];
-const GROUPS: SectionDef['group'][] = ['account', 'match', 'club', 'access'];
+const GROUPS: SectionDef['group'][] = ['account', 'league', 'match', 'club', 'access'];
 
 /** Live values shown on the right of each row of the overview ("how the club is set up" at a glance). */
 function useSummary(
@@ -63,6 +67,8 @@ function useSummary(
   const form = useFormSettings();
   const t = useTranslations('settings');
   const { locale } = useLocaleSetting();
+  const { leagues, activeLeagueId, leagueRole } = useActiveLeague();
+  const tRole = useTranslations('league.roles');
 
   useEffect(() => {
     try {
@@ -98,6 +104,7 @@ function useSummary(
   const values: Partial<Record<SectionId, string>> = {
     notifiche: permission === 'granted' ? t('notifOn') : permission === 'denied' ? t('notifBlocked') : permission === 'unsupported' ? '' : t('notifOff'),
     account: email || '',
+    lega: [leagues.find((l) => l.id === activeLeagueId)?.name, leagueRole ? tRole(leagueRole) : ''].filter(Boolean).join(' · '),
     partita: officialDate ? short(officialDate) : t('noOfficial'),
     campi: def ? `${def.name} · €${Number(def.cost || settings.standard_total_cost || 80)}` : '',
     regole: `${settings.timelock_enabled ? t('timelockOn', { hours: settings.timelock_hours_before || 4 }) : t('timelockOff')} · ${t('keeper', {
@@ -228,6 +235,8 @@ function SettingsContent() {
               <NotificationGuide />
             ) : current.id === 'account' ? (
               <AccountSettings />
+            ) : current.id === 'lega' ? (
+              <LeaguePanel />
             ) : (
               <AdminSections section={current.id} />
             )}

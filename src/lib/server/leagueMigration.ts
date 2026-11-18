@@ -84,27 +84,6 @@ export function playerFromProfile(id: string, profile: Record<string, unknown>):
   };
 }
 
-/**
- * Multi-league 1B (until invites arrive in step 3): a NEW account joins "I Calcettari" as before, as a player.
- * Creates its card (from the global profile) and the membership entry; nothing if they already exist.
- */
-export async function ensureDefaultLeagueCard(profileId: string, uid: string, profile: Record<string, unknown>): Promise<boolean> {
-  const db = adminDb();
-  const leagueId = CALCETTARI_LEAGUE_ID;
-  const cardRef = db.doc(`leagues/${leagueId}/players/${profileId}`);
-  if ((await cardRef.get()).exists) return false;
-  const card = playerFromProfile(profileId, { ...profile, user_id: uid });
-  const batch = db.batch();
-  batch.create(cardRef, card);
-  batch.set(
-    db.doc(`memberships/${uid}`),
-    { leagues: { [leagueId]: { player_id: profileId, league_role: card.leagueRole, name: CALCETTARI_LEAGUE_NAME } }, updated_at: new Date().toISOString() },
-    { merge: true }
-  );
-  await batch.commit();
-  return true;
-}
-
 export async function migrateToCalcettari(dryRun: boolean): Promise<LeagueMigrationResult> {
   const db = adminDb();
   const leagueId = CALCETTARI_LEAGUE_ID;

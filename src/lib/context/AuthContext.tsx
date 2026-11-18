@@ -22,6 +22,7 @@ import { doc, getDoc, setDoc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { ldoc } from '@/lib/league/leagueRefs';
 import { ActiveLeagueProvider, useActiveLeague } from '@/lib/context/ActiveLeagueContext';
 import { LeagueWelcome } from '@/components/league/LeagueWelcome';
+import { takeReturnPath } from '@/lib/utils/returnPath';
 import { ensurePrivateEmail } from '@/lib/firebase/firestoreService';
 
 /**
@@ -371,7 +372,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(result.user);
       await syncProfile(result.user);
       markJustSignedIn();
-      window.location.href = '/';
+      window.location.href = takeReturnPath();
     } finally {
       setIsLoading(false);
     }
@@ -413,7 +414,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(cred.user);
       await syncProfile(cred.user);
       markJustSignedIn();
-      window.location.href = '/';
+      window.location.href = takeReturnPath();
     } finally {
       setIsLoading(false);
     }

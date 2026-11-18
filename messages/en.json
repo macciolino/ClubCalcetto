@@ -948,7 +948,8 @@
       "account": "Your account",
       "match": "Match management",
       "club": "Club",
-      "access": "Access"
+      "access": "Access",
+      "league": "League"
     },
     "sections": {
       "notifiche": {
@@ -982,6 +983,10 @@
       "accessi": {
         "label": "Admins and accounts",
         "description": "Who is admin, deactivated accounts, why people leave"
+      },
+      "lega": {
+        "label": "League",
+        "description": "Invite friends, league name and member roles"
       }
     },
     "notifOn": "on",
@@ -1456,7 +1461,66 @@
     "join": {
       "title": "League invite",
       "invalid": "This invite is not valid or has expired. Ask the league organiser for a new link.",
-      "home": "Go to Home"
+      "home": "Go to Home",
+      "loading": "Checking the invite…",
+      "invitedTo": "You are invited to the league",
+      "signIn": "Sign in or sign up to join",
+      "already": "You are already in this league.",
+      "open": "Open the league",
+      "whoAreYou": "Are you already on the list?",
+      "whoHint": "If someone already added you as a guest, pick your name: you will get your matches, goals and OVR.",
+      "newPlayer": "I am new: create my card",
+      "join": "Join the league",
+      "joining": "Joining…",
+      "joined": "Welcome to \"{name}\"!",
+      "claimed": "Welcome to \"{name}\": {player}’s profile is now yours.",
+      "errors": {
+        "invalid": "This invite is no longer valid.",
+        "not_a_ghost": "That player is already linked to an account: pick another name or join as new.",
+        "email_not_verified": "Confirm your email first, then open the link again.",
+        "failed": "You did not join: check your connection and try again."
+      }
+    },
+    "invite": {
+      "title": "Invite to the league",
+      "intro": "Whoever opens the link joins the league as a player. If they are already listed as a guest, they pick their name and keep matches, goals and OVR.",
+      "loading": "Preparing the link…",
+      "copy": "Copy link",
+      "copied": "Link copied",
+      "whatsapp": "Share on WhatsApp",
+      "regenerate": "New link",
+      "regenerateConfirm": "Create a new link? The current one will stop working.",
+      "regenerated": "New link ready: the old one no longer works.",
+      "failed": "Link not available: check your connection and try again.",
+      "share": "Join the league \"{name}\" on Club Soccer: {url}"
+    },
+    "details": {
+      "title": "League details",
+      "name": "Name",
+      "visibility": "Visibility",
+      "save": "Save",
+      "saved": "League details saved.",
+      "onlyPresident": "Only presidents change name and visibility.",
+      "failed": "Not saved: check the name and try again."
+    },
+    "members": {
+      "title": "Members and roles",
+      "intro": "Presidents: run the league and the roles. Collaborators: matches, teams, attendance and cash. There is always at least one president.",
+      "you": "you",
+      "organiser": "organiser only",
+      "roleOf": "Role of {name}",
+      "changed": "{name}: {role}.",
+      "errors": {
+        "last_president": "Not possible: the league would be left without a president.",
+        "guest": "A guest without an account cannot have a managing role.",
+        "protected": "Only the super admin changes their own role.",
+        "forbidden": "Only presidents change roles.",
+        "bad_request": "Invalid role.",
+        "not_found": "Player not found.",
+        "failed": "Role not changed: check your connection and try again."
+      },
+      "playing": "I play in this league too",
+      "playingHint": "If you turn it off you are not listed among the players (attendance, teams) but you stay in the league."
     }
   }
 }

@@ -156,7 +156,7 @@ Production data is REAL: never rewrite stats, no paid services, never print secr
 - Saved by `savePreferences()` from Impostazioni → Lingua / Tema (`components/settings/*`), applied on sign-in on any device
   by `PreferencesSync` (layout). The device keeps its own copy (localStorage `cc_locale`, `cc_theme`) for the first paint.
 
-## Multi-league (steps 1A, 1B, 2 done 2026-11-18)
+## Multi-league (steps 1A, 1B, 2, 3 done 2026-11-18)
 - Target: every club collection lives under `leagues/{leagueId}/<same name>/<same id>` (matches, presences, generated_teams,
   match_payments, mvp_votes, sport_fields, stat_categories, settings, admin_requests, notify_state) + `players/{playerId}`
   (league card: OVR, stats, W/D/L, guests; SAME id as the profile, so every reference stays valid; `userId` = auth uid or
@@ -184,3 +184,12 @@ Production data is REAL: never rewrite stats, no paid services, never print secr
   Header: `components/league/LeagueSwitcher.tsx` (sheet < 1024px, popover ≥ 1024px), `CreateLeagueSheet`, `LeagueWelcome`
   (no league → shown by ActiveLeagueProvider instead of the pages, except /login and /join). `/join/[code]` = placeholder until step 3.
   Local caches are emptied when the active league changes (`cc_cache_league`). Cards with `isActivePlayer: false` are hidden from player lists.
+- Step 3 (2026-11-18): invite link `/join/{code}` — `league_invites/{code}` = { leagueId, createdBy, revoked } (server only, rules deny);
+  one active code per league (`POST /api/league-invite`, managers; `regenerate` revokes). `GET/POST /api/join`: league name for anyone,
+  signed in → member? + ghost players (guest cards without account, not archived); join = new card (league default parameters,
+  self-rating + review flags) or claim a ghost (`claimGuest`). Suspended league = invalid. `/join` is public in the proxy; signed-out users
+  go to /login and come back (`lib/utils/returnPath.ts`, `cc_return_to`). NO automatic league at sign-up any more (old guest invites
+  `/login?invite=` still join THEIR league). `POST /api/league-admin`: settings (presidents; name copied into every membership),
+  role (presidents; `setMemberRole` never leaves 0 presidents, guests never managers, p-1 only by the super admin; also updates the
+  membership `league_role`), playing (own `isActivePlayer`). UI: Impostazioni → Lega (`components/league/LeaguePanel.tsx`); "Rendi/Togli admin"
+  in Giocatori and Accessi use the same server route.

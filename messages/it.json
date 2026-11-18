@@ -948,7 +948,8 @@
       "account": "Tuo account",
       "match": "Gestione partita",
       "club": "Club",
-      "access": "Accessi"
+      "access": "Accessi",
+      "league": "Lega"
     },
     "sections": {
       "notifiche": {
@@ -982,6 +983,10 @@
       "accessi": {
         "label": "Admin e account",
         "description": "Chi è admin, account disattivati, motivi di chi lascia"
+      },
+      "lega": {
+        "label": "Lega",
+        "description": "Invita gli amici, nome della lega e ruoli dei membri"
       }
     },
     "notifOn": "attive",
@@ -1456,7 +1461,66 @@
     "join": {
       "title": "Invito alla lega",
       "invalid": "Questo invito non è valido o è scaduto. Chiedi un nuovo link a chi organizza la lega.",
-      "home": "Vai alla Home"
+      "home": "Vai alla Home",
+      "loading": "Controllo l’invito…",
+      "invitedTo": "Sei invitato nella lega",
+      "signIn": "Accedi o registrati per entrare",
+      "already": "Fai già parte di questa lega.",
+      "open": "Apri la lega",
+      "whoAreYou": "Sei già in rosa?",
+      "whoHint": "Se qualcuno ti ha già aggiunto come ospite, scegli il tuo nome: avrai le tue partite, i gol e l’OVR.",
+      "newPlayer": "Sono nuovo: crea la mia scheda",
+      "join": "Entra nella lega",
+      "joining": "Entro…",
+      "joined": "Benvenuto in \"{name}\"!",
+      "claimed": "Benvenuto in \"{name}\": il profilo di {player} ora è tuo.",
+      "errors": {
+        "invalid": "Questo invito non è più valido.",
+        "not_a_ghost": "Quel giocatore è già collegato a un account: scegli un altro nome o entra come nuovo.",
+        "email_not_verified": "Conferma prima la tua email, poi riapri il link.",
+        "failed": "Non sei entrato: controlla la connessione e riprova."
+      }
+    },
+    "invite": {
+      "title": "Invita nella lega",
+      "intro": "Chi apre il link entra nella lega come giocatore. Se è già in rosa come ospite, sceglie il suo nome e si tiene partite, gol e OVR.",
+      "loading": "Preparo il link…",
+      "copy": "Copia link",
+      "copied": "Link copiato",
+      "whatsapp": "Condividi su WhatsApp",
+      "regenerate": "Nuovo link",
+      "regenerateConfirm": "Creo un nuovo link? Quello attuale smette di funzionare.",
+      "regenerated": "Nuovo link pronto: quello vecchio non funziona più.",
+      "failed": "Link non disponibile: controlla la connessione e riprova.",
+      "share": "Unisciti alla lega \"{name}\" su Club Soccer: {url}"
+    },
+    "details": {
+      "title": "Dati della lega",
+      "name": "Nome",
+      "visibility": "Visibilità",
+      "save": "Salva",
+      "saved": "Dati della lega salvati.",
+      "onlyPresident": "Solo i presidenti modificano nome e visibilità.",
+      "failed": "Non salvato: controlla il nome e riprova."
+    },
+    "members": {
+      "title": "Membri e ruoli",
+      "intro": "Presidenti: gestiscono la lega e i ruoli. Collaboratori: partite, squadre, presenze e cassa. Ci vuole sempre almeno un presidente.",
+      "you": "tu",
+      "organiser": "solo organizza",
+      "roleOf": "Ruolo di {name}",
+      "changed": "{name}: {role}.",
+      "errors": {
+        "last_president": "Non si può: la lega resterebbe senza presidente.",
+        "guest": "Un ospite senza account non può avere un ruolo di gestione.",
+        "protected": "Il ruolo del super admin lo cambia solo lui.",
+        "forbidden": "Solo i presidenti cambiano i ruoli.",
+        "bad_request": "Ruolo non valido.",
+        "not_found": "Giocatore non trovato.",
+        "failed": "Ruolo non cambiato: controlla la connessione e riprova."
+      },
+      "playing": "Gioco anch’io in questa lega",
+      "playingHint": "Se lo spegni non compari tra i giocatori (presenze, squadre) ma resti nella lega."
     }
   }
 }

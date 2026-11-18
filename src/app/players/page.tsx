@@ -11,7 +11,8 @@ import { lastCompletedMatches } from '@/components/FormDots';
 import { PlayerCompare } from '@/components/PlayerCompare';
 import { useAuth } from '@/lib/context/AuthContext';
 import { Profile, StatCategory, Match, STAT_CANONICAL_ORDER } from '@/types/database';
-import { subscribeProfiles, subscribeStatCategories, subscribeMatches, deleteProfileDoc, updateProfileFields } from '@/lib/firebase/firestoreService';
+import { subscribeProfiles, subscribeStatCategories, subscribeMatches, deleteProfileDoc } from '@/lib/firebase/firestoreService';
+import { leagueAdminRequest } from '@/lib/services/leagueService';
 import { isFirebaseConfigured, auth as firebaseAuth } from '@/lib/firebase/config';
 import { getStoredPlayers, removeStoredPlayer, updateStoredPlayer, saveStoredPlayers, getPlayerMatchRecord } from '@/lib/services/playerService';
 import { getStoredCategories, saveStoredCategories, DEFAULT_BASE_CATEGORIES } from '@/lib/services/statCategoryService';
@@ -42,6 +43,7 @@ export default function GiocatoriPage() {
   const [categories, setCategories] = useState<StatCategory[]>(DEFAULT_CATEGORIES);
   const { forms } = useForms();
   const t = useTranslations('players');
+  const tm = useTranslations('league.members');
   const labels = usePlayerLabels();
   // Statistiche delle card (tab "Statistiche"): dalle partite archiviate, come Storico e Profilo
   const [completedMatches, setCompletedMatches] = useState<Match[]>([]);
@@ -197,15 +199,12 @@ ${link}`;
         : t('confirmRemoveAdmin', { name: p.full_name });
     if (!(await askConfirm(msg))) return;
     const updated: Profile = { ...p, role: next, updated_at: new Date().toISOString() };
-    try {
-      // C1: only the role (a whole stale copy could overwrite W/D/L or server flags)
-      await updateProfileFields(p.id, { role: next, updated_at: updated.updated_at });
-      updateStoredPlayer(updated);
-      setPlayers(getStoredPlayers());
-      notify(next === 'admin' ? t('nowAdmin', { name: p.full_name }) : t('noLongerAdmin', { name: p.full_name }));
-    } catch {
-      /* the error is already shown by updateProfileFields (C7) */
-    }
+    // Multi-league: admin = president of the league; the server keeps at least one president
+    const res = await leagueAdminRequest({ action: 'role', playerId: p.id, role: next === 'admin' ? 'PRESIDENT' : 'PLAYER' });
+    if (res !== 'ok') return notify(tm(`errors.${res}`));
+    updateStoredPlayer(updated);
+    setPlayers(getStoredPlayers());
+    notify(next === 'admin' ? t('nowAdmin', { name: p.full_name }) : t('noLongerAdmin', { name: p.full_name }));
   };
 
   // Filtraggio e ordinamento (card: pulsanti in alto; tabella: intestazioni cliccabili)

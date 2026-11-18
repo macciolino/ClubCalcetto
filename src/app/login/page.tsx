@@ -6,6 +6,7 @@ import { PitchLines } from '@/components/PitchLines';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { takeReturnPath } from '@/lib/utils/returnPath';
 import { GoogleAuthProvider, sendPasswordResetEmail } from 'firebase/auth';
 import { auth as firebaseAuth } from '@/lib/firebase/config';
 import { useAuth, savePendingInvite, takePendingInvite, afterRegistration, requestReturn } from '@/lib/context/AuthContext';
@@ -129,12 +130,13 @@ export default function LoginPage() {
             await refreshProfile();
             notify(t('guestClaimed', { name: res.guestName || '' }));
           } else if (res && !res.ok) notify(t('inviteInvalid2'));
-          router.replace('/');
+          router.replace(takeReturnPath());
         });
         return;
       }
       // L'animazione dopo il login la avvia il caricamento della Home (markJustSignedIn in AuthContext)
-      router.replace('/');
+      // Link di invito aperto prima di entrare (/join/…): ci si torna
+      router.replace(takeReturnPath());
     }
   }, [mounted, user, profile, isEmailVerified, router, refreshProfile, t]);
 
@@ -271,7 +273,7 @@ export default function LoginPage() {
       const verified = await checkEmailVerification();
       if (verified) {
         markJustSignedIn();
-      window.location.href = '/';
+      window.location.href = takeReturnPath();
       } else {
         setErrorMessage(t('notVerified'));
       }
