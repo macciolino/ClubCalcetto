@@ -14,6 +14,8 @@ You are an expert UI/UX designer and full-stack developer collaborating on "Club
 ## Multi-Theme & Semantic Tokens (Light / Dark Mode)
 - *No Hardcoded Theme Colors:* Never use hardcoded dark-only background or text colors (e.g., bg-slate-900, text-white on main surfaces) for layout containers, cards, modals, or inputs. Always use the centralized semantic CSS/Tailwind design tokens (bg-app, bg-card, bg-card-hover, text-primary, text-secondary, border-subtle, accent-primary) so every component adapts seamlessly to both Light and Dark themes.
 - *Contrast & Semantic Badges:* Ensure semantic status badges (Win/Green, Draw/Yellow, Loss/Red, Paid/Unpaid) maintain accessible contrast ratios against both #FFFFFF (Light cards) and dark slate backgrounds (Dark cards).
+- *Tactical / Pitch Widgets:* The wrappers and info headers of tactical and pitch widgets (e.g. the pitch card in `/teams`) follow the active theme (Light/Dark) through the semantic tokens; only the green of the playing surface (and the shirts/player stickers on it) stays fixed.
+- *Muted Text Contrast:* Secondary/muted texts must always meet the minimum contrast levels in Dark Mode (`--text-muted` at least slate-400, ≥ 4.5:1 on dark cards; dashed empty slots use `--border-strong`, at least slate-700) — checked by `tests/unit/themeTokens.test.ts`.
 - *Internationalization (next-intl):* Never hardcode UI strings in Italian or English inside JSX components; always use next-intl translation keys (messages/it.json and messages/en.json).
 
 ## 2. Global Component Standards (Strict Consistency)

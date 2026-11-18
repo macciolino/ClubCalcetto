@@ -34,13 +34,13 @@
   --bg-card: 19 28 46;            /* #131C2E */
   --bg-card-hover: 30 41 59;      /* #1E293B */
   --text-primary: 241 245 249;    /* #F1F5F9 */
-  --text-secondary: 148 163 184;  /* #94A3B8 */
+  --text-secondary: 203 213 225;  /* #CBD5E1 (slate-300): sopra il muted, gerarchia mantenuta */
   --border-color: 30 41 59;       /* #1E293B */
   --accent-primary: 16 185 129;   /* #10B981 */
   --accent-contrast: 11 15 25;    /* #0B0F19 */
   --accent-text: 52 211 153;      /* #34D399 */
-  --text-muted: 100 116 139;      /* #64748B (slate-500, come oggi) */
-  --border-strong: 51 65 85;      /* #334155 (slate-700) */
+  --text-muted: 148 163 184;      /* #94A3B8 (slate-400): minimo leggibile sulle card scure */
+  --border-strong: 71 85 105;     /* #475569 (slate-600): slot vuoti tratteggiati nitidi sul navy */
   --danger-text: 253 164 175;     /* #FDA4AF (rose-300) */
   --warning-text: 252 211 77;     /* #FCD34D (amber-300) */
 }

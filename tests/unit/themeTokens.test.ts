@@ -65,9 +65,16 @@ describe('Token di tema (Light / Dark)', () => {
     expect(contrast(dark[fg], dark[bg])).toBeGreaterThanOrEqual(min);
   });
 
-  it('testo attenuato: ≥ 4.5:1 nel tema chiaro, come oggi (≥ 3.5:1) in quello scuro', () => {
+  it('testo attenuato: ≥ 4.5:1 in entrambi i temi (nello scuro almeno slate-400), sotto il secondario', () => {
     expect(contrast(light['--text-muted'], light['--bg-card'])).toBeGreaterThanOrEqual(4.5);
-    expect(contrast(dark['--text-muted'], dark['--bg-card'])).toBeGreaterThanOrEqual(3.5);
+    expect(contrast(dark['--text-muted'], dark['--bg-card'])).toBeGreaterThanOrEqual(4.5);
+    expect(luminance(dark['--text-muted'])).toBeGreaterThanOrEqual(luminance([148, 163, 184]));
+    expect(contrast(dark['--text-secondary'], dark['--bg-card'])).toBeGreaterThan(contrast(dark['--text-muted'], dark['--bg-card']));
+  });
+
+  it('bordi forti (slot vuoti tratteggiati): nello scuro almeno slate-700 e visibili sul navy', () => {
+    expect(luminance(dark['--border-strong'])).toBeGreaterThanOrEqual(luminance([51, 65, 85]));
+    expect(contrast(dark['--border-strong'], dark['--bg-card'])).toBeGreaterThanOrEqual(1.8);
   });
 
   it('Tailwind espone i token con opacità (bg-card/60 ecc.)', () => {

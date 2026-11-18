@@ -24,6 +24,13 @@ test.describe('Tema (Impostazioni)', () => {
     await expect(html).toHaveClass(/\bdark\b/);
     await expect(row).toContainText('Scuro');
     expect(await page.evaluate(() => localStorage.getItem('cc_theme'))).toBe('dark');
+    // "Tema: Scuro" è solo un avviso temporaneo: compare sopra la barra in basso e sparisce da solo
+    const toast = page.getByText('Tema: Scuro', { exact: true });
+    await expect(toast).toBeVisible();
+    const toastBox = await toast.boundingBox();
+    const navBox = await page.getByRole('navigation', { name: 'Navigazione principale' }).last().boundingBox();
+    expect(toastBox!.y + toastBox!.height).toBeLessThanOrEqual(navBox!.y);
+    await expect(toast).toHaveCount(0, { timeout: 6000 });
 
     // resta dopo un ricaricamento
     await page.reload();

@@ -72,15 +72,16 @@ export function PlayerCardFifa({
         <span className={`block text-[15px] font-semibold leading-tight line-clamp-2 break-words ${isCurrent ? 'text-accent-text' : 'text-primary'}`}>
           {player.full_name}
         </span>
-        <span className="mt-1 flex items-center gap-2 text-xs text-secondary">
-          <span className="truncate">
+        {/* Ruolo e stato: etichette brevi intere; se non stanno sulla riga, lo stato va sotto invece di tagliarsi */}
+        <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-secondary">
+          <span className="whitespace-nowrap">
             {labels.position(player.position)}
             {player.is_guest ? t('guestSuffix') : ''}
           </span>
           {playedAny(player.id, recentMatches) ? (
             <FormDots playerId={player.id} matches={recentMatches} interactive={false} className="flex-shrink-0" />
           ) : (
-            <span className="text-[11px] text-muted truncate">{t('noRecent')}</span>
+            <span className="text-[11px] text-muted">{t('noRecent')}</span>
           )}
         </span>
       </span>
