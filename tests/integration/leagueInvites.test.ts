@@ -8,6 +8,7 @@ import { POST as inviteRoute } from '@/app/api/league-invite/route';
 import { GET as joinInfo, POST as joinRoute } from '@/app/api/join/route';
 import { POST as leagueAdmin } from '@/app/api/league-admin/route';
 import { POST as registered } from '@/app/api/account/registered/route';
+import { POST as resolveRequest } from '@/app/api/admin/requests/route';
 import { assertEmulators, call, db, idToken, ldb, makeUser, profileDoc, resetEmulators } from './helpers';
 
 assertEmulators();
@@ -77,7 +78,7 @@ describe('Entrare con il link', () => {
     expect((await call(joinRoute, { code: c }, u.token)).data).toMatchObject({ ok: true, already: true });
   });
 
-  it('"sono io": prende la scheda dell’ospite con partite, gol, OVR e V/P/S', async () => {
+  it('"sono io": la scheda dell’ospite passa SOLO dopo l’approvazione di un gestore', async () => {
     await ldb().doc('players/guest-1').set(profileDoc('guest-1', { is_guest: true, user_id: null, userId: null, email: null, full_name: 'Ospite Luca', stats: { Tiro: 9 }, overall_rating: 8, matches_won: 3, leagueRole: 'PLAYER' }));
     await ldb().doc('players/guest-2').set(profileDoc('guest-2', { is_guest: true, user_id: null, userId: null, full_name: 'Ospite archiviato', archived_at: 'x' }));
     await ldb().doc('matches/2026-10-01').set({ status: 'completed', team_white: [{ id: 'guest-1', name: 'Ospite Luca' }], team_black: [], scorers: [{ player_id: 'guest-1', goals: 2 }], mvp_player_id: 'guest-1' });
@@ -89,11 +90,32 @@ describe('Entrare con il link', () => {
 
     expect((await call(joinRoute, { code: c, claimPlayerId: 'pres' }, u.token)).status).toBe(400); // non è un ospite
     const res = await call(joinRoute, { code: c, claimPlayerId: 'guest-1' }, u.token);
-    expect(res.data).toMatchObject({ ok: true, claimed: 'Ospite Luca' });
+    expect(res.data).toMatchObject({ ok: true, claimPending: 'Ospite Luca' });
+    // entrato come giocatore nuovo; l'ospite e il suo storico NON sono ancora suoi
+    expect((await ldb().doc('players/guest-1').get()).exists).toBe(true);
+    expect((await ldb().doc('players/o2').get()).data()).toMatchObject({ matches_won: 0, is_guest: false });
+    expect((await ldb().doc('admin_requests/claim_o2').get()).data()).toMatchObject({ type: 'guest_claim', status: 'open', guest_id: 'guest-1', guest_name: 'Ospite Luca' });
+    // un giocatore non può approvarla, il presidente sì
+    expect((await call(resolveRequest, { id: 'claim_o2', action: 'approve' }, u.token)).status).toBe(403);
+    expect((await call(resolveRequest, { id: 'claim_o2', action: 'approve' }, pres.token)).data).toMatchObject({ ok: true, guestName: 'Ospite Luca' });
     expect((await ldb().doc('players/guest-1').get()).exists).toBe(false);
     expect((await ldb().doc('players/o2').get()).data()).toMatchObject({ userId: 'o2', stats: { Tiro: 9 }, overall_rating: 8, matches_won: 3, needs_stat_review: false, self_rating_pending: false });
     const m = (await ldb().doc('matches/2026-10-01').get()).data()!;
     expect([m.team_white[0].id, m.scorers[0].player_id, m.mvp_player_id]).toEqual(['o2', 'o2', 'o2']);
+  });
+
+  it('rifiutata: resta un giocatore nuovo; due persone per lo stesso ospite: passa a uno solo', async () => {
+    await ldb().doc('players/guest-1').set(profileDoc('guest-1', { is_guest: true, user_id: null, userId: null, email: null, full_name: 'Ospite Luca', matches_won: 3, leagueRole: 'PLAYER' }));
+    const c = await code();
+    const a = await outsider('oa');
+    const b = await outsider('ob');
+    await call(joinRoute, { code: c, claimPlayerId: 'guest-1' }, a.token);
+    await call(joinRoute, { code: c, claimPlayerId: 'guest-1' }, b.token);
+    expect((await call(resolveRequest, { id: 'claim_oa', action: 'reject' }, pres.token)).data.ok).toBe(true);
+    expect((await ldb().doc('players/oa').get()).data()?.matches_won).toBe(0);
+    expect((await ldb().doc('players/guest-1').get()).exists).toBe(true);
+    expect((await call(resolveRequest, { id: 'claim_ob', action: 'approve' }, pres.token)).data.ok).toBe(true);
+    expect((await ldb().doc('players/ob').get()).data()?.matches_won).toBe(3);
   });
 
   it('serve l’accesso con email verificata', async () => {

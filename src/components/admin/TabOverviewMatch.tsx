@@ -10,7 +10,7 @@ import { MatchResultFields, MatchResultValue, validateScorers } from '@/componen
 import { MatchFormatPicker } from '@/components/MatchFormatPicker';
 import { reconcileTeams, toTeamPlayer } from '@/lib/utils/teamUtils';
 import { cashHeadCount, cashPayers, cashSummary } from '@/lib/utils/cashUtils';
-import { FORMAT_INFO, dayFormat, maxPlayersFor, perHead } from '@/lib/utils/matchFormat';
+import { FORMAT_INFO, dayFormat, maxPlayersFor, perHead, totalFromPerHead } from '@/lib/utils/matchFormat';
 import {
   effectiveMatchCost,
   effectiveMatchLocation,
@@ -336,6 +336,7 @@ export function TabOverviewMatch({
   const [timeInput, setTimeInput] = useState(time);
   const [notesInput, setNotesInput] = useState('');
   const [costInput, setCostInput] = useState('');
+  const [shareInput, setShareInput] = useState('');
   useEffect(() => setTimeInput(time), [time, date]);
   useEffect(() => setNotesInput(match?.notes || ''), [match?.notes, date]);
   useEffect(
@@ -474,7 +475,26 @@ export function TabOverviewMatch({
             className={`${inputCls} tabular-nums`}
           />
         </label>
-        <div className="pb-2.5 text-sm text-secondary tabular-nums">{t('perHead', { amount: perHead(totalCost, headCount) })}</div>
+        {/* Or the share per head: the total follows (the field / catalogue price is only the starting value) */}
+        <label className="block w-36">
+          <span className="block text-xs font-medium text-secondary mb-1.5">{t('shareLabel')}</span>
+          <input
+            type="text"
+            inputMode="decimal"
+            value={shareInput}
+            disabled={isArchived}
+            placeholder={perHead(totalCost, headCount)}
+            aria-describedby="share-hint"
+            onChange={(e) => setShareInput(e.target.value.replace(/[^0-9.,]/g, ''))}
+            onBlur={() => {
+              const total = totalFromPerHead(Number(shareInput.replace(',', '.')), headCount);
+              setShareInput('');
+              if (total > 0 && total !== totalCost) save({ total_cost: total, cost_override: true }, t('costSaved'));
+            }}
+            className={`${inputCls} tabular-nums`}
+          />
+        </label>
+        <div id="share-hint" className="pb-2.5 text-sm text-secondary tabular-nums">{t('perHead', { amount: perHead(totalCost, headCount) })}</div>
         {match?.cost_override && !isArchived && (
           <button type="button" onClick={() => save({ cost_override: false }, t('costReset'))} className={`${textLink} pb-2.5`}>
             {t('useFieldCost')}

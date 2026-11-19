@@ -63,7 +63,7 @@ export default function JoinLeaguePage() {
     sending.current = false;
     setJoining(false);
     if ('error' in res) return setError(t(`errors.${res.error}`));
-    notify(res.claimed ? t('claimed', { name: info.leagueName, player: res.claimed }) : t('joined', { name: info.leagueName }));
+    notify(res.claimPending ? t('claimPending', { name: info.leagueName, player: res.claimPending }) : t('joined', { name: info.leagueName }));
     openLeague(res.leagueId);
   };
 

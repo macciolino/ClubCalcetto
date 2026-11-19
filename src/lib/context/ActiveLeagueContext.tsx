@@ -1,6 +1,8 @@
 'use client';
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
+import { notify } from '@/components/ui/Feedback';
 import { usePathname } from 'next/navigation';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '@/lib/firebase/config';
@@ -135,17 +137,59 @@ export function ActiveLeagueProvider({
     );
   }, [active?.id, active?.playerId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Status of the active league (suspended = read-only banner)
+  // Status of the active league (suspended = read-only banner). Suspended while it is open → another league if
+  // there is one (it stays readable from the switcher), otherwise it stays here read-only with the banner.
   const [status, setStatus] = useState<{ id: string; suspended: boolean } | null>(null);
+  const tf = useTranslations('league.fallback');
+  const leaguesNow = useRef(leagues);
+  useEffect(() => {
+    leaguesNow.current = leagues;
+  }, [leagues]);
   useEffect(() => {
     if (!activeLeagueId || !isFirebaseConfigured) return;
+    let wasSuspended: boolean | null = null;
     return onSnapshot(
       doc(db, 'leagues', activeLeagueId),
-      (snap) => setStatus({ id: activeLeagueId, suspended: snap.data()?.status === 'suspended' }),
+      (snap) => {
+        const suspended = snap.data()?.status === 'suspended';
+        setStatus({ id: activeLeagueId, suspended });
+        const justSuspended = wasSuspended === false && suspended;
+        wasSuspended = suspended;
+        if (!justSuspended) return;
+        const name = leaguesNow.current.find((l) => l.id === activeLeagueId)?.name || '';
+        const other = leaguesNow.current.find((l) => l.id !== activeLeagueId);
+        if (!other) return notify(tf('suspendedStay', { name }), 'info');
+        try {
+          localStorage.setItem(STORAGE_KEY, other.id);
+        } catch {
+          /* storage not available: this session only */
+        }
+        setChosen(other.id);
+        notify(tf('suspendedSwitched', { name, other: other.name }), 'info');
+      },
       () => undefined
     );
-  }, [activeLeagueId]);
+  }, [activeLeagueId, tf]);
   const isSuspended = Boolean(status && status.id === activeLeagueId && status.suspended);
+
+  // Fallback (no blank pages, no loops of permission errors): the active league disappears from the memberships
+  // (taken out of it, or the league was deleted) → the next league, or the welcome screen if none is left.
+  const previous = useRef<{ uid: string | null; leagues: LeagueSummary[]; active: string | null } | null>(null);
+  useEffect(() => {
+    if (!membershipsReady) return;
+    const prev = previous.current;
+    previous.current = { uid, leagues, active: activeLeagueId };
+    if (!prev || prev.uid !== uid || !prev.active || leagues.some((l) => l.id === prev.active)) return;
+    const lost = prev.leagues.find((l) => l.id === prev.active);
+    if (!lost) return;
+    // The active league already falls back on its own (the lost id is no longer in the list): only forget it on the device
+    try {
+      if (localStorage.getItem(STORAGE_KEY) === lost.id) localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      /* storage not available */
+    }
+    notify(leagues.length ? tf('goneSwitched', { name: lost.name, other: leagues[0].name }) : tf('goneNone', { name: lost.name }), 'info');
+  }, [uid, leagues, activeLeagueId, membershipsReady, tf]);
 
   const setActiveLeague = useCallback((leagueId: string) => {
     try {

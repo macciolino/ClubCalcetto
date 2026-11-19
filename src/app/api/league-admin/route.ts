@@ -4,6 +4,7 @@ import { callerFrom } from '@/lib/server/adminRequests';
 import { currentLeague, isLeagueActive, memberCard, scoped } from '@/lib/server/leagueScope';
 import { removeLeagueMember, setActivePlayer, setMemberRole, updateLeagueSettings } from '@/lib/server/leagueMembers';
 import { checkPromotions } from '@/lib/server/presenceWatch';
+import { deleteLeague } from '@/lib/server/leagueDeletion';
 import type { LeagueRole } from '@/types/league';
 
 export const runtime = 'nodejs';
@@ -15,6 +16,7 @@ export const dynamic = 'force-dynamic';
  *  - { action: 'role', playerId, role }          presidents: PRESIDENT | COLLABORATOR | PLAYER (never without a president)
  *  - { action: 'playing', active }               any member: "Gioco anch'io" on their own card
  *  - { action: 'remove', playerId }              managers: take a member out of THIS league (never the global account)
+ *  - { action: 'delete', confirmName }           presidents: delete the league for good (typed name must match)
  */
 async function handlePost(request: Request) {
   if (!isAdminConfigured()) return NextResponse.json({ ok: false, error: 'not_configured' }, { status: 503 });
@@ -41,6 +43,11 @@ async function handlePost(request: Request) {
       return NextResponse.json({ ok: true });
     }
     if (card.data.leagueRole !== 'PRESIDENT') return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
+    if (body.action === 'delete') {
+      const res = await deleteLeague(leagueId, body.confirmName);
+      if (res === 'ok') return NextResponse.json({ ok: true });
+      return NextResponse.json({ ok: false, error: res }, { status: res === 'not_found' ? 404 : 400 });
+    }
     if (body.action === 'settings') {
       const res = await updateLeagueSettings(leagueId, { name: body.name, visibility: body.visibility });
       return NextResponse.json({ ok: res === 'ok', error: res === 'ok' ? undefined : res }, { status: res === 'ok' ? 200 : 400 });

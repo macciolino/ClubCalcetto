@@ -149,7 +149,8 @@
     "archivedDone": "Partita del {date} archiviata: la trovi nello Storico.",
     "saveFailed": "Salvataggio non riuscito. Controlla la connessione e riprova.",
     "saveFailedShort": "Salvataggio non riuscito, riprova.",
-    "paymentFailed": "Pagamento non salvato: controlla la connessione e riprova."
+    "paymentFailed": "Pagamento non salvato: controlla la connessione e riprova.",
+    "shareLabel": "Quota a testa (€)"
   },
   "result": {
     "finalScore": "Risultato finale",
@@ -1357,7 +1358,15 @@
     "reviewsAria": "Valutazioni da rivedere",
     "reviewsTitle": "Valutazioni da rivedere · dopo la prima partita",
     "denied": "Non riesco a leggere le richieste: le regole Firestore aggiornate non risultano pubblicate. Pubblica il file firestore.rules dalla console Firebase (Firestore → Regole) e riapri questa finestra.",
-    "notificationsAria": "Notifiche"
+    "notificationsAria": "Notifiche",
+    "tClaim": "{name} dice di essere \"{guest}\"",
+    "claimHint": "{name} è entrato con il link di invito e ha scelto la scheda ospite \"{guest}\". Approva solo se lo riconosci: partite, gol e statistiche passano al suo account.",
+    "confirmClaim": "Confermi che {name} è \"{guest}\"? Lo storico della scheda ospite passa al suo account e l’ospite sparisce dall’elenco.",
+    "approveClaim": "Approva, è lui",
+    "rejectClaim": "Rifiuta",
+    "claimApproved": "{name} ora ha lo storico di \"{guest}\".",
+    "claimRejected": "Richiesta di {name} rifiutata: resta un giocatore nuovo.",
+    "claimGone": "Questa scheda ospite non è più disponibile (già collegata o eliminata)."
   },
   "emailPrivacy": {
     "title": "Protezione delle email",
@@ -1456,18 +1465,18 @@
       "already": "Fai già parte di questa lega.",
       "open": "Apri la lega",
       "whoAreYou": "Sei già in rosa?",
-      "whoHint": "Se qualcuno ti ha già aggiunto come ospite, scegli il tuo nome: avrai le tue partite, i gol e l’OVR.",
+      "whoHint": "Se qualcuno ti ha già aggiunto come ospite, scegli il tuo nome: il presidente o un collaboratore conferma che sei tu e ti passa partite, gol e OVR.",
       "newPlayer": "Sono nuovo: crea la mia scheda",
       "join": "Entra nella lega",
       "joining": "Entro…",
       "joined": "Benvenuto in \"{name}\"!",
-      "claimed": "Benvenuto in \"{name}\": il profilo di {player} ora è tuo.",
       "errors": {
         "invalid": "Questo invito non è più valido.",
         "not_a_ghost": "Quel giocatore è già collegato a un account: scegli un altro nome o entra come nuovo.",
         "email_not_verified": "Conferma prima la tua email, poi riapri il link.",
         "failed": "Non sei entrato: controlla la connessione e riprova."
-      }
+      },
+      "claimPending": "Benvenuto in \"{name}\"! Hai chiesto la scheda di {player}: appena il presidente o un collaboratore conferma, partite e statistiche diventano tue."
     },
     "invite": {
       "title": "Invita nella lega",
@@ -1513,6 +1522,31 @@
       "search": "Cerca un membro",
       "searchPlaceholder": "Cerca per nome",
       "noResults": "Nessun membro con questo nome."
+    },
+    "fallback": {
+      "goneSwitched": "Non fai più parte della lega \"{name}\" (sei stato tolto o la lega è stata eliminata). Ora sei in \"{other}\".",
+      "goneNone": "Non fai più parte della lega \"{name}\" (sei stato tolto o la lega è stata eliminata). Puoi crearne una nuova o entrare con un invito.",
+      "suspendedSwitched": "La lega \"{name}\" è stata sospesa: ti abbiamo portato in \"{other}\". Puoi ancora consultarla dal selettore delle leghe.",
+      "suspendedStay": "La lega \"{name}\" è stata sospesa: puoi solo consultare i dati."
+    },
+    "delete": {
+      "zone": "Zona pericolosa",
+      "intro": "Elimina la lega e tutto quello che contiene: partite, presenze, squadre, cassa, statistiche e impostazioni. Gli account dei membri restano, e anche le loro altre leghe.",
+      "open": "Elimina la lega",
+      "short": "Elimina",
+      "title": "Eliminare \"{name}\"?",
+      "warning": "L’eliminazione è definitiva: i dati non si possono recuperare. Tutti i membri perdono l’accesso a questa lega.",
+      "typeName": "Per confermare scrivi il nome esatto della lega: {name}",
+      "confirm": "Elimina per sempre",
+      "cancel": "Annulla",
+      "done": "La lega \"{name}\" è stata eliminata.",
+      "errors": {
+        "name_mismatch": "Il nome non corrisponde: scrivilo esattamente com’è.",
+        "protected": "La lega di base \"I Calcettari\" non si può eliminare.",
+        "forbidden": "Solo un presidente della lega può eliminarla.",
+        "not_found": "Questa lega non esiste più.",
+        "failed": "Eliminazione non riuscita: controlla la connessione e riprova."
+      }
     }
   },
   "superAdmin": {

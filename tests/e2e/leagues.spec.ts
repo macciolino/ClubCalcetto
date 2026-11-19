@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { FieldValue } from 'firebase-admin/firestore';
 import { db, loginAs, loginAsAdmin, seedAccountWithoutLeague, seedMatchDay } from './seed';
 
 /** Multi-league step 2: league switcher in the header, creating a league, welcome screen without leagues. */
@@ -124,7 +125,7 @@ test.describe('Inviti e ruoli', () => {
     await expect(page.getByRole('button', { name: /Lega attiva: I Calcettari FC/ })).toBeVisible({ timeout: 15_000 });
   });
 
-  test('senza account entrato: il link mostra la lega, si accede e si torna all’invito; "sono io" prende la scheda dell’ospite', async ({ page }) => {
+  test('senza account entrato: il link mostra la lega, si accede e si torna all’invito; "sono io" chiede la scheda, il presidente approva', async ({ page, browser }) => {
     const acc = await seedAccountWithoutLeague();
     await page.goto(`/join/${CODE}`);
     await expect(page.getByText('I Calcettari', { exact: true })).toBeVisible();
@@ -138,11 +139,21 @@ test.describe('Inviti e ruoli', () => {
     await me.click();
     await expect(me).toHaveAttribute('aria-checked', 'true');
     await page.getByRole('button', { name: 'Entra nella lega' }).click();
-    await expect(page.getByText(/il profilo di Ospite Luca ora è tuo/)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Hai chiesto la scheda di Ospite Luca/)).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole('button', { name: /Lega attiva: I Calcettari/ })).toBeVisible({ timeout: 15_000 });
-    const card = (await db.doc('leagues/calcettari/players/e2e-nolega').get()).data();
-    expect(card).toMatchObject({ userId: 'e2e-nolega', matches_won: 4, overall_rating: 8 });
-    expect((await db.doc('leagues/calcettari/players/guest-luca').get()).exists).toBe(false);
+    // entrato come nuovo: lo storico dell'ospite NON è ancora suo
+    expect((await db.doc('leagues/calcettari/players/e2e-nolega').get()).data()).toMatchObject({ userId: 'e2e-nolega', matches_won: 0 });
+    expect((await db.doc('leagues/calcettari/players/guest-luca').get()).exists).toBe(true);
+
+    // il presidente approva dal centro richieste
+    const admin = await (await browser.newContext()).newPage();
+    await loginAsAdmin(admin);
+    await admin.goto('/?richieste=1');
+    await expect(admin.getByText('Nuovo Arrivato dice di essere "Ospite Luca"')).toBeVisible({ timeout: 15_000 });
+    await admin.getByRole('button', { name: 'Approva, è lui' }).click();
+    await admin.getByRole('button', { name: 'Conferma', exact: true }).click();
+    await expect.poll(async () => (await db.doc('leagues/calcettari/players/guest-luca').get()).exists, { timeout: 15_000 }).toBe(false);
+    expect((await db.doc('leagues/calcettari/players/e2e-nolega').get()).data()).toMatchObject({ matches_won: 4, overall_rating: 8 });
   });
 
   test('già entrato e senza leghe: "sono nuovo" crea la scheda; riaprendo il link risulta già membro', async ({ page }) => {
@@ -155,6 +166,59 @@ test.describe('Inviti e ruoli', () => {
     expect((await db.doc('leagues/calcettari/players/e2e-nolega').get()).data()).toMatchObject({ leagueRole: 'PLAYER', matches_won: 0 });
     await page.goto(`/join/${CODE}`);
     await expect(page.getByText('Fai già parte di questa lega.')).toBeVisible();
+  });
+});
+
+/** League lifecycle: delete for good (typed name) and automatic fallback when the active league goes away. */
+test.describe('Ciclo di vita della lega', () => {
+  test.beforeEach(async () => {
+    await seedMatchDay();
+    await db.doc('leagues/giovedi').set({ id: 'giovedi', name: 'Lega del giovedì', slug: 'lega-del-giovedi', status: 'active', visibility: 'private', createdAt: new Date().toISOString(), createdBy: 'p-1' });
+    await db.doc('leagues/giovedi/players/p-1').set({ id: 'p-1', userId: 'e2e-super', user_id: 'e2e-super', full_name: 'Marco Test', leagueRole: 'PRESIDENT', role: 'admin', isActivePlayer: true, is_guest: false, stats: {}, overall_rating: 6 });
+    await db.doc('memberships/e2e-super').set({ leagues: { giovedi: { player_id: 'p-1', league_role: 'PRESIDENT', name: 'Lega del giovedì' } } }, { merge: true });
+  });
+
+  const openLeague = async (page: import('@playwright/test').Page, name: RegExp) => {
+    await page.getByRole('button', { name: /Lega attiva:/ }).click();
+    await page.getByRole('menuitemradio', { name }).click();
+  };
+
+  test('il presidente elimina la lega scrivendo il nome esatto: si torna all’altra lega', async ({ page }) => {
+    await loginAsAdmin(page);
+    await openLeague(page, /Lega del giovedì/);
+    await page.goto('/settings?sezione=lega');
+    await page.getByRole('button', { name: 'Elimina la lega' }).click();
+    const sheet = page.getByRole('dialog');
+    const confirm = sheet.getByRole('button', { name: 'Elimina per sempre' });
+    await expect(confirm).toBeDisabled();
+    await sheet.getByLabel(/scrivi il nome esatto della lega/).fill('Lega del giovedi');
+    await expect(confirm).toBeDisabled();
+    await sheet.getByLabel(/scrivi il nome esatto della lega/).fill('Lega del giovedì');
+    await confirm.click();
+    await expect(page.getByText('La lega "Lega del giovedì" è stata eliminata.')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('button', { name: /Lega attiva: I Calcettari/ })).toBeVisible({ timeout: 15_000 });
+    expect((await db.doc('leagues/giovedi').get()).exists).toBe(false);
+    expect((await db.doc('memberships/e2e-super').get()).data()?.leagues?.giovedi).toBeUndefined();
+    // la lega di base non mostra la zona pericolosa
+    await expect(page.getByRole('button', { name: 'Elimina la lega' })).toHaveCount(0);
+  });
+
+  test('tolto dalla lega aperta: avviso e passaggio all’altra; lega sospesa: avviso e passaggio', async ({ page }) => {
+    await loginAsAdmin(page);
+    await openLeague(page, /Lega del giovedì/);
+    await expect(page.getByRole('button', { name: /Lega attiva: Lega del giovedì/ })).toBeVisible();
+    // il server lo toglie (come "Togli dalla lega" o l'eliminazione)
+    await db.doc('memberships/e2e-super').update({ 'leagues.giovedi': FieldValue.delete() });
+    await expect(page.getByText(/Non fai più parte della lega "Lega del giovedì"/)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('button', { name: /Lega attiva: I Calcettari/ })).toBeVisible();
+
+    // di nuovo dentro, poi la lega viene sospesa mentre è aperta
+    await db.doc('memberships/e2e-super').set({ leagues: { giovedi: { player_id: 'p-1', league_role: 'PRESIDENT', name: 'Lega del giovedì' } } }, { merge: true });
+    await openLeague(page, /Lega del giovedì/);
+    await expect(page.getByRole('button', { name: /Lega attiva: Lega del giovedì/ })).toBeVisible();
+    await db.doc('leagues/giovedi').update({ status: 'suspended' });
+    await expect(page.getByText(/La lega "Lega del giovedì" è stata sospesa: ti abbiamo portato in "I Calcettari"/)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('button', { name: /Lega attiva: I Calcettari/ })).toBeVisible();
   });
 });
 

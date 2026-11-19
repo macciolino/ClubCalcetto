@@ -93,6 +93,15 @@ export function perHead(total: number, players: number): string {
   return v.toFixed(v % 1 ? 2 : 0).replace('.', ',');
 }
 
+/**
+ * Total cost from a per-head share typed by a manager ("€8 a testa" × 10 = €80), rounded to the cent.
+ * 0 when the share is not a positive number.
+ */
+export function totalFromPerHead(share: number, players: number): number {
+  if (!(share > 0)) return 0;
+  return Math.round(share * Math.max(1, players) * 100) / 100;
+}
+
 // ---------- formations on the pitch ----------
 
 /**

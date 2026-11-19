@@ -80,14 +80,23 @@ export async function fetchJoinInfo(code: string): Promise<JoinInfo | null> {
 
 export type JoinError = 'invalid' | 'not_a_ghost' | 'email_not_verified' | 'failed';
 
-export async function joinLeagueRequest(code: string, claimPlayerId: string | null): Promise<{ leagueId: string; claimed?: string } | { error: JoinError }> {
+export async function joinLeagueRequest(code: string, claimPlayerId: string | null): Promise<{ leagueId: string; claimPending?: string } | { error: JoinError }> {
   const { data } = await leagueFetch('/api/join', { method: 'POST', body: JSON.stringify({ code, claimPlayerId }) });
-  if (data.ok && typeof data.leagueId === 'string') return { leagueId: data.leagueId, claimed: data.claimed as string | undefined };
+  if (data.ok && typeof data.leagueId === 'string') return { leagueId: data.leagueId, claimPending: data.claimPending as string | undefined };
   const known: JoinError[] = ['invalid', 'not_a_ghost', 'email_not_verified'];
   return { error: known.includes(data.error as JoinError) ? (data.error as JoinError) : 'failed' };
 }
 
-export type LeagueAdminError = 'bad_request' | 'not_found' | 'guest' | 'last_president' | 'protected' | 'forbidden' | 'suspended' | 'failed';
+export type LeagueAdminError =
+  | 'bad_request'
+  | 'not_found'
+  | 'guest'
+  | 'last_president'
+  | 'protected'
+  | 'forbidden'
+  | 'suspended'
+  | 'name_mismatch'
+  | 'failed';
 
 /**
  * Active league: name / visibility (presidents), member roles (presidents), own "I play too",
@@ -99,10 +108,11 @@ export async function leagueAdminRequest(
     | { action: 'role'; playerId: string; role: LeagueRole }
     | { action: 'playing'; active: boolean }
     | { action: 'remove'; playerId: string }
+    | { action: 'delete'; confirmName: string }
 ): Promise<'ok' | LeagueAdminError> {
   const { data } = await leagueFetch('/api/league-admin', { method: 'POST', body: JSON.stringify(body) });
   if (data.ok) return 'ok';
-  const known: LeagueAdminError[] = ['bad_request', 'not_found', 'guest', 'last_president', 'protected', 'forbidden', 'suspended'];
+  const known: LeagueAdminError[] = ['bad_request', 'not_found', 'guest', 'last_president', 'protected', 'forbidden', 'suspended', 'name_mismatch'];
   return known.includes(data.error as LeagueAdminError) ? (data.error as LeagueAdminError) : 'failed';
 }
 
@@ -124,6 +134,13 @@ export async function fetchPlatformLeagues(): Promise<PlatformLeague[] | null | 
   const { status, data } = await leagueFetch('/api/super-admin/leagues');
   if (status === 403) return 'forbidden';
   return data.ok && Array.isArray(data.leagues) ? (data.leagues as PlatformLeague[]) : null;
+}
+
+/** Super admin: deletes a league for good (the typed name must match). */
+export async function deletePlatformLeague(leagueId: string, confirmName: string): Promise<'ok' | 'name_mismatch' | 'protected' | 'not_found' | 'failed'> {
+  const { data } = await leagueFetch('/api/super-admin/leagues', { method: 'POST', body: JSON.stringify({ leagueId, action: 'delete', confirmName }) });
+  if (data.ok) return 'ok';
+  return ['name_mismatch', 'protected', 'not_found'].includes(String(data.error)) ? (data.error as 'name_mismatch' | 'protected' | 'not_found') : 'failed';
 }
 
 export async function setPlatformLeagueStatus(leagueId: string, status: 'active' | 'suspended'): Promise<boolean> {

@@ -149,7 +149,8 @@
     "archivedDone": "Match on {date} archived: you will find it in History.",
     "saveFailed": "Saving failed. Check your connection and try again.",
     "saveFailedShort": "Saving failed, try again.",
-    "paymentFailed": "Payment not saved: check your connection and try again."
+    "paymentFailed": "Payment not saved: check your connection and try again.",
+    "shareLabel": "Share per head (€)"
   },
   "result": {
     "finalScore": "Final score",
@@ -1357,7 +1358,15 @@
     "reviewsAria": "Ratings to review",
     "reviewsTitle": "Ratings to review · after the first match",
     "denied": "I can't read the requests: the updated Firestore rules don't seem to be published. Publish the firestore.rules file from the Firebase console (Firestore → Rules) and reopen this window.",
-    "notificationsAria": "Notifications"
+    "notificationsAria": "Notifications",
+    "tClaim": "{name} says they are \"{guest}\"",
+    "claimHint": "{name} joined with the invite link and picked the guest card \"{guest}\". Approve only if you recognise them: matches, goals and stats move to their account.",
+    "confirmClaim": "Confirm that {name} is \"{guest}\"? The guest card history moves to their account and the guest disappears from the list.",
+    "approveClaim": "Approve, it's them",
+    "rejectClaim": "Reject",
+    "claimApproved": "{name} now has the history of \"{guest}\".",
+    "claimRejected": "{name}'s request rejected: they stay a new player.",
+    "claimGone": "This guest card is no longer available (already linked or deleted)."
   },
   "emailPrivacy": {
     "title": "Email protection",
@@ -1456,18 +1465,18 @@
       "already": "You are already in this league.",
       "open": "Open the league",
       "whoAreYou": "Are you already on the list?",
-      "whoHint": "If someone already added you as a guest, pick your name: you will get your matches, goals and OVR.",
+      "whoHint": "If someone already added you as a guest, pick your name: the president or a collaborator confirms it is you and hands you matches, goals and OVR.",
       "newPlayer": "I am new: create my card",
       "join": "Join the league",
       "joining": "Joining…",
       "joined": "Welcome to \"{name}\"!",
-      "claimed": "Welcome to \"{name}\": {player}’s profile is now yours.",
       "errors": {
         "invalid": "This invite is no longer valid.",
         "not_a_ghost": "That player is already linked to an account: pick another name or join as new.",
         "email_not_verified": "Confirm your email first, then open the link again.",
         "failed": "You did not join: check your connection and try again."
-      }
+      },
+      "claimPending": "Welcome to \"{name}\"! You asked for the card of {player}: as soon as the president or a collaborator confirms, its matches and stats become yours."
     },
     "invite": {
       "title": "Invite to the league",
@@ -1513,6 +1522,31 @@
       "search": "Search a member",
       "searchPlaceholder": "Search by name",
       "noResults": "No member with this name."
+    },
+    "fallback": {
+      "goneSwitched": "You are no longer in the league \"{name}\" (you were removed or the league was deleted). You are now in \"{other}\".",
+      "goneNone": "You are no longer in the league \"{name}\" (you were removed or the league was deleted). You can create a new one or join with an invite.",
+      "suspendedSwitched": "The league \"{name}\" has been suspended: we moved you to \"{other}\". You can still look at it from the league switcher.",
+      "suspendedStay": "The league \"{name}\" has been suspended: you can only look at its data."
+    },
+    "delete": {
+      "zone": "Danger zone",
+      "intro": "Delete the league and everything in it: matches, attendance, teams, cash, stats and settings. Members' accounts stay, and so do their other leagues.",
+      "open": "Delete the league",
+      "short": "Delete",
+      "title": "Delete \"{name}\"?",
+      "warning": "Deleting is final: the data can't be recovered. Every member loses access to this league.",
+      "typeName": "To confirm, type the exact league name: {name}",
+      "confirm": "Delete for good",
+      "cancel": "Cancel",
+      "done": "The league \"{name}\" has been deleted.",
+      "errors": {
+        "name_mismatch": "The name doesn't match: type it exactly as it is.",
+        "protected": "The base league \"I Calcettari\" can't be deleted.",
+        "forbidden": "Only a president of the league can delete it.",
+        "not_found": "This league no longer exists.",
+        "failed": "Delete failed: check your connection and try again."
+      }
     }
   },
   "superAdmin": {

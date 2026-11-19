@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { cashHeadCount, cashPayers, cashSummary } from '@/lib/utils/cashUtils';
-import { perHead } from '@/lib/utils/matchFormat';
+import { perHead, totalFromPerHead } from '@/lib/utils/matchFormat';
 import { matchCostFor, standardCostFor } from '@/lib/utils/matchUtils';
 import type { Match, SportField } from '@/types/database';
 
@@ -101,5 +101,23 @@ describe('Costo della partita per formato', () => {
   it('costo personalizzato e partita archiviata vincono sempre', () => {
     expect(matchCostFor({ cost_override: true, total_cost: 150, status: 'open' } as Match, settings, [field], '7v7')).toBe(150);
     expect(matchCostFor({ status: 'completed', total_cost: 90 } as Match, settings, [field], '11v11')).toBe(90);
+  });
+});
+
+describe('Costo della singola partita: il prezzo del campo è solo il punto di partenza', () => {
+  it('la quota a testa scritta dal gestore diventa il totale', () => {
+    expect(totalFromPerHead(8, 10)).toBe(80);
+    expect(totalFromPerHead(6.5, 14)).toBe(91);
+    expect(totalFromPerHead(7.33, 3)).toBe(21.99);
+    expect(totalFromPerHead(0, 10)).toBe(0);
+    expect(totalFromPerHead(NaN, 10)).toBe(0);
+  });
+
+  it('il costo personalizzato della partita vince su quello del campo e su quello standard', () => {
+    const field = { id: 'f1', name: 'Campo', address: '', cost: 90 };
+    const settings = { standard_total_cost: 80, default_field_id: 'f1' };
+    expect(matchCostFor(null, settings, [field], '5v5')).toBe(90);
+    const match = { cost_override: true, total_cost: 70, status: 'scheduled' } as unknown as Parameters<typeof matchCostFor>[0];
+    expect(matchCostFor(match, settings, [field], '5v5')).toBe(70);
   });
 });

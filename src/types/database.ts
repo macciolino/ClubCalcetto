@@ -369,13 +369,16 @@ export function sortStatsByCanonicalOrder(statKeys: string[]): string[] {
 /** Notification centre of the admins (collection admin_requests, written only by the server). */
 export interface AdminRequest {
   id: string;
-  type: 'new_signup' | 'restore' | 'account_closed' | 'format_proposal';
+  type: 'new_signup' | 'restore' | 'account_closed' | 'format_proposal' | 'guest_claim';
   status: 'open' | 'done';
   profile_id: string;
   name: string;
   email?: string | null;
   mode?: 'deactivate' | 'delete';
   reason?: string;
+  /** guest_claim: the guest card the new member says is theirs */
+  guest_id?: string;
+  guest_name?: string;
   /** format_proposal: match day, proposed format, format at that moment, sign-ups */
   date?: string;
   format?: MatchFormat;

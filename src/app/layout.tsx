@@ -56,8 +56,9 @@ export default function RootLayout({
               <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-6">
                 {children}
               </main>
-              <FeedbackHost />
             </AuthProvider>
+            {/* Outside AuthProvider: changing league remounts the pages, a message shown at that moment must stay */}
+            <FeedbackHost />
           </I18nProvider>
         </ThemeProvider>
       </body>

@@ -3,7 +3,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { adminDb } from '@/lib/firebase/admin';
 import { DEFAULT_BASE_CATEGORIES } from '@/lib/utils/defaultCategories';
 import { canChangeLeagueRole, canRemoveFromLeague, leagueSlug } from '@/lib/utils/leaguePermissions';
-import { claimGuest } from '@/lib/server/profileMerge';
+import { openRequest } from '@/lib/server/adminRequests';
 import { inLeague, leagueDb } from '@/lib/server/leagueScope';
 import { SUPER_ADMIN_PROFILE_ID } from '@/lib/superAdmin';
 import type { LeagueRole, LeagueVisibility } from '@/types/league';
@@ -120,10 +120,14 @@ export async function ensureLeagueCard(leagueId: string, caller: { uid: string; 
 }
 
 export type JoinResult =
-  | { ok: true; leagueId: string; already?: boolean; claimed?: string }
+  | { ok: true; leagueId: string; already?: boolean; claimPending?: string }
   | { ok: false; error: 'invalid' | 'not_a_ghost' };
 
-/** Joins with an invite: as a new player, or taking over a ghost player's card (matches, OVR, W/D/L, history). */
+/**
+ * Joins with an invite as a new player. Saying "I am this guest" does NOT hand over the guest's card (matches,
+ * goals, OVR, W/D/L): it opens a request that a president or collaborator of the league approves or rejects
+ * (Notifiche → Da gestire), so nobody can take someone else's history with a shared link.
+ */
 export async function joinWithInvite(code: string, caller: { uid: string; profileId: string }, claimPlayerId?: string | null): Promise<JoinResult> {
   const league = await leagueFromInvite(code);
   if (!league) return { ok: false, error: 'invalid' };
@@ -133,8 +137,16 @@ export async function joinWithInvite(code: string, caller: { uid: string; profil
     const ghost = ghosts.find((g) => g.id === claimPlayerId);
     if (!ghost) return { ok: false, error: 'not_a_ghost' };
     await ensureLeagueCard(league.id, caller, league.name);
-    await inLeague(league.id, () => claimGuest(ghost.id, caller.profileId));
-    return { ok: true, leagueId: league.id, claimed: ghost.name };
+    const profile = (await adminDb().doc(`profiles/${caller.profileId}`).get()).data() || {};
+    const name = String(profile.full_name || 'Giocatore');
+    await inLeague(league.id, () =>
+      openRequest(
+        `claim_${caller.profileId}`,
+        { type: 'guest_claim', profile_id: caller.profileId, name, guest_id: ghost.id, guest_name: ghost.name },
+        { title: '🔗 Scheda ospite da confermare', body: `${name} dice di essere "${ghost.name}": approva o rifiuta.` }
+      )
+    );
+    return { ok: true, leagueId: league.id, claimPending: ghost.name };
   }
   await ensureLeagueCard(league.id, caller, league.name);
   return { ok: true, leagueId: league.id };

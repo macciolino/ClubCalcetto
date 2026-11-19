@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { Copy, Link2, Loader2, RefreshCw, Save, Search, Share2, UserCheck, Users } from 'lucide-react';
+import { Copy, Link2, Loader2, RefreshCw, Save, Search, Share2, Trash2, UserCheck, Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { db, isFirebaseConfigured } from '@/lib/firebase/config';
 import { lcol } from '@/lib/league/leagueRefs';
@@ -10,8 +10,9 @@ import { useActiveLeague } from '@/lib/context/ActiveLeagueContext';
 import { askConfirm, notify } from '@/components/ui/Feedback';
 import { btn } from '@/components/ui/buttons';
 import { LeagueRoleBadge } from '@/components/league/LeagueSwitcher';
+import { DeleteLeagueSheet } from '@/components/league/DeleteLeagueSheet';
 import { fetchInviteCode, inviteUrl, leagueAdminRequest } from '@/lib/services/leagueService';
-import type { League, LeagueMemberPlayer, LeagueRole, LeagueVisibility } from '@/types/league';
+import { CALCETTARI_LEAGUE_ID, type League, type LeagueMemberPlayer, type LeagueRole, type LeagueVisibility } from '@/types/league';
 
 const card = 'bg-card p-4 sm:p-5 rounded-2xl space-y-3';
 const field = 'w-full rounded-xl border border-line bg-app px-3 py-2.5 text-sm text-primary placeholder:text-muted focus:outline-none focus:border-accent disabled:opacity-60';
@@ -38,7 +39,32 @@ export function LeaguePanel() {
       {/* Own playing status on top: on a phone nobody has to scroll a 30-player list to find it */}
       <PlayingCard />
       <MembersCard editable={isPresident} />
+      {/* Presidents only (the server checks it too); the base league "I Calcettari" can never be deleted */}
+      {isPresident && league && league.id !== CALCETTARI_LEAGUE_ID && <DeleteLeagueCard league={league} />}
     </div>
+  );
+}
+
+/** Danger zone: delete the league for good, after typing its exact name. */
+function DeleteLeagueCard({ league }: { league: League }) {
+  const t = useTranslations('league.delete');
+  const [open, setOpen] = useState(false);
+  const remove = async (typedName: string) => {
+    const res = await leagueAdminRequest({ action: 'delete', confirmName: typedName });
+    if (res !== 'ok') return res;
+    setOpen(false);
+    notify(t('done', { name: league.name }));
+    return 'ok';
+  };
+  return (
+    <section className="bg-card rounded-2xl p-4 sm:p-5 space-y-3 border border-rose-500/25" aria-labelledby="delete-league">
+      <h2 id="delete-league" className="text-base font-bold text-danger">{t('zone')}</h2>
+      <p className="text-sm text-secondary">{t('intro')}</p>
+      <button type="button" onClick={() => setOpen(true)} className={btn.danger}>
+        <Trash2 className="h-4 w-4" aria-hidden="true" /> {t('open')}
+      </button>
+      {open && <DeleteLeagueSheet leagueName={league.name} onDelete={remove} onClose={() => setOpen(false)} />}
+    </section>
   );
 }
 

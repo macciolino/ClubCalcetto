@@ -2,14 +2,16 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Ban, Loader2, PlayCircle, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Ban, Loader2, PlayCircle, ShieldCheck, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/lib/context/AuthContext';
 import { useLocaleSetting } from '@/i18n/I18nProvider';
 import { askConfirm, notify } from '@/components/ui/Feedback';
 import { btnInline, textLink } from '@/components/ui/buttons';
 import { PageSkeleton } from '@/components/ui/Skeleton';
-import { fetchPlatformLeagues, setPlatformLeagueStatus, type PlatformLeague } from '@/lib/services/leagueService';
+import { deletePlatformLeague, fetchPlatformLeagues, setPlatformLeagueStatus, type PlatformLeague } from '@/lib/services/leagueService';
+import { DeleteLeagueSheet } from '@/components/league/DeleteLeagueSheet';
+import { CALCETTARI_LEAGUE_ID } from '@/types/league';
 import { PlatformAdminsCard } from '@/components/platform/PlatformAdminsCard';
 
 /**
@@ -24,6 +26,8 @@ export default function SuperAdminPage() {
   const { locale } = useLocaleSetting();
   const [leagues, setLeagues] = useState<PlatformLeague[] | null | 'forbidden' | 'loading'>('loading');
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<PlatformLeague | null>(null);
+  const td = useTranslations('league.delete');
   const busy = useRef(false);
 
   const load = useCallback(async () => {
@@ -51,6 +55,15 @@ export default function SuperAdminPage() {
     if (!ok) return notify(t('changeFailed'));
     notify(next === 'suspended' ? t('doneSuspended', { name: l.name }) : t('doneActivated', { name: l.name }));
     await load();
+  };
+
+  const removeLeague = async (l: PlatformLeague, typedName: string) => {
+    const res = await deletePlatformLeague(l.id, typedName);
+    if (res !== 'ok') return res;
+    setDeleting(null);
+    notify(td('done', { name: l.name }));
+    await load();
+    return 'ok';
   };
 
   const date = (iso: string) =>
@@ -126,10 +139,18 @@ export default function SuperAdminPage() {
                   {l.status === 'active' ? t('suspend') : t('activate')}
                 </button>
                 )}
+                {isPlatformSuperAdmin && l.id !== CALCETTARI_LEAGUE_ID && (
+                  <button type="button" onClick={() => setDeleting(l)} disabled={busyId !== null} className={btnInline.danger}>
+                    <Trash2 className="h-4 w-4" aria-hidden="true" /> {td('short')}
+                  </button>
+                )}
               </li>
             ))}
           </ul>
         </section>
+      )}
+      {deleting && (
+        <DeleteLeagueSheet leagueName={deleting.name} onDelete={(typed) => removeLeague(deleting, typed)} onClose={() => setDeleting(null)} />
       )}
     </div>
   );

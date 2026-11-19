@@ -6,6 +6,7 @@ import { adminCaller, closeRequest } from '@/lib/server/adminRequests';
 import { reactivateAccount } from '@/lib/server/accountDeletion';
 import { archiveAndReset, claimGuest } from '@/lib/server/profileMerge';
 import { checkPromotions } from '@/lib/server/presenceWatch';
+import { sendToProfiles } from '@/lib/server/push';
 import { FORMAT_INFO, isMatchFormat } from '@/lib/utils/matchFormat';
 
 export const runtime = 'nodejs';
@@ -15,6 +16,7 @@ export const runtime = 'nodejs';
  *  new_signup:     'link' (with guestId: the guest's history goes to the new account) | 'new' (new player, nothing to link)
  *  restore:        'restore' (profile and history back) | 'reset' (old record archived, account starts from zero)
  *  account_closed: 'dismiss' (read)
+ *  guest_claim:    'approve' (the guest's card, history and stats go to the account) | 'reject' (stays a new player)
  *  format_proposal: 'apply_format' (the day switches to the proposed format) | 'dismiss' (keep the current one)
  */
 async function handlePost(request: Request) {
@@ -33,6 +35,29 @@ async function handlePost(request: Request) {
     if (req.type === 'new_signup' && action === 'link' && guestId) {
       const { guestName } = await claimGuest(guestId, profileId);
       await closeRequest(id, by, `linked:${guestId}`);
+      return NextResponse.json({ ok: true, guestName });
+    }
+    if (req.type === 'guest_claim' && (action === 'approve' || action === 'reject')) {
+      const guestName = String(req.guest_name || '');
+      if (action === 'reject') {
+        await closeRequest(id, by, 'rejected');
+        await sendToProfiles([profileId], { title: 'Scheda ospite', body: `La richiesta per "${guestName}" non è stata approvata.`, url: '/' }).catch(() => 0);
+        return NextResponse.json({ ok: true });
+      }
+      const card = (await leagueDb().doc(`players/${profileId}`).get()).data();
+      if (!card || card.removed_at) {
+        await closeRequest(id, by, 'not_member');
+        return NextResponse.json({ ok: false, error: 'not_member' }, { status: 409 });
+      }
+      try {
+        await claimGuest(String(req.guest_id || ''), profileId);
+      } catch {
+        // already taken by someone else (or deleted): nothing to hand over any more
+        await closeRequest(id, by, 'guest_gone');
+        return NextResponse.json({ ok: false, error: 'guest_gone' }, { status: 409 });
+      }
+      await closeRequest(id, by, `linked:${req.guest_id}`);
+      await sendToProfiles([profileId], { title: 'Scheda ospite collegata', body: `Ora hai lo storico di "${guestName}".`, url: '/profile' }).catch(() => 0);
       return NextResponse.json({ ok: true, guestName });
     }
     if (req.type === 'new_signup' && action === 'new') {

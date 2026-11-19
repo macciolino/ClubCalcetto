@@ -11,7 +11,7 @@ import { platformAccount } from '@/lib/server/platformAccount';
  *  - account_closed: a player closed their own account (information, "Segna come letto")
  *  - format_proposal: many sign-ups for a day → proposal to switch to a bigger format (once per day and format)
  */
-export type AdminRequestType = 'new_signup' | 'restore' | 'account_closed' | 'format_proposal';
+export type AdminRequestType = 'new_signup' | 'restore' | 'account_closed' | 'format_proposal' | 'guest_claim';
 
 export interface AdminRequestDoc {
   type: AdminRequestType;
@@ -22,6 +22,9 @@ export interface AdminRequestDoc {
   /** account_closed: 'deactivate' (data kept) | 'delete' (everything removed) */
   mode?: 'deactivate' | 'delete';
   reason?: string;
+  /** guest_claim: the guest card the account says is theirs */
+  guest_id?: string;
+  guest_name?: string;
   /** format_proposal: match day, proposed format, sign-ups when it was proposed, format at that moment */
   date?: string;
   format?: string;

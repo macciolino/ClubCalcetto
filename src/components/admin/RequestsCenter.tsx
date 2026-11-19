@@ -58,7 +58,7 @@ export function nameSimilarity(a: string, b: string): number {
   return Math.max(words, chars * 0.9);
 }
 
-type Msg = { alreadyDone: string; failed: string };
+type Msg = { alreadyDone: string; failed: string; guestGone: string };
 async function resolve(msg: Msg, id: string, action: string, guestId?: string): Promise<boolean> {
   try {
     const token = await firebaseAuth.currentUser?.getIdToken();
@@ -69,7 +69,7 @@ async function resolve(msg: Msg, id: string, action: string, guestId?: string): 
     });
     const data = await res.json();
     if (!data?.ok) {
-      notify(data?.error === 'already_done' ? msg.alreadyDone : msg.failed);
+      notify(data?.error === 'already_done' ? msg.alreadyDone : data?.error === 'guest_gone' || data?.error === 'not_member' ? msg.guestGone : msg.failed);
       return false;
     }
     return true;
@@ -187,7 +187,7 @@ export function RequestsBell() {
   const tb = useTranslations('bell');
   const tr = useTranslations('requests');
   const { locale } = useLocaleSetting();
-  const msg: Msg = { alreadyDone: tr('alreadyDone'), failed: tr('failed') };
+  const msg: Msg = { alreadyDone: tr('alreadyDone'), failed: tr('failed'), guestGone: tr('claimGone') };
   const admin = Boolean(isAdmin || profile?.role === 'admin');
   const profileId = profile?.id;
   // Notifiche personali (ultime 30) e quelle non lette al momento dell'apertura (restano evidenziate)
@@ -429,6 +429,45 @@ export function RequestsBell() {
     );
   };
 
+  /** "I am this guest": approve only if you recognise the person (the guest's matches, goals and stats go to them). */
+  const claimCard = (r: AdminRequest) => {
+    const guest = guests.find((g) => g.id === r.guest_id);
+    const played = guest ? (guest.matches_won || 0) + (guest.matches_drawn || 0) + (guest.matches_lost || 0) : 0;
+    return (
+      <>
+        <p className="text-sm text-secondary">{tr('claimHint', { name: r.name, guest: r.guest_name || '' })}</p>
+        {guest ? (
+          <p className="text-xs text-muted">{tr('guestMatches', { count: played })}</p>
+        ) : (
+          <p className="text-xs text-warning">{tr('claimGone')}</p>
+        )}
+        <div className="flex flex-col sm:flex-row gap-2">
+          <button
+            type="button"
+            disabled={busy !== null || !guest}
+            onClick={async () => {
+              if (!(await askConfirm(tr('confirmClaim', { name: r.name, guest: r.guest_name || '' })))) return;
+              run(`${r.id}:approve`, () => resolve(msg, r.id, 'approve'), tr('claimApproved', { name: r.name, guest: r.guest_name || '' }));
+            }}
+            className={btn.primary}
+          >
+            {busy === `${r.id}:approve` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+            {tr('approveClaim')}
+          </button>
+          <button
+            type="button"
+            disabled={busy !== null}
+            onClick={() => run(`${r.id}:reject`, () => resolve(msg, r.id, 'reject'), tr('claimRejected', { name: r.name }))}
+            className={btn.secondary}
+          >
+            {busy === `${r.id}:reject` ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserX className="h-4 w-4" />}
+            {tr('rejectClaim')}
+          </button>
+        </div>
+      </>
+    );
+  };
+
   const closedCard = (r: AdminRequest) => (
     <>
       <p className="text-sm text-secondary">
@@ -451,6 +490,7 @@ export function RequestsBell() {
 
   const META: Record<AdminRequest['type'], { icon: React.ElementType; tone: string; title: (r: AdminRequest) => string }> = {
     new_signup: { icon: UserPlus, tone: 'bg-accent/15 text-accent-text', title: (r) => tr('tNewSignup', { name: r.name }) },
+    guest_claim: { icon: Link2, tone: 'bg-amber-500/15 text-warning', title: (r) => tr('tClaim', { name: r.name, guest: r.guest_name || '' }) },
     restore: { icon: RotateCcw, tone: 'bg-amber-500/15 text-warning', title: (r) => tr('tRestore', { name: r.name }) },
     format_proposal: {
       icon: Lightbulb,
@@ -469,7 +509,7 @@ export function RequestsBell() {
     },
   };
   // Prima le richieste che aspettano una scelta (rientro, nuovi iscritti), poi gli avvisi
-  const order = { format_proposal: 0, restore: 1, new_signup: 2, account_closed: 3 } as const;
+  const order = { format_proposal: 0, guest_claim: 1, restore: 2, new_signup: 3, account_closed: 4 } as const;
   const sorted = [...requests].sort((a, b) => order[a.type] - order[b.type]);
 
   return (
@@ -548,6 +588,8 @@ export function RequestsBell() {
                       ? restoreCard(r)
                       : r.type === 'format_proposal'
                       ? formatCard(r)
+                      : r.type === 'guest_claim'
+                      ? claimCard(r)
                       : closedCard(r)}
                   </li>
                 );
