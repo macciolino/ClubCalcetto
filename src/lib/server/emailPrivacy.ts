@@ -64,3 +64,25 @@ export async function profileIdsByEmail(email: string): Promise<string[]> {
   ]);
   return Array.from(new Set([...priv.docs.map((d) => d.id), ...legacy.docs.map((d) => d.id)]));
 }
+
+/**
+ * Emails of the registered members of ONE league ({ profileId: email }), for its managers' screens.
+ * Only cards of that league with an account (no guests, not taken out of the league); the address comes from
+ * private_profiles, or from the profile itself while it has not been moved yet (C2).
+ */
+export async function leagueMemberEmails(leagueId: string): Promise<Record<string, string>> {
+  const db = adminDb();
+  const cards = await db.collection(`leagues/${leagueId}/players`).get();
+  const ids = cards.docs.filter((c) => c.data().is_guest !== true && c.data().userId && !c.data().removed_at).map((c) => c.id);
+  if (!ids.length) return {};
+  const [privates, profiles] = await Promise.all([
+    db.getAll(...ids.map((id) => db.doc(`private_profiles/${id}`))),
+    db.getAll(...ids.map((id) => db.doc(`profiles/${id}`))),
+  ]);
+  const out: Record<string, string> = {};
+  ids.forEach((id, i) => {
+    const email = privates[i].data()?.email || profiles[i].data()?.email;
+    if (typeof email === 'string' && email) out[id] = email;
+  });
+  return out;
+}

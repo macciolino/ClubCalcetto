@@ -8,7 +8,7 @@ import { Match, Profile, StatCategory, sortStatsByCanonicalOrder } from '@/types
 import { FormDots, playedAny } from './FormDots';
 import { RadarChart } from './RadarChart';
 import { Sheet } from './ui/Sheet';
-import { Edit3, Trash2, ShieldCheck, ShieldOff, MoreHorizontal, MessageCircle } from 'lucide-react';
+import { Edit3, Trash2, ShieldCheck, ShieldOff, MoreHorizontal, MessageCircle, UserMinus, UserX } from 'lucide-react';
 import { menu } from '@/components/ui/buttons';
 import { useTranslations } from 'next-intl';
 import { usePlayerLabels } from '@/i18n/usePlayerLabels';
@@ -107,6 +107,8 @@ export function PlayerDetailSheet({
   showEmail = false,
   onToggleAdmin,
   onInvite,
+  onRemoveFromLeague,
+  onDeactivateAccount,
 }: {
   player: Profile;
   categories?: StatCategory[];
@@ -115,7 +117,12 @@ export function PlayerDetailSheet({
   recentMatches?: Match[];
   isAdmin: boolean;
   onEdit?: (player: Profile) => void;
+  /** Managers, guests only: delete the guest's card */
   onDelete?: (player: Profile) => void;
+  /** Managers: take a registered member out of THIS league (the account stays) */
+  onRemoveFromLeague?: (player: Profile) => void;
+  /** Platform super admin only: deactivate the global account */
+  onDeactivateAccount?: (player: Profile) => void;
   onClose: () => void;
   /** Admins see the player's email */
   showEmail?: boolean;
@@ -142,6 +149,8 @@ export function PlayerDetailSheet({
   const canDelete = Boolean(onDelete) && !isSuperAdminProfile(player);
   const canToggleAdmin = Boolean(onToggleAdmin) && !player.is_guest && !isSuperAdminProfile(player);
   const canInvite = Boolean(onInvite) && player.is_guest;
+  const canRemove = Boolean(onRemoveFromLeague) && !player.is_guest && !isSuperAdminProfile(player);
+  const canDeactivate = Boolean(onDeactivateAccount) && !player.is_guest && !isSuperAdminProfile(player);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const radar = (
@@ -267,7 +276,7 @@ export function PlayerDetailSheet({
                 <Edit3 className="h-5 w-5" />
               </button>
             )}
-            {(canDelete || canToggleAdmin || canInvite) && (
+            {(canDelete || canToggleAdmin || canInvite || canRemove || canDeactivate) && (
               <div className="relative">
                 <button
                   type="button"
@@ -321,6 +330,35 @@ export function PlayerDetailSheet({
                         >
                           <Trash2 className="h-4 w-4" /> {t('delete')}
                         </button>
+                      )}
+                      {canRemove && (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            setMenuOpen(false);
+                            onRemoveFromLeague?.(player);
+                          }}
+                          className={menu.danger}
+                        >
+                          <UserMinus className="h-4 w-4" /> {t('removeFromLeague')}
+                        </button>
+                      )}
+                      {canDeactivate && (
+                        <>
+                          <div className={menu.divider} role="separator" />
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                              setMenuOpen(false);
+                              onDeactivateAccount?.(player);
+                            }}
+                            className={menu.danger}
+                          >
+                            <UserX className="h-4 w-4" /> {t('deactivateAccount')}
+                          </button>
+                        </>
                       )}
                     </div>
                   </>

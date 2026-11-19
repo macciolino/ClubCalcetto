@@ -13,6 +13,10 @@ import { useAuth } from '@/lib/context/AuthContext';
 import { Profile, StatCategory, Match, STAT_CANONICAL_ORDER } from '@/types/database';
 import { subscribeProfiles, subscribeStatCategories, subscribeMatches, deleteProfileDoc } from '@/lib/firebase/firestoreService';
 import { leagueAdminRequest } from '@/lib/services/leagueService';
+import { useActiveLeague } from '@/lib/context/ActiveLeagueContext';
+import { canRemoveFromLeague } from '@/lib/utils/leaguePermissions';
+import { SUPER_ADMIN_PROFILE_ID } from '@/lib/superAdmin';
+import type { LeagueMemberPlayer } from '@/types/league';
 import { isFirebaseConfigured, auth as firebaseAuth } from '@/lib/firebase/config';
 import { getStoredPlayers, removeStoredPlayer, updateStoredPlayer, saveStoredPlayers, getPlayerMatchRecord } from '@/lib/services/playerService';
 import { getStoredCategories, saveStoredCategories, DEFAULT_BASE_CATEGORIES } from '@/lib/services/statCategoryService';
@@ -24,7 +28,8 @@ import {
   Plus,
   GitCompare,
   Edit3, 
-  Trash2, 
+  Trash2,
+  UserMinus,
   LayoutGrid,
   Table as TableIcon,
 } from 'lucide-react';
@@ -38,6 +43,7 @@ const DEFAULT_CATEGORIES: StatCategory[] = DEFAULT_BASE_CATEGORIES;
 
 export default function GiocatoriPage() {
   const { user, profile, isAdmin, isSuperAdmin } = useAuth();
+  const { leagueRole } = useActiveLeague();
   const [mounted, setMounted] = useState(false);
   const [players, setPlayers] = useState<Profile[]>([]);
   const [categories, setCategories] = useState<StatCategory[]>(DEFAULT_CATEGORIES);
@@ -135,34 +141,48 @@ export default function GiocatoriPage() {
     setPlayers(getStoredPlayers());
   };
 
-  // Ospiti: un admin cancella la scheda. Account registrati: solo il super admin, eliminazione completa
-  const handleDeletePlayer = async (playerId: string, name: string) => {
-    if (!isStrictAdmin || playerId === 'p-1') return;
-    const target = players.find((p) => p.id === playerId);
-    try {
-      if (target?.is_guest) {
-        if (!(await askConfirm(t('confirmDeleteGuest', { name })))) return;
-        removeStoredPlayer(playerId);
-        setPlayers(getStoredPlayers());
-        await deleteProfileDoc(playerId);
-        return;
-      }
-      if (!isSuperAdmin) {
-        notify(t('onlySuperAdmin'));
-        return;
-      }
-      if (!(await askConfirm(t('confirmDeactivate', { name })))) return;
-      const res = await manageAccountAsSuperAdmin(playerId, 'deactivate');
-      if (!res.ok) {
-        notify(t('failed'));
-        return;
-      }
-      removeStoredPlayer(playerId);
-      setPlayers(getStoredPlayers());
-    } catch (err) {
-      console.error('Delete player error:', err);
-    }
+  // Tre azioni distinte (stessi controlli del server):
+  //  - ospite: un gestore cancella la scheda;
+  //  - membro registrato: un gestore lo toglie SOLO da questa lega (l'account resta, anche nelle altre leghe);
+  //  - account globale: disattivarlo è solo del super admin della piattaforma.
+  const canRemove = (p: Profile) =>
+    Boolean(profile) && canRemoveFromLeague({ id: profile!.id, leagueRole }, p as Profile & Partial<LeagueMemberPlayer>, SUPER_ADMIN_PROFILE_ID);
+  const canDeleteGuest = (p: Profile) => isStrictAdmin && p.is_guest && p.id !== SUPER_ADMIN_PROFILE_ID;
+  const canDeactivateAccount = (p: Profile) => isSuperAdmin && !p.is_guest && p.id !== SUPER_ADMIN_PROFILE_ID;
+
+  const dropFromList = (playerId: string) => {
+    removeStoredPlayer(playerId);
+    setPlayers(getStoredPlayers());
   };
+
+  const handleDeleteGuest = async (p: Profile) => {
+    if (!canDeleteGuest(p) || !(await askConfirm(t('confirmDeleteGuest', { name: p.full_name })))) return;
+    dropFromList(p.id);
+    await deleteProfileDoc(p.id);
+  };
+
+  const handleRemoveFromLeague = async (p: Profile) => {
+    if (!canRemove(p) || !(await askConfirm(t('confirmRemoveFromLeague', { name: p.full_name })))) return;
+    const res = await leagueAdminRequest({ action: 'remove', playerId: p.id });
+    if (res !== 'ok') return notify(t('removeFailed'));
+    dropFromList(p.id);
+    notify(t('removedFromLeague', { name: p.full_name }));
+  };
+
+  const handleDeactivateAccount = async (p: Profile) => {
+    if (!canDeactivateAccount(p) || !(await askConfirm(t('confirmDeactivate', { name: p.full_name })))) return;
+    const res = await manageAccountAsSuperAdmin(p.id, 'deactivate');
+    if (!res.ok) return notify(t('failed'));
+    dropFromList(p.id);
+  };
+
+  /** Table row button: guests are deleted, registered members are taken out of the league. */
+  const rowRemoval = (p: Profile) =>
+    canDeleteGuest(p)
+      ? { label: t('deleteGuest'), run: () => handleDeleteGuest(p), Icon: Trash2 }
+      : canRemove(p)
+        ? { label: t('removeFromLeague'), run: () => handleRemoveFromLeague(p), Icon: UserMinus }
+        : null;
 
   // Super admin: rende admin un giocatore registrato o gli toglie i permessi
   // Ospite: link di invito su WhatsApp (si registra e tiene partite e statistiche)
@@ -680,17 +700,21 @@ ${link}`;
                               >
                                 <Edit3 className="h-4 w-4" />
                               </button>
-                              {(player.is_guest || isSuperAdmin) && player.id !== 'p-1' && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeletePlayer(player.id, player.full_name)}
-                                  className="p-1.5 bg-card-hover text-secondary hover:text-danger hover:bg-rose-500/15 rounded-lg transition-all cursor-pointer"
-                                  title={player.is_guest ? t('deleteGuest') : t('deleteAccount')}
-                                  aria-label={player.is_guest ? t('deleteGuest') : t('deleteAccount')}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
-                              )}
+                              {(() => {
+                                const action = rowRemoval(player);
+                                if (!action) return null;
+                                return (
+                                  <button
+                                    type="button"
+                                    onClick={action.run}
+                                    className="p-1.5 bg-card-hover text-secondary hover:text-danger hover:bg-rose-500/15 rounded-lg transition-all cursor-pointer"
+                                    title={action.label}
+                                    aria-label={`${action.label}: ${player.full_name}`}
+                                  >
+                                    <action.Icon className="h-4 w-4" />
+                                  </button>
+                                );
+                              })()}
                             </div>
                           </td>
                         )}
@@ -725,14 +749,9 @@ ${link}`;
               setDetailId(null);
               handleOpenEditModal(p);
             }}
-            onDelete={
-              dp.is_guest || isSuperAdmin
-                ? (p) => {
-                    setDetailId(null);
-                    handleDeletePlayer(p.id, p.full_name);
-                  }
-                : undefined
-            }
+            onDelete={canDeleteGuest(dp) ? (p) => (setDetailId(null), handleDeleteGuest(p)) : undefined}
+            onRemoveFromLeague={canRemove(dp) ? (p) => (setDetailId(null), handleRemoveFromLeague(p)) : undefined}
+            onDeactivateAccount={canDeactivateAccount(dp) ? (p) => (setDetailId(null), handleDeactivateAccount(p)) : undefined}
           />
         );
       })()}

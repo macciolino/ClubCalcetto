@@ -171,15 +171,15 @@ export function AdminSections({ section }: { section: AdminSection }) {
   }, [activeDate]);
 
   // Se non admin o in caricamento, mostra esclusivamente spinner
-  // Account disattivati (tutti gli admin): elenco in Impostazioni → Admin e account.
+  // Account disattivati (solo il super admin): elenco in Impostazioni → Admin e account.
   // (gli hook devono stare PRIMA del return qui sotto)
   const [deactivatedPlayers, setDeactivatedPlayers] = useState<Profile[]>([]);
   useEffect(() => {
-    if (!(isSuperAdmin || isAdmin) || section !== 'accessi') return;
+    if (!isSuperAdmin || section !== 'accessi') return;
     setDeactivatedPlayers([]);
     const unsub = subscribeProfiles((list) => setDeactivatedPlayers(list.filter((p) => !p.archived_at)), 'deactivated');
     return () => unsub();
-  }, [isSuperAdmin, isAdmin, section]);
+  }, [isSuperAdmin, section]);
 
   if (!isStrictAdmin) {
     return (
@@ -345,11 +345,14 @@ export function AdminSections({ section }: { section: AdminSection }) {
       {section === 'accessi' && (isSuperAdmin || isAdmin) && (
         <>
           <AdminsCard players={players} onToggleRole={handleTogglePlayerRole} />
-          <DeactivatedAccountsList
-            deactivatedPlayers={deactivatedPlayers}
-            onReactivatePlayer={handleReactivatePlayer}
-            onDeleteDeactivatedPlayer={handleDeleteDeactivatedPlayer}
-          />
+          {/* Riattivare o eliminare un account (globale): solo il super admin della piattaforma */}
+          {isSuperAdmin && (
+            <DeactivatedAccountsList
+              deactivatedPlayers={deactivatedPlayers}
+              onReactivatePlayer={handleReactivatePlayer}
+              onDeleteDeactivatedPlayer={handleDeleteDeactivatedPlayer}
+            />
+          )}
           {/* I motivi di chi lascia: solo il super admin */}
           {isSuperAdmin && <EmailPrivacyCard />}
           {isSuperAdmin && <LeagueMigrationCard />}

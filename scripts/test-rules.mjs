@@ -434,7 +434,9 @@ await expectAllowed('player B reads own private doc', () => getDoc(doc(playerB.d
 await expectDenied('player B reads player A private doc', () => getDoc(doc(playerB.db, 'private_profiles', playerA.uid)));
 await expectDenied('player B lists all private emails', () => getDocs(collection(playerB.db, 'private_profiles')));
 await expectDenied('anonymous lists all private emails', () => getDocs(collection(anon.db, 'private_profiles')));
-await expectAllowed('admin lists all private emails', () => getDocs(collection(adminC.db, 'private_profiles')));
+await expectDenied('old global admin lists all private emails (managers get only their league, from the server)', () => getDocs(collection(adminC.db, 'private_profiles')));
+await expectDenied('old global admin reads another player private doc', () => getDoc(doc(adminC.db, 'private_profiles', playerB.uid)));
+await expectAllowed('super admin lists all private emails', () => getDocs(collection(superAdmin.db, 'private_profiles')));
 await expectAllowed('super admin saves own email in p-1 private doc', () =>
   setDoc(doc(superAdmin.db, 'private_profiles', 'p-1'), { email: 'macciolino84@gmail.com', updated_at: 'x' }));
 await expectDenied('impostor (not verified) reads p-1 private doc', () => getDoc(doc(impostor.db, 'private_profiles', 'p-1')));

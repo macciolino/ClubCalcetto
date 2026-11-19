@@ -1,7 +1,8 @@
 import { randomBytes } from 'crypto';
+import { FieldValue } from 'firebase-admin/firestore';
 import { adminDb } from '@/lib/firebase/admin';
 import { DEFAULT_BASE_CATEGORIES } from '@/lib/utils/defaultCategories';
-import { canChangeLeagueRole, leagueSlug } from '@/lib/utils/leaguePermissions';
+import { canChangeLeagueRole, canRemoveFromLeague, leagueSlug } from '@/lib/utils/leaguePermissions';
 import { claimGuest } from '@/lib/server/profileMerge';
 import { inLeague, leagueDb } from '@/lib/server/leagueScope';
 import { SUPER_ADMIN_PROFILE_ID } from '@/lib/superAdmin';
@@ -104,6 +105,9 @@ export async function ensureLeagueCard(leagueId: string, caller: { uid: string; 
       updated_at: now,
     });
     created = true;
+  } else if (card.data()?.removed_at) {
+    // Back in a league they had been taken out of: same card (history, parameters), as a player
+    batch.update(cardRef, { removed_at: FieldValue.delete(), removed_by: FieldValue.delete(), isActivePlayer: true, updated_at: now });
   }
   const role = (card.data()?.leagueRole as LeagueRole) || 'PLAYER';
   batch.set(
@@ -206,3 +210,49 @@ export async function setActivePlayer(leagueId: string, playerId: string, active
   await leagueDb(leagueId).doc(`players/${playerId}`).update({ isActivePlayer: active, updated_at: new Date().toISOString() });
 }
 
+
+// ---------- taking a member out of the league ----------
+
+export type RemoveMemberError = 'not_found' | 'forbidden';
+
+/**
+ * A manager takes a registered member OUT OF THIS LEAGUE (rules in `canRemoveFromLeague`). The global account,
+ * the card's history and the other leagues stay as they are: the card is marked `removed_at` (hidden from the
+ * lists, kept for the archived matches), the membership entry goes away (no more access) and their future
+ * sign-ups in this league are cancelled. Returns the dates whose sign-ups were removed (substitutions re-checked).
+ */
+export async function removeLeagueMember(
+  leagueId: string,
+  playerId: string,
+  by: { profileId: string; leagueRole: LeagueRole }
+): Promise<{ ok: true; dates: string[] } | { ok: false; error: RemoveMemberError }> {
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(playerId)) return { ok: false, error: 'not_found' };
+  const db = adminDb();
+  const L = leagueDb(leagueId);
+  const ref = L.doc(`players/${playerId}`);
+  const snap = await ref.get();
+  if (!snap.exists) return { ok: false, error: 'not_found' };
+  const card = snap.data() || {};
+  const target = {
+    id: playerId,
+    leagueRole: (card.leagueRole as LeagueRole) || 'PLAYER',
+    is_guest: card.is_guest === true,
+    userId: (card.userId as string) || null,
+    removed_at: (card.removed_at as string) || null,
+  };
+  if (!canRemoveFromLeague({ id: by.profileId, leagueRole: by.leagueRole }, target, SUPER_ADMIN_PROFILE_ID)) {
+    return { ok: false, error: target.removed_at || target.is_guest || !target.userId ? 'not_found' : 'forbidden' };
+  }
+
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' });
+  const presences = (await L.collection('presences').where('player_id', '==', playerId).get()).docs.filter(
+    (d) => String(d.data().date || '') >= today
+  );
+  const now = new Date().toISOString();
+  const batch = db.batch();
+  batch.update(ref, { removed_at: now, removed_by: by.profileId, leagueRole: 'PLAYER', role: 'player', isActivePlayer: false, updated_at: now });
+  batch.set(db.doc(`memberships/${target.userId}`), { leagues: { [leagueId]: FieldValue.delete() }, updated_at: now }, { merge: true });
+  presences.forEach((d) => batch.delete(d.ref));
+  await batch.commit();
+  return { ok: true, dates: Array.from(new Set(presences.map((d) => String(d.data().date)))) };
+}

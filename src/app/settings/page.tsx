@@ -88,9 +88,11 @@ function useSummary(
       ),
     ];
     unsubs.push(subscribeProfiles((list: Profile[]) => setAdmins((list || []).filter((p) => p.role === 'admin').length)));
-    unsubs.push(
-      subscribeProfiles((list: Profile[]) => setReturning((list || []).filter((p) => p.restore_requested_at && !p.archived_at).length), 'deactivated')
-    );
+    // Gli account chiusi li riattiva solo il super admin (Admin e account → Account disattivati)
+    if (superAdmin)
+      unsubs.push(
+        subscribeProfiles((list: Profile[]) => setReturning((list || []).filter((p) => p.restore_requested_at && !p.archived_at).length), 'deactivated')
+      );
     return () => unsubs.forEach((u) => u());
   }, [admin, superAdmin]);
 

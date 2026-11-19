@@ -126,9 +126,11 @@ service cloud.firestore {
     }
 
     // ---------- C2: private data of a profile (email) ----------
-    // Read: the player (own) and admins. Write: the player, only their own sign-in email; the server moves the old ones.
+    // Read: the player (own) and the super admin. League managers get ONLY their league members' emails from the
+    // server (/api/league-emails), never this collection: no reading people of other leagues.
+    // Write: the player, only their own sign-in email; the server moves the old ones.
     match /private_profiles/{profileId} {
-      allow read: if isAdmin() || isOwnProfile(profileId);
+      allow read: if isSuperAdmin() || isOwnProfile(profileId);
       allow create, update: if isOwnProfile(profileId)
         && request.resource.data.keys().hasOnly(['email', 'updated_at'])
         && request.auth.token.email is string

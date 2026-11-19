@@ -184,7 +184,7 @@ function MembersCard({ editable }: { editable: boolean }) {
       (snap) => {
         const list = snap.docs
           .map((d) => ({ ...(d.data() as LeagueMemberPlayer), id: d.id }))
-          .filter((p) => p.userId && !p.deactivated_at && !p.archived_at)
+          .filter((p) => p.userId && !p.deactivated_at && !p.archived_at && !p.removed_at)
           .sort((a, b) => ROLES.indexOf(a.leagueRole) - ROLES.indexOf(b.leagueRole) || a.full_name.localeCompare(b.full_name));
         setCards(list);
       },

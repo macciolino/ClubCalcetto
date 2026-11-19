@@ -38,3 +38,22 @@ export function leagueSlug(name: string): string {
     .replace(/^-+|-+$/g, '')
     .slice(0, 48);
 }
+
+/**
+ * Can `by` (a member of the league) take `target` OUT OF THIS LEAGUE? The global account is never touched:
+ * deleting / deactivating an account is only for its owner or the platform super admin.
+ * Managers remove players; only presidents remove collaborators; presidents are demoted first (never removed),
+ * nobody removes themselves (they leave) or the super admin's card; guests are deleted, not removed.
+ */
+export function canRemoveFromLeague(
+  by: { id: string; leagueRole?: LeagueRole | null },
+  target: { id: string; leagueRole?: LeagueRole | null; is_guest?: boolean; userId?: string | null; removed_at?: string | null },
+  superAdminProfileId: string
+): boolean {
+  if (!canManageMatchesAndCash(by.leagueRole)) return false;
+  if (target.is_guest || !target.userId || target.removed_at) return false;
+  if (target.id === by.id || target.id === superAdminProfileId) return false;
+  const role = target.leagueRole || 'PLAYER';
+  if (role === 'PLAYER') return true;
+  return role === 'COLLABORATOR' && by.leagueRole === 'PRESIDENT';
+}

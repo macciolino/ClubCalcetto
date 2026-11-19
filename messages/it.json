@@ -331,12 +331,10 @@
     "quickEdit": "Modifica rapida giocatore",
     "editRatings": "Modifica voti e dettagli",
     "deleteGuest": "Elimina ospite",
-    "deleteAccount": "Elimina account",
     "wonShort": "{n}V",
     "drawnShort": "{n}P",
     "lostShort": "{n}S",
     "confirmDeleteGuest": "Eliminare l'ospite \"{name}\"? Nelle partite già giocate resta il nome.",
-    "onlySuperAdmin": "Solo il super admin può disattivare un account registrato.",
     "confirmDeactivate": "Disattivare l'account di \"{name}\"? Non potrà più entrare e sparirà dalle pagine; scheda, parametri e statistiche restano salvati. Potrai riattivarlo o eliminarlo del tutto da Impostazioni → Admin e account.",
     "failed": "Operazione non riuscita. Riprova.",
     "inviteText": "Ciao {first}! Ti ho aggiunto a Club Soccer, l'app del nostro calcetto. Registrati da questo link: le tue partite e statistiche saranno già tue.",
@@ -344,7 +342,11 @@
     "confirmMakeAdmin": "Rendere admin \"{name}\"? Potrà gestire presenze, squadre, partite e impostazioni del club.",
     "confirmRemoveAdmin": "Togliere i permessi di admin a \"{name}\"? Resterà un giocatore normale.",
     "nowAdmin": "{name} ora è admin.",
-    "noLongerAdmin": "{name} non è più admin."
+    "noLongerAdmin": "{name} non è più admin.",
+    "removeFromLeague": "Togli dalla lega",
+    "confirmRemoveFromLeague": "Togliere \"{name}\" da questa lega? Non potrà più vederla né iscriversi alle partite; le iscrizioni future vengono annullate. Il suo account, le altre leghe e le partite già giocate restano. Potrà rientrare con un link di invito.",
+    "removedFromLeague": "{name} non fa più parte della lega.",
+    "removeFailed": "Non sono riuscito a toglierlo dalla lega. Riprova."
   },
   "playerCard": {
     "superAdmin": "Super Admin",
@@ -372,7 +374,9 @@
     "delete": "Elimina",
     "last5": "Ultime 5",
     "tabSkills": "Abilità",
-    "tabStats": "Statistiche"
+    "tabStats": "Statistiche",
+    "removeFromLeague": "Togli dalla lega",
+    "deactivateAccount": "Disattiva account"
   },
   "playerModal": {
     "editTitle": "Modifica giocatore",

@@ -331,12 +331,10 @@
     "quickEdit": "Quick edit player",
     "editRatings": "Edit ratings and details",
     "deleteGuest": "Delete guest",
-    "deleteAccount": "Delete account",
     "wonShort": "{n}W",
     "drawnShort": "{n}D",
     "lostShort": "{n}L",
     "confirmDeleteGuest": "Delete the guest \"{name}\"? Their name stays in matches already played.",
-    "onlySuperAdmin": "Only the super admin can deactivate a registered account.",
     "confirmDeactivate": "Deactivate the account of \"{name}\"? They won't be able to sign in and will disappear from the pages; profile, ratings and stats stay saved. You can reactivate or fully delete it from Settings → Admins and accounts.",
     "failed": "Something went wrong. Try again.",
     "inviteText": "Hi {first}! I added you to Club Soccer, our five-a-side app. Sign up with this link: your matches and stats will already be yours.",
@@ -344,7 +342,11 @@
     "confirmMakeAdmin": "Make \"{name}\" an admin? They will manage attendance, teams, matches and club settings.",
     "confirmRemoveAdmin": "Remove admin rights from \"{name}\"? They will be a regular player.",
     "nowAdmin": "{name} is now an admin.",
-    "noLongerAdmin": "{name} is no longer an admin."
+    "noLongerAdmin": "{name} is no longer an admin.",
+    "removeFromLeague": "Remove from league",
+    "confirmRemoveFromLeague": "Remove \"{name}\" from this league? They will no longer see it or sign up for matches; future sign-ups are cancelled. Their account, other leagues and past matches stay. They can come back with an invite link.",
+    "removedFromLeague": "{name} is no longer in the league.",
+    "removeFailed": "Could not remove them from the league. Try again."
   },
   "playerCard": {
     "superAdmin": "Super Admin",
@@ -372,7 +374,9 @@
     "delete": "Delete",
     "last5": "Last 5",
     "tabSkills": "Skills",
-    "tabStats": "Stats"
+    "tabStats": "Stats",
+    "removeFromLeague": "Remove from league",
+    "deactivateAccount": "Deactivate account"
   },
   "playerModal": {
     "editTitle": "Edit player",

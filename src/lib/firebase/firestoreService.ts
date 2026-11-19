@@ -1,5 +1,4 @@
 import {
-  collection,
   doc,
   setDoc,
   deleteDoc,
@@ -91,31 +90,6 @@ export async function saveProfileDoc(profile: Profile): Promise<void> {
   } catch (err) {
     console.warn('[Firestore] saveProfileDoc error:', err);
     reportWriteError(err);
-  }
-}
-
-/**
- * C2 — emails of all players (private_profiles), readable only by admins: { profileId: email }.
- * For a player the subscription is simply denied by the rules (callback never called).
- */
-export function subscribeProfileEmails(callback: (emails: Record<string, string>) => void): Unsubscribe | (() => void) {
-  if (!isFirebaseConfigured || typeof window === 'undefined') return () => {};
-  try {
-    return onSnapshot(
-      collection(db, 'private_profiles'),
-      (snapshot) => {
-        const map: Record<string, string> = {};
-        snapshot.forEach((d) => {
-          const email = d.data().email;
-          if (typeof email === 'string' && email) map[d.id] = email;
-        });
-        callback(map);
-      },
-      (err) => console.warn('[Firestore] subscribeProfileEmails warning:', err.message)
-    );
-  } catch (err) {
-    console.warn('[Firestore] subscribeProfileEmails exception:', err);
-    return () => {};
   }
 }
 

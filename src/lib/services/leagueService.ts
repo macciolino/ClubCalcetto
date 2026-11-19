@@ -89,9 +89,16 @@ export async function joinLeagueRequest(code: string, claimPlayerId: string | nu
 
 export type LeagueAdminError = 'bad_request' | 'not_found' | 'guest' | 'last_president' | 'protected' | 'forbidden' | 'suspended' | 'failed';
 
-/** Active league: name / visibility (presidents), member roles (presidents), own "I play too". */
+/**
+ * Active league: name / visibility (presidents), member roles (presidents), own "I play too",
+ * taking a member out of the league (managers; the account is never touched).
+ */
 export async function leagueAdminRequest(
-  body: { action: 'settings'; name?: string; visibility?: LeagueVisibility } | { action: 'role'; playerId: string; role: LeagueRole } | { action: 'playing'; active: boolean }
+  body:
+    | { action: 'settings'; name?: string; visibility?: LeagueVisibility }
+    | { action: 'role'; playerId: string; role: LeagueRole }
+    | { action: 'playing'; active: boolean }
+    | { action: 'remove'; playerId: string }
 ): Promise<'ok' | LeagueAdminError> {
   const { data } = await leagueFetch('/api/league-admin', { method: 'POST', body: JSON.stringify(body) });
   if (data.ok) return 'ok';
@@ -122,4 +129,10 @@ export async function fetchPlatformLeagues(): Promise<PlatformLeague[] | null | 
 export async function setPlatformLeagueStatus(leagueId: string, status: 'active' | 'suspended'): Promise<boolean> {
   const { data } = await leagueFetch('/api/super-admin/leagues', { method: 'POST', body: JSON.stringify({ leagueId, status }) });
   return data.ok === true;
+}
+
+/** C2 — emails of the members of the ACTIVE league only ({ profileId: email }); null = not allowed or failed. */
+export async function fetchLeagueEmails(): Promise<Record<string, string> | null> {
+  const { data } = await leagueFetch('/api/league-emails');
+  return data.ok ? ((data.emails as Record<string, string>) || {}) : null;
 }

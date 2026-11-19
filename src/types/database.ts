@@ -132,6 +132,8 @@ export interface Profile {
   is_guest: boolean;
   /** Account deactivated (login blocked, hidden everywhere, data kept): set only by the server. Empty = active. */
   deactivated_at?: string;
+  /** League card only: the member was taken out of THIS league by a manager (account untouched, history kept). */
+  removed_at?: string;
   /** Logout from every device: sessions started before this time (ms) are closed */
   sessions_revoked_at?: number;
   /** Personal preferences saved from Impostazioni (with name, photo and role, the only fields a player can change) */

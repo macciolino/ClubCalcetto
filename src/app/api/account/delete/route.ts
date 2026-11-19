@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminAuth, adminDb, isAdminConfigured } from '@/lib/firebase/admin';
-import { isLeagueManager, mirrorOnCards, scoped } from '@/lib/server/leagueScope';
+import { mirrorOnCards, scoped } from '@/lib/server/leagueScope';
 import {
   DELETE_REASONS,
   SUPER_ADMIN_EMAIL,
@@ -24,7 +24,7 @@ export const runtime = 'nodejs';
 /**
  * mode: 'deactivate' (data kept, can be reactivated) | 'delete' (everything removed) | 'reactivate' (super admin only)
  * POST { mode, reason, details? }      → the signed-in player deactivates or deletes their OWN account (reason required)
- * POST { mode, targetProfileId }       → an admin deactivates, deletes or reactivates someone else's account (never p-1)
+ * POST { mode, targetProfileId }       → the platform super admin deactivates, deletes or reactivates someone else's account (never p-1)
  * The super admin account (p-1) can never be deleted.
  */
 async function handlePost(request: Request) {
@@ -47,11 +47,10 @@ async function handlePost(request: Request) {
     const mode = body.mode === 'deactivate' || body.mode === 'reactivate' ? body.mode : 'delete';
     const details = String(body.details || '').trim().slice(0, 500);
 
-    // Account di un altro: tutti gli admin (mai il super admin)
+    // Account di un altro (disattivare, eliminare, riattivare l'account GLOBALE): solo il super admin della piattaforma.
+    // I gestori di una lega tolgono un membro solo da quella lega (/api/league-admin, action 'remove').
     if (body.targetProfileId && body.targetProfileId !== caller.uid) {
-      // Multi-league: president / collaborator of the league (or the super admin)
-      const isAdmin = isSuper || (await isLeagueManager(caller.uid));
-      if (!isAdmin) return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
+      if (!isSuper) return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
       if (body.targetProfileId === SUPER_ADMIN_PROFILE_ID) {
         return NextResponse.json({ ok: false, error: 'super_admin' }, { status: 400 });
       }

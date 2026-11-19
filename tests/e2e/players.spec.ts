@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { PLAYERS, db, loginAsAdmin, seedMatchDay } from './seed';
+import { LEAGUE, PLAYERS, db, loginAsAdmin, seedMatchDay, waitForDoc } from './seed';
 
 /** Giocatori: page, player detail and compare, in Italian and in English (positions and stats only change on screen). */
 test.describe('Giocatori in italiano e in inglese', () => {
@@ -16,6 +16,28 @@ test.describe('Giocatori in italiano e in inglese', () => {
     const sheet = page.getByRole('dialog');
     await expect(sheet.getByRole('tab', { name: 'Abilità' })).toBeVisible();
     await expect(sheet.getByText('Ultime 5')).toBeVisible();
+  });
+
+  test('togliere un giocatore dalla lega: azione distinta da "Disattiva account", l’account resta', async ({ page }) => {
+    const p = PLAYERS[1];
+    await loginAsAdmin(page);
+    await page.goto('/players');
+    await page.getByRole('button', { name: new RegExp(`^${p.name}, `) }).click();
+    const sheet = page.getByRole('dialog');
+    await sheet.getByRole('button', { name: 'Altre azioni' }).click();
+    // il super admin vede entrambe, separate: lega e account globale
+    await expect(sheet.getByRole('menuitem', { name: 'Togli dalla lega' })).toBeVisible();
+    await expect(sheet.getByRole('menuitem', { name: 'Disattiva account' })).toBeVisible();
+    await sheet.getByRole('menuitem', { name: 'Togli dalla lega' }).click();
+    await page.getByRole('button', { name: 'Conferma', exact: true }).click();
+    await expect(page.getByText(`${p.name} non fa più parte della lega.`)).toBeVisible();
+
+    await waitForDoc(`${LEAGUE}/players/${p.id}`, (d) => Boolean(d?.removed_at));
+    expect((await db.doc(`memberships/${p.id}`).get()).data()?.leagues?.calcettari).toBeUndefined();
+    expect((await db.doc(`profiles/${p.id}`).get()).data()?.deactivated_at).toBeUndefined();
+    await page.reload();
+    await expect(page.locator(`text=${PLAYERS[0].name} >> visible=true`).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: new RegExp(`^${p.name}, `) })).toHaveCount(0);
   });
 
   test('inglese: filtri, elenco, scheda e confronto tradotti', async ({ page }) => {

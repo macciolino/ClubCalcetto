@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server';
 import { isAdminConfigured } from '@/lib/firebase/admin';
 import { callerFrom } from '@/lib/server/adminRequests';
 import { currentLeague, isLeagueActive, memberCard, scoped } from '@/lib/server/leagueScope';
-import { setActivePlayer, setMemberRole, updateLeagueSettings } from '@/lib/server/leagueMembers';
+import { removeLeagueMember, setActivePlayer, setMemberRole, updateLeagueSettings } from '@/lib/server/leagueMembers';
+import { checkPromotions } from '@/lib/server/presenceWatch';
+import type { LeagueRole } from '@/types/league';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -12,6 +14,7 @@ export const dynamic = 'force-dynamic';
  *  - { action: 'settings', name?, visibility? }  presidents: name and visibility
  *  - { action: 'role', playerId, role }          presidents: PRESIDENT | COLLABORATOR | PLAYER (never without a president)
  *  - { action: 'playing', active }               any member: "Gioco anch'io" on their own card
+ *  - { action: 'remove', playerId }              managers: take a member out of THIS league (never the global account)
  */
 async function handlePost(request: Request) {
   if (!isAdminConfigured()) return NextResponse.json({ ok: false, error: 'not_configured' }, { status: 503 });
@@ -26,6 +29,15 @@ async function handlePost(request: Request) {
 
     if (body.action === 'playing') {
       await setActivePlayer(leagueId, card.playerId, body.active !== false);
+      return NextResponse.json({ ok: true });
+    }
+    if (body.action === 'remove') {
+      const role = (card.data.leagueRole as LeagueRole) || 'PLAYER';
+      if (role === 'PLAYER') return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
+      const res = await removeLeagueMember(leagueId, String(body.playerId || ''), { profileId: card.playerId, leagueRole: role });
+      if (!res.ok) return NextResponse.json({ ok: false, error: res.error }, { status: res.error === 'not_found' ? 404 : 403 });
+      // Their places on future days go to the waiting list (notifications to who moves up)
+      await Promise.all(res.dates.map((d) => checkPromotions(d).catch(() => undefined)));
       return NextResponse.json({ ok: true });
     }
     if (card.data.leagueRole !== 'PRESIDENT') return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
