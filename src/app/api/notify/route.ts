@@ -9,7 +9,6 @@ import { GeneratedTeamRecord } from '@/types/database';
 
 export const runtime = 'nodejs';
 
-import { SUPER_ADMIN_EMAIL } from '@/lib/superAdmin';
 import { isReconcileDate } from '@/lib/utils/reconcileWindow';
 
 
@@ -107,8 +106,8 @@ async function handlePost(request: Request) {
 
     // Chiunque abbia fatto l'accesso può chiedere il controllo sostituzioni (il server decide da solo)
     if (body.type === 'reconcile') {
-      const isSuperCaller = caller.email === SUPER_ADMIN_EMAIL && caller.email_verified === true;
-      if (!isSuperCaller && !(await memberCard(caller.uid))) return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
+      // members of the league only (the super admin too: no bypass in leagues it does not belong to)
+      if (!(await memberCard(caller.uid))) return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
       if (!(await isLeagueActive())) return NextResponse.json({ ok: true, substitutions: 0, skipped: true }); // lega sospesa: niente scritture
       if (!isDate(body.date)) return NextResponse.json({ ok: false, error: 'bad_request' }, { status: 400 });
       // C11: only days that can still change (yesterday … 30 days ahead): any other date costs reads for nothing
@@ -116,9 +115,8 @@ async function handlePost(request: Request) {
       return NextResponse.json({ ok: true, ...(await reconcile(body.date)) });
     }
 
-    // Tutto il resto solo per chi gestisce la lega (presidenti e collaboratori) o il super admin
-    const isSuper = caller.email === SUPER_ADMIN_EMAIL && caller.email_verified === true;
-    if (!isSuper && !(await isLeagueManager(caller.uid))) {
+    // Tutto il resto solo per chi gestisce la lega (presidenti e collaboratori), super admin compreso: nessun bypass
+    if (!(await isLeagueManager(caller.uid))) {
       return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
     }
 

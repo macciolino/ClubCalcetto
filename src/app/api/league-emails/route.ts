@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { adminDb, isAdminConfigured } from '@/lib/firebase/admin';
+import { isAdminConfigured } from '@/lib/firebase/admin';
 import { callerFrom } from '@/lib/server/adminRequests';
 import { leagueMemberEmails } from '@/lib/server/emailPrivacy';
 import { currentLeague, memberCard, scoped } from '@/lib/server/leagueScope';
@@ -9,8 +9,8 @@ export const dynamic = 'force-dynamic';
 
 /**
  * GET → { ok, emails: { profileId: email } } of the members of the ACTIVE league (header x-league-id) only.
- * Allowed to its presidents and collaborators (also while the league is suspended: reading only) and to the
- * platform super admin. Nobody else, and never the emails of people outside that league.
+ * Allowed only to its presidents and collaborators (also while the league is suspended: reading only); the
+ * platform super admin too only where it manages the league. Never the emails of people outside that league.
  */
 async function handleGet(request: Request) {
   if (!isAdminConfigured()) return NextResponse.json({ ok: false, error: 'not_configured' }, { status: 503 });
@@ -19,9 +19,7 @@ async function handleGet(request: Request) {
     if (!caller) return NextResponse.json({ ok: false, error: 'unauthenticated' }, { status: 401 });
     const leagueId = currentLeague();
     let allowed = false;
-    if (caller.isSuper) {
-      allowed = (await adminDb().doc(`leagues/${leagueId}`).get()).exists;
-    } else if (caller.emailVerified) {
+    if (caller.emailVerified) {
       const card = await memberCard(caller.uid, leagueId);
       const role = card?.data.leagueRole;
       allowed = Boolean(card && !card.data.deactivated_at && !card.data.removed_at && (role === 'PRESIDENT' || role === 'COLLABORATOR'));

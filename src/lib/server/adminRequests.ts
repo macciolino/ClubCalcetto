@@ -2,8 +2,7 @@ import { adminAuth } from '@/lib/firebase/admin';
 import { isLeagueManager, leagueDb } from '@/lib/server/leagueScope';
 import { adminProfileIds, sendToProfiles } from '@/lib/server/push';
 
-import { SUPER_ADMIN_EMAIL } from '@/lib/superAdmin';
-export { SUPER_ADMIN_EMAIL };
+import { platformAccount } from '@/lib/server/platformAccount';
 
 /**
  * Requests for the admins (collection `admin_requests`, written ONLY by the server; admins read them in the app).
@@ -64,17 +63,27 @@ export async function callerFrom(request: Request) {
     .verifyIdToken(idToken)
     .catch(() => null);
   if (!decoded) return null;
-  const isSuper = decoded.email === SUPER_ADMIN_EMAIL && decoded.email_verified === true;
-  const profileId = isSuper ? 'p-1' : decoded.uid;
+  // Platform role from the global profile (profiles.platformRole), never from the email
+  const account = await platformAccount(decoded);
   // Google accounts are always verified; email/password accounts after the link in the email
   const emailVerified = decoded.email_verified === true;
-  return { uid: decoded.uid, email: decoded.email || null, isSuper, profileId, emailVerified };
+  return {
+    uid: decoded.uid,
+    email: decoded.email || null,
+    profileId: account.profileId,
+    platformRole: account.platformRole,
+    isSuper: account.isSuper,
+    isPlatformStaff: account.isPlatformStaff,
+    emailVerified,
+  };
 }
 
-/** Caller that manages the current league (president / collaborator) or the super admin; null otherwise. */
+/**
+ * Caller that manages the current league (president / collaborator); null otherwise.
+ * The platform super admin has NO bypass here: in a league it is a manager only if its card says so.
+ */
 export async function adminCaller(request: Request) {
   const caller = await callerFrom(request);
   if (!caller) return null;
-  if (caller.isSuper) return caller;
   return (await isLeagueManager(caller.uid)) ? caller : null;
 }

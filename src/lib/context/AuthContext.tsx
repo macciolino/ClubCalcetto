@@ -111,12 +111,13 @@ export async function requestReturn(email?: string | null): Promise<{ pending: b
   }
 }
 
+/** Which profile document: the uid, or the founder's legacy 'p-1' (identity only: permissions come from platformRole). */
 function profileDocIdFor(fbUser: FirebaseUser): string {
   return isSuperAdminEmail(fbUser.email) ? SUPER_ADMIN_PROFILE_ID : fbUser.uid;
 }
 
-function normalizeRole(rawRole: unknown, email?: string | null): UserRole {
-  if (isSuperAdminEmail(email)) return 'admin';
+/** Legacy global field, kept only as data: it grants nothing (management is per league, platform powers in platformRole). */
+function normalizeRole(rawRole: unknown): UserRole {
   return rawRole === 'admin' ? 'admin' : 'player';
 }
 
@@ -147,7 +148,7 @@ function buildNewProfile(
       fbUser.displayName ||
       (fbUser.email ? fbUser.email.split('@')[0] : 'Giocatore'),
     avatar_url: fbUser.photoURL || null,
-    role: isSuperAdminEmail(fbUser.email) ? 'admin' : 'player',
+    role: 'player',
     position: position || 'Esterno',
     is_guest: false,
     ...(names ? { first_name: names.firstName, last_name: names.lastName } : {}),
@@ -238,7 +239,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         resolved = {
           ...data,
           id: docId,
-          role: normalizeRole(data.role, fbUser.email),
+          role: normalizeRole(data.role),
           position: data.position || 'Esterno',
         };
         updateStoredPlayer(resolved);
@@ -256,7 +257,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Il server può aver cambiato il profilo (ospite collegato, autovalutazione da fare): si rilegge
         if (res?.claimed || isNew) {
           const fresh = await getDoc(docRef);
-          if (fresh.exists()) resolved = { ...(fresh.data() as Profile), id: docId, role: normalizeRole(fresh.data()?.role, fbUser.email) };
+          if (fresh.exists()) resolved = { ...(fresh.data() as Profile), id: docId, role: normalizeRole(fresh.data()?.role) };
           updateStoredPlayer(resolved);
         }
         if (res?.claimed) {
@@ -340,7 +341,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ...profile,
         ...found,
         id: profile.id,
-        role: normalizeRole(found.role, user?.email),
+        role: normalizeRole(found.role),
       };
       setProfile(updated);
       setRoutingCookies(updated);
@@ -524,7 +525,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     updateStoredPlayer(merged);
   };
 
-  const isSuperAdmin = Boolean(user && user.emailVerified && isSuperAdminEmail(user.email));
+  // Platform role from the global profile (written only by the server), never from the email
+  const isSuperAdmin = Boolean(user?.emailVerified && profile?.platformRole === 'SUPER_ADMIN');
   // Management is per league: useAuth() replaces this with the role on the ACTIVE league's card
   const isAdmin = false;
   const authProvider = isFirebaseConfigured ? 'firebase' : 'local';
@@ -595,10 +597,21 @@ export function useAuth() {
       role: manages ? 'admin' : 'player',
     };
   }, [account, member, manages]);
-  // Step 4: platform governance (/super-admin) = platformRole on the GLOBAL profile (server-written) + verified email
-  const isPlatformSuperAdmin = Boolean(context.user?.emailVerified && account?.platformRole === 'SUPER_ADMIN');
+  // Platform roles = platformRole on the GLOBAL profile (server-written) + verified email
+  const verified = Boolean(context.user?.emailVerified);
+  const isPlatformSuperAdmin = verified && account?.platformRole === 'SUPER_ADMIN';
+  /** Super admin or platform admin (GLOBAL_ADMIN): sees the platform console */
+  const isPlatformStaff = isPlatformSuperAdmin || (verified && account?.platformRole === 'GLOBAL_ADMIN');
   return useMemo(
-    () => ({ ...context, profile, isAdmin: Boolean(context.user && manages), isPlatformSuperAdmin, isLoading: isLoading || leagueLoading }),
-    [context, profile, manages, isPlatformSuperAdmin, isLoading, leagueLoading]
+    () => ({
+      ...context,
+      profile,
+      isAdmin: Boolean(context.user && manages),
+      isSuperAdmin: isPlatformSuperAdmin,
+      isPlatformSuperAdmin,
+      isPlatformStaff,
+      isLoading: isLoading || leagueLoading,
+    }),
+    [context, profile, manages, isPlatformSuperAdmin, isPlatformStaff, isLoading, leagueLoading]
   );
 }

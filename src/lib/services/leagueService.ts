@@ -119,7 +119,7 @@ export interface PlatformLeague {
   guests: number;
 }
 
-/** Every league of the platform (platform super admins only); null = failed, 'forbidden' = not a super admin. */
+/** Every league of the platform (super admin and platform admins); null = failed, 'forbidden' = no platform role. */
 export async function fetchPlatformLeagues(): Promise<PlatformLeague[] | null | 'forbidden'> {
   const { status, data } = await leagueFetch('/api/super-admin/leagues');
   if (status === 403) return 'forbidden';
@@ -129,6 +129,29 @@ export async function fetchPlatformLeagues(): Promise<PlatformLeague[] | null | 
 export async function setPlatformLeagueStatus(leagueId: string, status: 'active' | 'suspended'): Promise<boolean> {
   const { data } = await leagueFetch('/api/super-admin/leagues', { method: 'POST', body: JSON.stringify({ leagueId, status }) });
   return data.ok === true;
+}
+
+// ---------- platform admins (GLOBAL_ADMIN), super admin only ----------
+
+export interface PlatformStaff {
+  profileId: string;
+  name: string;
+  platformRole: 'SUPER_ADMIN' | 'GLOBAL_ADMIN';
+}
+
+export async function fetchPlatformStaff(): Promise<PlatformStaff[] | null> {
+  const { data } = await leagueFetch('/api/super-admin/admins');
+  return data.ok && Array.isArray(data.staff) ? (data.staff as PlatformStaff[]) : null;
+}
+
+export type PlatformRoleResult = { ok: true; name: string } | { ok: false; error: 'bad_request' | 'not_found' | 'protected' | 'failed' };
+
+/** Appoints a platform admin by the EXACT email of their account ({ email }), or revokes one ({ profileId } or { email }). */
+export async function setPlatformAdmin(target: { email?: string; profileId?: string }, role: 'GLOBAL_ADMIN' | 'USER'): Promise<PlatformRoleResult> {
+  const { data } = await leagueFetch('/api/super-admin/admins', { method: 'POST', body: JSON.stringify({ ...target, role }) });
+  if (data.ok) return { ok: true, name: String(data.name || target.email || '') };
+  const error = ['bad_request', 'not_found', 'protected'].includes(String(data.error)) ? (data.error as 'bad_request' | 'not_found' | 'protected') : 'failed';
+  return { ok: false, error };
 }
 
 /** C2 — emails of the members of the ACTIVE league only ({ profileId: email }); null = not allowed or failed. */

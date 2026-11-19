@@ -164,12 +164,12 @@ test.describe('Super admin della piattaforma', () => {
     await seedMatchDay();
   });
 
-  test('voce "Super admin" nel menu, elenco delle leghe, sospende e riattiva', async ({ page }) => {
+  test('voce "Console piattaforma" nel menu, elenco delle leghe, sospende e riattiva', async ({ page }) => {
     await loginAsAdmin(page);
     await page.locator('button[aria-controls="user-menu"]').click();
-    await page.getByRole('menuitem', { name: 'Super admin' }).click();
+    await page.getByRole('menuitem', { name: 'Console piattaforma' }).click();
     await expect(page).toHaveURL(/\/super-admin$/);
-    await expect(page.getByRole('heading', { name: 'Console super admin' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Console piattaforma', level: 1 })).toBeVisible();
     const row = page.getByRole('listitem', { name: 'I Calcettari' });
     await expect(row).toContainText('Attiva');
     await expect(row).toContainText('11 membri');
@@ -192,8 +192,38 @@ test.describe('Super admin della piattaforma', () => {
     await loginAsAdmin(page);
     await page.locator('button[aria-controls="user-menu"]').click();
     await expect(page.getByRole('menuitem', { name: 'Impostazioni' })).toBeVisible();
-    await expect(page.getByRole('menuitem', { name: 'Super admin' })).toHaveCount(0);
+    await expect(page.getByRole('menuitem', { name: 'Console piattaforma' })).toHaveCount(0);
+    // il ruolo mostrato è quello della lega (badge sull'avatar), mai "Admin"
+    await expect(page.locator('[title="Presidente"]').first()).toBeAttached();
+    await expect(page.locator('[title="Amministratore"]')).toHaveCount(0);
     await page.goto('/super-admin');
-    await expect(page.getByText('Questa pagina è riservata ai super admin della piattaforma.')).toBeVisible();
+    await expect(page.getByText('Questa pagina è riservata al super admin e agli admin della piattaforma.')).toBeVisible();
+  });
+
+  test('admin della piattaforma: nomina per email esatta, compare nell’elenco, si toglie', async ({ page }) => {
+    await seedAccountWithoutLeague('aiuto@example.com');
+    await loginAsAdmin(page);
+    await page.goto('/super-admin');
+    const card = page.getByRole('region', { name: 'Admin della piattaforma' });
+    await expect(card.getByRole('list', { name: 'Admin della piattaforma' })).toContainText('Super admin');
+    await card.getByLabel("Email dell'account da nominare").fill('nessuno@example.com');
+    await card.getByRole('button', { name: 'Nomina admin piattaforma' }).click();
+    await page.getByRole('button', { name: 'Conferma', exact: true }).click();
+    await expect(page.getByText('Nessun account registrato con questa email.')).toBeVisible();
+
+    await card.getByLabel("Email dell'account da nominare").fill('aiuto@example.com');
+    await card.getByRole('button', { name: 'Nomina admin piattaforma' }).click();
+    await page.getByRole('button', { name: 'Conferma', exact: true }).click();
+    await expect(card.getByRole('list', { name: 'Admin della piattaforma' })).toContainText('Admin piattaforma', { timeout: 15_000 });
+    const roleOf = async () => {
+      const docs = await db.collection('profiles').where('platformRole', '==', 'GLOBAL_ADMIN').get();
+      return docs.size;
+    };
+    expect(await roleOf()).toBe(1);
+
+    await card.getByRole('button', { name: 'Togli' }).click();
+    await page.getByRole('button', { name: 'Conferma', exact: true }).click();
+    await expect.poll(roleOf, { timeout: 15_000 }).toBe(0);
+    await expect(card.getByRole('list', { name: 'Admin della piattaforma' })).not.toContainText('Admin piattaforma');
   });
 });

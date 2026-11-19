@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminAuth, isAdminConfigured } from '@/lib/firebase/admin';
-import { SUPER_ADMIN_EMAIL } from '@/lib/server/accountDeletion';
+import { platformAccount } from '@/lib/server/platformAccount';
 import { migrateProfileEmails } from '@/lib/server/emailPrivacy';
 
 export const runtime = 'nodejs';
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
       .verifyIdToken(idToken)
       .catch(() => null);
     if (!caller) return NextResponse.json({ ok: false, error: 'unauthenticated' }, { status: 401 });
-    if (!(caller.email === SUPER_ADMIN_EMAIL && caller.email_verified === true)) {
+    if (!(await platformAccount(caller)).isSuper) {
       return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
     }
     const body = (await request.json().catch(() => ({}))) as { dryRun?: boolean };

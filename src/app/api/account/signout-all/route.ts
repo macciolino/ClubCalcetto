@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminAuth, adminDb, isAdminConfigured } from '@/lib/firebase/admin';
-import { SUPER_ADMIN_EMAIL, SUPER_ADMIN_PROFILE_ID } from '@/lib/server/accountDeletion';
+import { platformAccount } from '@/lib/server/platformAccount';
 
 export const runtime = 'nodejs';
 
@@ -21,8 +21,7 @@ export async function POST(request: Request) {
       .verifyIdToken(idToken)
       .catch(() => null);
     if (!caller) return NextResponse.json({ ok: false, error: 'unauthenticated' }, { status: 401 });
-    const isSuper = caller.email === SUPER_ADMIN_EMAIL && caller.email_verified === true;
-    const profileId = isSuper ? SUPER_ADMIN_PROFILE_ID : caller.uid;
+    const { profileId } = await platformAccount(caller);
 
     await adminAuth().revokeRefreshTokens(caller.uid);
     const ref = adminDb().doc(`profiles/${profileId}`);

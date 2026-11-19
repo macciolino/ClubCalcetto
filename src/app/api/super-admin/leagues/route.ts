@@ -1,18 +1,19 @@
 import { NextResponse } from 'next/server';
 import { isAdminConfigured } from '@/lib/firebase/admin';
-import { listPlatformLeagues, platformCaller, setLeagueStatus } from '@/lib/server/platformAdmin';
+import { listPlatformLeagues, platformCaller, platformStaffCaller, setLeagueStatus } from '@/lib/server/platformAdmin';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
- * Multi-league step 4, platform super admins only (`platformRole: 'SUPER_ADMIN'`):
- * GET → every league with members, status and creation date; POST { leagueId, status: 'active' | 'suspended' }.
+ * Platform governance:
+ * GET  → every league with members, status and creation date (super admin and platform admins);
+ * POST { leagueId, status: 'active' | 'suspended' } → super admin only.
  */
 export async function GET(request: Request) {
   if (!isAdminConfigured()) return NextResponse.json({ ok: false, error: 'not_configured' }, { status: 503 });
   try {
-    if (!(await platformCaller(request))) return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
+    if (!(await platformStaffCaller(request))) return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
     return NextResponse.json({ ok: true, leagues: await listPlatformLeagues() });
   } catch (err) {
     console.error('[super-admin/leagues] errore:', err instanceof Error ? err.message : err);

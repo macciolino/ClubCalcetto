@@ -1,18 +1,11 @@
 'use client';
 
 import { Skeleton } from '@/components/ui/Skeleton';
-import { notify, askConfirm } from '@/components/ui/Feedback';
 
-import { DeletionFeedbackCard } from '@/components/admin/DeletionFeedbackCard';
-import { EmailPrivacyCard } from '@/components/admin/EmailPrivacyCard';
-import { LeagueMigrationCard } from '@/components/admin/LeagueMigrationCard';
-import { DeactivatedAccountsList } from '@/components/admin/DeactivatedAccountsList';
-import { manageAccountAsSuperAdmin } from '@/lib/services/accountService';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/context/AuthContext';
 import { AppSettings, StatCategory, Profile, Presence, SportField, GeneratedTeamRecord } from '@/types/database';
 import { TabOverviewMatch } from '@/components/admin/TabOverviewMatch';
-import { AdminsCard } from '@/components/admin/AdminsCard';
 import { TabClubConfigFields } from '@/components/admin/TabClubConfigFields';
 import { NotificationSettingsCard } from '@/components/admin/NotificationSettingsCard';
 import {
@@ -26,11 +19,9 @@ import {
   saveStandardCostsDoc,
   subscribeGeneratedTeams,
 } from '@/lib/firebase/firestoreService';
-import { leagueAdminRequest } from '@/lib/services/leagueService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import {
   getStoredPlayers,
-  updateStoredPlayer,
   saveStoredPlayers,
 } from '@/lib/services/playerService';
 import { 
@@ -53,16 +44,14 @@ import {
 } from '@/lib/services/fieldService';
 import { getCalendarDays, toDateString } from '@/lib/utils/dateUtils';
 import { useTranslations } from 'next-intl';
-import { isSuperAdminProfile } from '@/lib/superAdmin';
 
 /** Admin sections shown in Impostazioni (each one was a part of the old /admin page). */
-export type AdminSection = 'partita' | 'campi' | 'regole' | 'parametri' | 'notifiche-club' | 'accessi';
+export type AdminSection = 'partita' | 'campi' | 'regole' | 'parametri' | 'notifiche-club';
 
 export function AdminSections({ section }: { section: AdminSection }) {
-  const { user, profile, isAdmin, isSuperAdmin, isLoading } = useAuth();
+  const { user, profile, isAdmin, isLoading } = useAuth();
   const [mounted, setMounted] = useState(false);
   const t = useTranslations('adminSections');
-  const tm = useTranslations('league.members');
 
   // Stato Dati Globali
   const [upcomingDays] = useState(() => getCalendarDays());
@@ -170,17 +159,7 @@ export function AdminSections({ section }: { section: AdminSection }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeDate]);
 
-  // Se non admin o in caricamento, mostra esclusivamente spinner
-  // Account disattivati (solo il super admin): elenco in Impostazioni → Admin e account.
-  // (gli hook devono stare PRIMA del return qui sotto)
-  const [deactivatedPlayers, setDeactivatedPlayers] = useState<Profile[]>([]);
-  useEffect(() => {
-    if (!isSuperAdmin || section !== 'accessi') return;
-    setDeactivatedPlayers([]);
-    const unsub = subscribeProfiles((list) => setDeactivatedPlayers(list.filter((p) => !p.archived_at)), 'deactivated');
-    return () => unsub();
-  }, [isSuperAdmin, section]);
-
+  // Se non gestore della lega o in caricamento, mostra esclusivamente spinner
   if (!isStrictAdmin) {
     return (
       <div className="space-y-4" role="status" aria-label={t('checking')}>
@@ -214,46 +193,6 @@ export function AdminSections({ section }: { section: AdminSection }) {
       timelock_enabled: enabled,
       timelock_hours_before: hours,
     });
-  };
-
-  // Handlers Tab 3: Anagrafica & Ruoli
-  const handleTogglePlayerRole = async (targetPlayer: Profile) => {
-    if (!isSuperAdmin && !isAdmin) {
-      notify(t('onlyAdmins'));
-      return;
-    }
-    const isMarco = isSuperAdminProfile(targetPlayer);
-    if (isMarco && targetPlayer.role === 'admin') {
-      notify(t('cannotDemoteMain'));
-      return;
-    }
-
-    const nextRole: 'admin' | 'player' = targetPlayer.role === 'admin' ? 'player' : 'admin';
-    const updated: Profile = {
-      ...targetPlayer,
-      role: nextRole,
-      updated_at: new Date().toISOString(),
-    };
-
-    // Multi-league: admin = president of the league; the server keeps at least one president
-    const res = await leagueAdminRequest({ action: 'role', playerId: targetPlayer.id, role: nextRole === 'admin' ? 'PRESIDENT' : 'PLAYER' });
-    if (res !== 'ok') return notify(tm(`errors.${res}`));
-    updateStoredPlayer(updated);
-    setPlayers(getStoredPlayers());
-  };
-
-  const handleReactivatePlayer = async (player: Profile) => {
-    if (!(await askConfirm(t('confirmReactivate', { name: player.full_name })))) return;
-    const res = await manageAccountAsSuperAdmin(player.id, 'reactivate');
-    if (res.ok) setDeactivatedPlayers((prev) => prev.filter((p) => p.id !== player.id));
-    else notify(t('reactivateFailed'));
-  };
-
-  const handleDeleteDeactivatedPlayer = async (player: Profile) => {
-    if (!(await askConfirm(t('confirmDelete', { name: player.full_name })))) return;
-    const res = await manageAccountAsSuperAdmin(player.id, 'delete');
-    if (res.ok) setDeactivatedPlayers((prev) => prev.filter((p) => p.id !== player.id));
-    else notify(t('deleteFailed'));
   };
 
   // Handlers Tab 4: Configurazione Club & Campi
@@ -342,23 +281,6 @@ export function AdminSections({ section }: { section: AdminSection }) {
 
       {section === 'parametri' && <TabClubConfigFields {...configProps} part="params" />}
 
-      {section === 'accessi' && (isSuperAdmin || isAdmin) && (
-        <>
-          <AdminsCard players={players} onToggleRole={handleTogglePlayerRole} />
-          {/* Riattivare o eliminare un account (globale): solo il super admin della piattaforma */}
-          {isSuperAdmin && (
-            <DeactivatedAccountsList
-              deactivatedPlayers={deactivatedPlayers}
-              onReactivatePlayer={handleReactivatePlayer}
-              onDeleteDeactivatedPlayer={handleDeleteDeactivatedPlayer}
-            />
-          )}
-          {/* I motivi di chi lascia: solo il super admin */}
-          {isSuperAdmin && <EmailPrivacyCard />}
-          {isSuperAdmin && <LeagueMigrationCard />}
-          {isSuperAdmin && <DeletionFeedbackCard />}
-        </>
-      )}
 
     </div>
   );

@@ -4,7 +4,8 @@ rules_version = '2';
 // ClubCalcetto - Firestore Security Rules
 // ----------------------------------------------------------------------------
 // Roles
-//  - Super admin : the verified account macciolino84@gmail.com (profile doc 'p-1'), the only global power
+//  - Platform    : profiles.platformRole (written ONLY by the server). SUPER_ADMIN is the only global power in
+//                  these rules; GLOBAL_ADMIN (platform helper) works through the server console, not here.
 //  - League roles: PRESIDENT / COLLABORATOR / PLAYER on leagues/{id}/players (see "Multi-league" below):
 //                  they count ONLY inside their league. There is no global "admin" any more (the old
 //                  profiles.role == 'admin' grants nothing).
@@ -19,10 +20,32 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // The founder's legacy profile 'p-1' (created before Firebase Auth) belongs to the account whose uid is in its
+    // user_id (repaired by the server); the email only helps to locate it, it grants nothing by itself.
+    function legacyProfilePath() {
+      return /databases/$(database)/documents/profiles/p-1;
+    }
+    function ownsLegacyProfile() {
+      return signedIn() && request.auth.token.email_verified == true && exists(legacyProfilePath())
+        && (get(legacyProfilePath()).data.get('user_id', '') == request.auth.uid
+            || request.auth.token.email == 'macciolino84@gmail.com');
+    }
+    // The caller's global account: profiles/{uid}, or the legacy 'p-1'
+    function myAccountPath() {
+      return exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
+        ? /databases/$(database)/documents/profiles/$(request.auth.uid)
+        : legacyProfilePath();
+    }
+    function myPlatformRole() {
+      return exists(/databases/$(database)/documents/profiles/$(request.auth.uid)) || ownsLegacyProfile()
+        ? get(myAccountPath()).data.get('platformRole', 'USER')
+        : 'USER';
+    }
+    // Platform super admin = platformRole SUPER_ADMIN on the caller's own account, with a verified email
     function isSuperAdmin() {
       return signedIn()
-        && request.auth.token.email == 'macciolino84@gmail.com'
-        && request.auth.token.email_verified == true;
+        && request.auth.token.email_verified == true
+        && myPlatformRole() == 'SUPER_ADMIN';
     }
 
     function changedKeys() {
@@ -117,7 +140,7 @@ service cloud.firestore {
     // ---------- in-app bell (profiles/{id}/notifications) ----------
     // Written only by the server (Admin SDK). Each person reads, marks as read and deletes ONLY their own.
     function isOwnProfile(profileId) {
-      return signedIn() && (profileId == request.auth.uid || (profileId == 'p-1' && isSuperAdmin()));
+      return signedIn() && (profileId == request.auth.uid || (profileId == 'p-1' && ownsLegacyProfile()));
     }
     match /profiles/{profileId}/notifications/{notificationId} {
       allow read, delete: if isOwnProfile(profileId);
@@ -153,7 +176,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['uid', 'profile_id', 'platform', 'updated_at'])
         && request.resource.data.uid == request.auth.uid
         && (request.resource.data.profile_id == request.auth.uid
-            || (isSuperAdmin() && request.resource.data.profile_id == 'p-1'))
+            || (request.resource.data.profile_id == 'p-1' && ownsLegacyProfile()))
         && request.resource.data.platform in ['ios', 'android', 'desktop']
         && request.resource.data.updated_at == request.time;
       allow delete: if signedIn() && resource.data.uid == request.auth.uid;
@@ -348,7 +371,7 @@ service cloud.firestore {
       }
       // Managers' notification centre: written only by the server. notify_state / invites: server only (denied).
       match /admin_requests/{id} {
-        allow read: if isLeagueManager(leagueId) || isSuperAdmin();
+        allow read: if isLeagueManager(leagueId);
         allow write: if false;
       }
     }

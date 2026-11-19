@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { adminAuth, adminDb, isAdminConfigured } from '@/lib/firebase/admin';
 import { mirrorOnCards, scoped } from '@/lib/server/leagueScope';
+import { platformAccount } from '@/lib/server/platformAccount';
 import {
   DELETE_REASONS,
-  SUPER_ADMIN_EMAIL,
   SUPER_ADMIN_PROFILE_ID,
   deactivateAccount,
   deleteAccount,
@@ -37,7 +37,8 @@ async function handlePost(request: Request) {
       .verifyIdToken(idToken)
       .catch(() => null);
     if (!caller) return NextResponse.json({ ok: false, error: 'unauthenticated' }, { status: 401 });
-    const isSuper = caller.email === SUPER_ADMIN_EMAIL && caller.email_verified === true;
+    const me = await platformAccount(caller);
+    const isSuper = me.isSuper;
     const body = (await request.json()) as {
       mode?: 'deactivate' | 'delete' | 'reactivate';
       reason?: string;
@@ -62,7 +63,7 @@ async function handlePost(request: Request) {
         if (exists.data()?.restore_requested_at) {
           await adminDb().doc(`profiles/${body.targetProfileId}`).update({ restore_requested_at: FieldValue.delete() });
           await mirrorOnCards(body.targetProfileId, { restore_requested_at: FieldValue.delete() });
-          await closeRequest(`restore_${body.targetProfileId}`, isSuper ? 'p-1' : caller.uid, 'restored').catch(() => undefined);
+          await closeRequest(`restore_${body.targetProfileId}`, me.profileId, 'restored').catch(() => undefined);
         }
         return NextResponse.json({ ok: true });
       }
@@ -72,7 +73,7 @@ async function handlePost(request: Request) {
       if (!exists.data()?.is_guest && !exists.data()?.deactivated_at) {
         await saveDeletionFeedback({
           name: res.name,
-          reason: body.reason || (mode === 'deactivate' ? (isSuper ? 'Disattivato dal super admin' : 'Disattivato da un admin') : isSuper ? 'Eliminato dal super admin' : 'Eliminato da un admin'),
+          reason: body.reason || (mode === 'deactivate' ? 'Disattivato dal super admin' : 'Eliminato dal super admin'),
           details,
           deletedBy: 'super_admin',
           mode,

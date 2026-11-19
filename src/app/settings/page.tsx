@@ -9,6 +9,7 @@ import { ldoc } from '@/lib/league/leagueRefs';
 import { useAuth } from '@/lib/context/AuthContext';
 import { NotificationGuide } from '@/components/NotificationGuide';
 import { AccountSettings } from '@/components/AccountSettings';
+import { PlatformAccountsPanel } from '@/components/admin/PlatformAccountsPanel';
 import { LeaguePanel } from '@/components/league/LeaguePanel';
 import { useActiveLeague } from '@/lib/context/ActiveLeagueContext';
 import { ThemeSetting } from '@/components/settings/ThemeSetting';
@@ -25,7 +26,7 @@ import { btn } from '@/components/ui/buttons';
 import { useTranslations } from 'next-intl';
 import { useLocaleSetting } from '@/i18n/I18nProvider';
 
-type SectionId = 'notifiche' | 'account' | 'lega' | AdminSection;
+type SectionId = 'notifiche' | 'account' | 'lega' | 'accessi' | AdminSection;
 
 interface SectionDef {
   id: SectionId;
@@ -45,7 +46,8 @@ const SECTIONS: SectionDef[] = [
   { id: 'parametri', icon: BarChart3, access: 'admin', group: 'league' },
   { id: 'notifiche-club', icon: Megaphone, access: 'admin', group: 'league' },
   { id: 'partita', icon: Trophy, access: 'admin', group: 'match' },
-  { id: 'accessi', icon: ShieldCheck, access: 'admin', group: 'access' },
+  // Platform super admin only: accounts and platform tools (league roles live in Lega → Membri e ruoli)
+  { id: 'accessi', icon: ShieldCheck, access: 'super', group: 'access' },
 ];
 const GROUPS: SectionDef['group'][] = ['account', 'league', 'match', 'access'];
 
@@ -57,8 +59,7 @@ function useSummary(
 ): { values: Partial<Record<SectionId, string>>; alerts: Partial<Record<SectionId, number>> } {
   const [settings, setSettings] = useState<AppSettings>({});
   const [fields, setFields] = useState<SportField[]>([]);
-  const [admins, setAdmins] = useState<number | null>(null);
-  // Account chiusi che hanno chiesto di rientrare (pallino su "Admin e account")
+  // Account chiusi che hanno chiesto di rientrare (pallino su "Account e piattaforma", solo super admin)
   const [returning, setReturning] = useState(0);
   const [notifyMode, setNotifyMode] = useState<string>('');
   const [officialDate, setOfficialDate] = useState('');
@@ -87,14 +88,14 @@ function useSummary(
         () => undefined
       ),
     ];
-    unsubs.push(subscribeProfiles((list: Profile[]) => setAdmins((list || []).filter((p) => p.role === 'admin').length)));
-    // Gli account chiusi li riattiva solo il super admin (Admin e account → Account disattivati)
-    if (superAdmin)
-      unsubs.push(
-        subscribeProfiles((list: Profile[]) => setReturning((list || []).filter((p) => p.restore_requested_at && !p.archived_at).length), 'deactivated')
-      );
     return () => unsubs.forEach((u) => u());
-  }, [admin, superAdmin]);
+  }, [admin]);
+
+  // Gli account chiusi li riattiva solo il super admin (Account e piattaforma → Account disattivati)
+  useEffect(() => {
+    if (!isFirebaseConfigured || !superAdmin) return;
+    return subscribeProfiles((list: Profile[]) => setReturning((list || []).filter((p) => p.restore_requested_at && !p.archived_at).length), 'deactivated');
+  }, [superAdmin]);
 
   const short = (d?: string) => {
     if (!d) return '';
@@ -114,8 +115,7 @@ function useSummary(
     })}`,
     parametri: t('params', { count: categories.length, state: anyForm ? t('formOn') : t('formOff') }),
     'notifiche-club': notifyMode === 'all' ? t('clubAll') : notifyMode === 'off' ? t('clubOff') : notifyMode ? t('clubAdmins') : '',
-    accessi:
-      admins === null ? '' : `${t('admins', { count: admins })}${returning ? ` · ${t('returning', { count: returning })}` : ''}`,
+    accessi: returning ? t('returning', { count: returning }) : '',
   };
   return { values, alerts: { accessi: returning } };
 }
@@ -243,6 +243,8 @@ function SettingsContent() {
               <AccountSettings />
             ) : current.id === 'lega' ? (
               <LeaguePanel />
+            ) : current.id === 'accessi' ? (
+              <PlatformAccountsPanel />
             ) : (
               <AdminSections section={current.id} />
             )}

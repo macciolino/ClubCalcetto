@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminAuth, adminDb, isAdminConfigured } from '@/lib/firebase/admin';
-import { SUPER_ADMIN_EMAIL } from '@/lib/server/accountDeletion';
+import { platformAccount } from '@/lib/server/platformAccount';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -15,7 +15,7 @@ export async function GET(request: Request) {
       .verifyIdToken(idToken)
       .catch(() => null);
     if (!caller) return NextResponse.json({ ok: false, error: 'unauthenticated' }, { status: 401 });
-    if (!(caller.email === SUPER_ADMIN_EMAIL && caller.email_verified === true)) {
+    if (!(await platformAccount(caller)).isSuper) {
       return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
     }
     const snap = await adminDb().collection('account_feedback').orderBy('at', 'desc').limit(100).get();

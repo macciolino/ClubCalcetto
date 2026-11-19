@@ -10,15 +10,17 @@ import { askConfirm, notify } from '@/components/ui/Feedback';
 import { btnInline, textLink } from '@/components/ui/buttons';
 import { PageSkeleton } from '@/components/ui/Skeleton';
 import { fetchPlatformLeagues, setPlatformLeagueStatus, type PlatformLeague } from '@/lib/services/leagueService';
+import { PlatformAdminsCard } from '@/components/platform/PlatformAdminsCard';
 
 /**
- * Multi-league step 4 — platform governance, only for `platformRole: 'SUPER_ADMIN'` (menu → "Super admin").
- * Every league with members, status and creation date; suspend (read-only for everyone) or re-activate.
- * The super admin does not enter other people's leagues from here.
+ * Platform console (menu → "Console piattaforma"), for platform roles only:
+ *  - SUPER_ADMIN: every league (suspend / re-activate) and the platform admins (appoint / revoke);
+ *  - GLOBAL_ADMIN: reads the leagues and their numbers, no destructive action.
+ * Nobody enters other people's leagues from here.
  */
 export default function SuperAdminPage() {
   const t = useTranslations('superAdmin');
-  const { isPlatformSuperAdmin, isLoading } = useAuth();
+  const { isPlatformSuperAdmin, isPlatformStaff, isLoading } = useAuth();
   const { locale } = useLocaleSetting();
   const [leagues, setLeagues] = useState<PlatformLeague[] | null | 'forbidden' | 'loading'>('loading');
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -29,16 +31,16 @@ export default function SuperAdminPage() {
   }, []);
 
   useEffect(() => {
-    if (isLoading || !isPlatformSuperAdmin) return;
+    if (isLoading || !isPlatformStaff) return;
     let alive = true;
     fetchPlatformLeagues().then((res) => alive && setLeagues(res));
     return () => {
       alive = false;
     };
-  }, [isLoading, isPlatformSuperAdmin]);
+  }, [isLoading, isPlatformStaff]);
 
   const change = async (l: PlatformLeague) => {
-    if (busy.current) return;
+    if (busy.current || !isPlatformSuperAdmin) return;
     const next = l.status === 'active' ? 'suspended' : 'active';
     if (!(await askConfirm(next === 'suspended' ? t('confirmSuspend', { name: l.name }) : t('confirmActivate', { name: l.name })))) return;
     busy.current = true;
@@ -55,7 +57,7 @@ export default function SuperAdminPage() {
     iso ? new Date(iso).toLocaleDateString(locale === 'en' ? 'en-GB' : 'it-IT', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 
   if (isLoading) return <PageSkeleton />;
-  if (!isPlatformSuperAdmin || leagues === 'forbidden') {
+  if (!isPlatformStaff || leagues === 'forbidden') {
     return (
       <div className="max-w-md mx-auto bg-card rounded-2xl p-6 text-center space-y-3">
         <p className="text-sm text-secondary">{t('forbidden')}</p>
@@ -72,8 +74,10 @@ export default function SuperAdminPage() {
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-primary flex items-center gap-2">
           <ShieldCheck className="h-7 w-7 text-warning" aria-hidden="true" /> {t('title')}
         </h1>
-        <p className="text-sm text-secondary max-w-2xl">{t('subtitle')}</p>
+        <p className="text-sm text-secondary max-w-2xl">{isPlatformSuperAdmin ? t('subtitle') : t('subtitleStaff')}</p>
       </header>
+
+      {isPlatformSuperAdmin && <PlatformAdminsCard />}
 
       {leagues === 'loading' && (
         <p className="text-sm text-secondary flex items-center gap-2">
@@ -105,6 +109,7 @@ export default function SuperAdminPage() {
                     {t('members', { count: l.members })} · {t('guests', { count: l.guests })} · {t('created', { date: date(l.createdAt) })}
                   </p>
                 </div>
+                {isPlatformSuperAdmin && (
                 <button
                   type="button"
                   onClick={() => change(l)}
@@ -120,6 +125,7 @@ export default function SuperAdminPage() {
                   )}
                   {l.status === 'active' ? t('suspend') : t('activate')}
                 </button>
+                )}
               </li>
             ))}
           </ul>

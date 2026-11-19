@@ -28,8 +28,9 @@ import { LeagueSwitcher } from '@/components/league/LeagueSwitcher';
 export function Navbar() {
   const pathname = usePathname();
   const t = useTranslations('nav');
-  const { user, profile, isAdmin, isPlatformSuperAdmin, signOut } = useAuth();
-  const { isSuspended } = useActiveLeague();
+  const { user, profile, isAdmin, isPlatformStaff, signOut } = useAuth();
+  const { isSuspended, leagueRole } = useActiveLeague();
+  const tRole = useTranslations('league.roles');
   const ts = useTranslations('superAdmin');
 
   // Rinnova la registrazione per le notifiche a ogni avvio (i telefoni cambiano il codice ogni tanto)
@@ -67,10 +68,8 @@ export function Navbar() {
     return null;
   }
 
-  // Condizionale Rigido nella UI (Navbar e Menu):
-  // Il link o tab che porta a /admin viene renderizzato ESCLUSIVAMENTE se user && (profile.role === 'admin' || isAdmin).
-  // Per chiunque altro (role === 'player' o non profilato) il link non esiste affatto nel DOM.
-  const isStrictAdmin = Boolean(mounted && user && (profile?.role === 'admin' || isAdmin));
+  // Strumenti di gestione: solo per presidenti e collaboratori della lega ATTIVA (per chiunque altro non esistono nel DOM)
+  const isStrictAdmin = Boolean(mounted && user && isAdmin);
 
   const navItems = [
     { href: '/', label: t('home'), icon: Home },
@@ -83,7 +82,8 @@ export function Navbar() {
   ];
 
   const displayName = mounted && profile?.full_name ? profile.full_name : t('guest');
-  const roleLabel = isStrictAdmin ? t('admin') : t('player');
+  // Il ruolo nella lega attiva (Presidente / Collaboratore / Giocatore): mai "Admin", che è solo della piattaforma
+  const roleLabel = mounted && leagueRole ? tRole(leagueRole) : t('player');
   const showAdminBadge = isStrictAdmin;
   const avatarChar = mounted && profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : 'U';
   const avatarUrl = mounted ? profile?.avatar_url : null;
@@ -140,7 +140,7 @@ export function Navbar() {
                   {showAdminBadge && (
                     <span
                       className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-black text-on-accent ring-2 ring-app"
-                      title={t('administrator')}
+                      title={leagueRole ? tRole(leagueRole) : undefined}
                     >
                       ★
                     </span>
@@ -183,12 +183,12 @@ export function Navbar() {
                   >
                     <Settings className="h-4 w-4 text-accent-text" /> {t('settings')}
                   </Link>
-                  {/* Step 4: platform governance, separated from the personal items */}
-                  {isPlatformSuperAdmin && (
+                  {/* Platform console (super admin and platform admins), separated from the personal items */}
+                  {isPlatformStaff && (
                     <>
                       <div className={menu.divider} />
                       <Link href="/super-admin" role="menuitem" onClick={() => setMenuOpen(false)} className={menu.item}>
-                        <ShieldCheck className="h-4 w-4 text-warning" /> {t('superAdmin')}
+                        <ShieldCheck className="h-4 w-4 text-warning" /> {t('platformConsole')}
                       </Link>
                     </>
                   )}

@@ -50,6 +50,7 @@ export default function GiocatoriPage() {
   const { forms } = useForms();
   const t = useTranslations('players');
   const tm = useTranslations('league.members');
+  const tRole = useTranslations('league.roles');
   const labels = usePlayerLabels();
   // Statistiche delle card (tab "Statistiche"): dalle partite archiviate, come Storico e Profilo
   const [completedMatches, setCompletedMatches] = useState<Match[]>([]);
@@ -210,21 +211,21 @@ ${link}`;
     }
   };
 
-  const handleToggleAdmin = async (p: Profile) => {
-    if (!isClientAdmin || p.is_guest || p.id === 'p-1') return;
-    const next: 'admin' | 'player' = p.role === 'admin' ? 'player' : 'admin';
-    const msg =
-      next === 'admin'
-        ? t('confirmMakeAdmin', { name: p.full_name })
-        : t('confirmRemoveAdmin', { name: p.full_name });
+  // Ruoli di lega: solo il presidente (come il server). Da qui: nomina presidente / torna giocatore;
+  // collaboratori e tutti i ruoli anche da Impostazioni → Lega → Membri e ruoli.
+  const isPresident = leagueRole === 'PRESIDENT';
+  const roleOf = (p: Profile) => (p as Profile & Partial<LeagueMemberPlayer>).leagueRole || 'PLAYER';
+  const handleToggleRole = async (p: Profile) => {
+    if (!isPresident || p.is_guest || p.id === SUPER_ADMIN_PROFILE_ID) return;
+    const next = roleOf(p) === 'PLAYER' ? 'PRESIDENT' : 'PLAYER';
+    const msg = next === 'PRESIDENT' ? t('confirmMakePresident', { name: p.full_name }) : t('confirmMakePlayer', { name: p.full_name });
     if (!(await askConfirm(msg))) return;
-    const updated: Profile = { ...p, role: next, updated_at: new Date().toISOString() };
-    // Multi-league: admin = president of the league; the server keeps at least one president
-    const res = await leagueAdminRequest({ action: 'role', playerId: p.id, role: next === 'admin' ? 'PRESIDENT' : 'PLAYER' });
+    const res = await leagueAdminRequest({ action: 'role', playerId: p.id, role: next });
     if (res !== 'ok') return notify(tm(`errors.${res}`));
+    const updated = { ...p, leagueRole: next, role: next === 'PLAYER' ? 'player' : 'admin', updated_at: new Date().toISOString() } as Profile;
     updateStoredPlayer(updated);
     setPlayers(getStoredPlayers());
-    notify(next === 'admin' ? t('nowAdmin', { name: p.full_name }) : t('noLongerAdmin', { name: p.full_name }));
+    notify(next === 'PRESIDENT' ? t('nowPresident', { name: p.full_name }) : t('nowPlayer', { name: p.full_name }));
   };
 
   // Filtraggio e ordinamento (card: pulsanti in alto; tabella: intestazioni cliccabili)
@@ -598,10 +599,11 @@ ${link}`;
                                   {initialsOf(player.full_name)}
                                 </div>
                               )}
-                              {player.role === 'admin' && (
+                              {roleOf(player) !== 'PLAYER' && (
                                 <span
                                   className="absolute -bottom-1 -right-1 bg-amber-500 text-on-accent text-[8px] font-bold rounded-full h-3.5 w-3.5 flex items-center justify-center ring-1 ring-app"
-                                  title={t('admin')}
+                                  title={tRole(roleOf(player))}
+                                  aria-label={tRole(roleOf(player))}
                                 >
                                   ★
                                 </span>
@@ -742,7 +744,7 @@ ${link}`;
             recentMatches={recentMatches}
             isAdmin={isClientAdmin}
             showEmail={isClientAdmin}
-            onToggleAdmin={isClientAdmin ? handleToggleAdmin : undefined}
+            onToggleRole={isPresident ? handleToggleRole : undefined}
             onInvite={isClientAdmin ? handleInviteGuest : undefined}
             onClose={() => setDetailId(null)}
             onEdit={(p) => {

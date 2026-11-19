@@ -10,6 +10,7 @@ import { takeReturnPath } from '@/lib/utils/returnPath';
 import { GoogleAuthProvider, sendPasswordResetEmail } from 'firebase/auth';
 import { auth as firebaseAuth } from '@/lib/firebase/config';
 import { useAuth, savePendingInvite, takePendingInvite, afterRegistration, requestReturn } from '@/lib/context/AuthContext';
+import { useActiveLeague } from '@/lib/context/ActiveLeagueContext';
 import { notify } from '@/components/ui/Feedback';
 import { btn } from '@/components/ui/buttons';
 import { FIELD_POSITIONS, FieldPosition } from '@/types/database';
@@ -47,6 +48,8 @@ export default function LoginPage() {
     refreshProfile,
   } = useAuth();
   const t = useTranslations('login');
+  const tRole = useTranslations('league.roles');
+  const { leagueRole: myLeagueRole } = useActiveLeague();
   const { locale } = useLocaleSetting();
   const labels = usePlayerLabels();
   // Link di invito per un ospite (/login?invite=…): nome dell'ospite per il banner
@@ -538,7 +541,7 @@ export default function LoginPage() {
               <div className="min-w-0">
                 <p className="text-base font-semibold text-primary truncate">{profile.full_name}</p>
                 <p className="text-xs text-secondary">
-                  {isStrictAdmin ? t('admin') : t('player')}
+                  {myLeagueRole ? tRole(myLeagueRole) : t('player')}
                   {profile.position ? ` · ${labels.position(profile.position)}` : ''}
                 </p>
               </div>

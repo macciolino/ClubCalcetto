@@ -138,9 +138,11 @@ await joinLeague(playerB, playerB.uid, 'PLAYER', 'calcettari', { matches_won: 5 
 await joinLeague(newbie, newbie.uid, 'PLAYER');
 await ownerSet('leagues/calcettari/players/guest-1', card('guest-1', null, 'PLAYER', { is_guest: true, user_id: null }));
 // ---------- setup (by the super admin) ----------
+// The founder's legacy profile p-1 with the platform role, as the migration leaves it (server-written)
+await ownerSet('profiles/p-1', baseProfile('p-1', { role: 'admin', user_id: superAdmin.uid, platformRole: 'SUPER_ADMIN' }));
 console.log('\nSetup');
-await expectAllowed('super admin creates its own profile p-1', () =>
-  setDoc(doc(superAdmin.db, 'profiles', 'p-1'), baseProfile('p-1', { role: 'admin' })));
+await expectAllowed('super admin (platformRole on p-1) edits its own profile p-1', () =>
+  setDoc(doc(superAdmin.db, 'profiles', 'p-1'), { full_name: 'Marco' }, { merge: true }));
 await expectAllowed('super admin creates an admin profile', () =>
   setDoc(doc(superAdmin.db, 'profiles', adminC.uid), baseProfile(adminC.uid, { role: 'admin' })));
 await expectAllowed('super admin creates a legacy "user" profile for player B', () =>
@@ -470,6 +472,23 @@ await expectDenied('super admin writes a league it is not in', () =>
   setDoc(doc(superAdmin.db, 'leagues', 'other', 'matches', '2026-01-02'), { status: 'completed' }));
 await expectDenied('impostor (not verified) reads a league', () => getDoc(doc(impostor.db, 'leagues', 'calcettari')));
 await expectDenied('anyone creates a league from the app', () => setDoc(doc(adminC.db, 'leagues', 'new'), { name: 'x' }));
+
+console.log('\nPlatform roles come from profiles.platformRole, never from the email');
+{
+  const helper = await client({ google: { sub: 'helper', email: 'helper@example.com' } });
+  await ownerSet(`profiles/${helper.uid}`, baseProfile(helper.uid, { platformRole: 'GLOBAL_ADMIN' }));
+  await expectDenied('GLOBAL_ADMIN has no super admin power in the rules (emails)', () => getDocs(collection(helper.db, 'private_profiles')));
+  await expectDenied('GLOBAL_ADMIN reads a league it is not in', () => getDoc(doc(helper.db, 'leagues', 'calcettari')));
+  await expectDenied('GLOBAL_ADMIN gives itself SUPER_ADMIN', () =>
+    setDoc(doc(helper.db, 'profiles', helper.uid), { platformRole: 'SUPER_ADMIN' }, { merge: true }));
+  const boss2 = await client({ google: { sub: 'boss-2', email: 'boss2@example.com' } });
+  await ownerSet(`profiles/${boss2.uid}`, baseProfile(boss2.uid, { platformRole: 'SUPER_ADMIN' }));
+  await expectAllowed('another account with platformRole SUPER_ADMIN is super admin (no email needed)', () =>
+    getDocs(collection(boss2.db, 'private_profiles')));
+  await ownerSet('profiles/p-1', baseProfile('p-1', { role: 'admin', user_id: superAdmin.uid, platformRole: 'USER' }));
+  await expectDenied('founder with platformRole USER on p-1: no super admin power', () => getDocs(collection(superAdmin.db, 'private_profiles')));
+  await ownerSet('profiles/p-1', baseProfile('p-1', { role: 'admin', user_id: superAdmin.uid, platformRole: 'SUPER_ADMIN' }));
+}
 
 console.log('\nPlayer cards');
 await expectAllowed('player B renames own card', () => updateDoc(LC(playerB, 'players', playerB.uid), { full_name: 'B nuovo', updated_at: 'y' }));

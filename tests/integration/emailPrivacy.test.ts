@@ -63,7 +63,7 @@ describe('Spostamento delle email (C2)', () => {
     expect((await call(emailPrivacy, { dryRun: false }, player.token)).status).toBe(403);
     expect((await call(emailPrivacy, {})).status).toBe(401);
 
-    const sup = await makeUser('super', { role: 'admin' }, { email: 'macciolino84@gmail.com' });
+    const sup = await makeUser('super', { role: 'admin', platformRole: 'SUPER_ADMIN' }, { email: 'macciolino84@gmail.com' });
     const dry = await call(emailPrivacy, {}, sup.token);
     expect(dry.data).toMatchObject({ ok: true, dryRun: true });
     expect((await profile('p1'))?.email).toBe('p1@example.com');

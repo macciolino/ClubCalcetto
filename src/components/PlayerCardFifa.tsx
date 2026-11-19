@@ -105,7 +105,7 @@ export function PlayerDetailSheet({
   onDelete,
   onClose,
   showEmail = false,
-  onToggleAdmin,
+  onToggleRole,
   onInvite,
   onRemoveFromLeague,
   onDeactivateAccount,
@@ -126,8 +126,8 @@ export function PlayerDetailSheet({
   onClose: () => void;
   /** Admins see the player's email */
   showEmail?: boolean;
-  /** Super admin: make / remove admin */
-  onToggleAdmin?: (player: Profile) => void;
+  /** League presidents only: make president / back to player */
+  onToggleRole?: (player: Profile) => void;
   /** Admins, guests only: invite link on WhatsApp (the guest registers and keeps matches and stats) */
   onInvite?: (player: Profile) => void;
 }) {
@@ -147,7 +147,8 @@ export function PlayerDetailSheet({
   if (form !== 0) Object.keys(displayStats).forEach((k) => (displayStats[k] = clamp(Number(displayStats[k]) + form)));
   const ovr = ovrDisplay(player.overall_rating, form);
   const canDelete = Boolean(onDelete) && !isSuperAdminProfile(player);
-  const canToggleAdmin = Boolean(onToggleAdmin) && !player.is_guest && !isSuperAdminProfile(player);
+  const canToggleRole = Boolean(onToggleRole) && !player.is_guest && !isSuperAdminProfile(player);
+  const isManagerCard = ((player as Profile & { leagueRole?: string }).leagueRole || 'PLAYER') !== 'PLAYER';
   const canInvite = Boolean(onInvite) && player.is_guest;
   const canRemove = Boolean(onRemoveFromLeague) && !player.is_guest && !isSuperAdminProfile(player);
   const canDeactivate = Boolean(onDeactivateAccount) && !player.is_guest && !isSuperAdminProfile(player);
@@ -263,7 +264,7 @@ export function PlayerDetailSheet({
         </span>
       }
       headerActions={
-        isAdmin && (onEdit || canDelete || canToggleAdmin || canInvite) ? (
+        isAdmin && (onEdit || canDelete || canToggleRole || canInvite || canRemove || canDeactivate) ? (
           <>
             {onEdit && (
               <button
@@ -276,7 +277,7 @@ export function PlayerDetailSheet({
                 <Edit3 className="h-5 w-5" />
               </button>
             )}
-            {(canDelete || canToggleAdmin || canInvite || canRemove || canDeactivate) && (
+            {(canDelete || canToggleRole || canInvite || canRemove || canDeactivate) && (
               <div className="relative">
                 <button
                   type="button"
@@ -304,18 +305,18 @@ export function PlayerDetailSheet({
                           <MessageCircle className="h-4 w-4 text-accent-text" /> {t('inviteWhatsapp')}
                         </button>
                       )}
-                      {canToggleAdmin && (
+                      {canToggleRole && (
                         <button
                           type="button"
                           role="menuitem"
                           onClick={() => {
                             setMenuOpen(false);
-                            onToggleAdmin?.(player);
+                            onToggleRole?.(player);
                           }}
                           className={menu.item}
                         >
-                          {player.role === 'admin' ? <ShieldOff className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
-                          {player.role === 'admin' ? t('removeAdmin') : t('makeAdmin')}
+                          {isManagerCard ? <ShieldOff className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
+                          {isManagerCard ? t('makePlayer') : t('makePresident')}
                         </button>
                       )}
                       {canDelete && (

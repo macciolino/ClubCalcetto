@@ -127,7 +127,7 @@ export interface Profile {
   avatar_url: string | null;
   role: UserRole; // 'admin' | 'player'
   /** Multi-league: platform governance ('SUPER_ADMIN'); missing = 'USER'. Set only by the server. */
-  platformRole?: 'SUPER_ADMIN' | 'USER';
+  platformRole?: 'SUPER_ADMIN' | 'GLOBAL_ADMIN' | 'USER';
   position?: FieldPosition; // 'Portiere' | 'Difensore' | 'Esterno' | 'Punta'
   is_guest: boolean;
   /** Account deactivated (login blocked, hidden everywhere, data kept): set only by the server. Empty = active. */

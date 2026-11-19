@@ -46,7 +46,7 @@ describe('Account globale di un altro: solo il super admin', () => {
     expect((await call(accountDelete, { targetProfileId: 'victim', mode: 'deactivate' }, pres.token)).status).toBe(403);
     expect((await db().doc('profiles/victim').get()).data()?.deactivated_at).toBeUndefined();
 
-    const sup = await makeUser('super', { role: 'admin' }, { email: 'macciolino84@gmail.com' });
+    const sup = await makeUser('super', { role: 'admin', platformRole: 'SUPER_ADMIN' }, { email: 'macciolino84@gmail.com' });
     expect((await call(accountDelete, { targetProfileId: 'victim', mode: 'deactivate' }, sup.token)).data.ok).toBe(true);
     expect((await db().doc('profiles/victim').get()).data()?.deactivated_at).toBeTruthy();
   });

@@ -6,7 +6,7 @@ import type { MatchFormat, Profile } from './database';
  */
 
 /** Platform level, on `profiles/{id}.platformRole` (missing = 'USER'). Super admins govern the app, they are NOT members of every league. */
-export type PlatformRole = 'SUPER_ADMIN' | 'USER';
+export type PlatformRole = 'SUPER_ADMIN' | 'GLOBAL_ADMIN' | 'USER';
 
 /** Role inside one league. Several PRESIDENTs are allowed; a league always keeps at least one. */
 export type LeagueRole = 'PRESIDENT' | 'COLLABORATOR' | 'PLAYER';

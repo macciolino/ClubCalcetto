@@ -40,6 +40,27 @@ test.describe('Giocatori in italiano e in inglese', () => {
     await expect(page.getByRole('button', { name: new RegExp(`^${p.name}, `) })).toHaveCount(0);
   });
 
+  test('ruoli di lega dalla scheda: il presidente nomina, il collaboratore non vede il pulsante', async ({ page }) => {
+    const p = PLAYERS[2];
+    await loginAsAdmin(page);
+    await page.goto('/players');
+    await page.getByRole('button', { name: new RegExp(`^${p.name}, `) }).click();
+    let sheet = page.getByRole('dialog');
+    await sheet.getByRole('button', { name: 'Altre azioni' }).click();
+    await expect(sheet.getByRole('menuitem', { name: 'Nomina presidente' })).toBeVisible();
+    await expect(sheet.getByRole('menuitem', { name: /admin/i })).toHaveCount(0);
+    await page.keyboard.press('Escape');
+
+    // lo stesso account da collaboratore: niente azioni sui ruoli (le fa solo il presidente)
+    await db.doc(`${LEAGUE}/players/p-1`).update({ leagueRole: 'COLLABORATOR' });
+    await page.reload();
+    await page.getByRole('button', { name: new RegExp(`^${p.name}, `) }).click();
+    sheet = page.getByRole('dialog');
+    await sheet.getByRole('button', { name: 'Altre azioni' }).click();
+    await expect(sheet.getByRole('menuitem', { name: 'Togli dalla lega' })).toBeVisible();
+    await expect(sheet.getByRole('menuitem', { name: 'Nomina presidente' })).toHaveCount(0);
+  });
+
   test('inglese: filtri, elenco, scheda e confronto tradotti', async ({ page }) => {
     await db.doc('profiles/p-1').update({ locale: 'en' });
     await loginAsAdmin(page);

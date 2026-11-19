@@ -38,8 +38,10 @@ test.describe('Impostazioni in inglese', () => {
     await expect(page.getByText('Default', { exact: true })).toBeVisible();
 
     await page.goto('/settings?sezione=accessi');
-    await expect(page.getByRole('heading', { name: 'Admins', exact: true })).toBeVisible();
+    // super admin only: platform tools, no league roles here (they live in League → Members and roles)
+    await expect(page.getByRole('heading', { name: 'Accounts and platform' })).toBeVisible();
     await expect(page.getByText('No deactivated accounts.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Admins', exact: true })).toHaveCount(0);
   });
 
   test('account e finestra di conferma tradotti', async ({ page }) => {

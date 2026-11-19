@@ -7,6 +7,7 @@ import { getStatValue, computeMatchStats, EMPTY_MATCH_STATS } from '@/lib/utils/
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/context/AuthContext';
+import { useActiveLeague } from '@/lib/context/ActiveLeagueContext';
 import { FieldPosition, FIELD_POSITIONS, sortStatsByCanonicalOrder } from '@/types/database';
 import { RadarChart } from '@/components/RadarChart';
 import { StatBadge } from '@/components/StatBadge';
@@ -36,6 +37,8 @@ export default function ProfiloPage() {
   const { user, profile, isAdmin, updateProfile } = useAuth();
   const [mounted, setMounted] = useState(false);
   const t = useTranslations('profile');
+  const tRole = useTranslations('league.roles');
+  const { leagueRole: myLeagueRole } = useActiveLeague();
   const labels = usePlayerLabels();
   const [fullName, setFullName] = useState(profile?.full_name || t('playerFallback'));
   const [position, setPosition] = useState<FieldPosition>(profile?.position || 'Esterno');
@@ -255,7 +258,7 @@ export default function ProfiloPage() {
                       : 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30'
                   }`}
                 >
-                  {isStrictAdmin ? t('admin') : t('player')}
+                  {myLeagueRole && myLeagueRole !== 'PLAYER' ? `★ ${tRole(myLeagueRole)}` : t('player')}
                 </span>
                 <StatBadge score={profile.overall_rating || 6.0} size="md" />
               </div>
