@@ -35,7 +35,7 @@ export function getStoredPlayers(): Profile[] {
         (p) => p && (p.id === 'p-1' || !/^p-\d+$/.test(p.id))
       );
       if (Array.isArray(parsed) && parsed.length > 0) {
-        // Assicura che Marco B. mantenga sempre il ruolo Admin, che i ruoli 'user' siano 'player' e che le posizioni siano valorizzate
+        // Ruoli 'user' → 'player' e posizioni sempre valorizzate (il ruolo mostrato è quello della scheda di lega)
         return parsed.map((p) => {
           const won = p.matches_won ?? 0;
           const drawn = p.matches_drawn ?? 0;
@@ -43,9 +43,9 @@ export function getStoredPlayers(): Profile[] {
           const position = p.position || 'Esterno';
 
           if (isSuperAdminProfile(p)) {
+            // the role shown is the one of the league card (the super admin can be a plain player in a league)
             return {
               ...p,
-              role: 'admin',
               position: p.position || 'Esterno',
               matches_won: won,
               matches_drawn: drawn,

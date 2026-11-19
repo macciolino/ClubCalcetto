@@ -3,22 +3,9 @@ import { NextResponse, type NextRequest } from 'next/server';
 export function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
-  // NOTE: these cookies are set by the browser and are only for routing/UX.
-  // The real security boundary is firestore.rules (data access is enforced server-side by Firebase).
-
-  // 1. ISOLAMENTO RIGIDO /admin:
-  // Se la route richiesta è /admin o qualsiasi sotto-percorso di /admin,
-  // controlla il cookie 'user_role'. Se non è presente o non è strettamente 'admin',
-  // blocca immediatamente la richiesta ed esegui un redirect forzato alla Home.
-  if (pathname.startsWith('/admin')) {
-    const userRole = request.cookies.get('user_role')?.value;
-    if (userRole !== 'admin') {
-      const redirectUrl = request.nextUrl.clone();
-      redirectUrl.pathname = '/';
-      return NextResponse.redirect(redirectUrl);
-    }
-    return NextResponse.next();
-  }
+  // NOTE: the session cookie is set by the browser and is only for routing/UX (sign-in page or not).
+  // The real security boundary is firestore.rules + the API routes (roles are checked there, per league).
+  // No role cookie any more: /admin only redirects to Impostazioni, where each section checks the league role.
 
   const hasSession = request.cookies.get('cc_session')?.value === '1';
   const isPublicRoute =

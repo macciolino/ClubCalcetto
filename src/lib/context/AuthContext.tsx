@@ -29,8 +29,9 @@ import { ensurePrivateEmail } from '@/lib/firebase/firestoreService';
  * SECURITY MODEL
  * - Identity comes ONLY from Firebase Auth (no local / simulated logins).
  * - The super admin is the verified account SUPER_ADMIN_EMAIL; its profile document is 'p-1'.
- * - Other admins are profiles with role === 'admin', promoted only by the super admin.
- * - Everything here is UI logic: the real enforcement is in firestore.rules.
+ * - Management roles exist only inside a league (PRESIDENT / COLLABORATOR on the league card, see useAuth):
+ *   the old global `profiles.role === 'admin'` grants nothing any more.
+ * - Everything here is UI logic: the real enforcement is in firestore.rules and the API routes.
  */
 import { SUPER_ADMIN_EMAIL, SUPER_ADMIN_PROFILE_ID, isSuperAdminEmail } from '@/lib/superAdmin';
 export { SUPER_ADMIN_EMAIL, SUPER_ADMIN_PROFILE_ID, isSuperAdminEmail };
@@ -164,14 +165,10 @@ function buildNewProfile(
 function setRoutingCookies(profile: Profile | null) {
   if (typeof document === 'undefined') return;
   try {
-    if (profile) {
-      const role = profile.role === 'admin' ? 'admin' : 'player';
-      document.cookie = `user_role=${role}; path=/; max-age=604800; SameSite=Lax`;
-      document.cookie = 'cc_session=1; path=/; max-age=604800; SameSite=Lax';
-    } else {
-      document.cookie = 'user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
-      document.cookie = 'cc_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
-    }
+    if (profile) document.cookie = 'cc_session=1; path=/; max-age=604800; SameSite=Lax';
+    else document.cookie = 'cc_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
+    // Old role cookie (from the global profiles.role): removed, roles are per league now
+    document.cookie = 'user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
     // Remove legacy cookie/keys from the old simulated-login system
     document.cookie = 'demo_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
     localStorage.removeItem('clubcalcetto_active_user');
@@ -528,7 +525,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const isSuperAdmin = Boolean(user && user.emailVerified && isSuperAdminEmail(user.email));
-  const isAdmin = Boolean(user && (isSuperAdmin || profile?.role === 'admin'));
+  // Management is per league: useAuth() replaces this with the role on the ACTIVE league's card
+  const isAdmin = false;
   const authProvider = isFirebaseConfigured ? 'firebase' : 'local';
 
   return (

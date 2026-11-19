@@ -4,9 +4,10 @@ rules_version = '2';
 // ClubCalcetto - Firestore Security Rules
 // ----------------------------------------------------------------------------
 // Roles
-//  - Super admin : the verified account macciolino84@gmail.com (profile doc 'p-1')
-//  - Admin       : (global profiles only) a profile whose role == 'admin'
-//  - League roles: PRESIDENT / COLLABORATOR / PLAYER on leagues/{id}/players (see "Multi-league" below)
+//  - Super admin : the verified account macciolino84@gmail.com (profile doc 'p-1'), the only global power
+//  - League roles: PRESIDENT / COLLABORATOR / PLAYER on leagues/{id}/players (see "Multi-league" below):
+//                  they count ONLY inside their league. There is no global "admin" any more (the old
+//                  profiles.role == 'admin' grants nothing).
 //  - Player      : any other signed-in user
 // Nobody who is not signed in can read or write anything.
 // ============================================================================
@@ -24,34 +25,12 @@ service cloud.firestore {
         && request.auth.token.email_verified == true;
     }
 
-    function myProfilePath() {
-      return /databases/$(database)/documents/profiles/$(request.auth.uid);
-    }
-
-    function isAdmin() {
-      return isSuperAdmin()
-        || (signedIn() && exists(myProfilePath()) && get(myProfilePath()).data.role == 'admin');
-    }
-
     function changedKeys() {
       return request.resource.data.diff(resource.data).affectedKeys();
     }
 
     function onlyChanges(keys) {
       return changedKeys().hasOnly(keys);
-    }
-
-    // Admins (not super admin) may not change roles, except normalising the legacy value 'user' -> 'player'
-    function roleUntouchedOrLegacyFix() {
-      return !('role' in changedKeys())
-        || (resource.data.role == 'user' && request.resource.data.role == 'player');
-    }
-
-    // Admins promote / demote other admins: never the super admin profile, and guests (no account) never become admin.
-    function adminRoleChange(profileId) {
-      return profileId != 'p-1'
-        && request.resource.data.role in ['admin', 'player']
-        && (request.resource.data.role != 'admin' || resource.data.get('is_guest', false) == false);
     }
 
     // Profile photo: only a real photo chosen by the player (small JPEG made by the app) or the Google photo.
@@ -97,9 +76,8 @@ service cloud.firestore {
       allow read: if signedIn();
 
       // A user creates ONLY their own profile (doc id = their uid), always as a plain player with no match history.
-      // Admins can create guest/manual players, but only the super admin can create another admin.
+      // Guests are league cards (leagues/{id}/players), not global profiles: nobody else creates profiles.
       allow create: if profileEmailUntouched() && platformRoleUntouched() && (isSuperAdmin()
-        || (isAdmin() && request.resource.data.role != 'admin')
         || (signedIn()
             && profileId == request.auth.uid
             && request.resource.data.role == 'player'
@@ -108,9 +86,9 @@ service cloud.firestore {
             && request.resource.data.get('matches_lost', 0) == 0
             && isValidNewOwnProfile()));
 
-      // Super admin: everything. Admin: stats, records, data (not roles). Player: only cosmetic fields of their own profile.
+      // Super admin: everything (never the platform role). Everyone else: only cosmetic fields of their own profile.
+      // League managers edit parameters and records on the league CARD, never on someone's global account.
       allow update: if profileEmailUntouched() && platformRoleUntouched() && (isSuperAdmin()
-        || (isAdmin() && (roleUntouchedOrLegacyFix() || adminRoleChange(profileId)))
         || (signedIn()
             && profileId == request.auth.uid
             && onlyChanges(['full_name', 'avatar_url', 'position', 'locale', 'theme', 'updated_at'])
@@ -119,10 +97,8 @@ service cloud.firestore {
             && (!('locale' in changedKeys()) || request.resource.data.locale in ['it', 'en'])
             && (!('theme' in changedKeys()) || request.resource.data.theme in ['system', 'light', 'dark'])));
 
-      // The super admin profile can never be deleted. Admins delete only GUESTS (players without an account);
-      // registered accounts are deleted only by the super admin, from the app via the server (login + data).
-      allow delete: if profileId != 'p-1'
-        && (isSuperAdmin() || (isAdmin() && resource.data.get('is_guest', false) == true));
+      // The super admin profile can never be deleted. Accounts are deleted by the server (owner or super admin).
+      allow delete: if profileId != 'p-1' && isSuperAdmin();
     }
 
     // ---------- C2: private data of a profile (email) ----------
@@ -180,7 +156,7 @@ service cloud.firestore {
             || (isSuperAdmin() && request.resource.data.profile_id == 'p-1'))
         && request.resource.data.platform in ['ios', 'android', 'desktop']
         && request.resource.data.updated_at == request.time;
-      allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
     }
 
 
@@ -379,15 +355,16 @@ service cloud.firestore {
 
     // ---------- single-group collections (before multi-league): read-only backup ----------
     // The app now uses leagues/{leagueId}/…; nobody writes here any more (the migration copied them).
-    match /stat_categories/{id} { allow read: if isAdmin(); }
-    match /settings/{id} { allow read: if isAdmin(); }
-    match /matches/{id} { allow read: if isAdmin(); }
-    match /generated_teams/{id} { allow read: if isAdmin(); }
-    match /presences/{id} { allow read: if isAdmin(); }
-    match /mvp_votes/{id} { allow read: if isAdmin(); }
-    match /match_payments/{id} { allow read: if isAdmin(); }
-    match /sport_fields/{id} { allow read: if isAdmin(); }
-    match /admin_requests/{id} { allow read: if isAdmin(); }
+    // Only the super admin reads them (they hold data of every old member).
+    match /stat_categories/{id} { allow read: if isSuperAdmin(); }
+    match /settings/{id} { allow read: if isSuperAdmin(); }
+    match /matches/{id} { allow read: if isSuperAdmin(); }
+    match /generated_teams/{id} { allow read: if isSuperAdmin(); }
+    match /presences/{id} { allow read: if isSuperAdmin(); }
+    match /mvp_votes/{id} { allow read: if isSuperAdmin(); }
+    match /match_payments/{id} { allow read: if isSuperAdmin(); }
+    match /sport_fields/{id} { allow read: if isSuperAdmin(); }
+    match /admin_requests/{id} { allow read: if isSuperAdmin(); }
 
     // Anything else is denied by default.
   }
