@@ -7,6 +7,7 @@ import { NumberInput } from '@/components/NumberInput';
 import React, { useState, useEffect } from 'react';
 import { AppSettings, SportField, StatCategory } from '@/types/database';
 import { FORMAT_INFO, MatchFormat } from '@/lib/utils/matchFormat';
+import { fieldMapsUrl } from '@/lib/utils/matchUtils';
 import { FieldModal } from './FieldModal';
 import { StatsLegendModal } from './StatsLegendModal';
 import { MapPin, Phone, Plus, ExternalLink, Edit3, Trash2, Check, Star } from 'lucide-react';
@@ -173,8 +174,8 @@ export function TabClubConfigFields({
                         <p className="flex items-center gap-1.5 text-xs text-secondary min-w-0">
                           <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
                           <span className="truncate">{field.address}</span>
-                          {field.maps_url && (
-                            <a href={field.maps_url} target="_blank" rel="noopener noreferrer" className="text-accent-text hover:text-accent-text" title={t('openMaps')}>
+                          {field.address && (
+                            <a href={fieldMapsUrl(field)} target="_blank" rel="noopener noreferrer" className="text-accent-text hover:text-accent-text" title={t('openMaps')}>
                               <ExternalLink className="h-3 w-3" />
                             </a>
                           )}

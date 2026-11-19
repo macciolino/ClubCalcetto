@@ -15,7 +15,7 @@ import { notifyMatchPlayers } from '@/lib/services/notificationService';
 import { TeamSwapEditor } from '@/components/TeamSwapEditor';
 import { MvpVoteCard } from '@/components/MvpVoteCard';
 import { getStoredFields, subscribeSportFields } from '@/lib/services/fieldService';
-import { effectiveMatchCost, effectiveMatchTime, effectiveMatchLocation, fieldLabel, fieldCostFor, standardCostFor } from '@/lib/utils/matchUtils';
+import { effectiveMatchCost, effectiveMatchTime, effectiveMatchLocation, fieldLabel, fieldMapsUrl, fieldCostFor, standardCostFor } from '@/lib/utils/matchUtils';
 import { useMatchFormats } from '@/lib/hooks/useMatchFormats';
 import { FORMAT_INFO, dayFormat, formationSlots, maxPlayersFor } from '@/lib/utils/matchFormat';
 import { MatchFormatPicker } from '@/components/MatchFormatPicker';
@@ -607,10 +607,7 @@ function SquadreContent() {
         </p>
         {selectedField?.address && (
           <a
-            href={
-              selectedField.maps_url ||
-              `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${selectedField.name} ${selectedField.address}`)}`
-            }
+            href={fieldMapsUrl(selectedField)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-start gap-1 text-xs text-secondary hover:text-accent-text"

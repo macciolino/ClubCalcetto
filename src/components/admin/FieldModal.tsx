@@ -5,6 +5,7 @@ import { Sheet, sheetBtn } from '@/components/ui/Sheet';
 import { SportField } from '@/types/database';
 import { MapPin, Phone, Save } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { isAutoMapsUrl } from '@/lib/utils/matchUtils';
 
 interface FieldModalProps {
   isOpen: boolean;
@@ -64,8 +65,8 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
     e.preventDefault();
     if (!name.trim() || !address.trim()) return;
 
-    const computedMapsUrl =
-      mapsUrl.trim() || `https://maps.google.com/?q=${encodeURIComponent(`${name} ${address}`)}`;
+    // Only a link chosen by hand is stored; otherwise the link follows the address (see fieldMapsUrl)
+    const computedMapsUrl = isAutoMapsUrl(mapsUrl) ? undefined : mapsUrl.trim();
 
     if (fieldToEdit) {
       onSave({

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lastMatchOutcome, matchPlace } from '@/lib/utils/matchUtils';
+import { fieldMapsUrl, lastMatchOutcome, matchPlace } from '@/lib/utils/matchUtils';
 import type { Match, SportField } from '@/types/database';
 
 const luini: SportField = { id: 'f1', name: 'Campo Luini', address: 'Via Luini 5, Milano', notes: '  Parcheggio interno ', maps_url: '' };
@@ -10,7 +10,7 @@ describe('Home: dati del campo', () => {
     expect(p).toEqual({
       name: 'Campo Luini',
       address: 'Via Luini 5, Milano',
-      mapsUrl: 'https://www.google.com/maps/search/?api=1&query=Campo%20Luini%20Via%20Luini%205%2C%20Milano',
+      mapsUrl: 'https://www.google.com/maps/search/?api=1&query=Via%20Luini%205%2C%20Milano',
       notes: 'Parcheggio interno',
     });
   });
@@ -19,6 +19,12 @@ describe('Home: dati del campo', () => {
     const p = matchPlace({ location: 'Campo Luini (Via Luini 5, Milano)' } as Match, [{ ...luini, maps_url: 'https://maps.app/x' }], undefined);
     expect(p.name).toBe('Campo Luini');
     expect(p.mapsUrl).toBe('https://maps.app/x');
+  });
+
+  it('il vecchio link generato in automatico non conta: si cerca l’indirizzo attuale', () => {
+    const moved = { ...luini, address: 'Via Nuova 9, Monza', maps_url: 'https://maps.google.com/?q=Campo%20Luini%20Via%20Luini%205%2C%20Milano' };
+    expect(matchPlace(null, [moved], 'f1').mapsUrl).toBe('https://www.google.com/maps/search/?api=1&query=Via%20Nuova%209%2C%20Monza');
+    expect(fieldMapsUrl({ name: 'Campo', address: '', maps_url: '' })).toBe('https://www.google.com/maps/search/?api=1&query=Campo');
   });
 
   it('luogo libero scritto a mano: solo il nome e una ricerca su Maps', () => {

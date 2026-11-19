@@ -17,6 +17,7 @@ import {
   effectiveMatchTime,
   fieldCostFor,
   fieldLabel,
+  fieldMapsUrl,
   matchField,
   standardCostFor,
 } from '@/lib/utils/matchUtils';
@@ -352,7 +353,7 @@ export function TabOverviewMatch({
     const text = [
       t('shareTitle', { date: fmtDate(date) }),
       `⏰ ${t('timePrefix', { time })}`,
-      `📍 ${location}${field?.maps_url ? `\n🗺️ ${field.maps_url}` : ''}`,
+      `📍 ${location}${field?.address ? `\n🗺️ ${fieldMapsUrl(field)}` : ''}`,
       t('sharePlayers', { label: info.label, players: info.players }),
       t('shareQuota', { amount: perHead(totalCost, info.players) }),
       notesInput.trim() ? `📝 ${notesInput.trim()}` : '',

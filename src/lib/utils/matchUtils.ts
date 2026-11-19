@@ -112,6 +112,18 @@ export interface MatchPlace {
 
 const mapsSearch = (q: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
 
+/** Old links the app generated itself (name + address, frozen at the first save): not a link chosen by a manager. */
+export const isAutoMapsUrl = (url?: string) => !url?.trim() || /^https:\/\/maps\.google\.com\/\?q=/.test(url.trim());
+
+/**
+ * Google Maps link of a field: a real link pasted by a manager wins; otherwise a search on the CURRENT address
+ * (the name is left out: Google would match a business with that name somewhere else).
+ */
+export function fieldMapsUrl(field: Pick<SportField, 'name' | 'address' | 'maps_url'>): string {
+  if (!isAutoMapsUrl(field.maps_url)) return field.maps_url!.trim();
+  return mapsSearch(field.address?.trim() || field.name);
+}
+
 export function matchPlace(match: Match | null | undefined, fields: SportField[], defaultFieldId?: string): MatchPlace {
   const field = matchField(match, fields, defaultFieldId);
   if (!field) {
@@ -122,7 +134,7 @@ export function matchPlace(match: Match | null | undefined, fields: SportField[]
   return {
     name: field.name,
     address,
-    mapsUrl: field.maps_url?.trim() || mapsSearch(address ? `${field.name} ${address}` : field.name),
+    mapsUrl: fieldMapsUrl(field),
     notes: field.notes?.trim() || undefined,
   };
 }

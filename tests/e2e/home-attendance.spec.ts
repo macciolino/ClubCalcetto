@@ -35,7 +35,7 @@ test.describe('Home e Presenze in italiano e in inglese', () => {
     await expect(place.getByText('Campo Test', { exact: true })).toBeVisible();
     await expect(place.getByText('Via dei Test 1', { exact: true })).toBeVisible();
     await expect(place.getByText('Parcheggio interno')).toBeVisible();
-    await expect(place.getByRole('link', { name: 'Apri in Google Maps' })).toHaveAttribute('href', /google\.com\/maps.*Campo%20Test/);
+    await expect(place.getByRole('link', { name: 'Apri in Google Maps' })).toHaveAttribute('href', /google\.com\/maps.*query=Via%20dei%20Test%201$/);
     await expect(page.getByText('(Via dei Test 1)')).toHaveCount(0);
 
     const last = page.getByRole('region', { name: 'Ultima partita' });
