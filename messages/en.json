@@ -639,6 +639,9 @@
     "result": "Result, MVP and scorers"
   },
   "home": {
+    "notPlaying": "You don’t play in this league",
+    "notPlayingHint": "You are marked as organiser: to sign up turn on \"I play in this league too\" in Settings → League.",
+    "noCard": "You have no player card in this league",
     "today": "today",
     "tomorrow": "tomorrow",
     "playerFallback": "Player",
@@ -765,6 +768,9 @@
     "selectedDay": "Selected day"
   },
   "presenceCard": {
+    "notPlaying": "You don’t play in this league",
+    "notPlayingHint": "You are marked as organiser: to sign up turn on \"I play too\" in Settings → League.",
+    "noCard": "You have no player card in this league",
     "ringAria": "{count} of {max} starters",
     "playerFallback": "Player",
     "confirmWithdraw": "Do you want to withdraw from {day}? Your spot goes to the first on the waiting list.",
@@ -1505,6 +1511,9 @@
       "intro": "Presidents: run the league and the roles. Collaborators: matches, teams, attendance and cash. There is always at least one president.",
       "you": "you",
       "organiser": "organiser only",
+      "playingOf": "{name} plays in this league",
+      "playingOn": "{name} now plays in this league.",
+      "playingOff": "{name} is now organiser only: their future sign-ups were removed.",
       "roleOf": "Role of {name}",
       "changed": "{name}: {role}.",
       "errors": {
@@ -1518,7 +1527,7 @@
         "suspended": "The league is suspended: no changes possible."
       },
       "playing": "I play in this league too",
-      "playingHint": "If you turn it off you are not listed among the players (attendance, teams) but you stay in the league.",
+      "playingHint": "If you turn it off you are not listed among the players (attendance, teams) and cannot sign up for matches: your future sign-ups are removed. You stay in the league.",
       "search": "Search a member",
       "searchPlaceholder": "Search by name",
       "noResults": "No member with this name."
@@ -1551,7 +1560,7 @@
   },
   "superAdmin": {
     "title": "Platform console",
-    "subtitle": "Every league of the platform: you can suspend or re-activate them. You do not join other people’s leagues.",
+    "subtitle": "Every league of the platform: you can suspend, re-activate or delete them. From the league switcher you open any of them with president powers.",
     "loading": "Loading leagues…",
     "failed": "Leagues not loaded: check your connection and try again.",
     "forbidden": "This page is only for the super admin and platform admins.",
@@ -1573,7 +1582,7 @@
     "changeFailed": "Status not changed: try again.",
     "suspendedBanner": "This league is suspended: you can look at the data, but sign-ups, matches and cash are blocked.",
     "home": "Go to Home",
-    "subtitleStaff": "Every league of the platform, read-only (you're a platform admin). You don't enter other people's leagues.",
+    "subtitleStaff": "Every league of the platform (you're a platform admin): you can suspend, re-activate or delete them. From the league switcher you open any of them with president powers.",
     "staff": {
       "title": "Platform admins",
       "intro": "They help you look after the platform: they see the league console read-only, without suspending leagues or appointing anyone. It isn't a league role: inside leagues only presidents and collaborators count.",

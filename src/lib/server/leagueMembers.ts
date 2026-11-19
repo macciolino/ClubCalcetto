@@ -6,6 +6,7 @@ import { canChangeLeagueRole, canRemoveFromLeague, leagueSlug } from '@/lib/util
 import { openRequest } from '@/lib/server/adminRequests';
 import { inLeague, leagueDb } from '@/lib/server/leagueScope';
 import { SUPER_ADMIN_PROFILE_ID } from '@/lib/superAdmin';
+import { isSuperAdminProfile } from '@/lib/server/platformAccount';
 import type { LeagueRole, LeagueVisibility } from '@/types/league';
 
 /**
@@ -195,7 +196,8 @@ export async function setMemberRole(
   by: { profileId: string; isSuper: boolean }
 ): Promise<'ok' | RoleChangeError> {
   if (!isLeagueRole(role) || !playerId) return 'bad_request';
-  if (playerId === SUPER_ADMIN_PROFILE_ID && !by.isSuper) return 'protected';
+  // A super admin's card (any account with platformRole SUPER_ADMIN) is changed only by a super admin
+  if (!by.isSuper && (playerId === SUPER_ADMIN_PROFILE_ID || (await isSuperAdminProfile(playerId)))) return 'protected';
   const db = adminDb();
   const L = leagueDb(leagueId);
   return db.runTransaction(async (tx) => {
@@ -217,9 +219,31 @@ export async function setMemberRole(
   });
 }
 
-/** "Gioco anch'io": a member switches their own playing status in the league. */
-export async function setActivePlayer(leagueId: string, playerId: string, active: boolean): Promise<void> {
-  await leagueDb(leagueId).doc(`players/${playerId}`).update({ isActivePlayer: active, updated_at: new Date().toISOString() });
+/**
+ * "Gioco anch'io": playing status of a card (the member themselves, or a president for anyone). An organiser
+ * (isActivePlayer false) is never on the pitch: their future sign-ups are cancelled (returned dates: the waiting
+ * list moves up) and the rules refuse new ones.
+ */
+export async function setActivePlayer(leagueId: string, playerId: string, active: boolean): Promise<{ ok: true; dates: string[] } | { ok: false; error: 'not_found' }> {
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(playerId)) return { ok: false, error: 'not_found' };
+  const L = leagueDb(leagueId);
+  const ref = L.doc(`players/${playerId}`);
+  const snap = await ref.get();
+  if (!snap.exists || snap.data()?.removed_at) return { ok: false, error: 'not_found' };
+  const now = new Date().toISOString();
+  if (active) {
+    await ref.update({ isActivePlayer: true, updated_at: now });
+    return { ok: true, dates: [] };
+  }
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' });
+  const presences = (await L.collection('presences').where('player_id', '==', playerId).get()).docs.filter(
+    (d) => String(d.data().date || '') >= today
+  );
+  const batch = adminDb().batch();
+  batch.update(ref, { isActivePlayer: false, updated_at: now });
+  presences.forEach((d) => batch.delete(d.ref));
+  await batch.commit();
+  return { ok: true, dates: Array.from(new Set(presences.map((d) => String(d.data().date)))) };
 }
 
 
@@ -236,7 +260,7 @@ export type RemoveMemberError = 'not_found' | 'forbidden';
 export async function removeLeagueMember(
   leagueId: string,
   playerId: string,
-  by: { profileId: string; leagueRole: LeagueRole }
+  by: { profileId: string; leagueRole: LeagueRole; isSuper?: boolean }
 ): Promise<{ ok: true; dates: string[] } | { ok: false; error: RemoveMemberError }> {
   if (!/^[A-Za-z0-9_-]{1,128}$/.test(playerId)) return { ok: false, error: 'not_found' };
   const db = adminDb();
@@ -252,9 +276,11 @@ export async function removeLeagueMember(
     userId: (card.userId as string) || null,
     removed_at: (card.removed_at as string) || null,
   };
-  if (!canRemoveFromLeague({ id: by.profileId, leagueRole: by.leagueRole }, target, SUPER_ADMIN_PROFILE_ID)) {
+  if (!canRemoveFromLeague({ id: by.profileId, leagueRole: by.leagueRole }, target, by.isSuper ? '' : SUPER_ADMIN_PROFILE_ID)) {
     return { ok: false, error: target.removed_at || target.is_guest || !target.userId ? 'not_found' : 'forbidden' };
   }
+  // Any super admin account is protected (only a super admin takes it out)
+  if (!by.isSuper && (await isSuperAdminProfile(playerId))) return { ok: false, error: 'forbidden' };
 
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' });
   const presences = (await L.collection('presences').where('player_id', '==', playerId).get()).docs.filter(

@@ -527,6 +527,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Platform role from the global profile (written only by the server), never from the email
   const isSuperAdmin = Boolean(user?.emailVerified && profile?.platformRole === 'SUPER_ADMIN');
+  const isStaff = Boolean(user?.emailVerified && (profile?.platformRole === 'SUPER_ADMIN' || profile?.platformRole === 'GLOBAL_ADMIN'));
   // Management is per league: useAuth() replaces this with the role on the ACTIVE league's card
   const isAdmin = false;
   const authProvider = isFirebaseConfigured ? 'firebase' : 'local';
@@ -554,6 +555,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       <ActiveLeagueProvider
         uid={user?.uid ?? null}
         isSuperAdmin={isSuperAdmin}
+        isPlatformStaff={isStaff}
         accountReady={!isLoading && Boolean(profile)}
         noLeague={
           <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-6">

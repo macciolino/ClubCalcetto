@@ -203,7 +203,27 @@ test.describe('Ciclo di vita della lega', () => {
     await expect(page.getByRole('button', { name: 'Elimina la lega' })).toHaveCount(0);
   });
 
+  test('staff di piattaforma: apre una lega senza scheda con i poteri del presidente, ma non si iscrive', async ({ page }) => {
+    await db.doc('leagues/sabato').set({ id: 'sabato', name: 'Lega del sabato', slug: 'lega-del-sabato', status: 'suspended', visibility: 'private', createdAt: new Date().toISOString(), createdBy: 'x' });
+    await loginAsAdmin(page);
+    await openLeague(page, /Lega del sabato/);
+    await expect(page.getByRole('button', { name: /Lega attiva: Lega del sabato/ })).toBeVisible();
+    await expect(page.getByText('Non hai una scheda giocatore in questa lega')).toBeVisible({ timeout: 15_000 });
+    // anche sospesa: lo staff resta e gestisce (zona pericolosa del presidente)
+    await page.goto('/settings?sezione=lega');
+    await expect(page.getByRole('button', { name: 'Elimina la lega' })).toBeVisible({ timeout: 15_000 });
+  });
+
+  test('organizzatore ("Gioco anch’io" spento): niente "Ci sono"', async ({ page }) => {
+    await db.doc('leagues/calcettari/players/p-1').update({ isActivePlayer: false });
+    await loginAsAdmin(page);
+    await expect(page.getByText('Non giochi in questa lega')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('button', { name: 'Ci sono' })).toHaveCount(0);
+  });
+
   test('tolto dalla lega aperta: avviso e passaggio all’altra; lega sospesa: avviso e passaggio', async ({ page }) => {
+    // un presidente qualunque (lo staff di piattaforma invece resta in ogni lega, anche sospesa)
+    await db.doc('profiles/p-1').update({ platformRole: 'USER' });
     await loginAsAdmin(page);
     await openLeague(page, /Lega del giovedì/);
     await expect(page.getByRole('button', { name: /Lega attiva: Lega del giovedì/ })).toBeVisible();

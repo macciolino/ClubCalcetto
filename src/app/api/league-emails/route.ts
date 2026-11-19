@@ -9,8 +9,8 @@ export const dynamic = 'force-dynamic';
 
 /**
  * GET → { ok, emails: { profileId: email } } of the members of the ACTIVE league (header x-league-id) only.
- * Allowed only to its presidents and collaborators (also while the league is suspended: reading only); the
- * platform super admin too only where it manages the league. Never the emails of people outside that league.
+ * Allowed to its presidents and collaborators (also while the league is suspended: reading only) and to platform
+ * staff (SUPER_ADMIN, GLOBAL_ADMIN: PRESIDENT everywhere). Never the emails of people outside that league.
  */
 async function handleGet(request: Request) {
   if (!isAdminConfigured()) return NextResponse.json({ ok: false, error: 'not_configured' }, { status: 503 });
@@ -18,8 +18,8 @@ async function handleGet(request: Request) {
     const caller = await callerFrom(request);
     if (!caller) return NextResponse.json({ ok: false, error: 'unauthenticated' }, { status: 401 });
     const leagueId = currentLeague();
-    let allowed = false;
-    if (caller.emailVerified) {
+    let allowed = caller.isPlatformStaff;
+    if (!allowed && caller.emailVerified) {
       const card = await memberCard(caller.uid, leagueId);
       const role = card?.data.leagueRole;
       allowed = Boolean(card && !card.data.deactivated_at && !card.data.removed_at && (role === 'PRESIDENT' || role === 'COLLABORATOR'));

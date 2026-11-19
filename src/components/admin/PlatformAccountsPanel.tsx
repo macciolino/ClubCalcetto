@@ -13,22 +13,23 @@ import { manageAccountAsSuperAdmin } from '@/lib/services/accountService';
 import type { Profile } from '@/types/database';
 
 /**
- * Impostazioni → "Account e piattaforma": platform super admin only (never a league role).
- * Deactivated accounts (reactivate / delete for good), email privacy, league migration, why people leave.
+ * Impostazioni → "Account e piattaforma": platform staff only (never a league role).
+ * SUPER_ADMIN and GLOBAL_ADMIN: deactivated accounts (reactivate / delete for good) and why people leave.
+ * SUPER_ADMIN only (reserved system section): email privacy and league migration.
  * League roles are managed only in Impostazioni → Lega → Membri e ruoli.
  */
 export function PlatformAccountsPanel() {
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin, isPlatformStaff } = useAuth();
   const t = useTranslations('adminSections');
   const [deactivated, setDeactivated] = useState<Profile[]>([]);
 
   useEffect(() => {
-    if (!isSuperAdmin) return;
+    if (!isPlatformStaff) return;
     const unsub = subscribeProfiles((list) => setDeactivated(list.filter((p) => !p.archived_at)), 'deactivated');
     return () => unsub();
-  }, [isSuperAdmin]);
+  }, [isPlatformStaff]);
 
-  if (!isSuperAdmin) return null;
+  if (!isPlatformStaff) return null;
 
   const reactivate = async (player: Profile) => {
     if (!(await askConfirm(t('confirmReactivate', { name: player.full_name })))) return;
@@ -47,8 +48,8 @@ export function PlatformAccountsPanel() {
   return (
     <div className="space-y-6">
       <DeactivatedAccountsList deactivatedPlayers={deactivated} onReactivatePlayer={reactivate} onDeleteDeactivatedPlayer={remove} />
-      <EmailPrivacyCard />
-      <LeagueMigrationCard />
+      {isSuperAdmin && <EmailPrivacyCard />}
+      {isSuperAdmin && <LeagueMigrationCard />}
       <DeletionFeedbackCard />
     </div>
   );

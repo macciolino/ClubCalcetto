@@ -31,7 +31,7 @@ type SectionId = 'notifiche' | 'account' | 'lega' | 'accessi' | AdminSection;
 interface SectionDef {
   id: SectionId;
   icon: React.ElementType;
-  access: 'all' | 'admin' | 'super';
+  access: 'all' | 'admin' | 'staff';
   group: 'account' | 'league' | 'match' | 'access';
 }
 
@@ -46,8 +46,8 @@ const SECTIONS: SectionDef[] = [
   { id: 'parametri', icon: BarChart3, access: 'admin', group: 'league' },
   { id: 'notifiche-club', icon: Megaphone, access: 'admin', group: 'league' },
   { id: 'partita', icon: Trophy, access: 'admin', group: 'match' },
-  // Platform super admin only: accounts and platform tools (league roles live in Lega → Membri e ruoli)
-  { id: 'accessi', icon: ShieldCheck, access: 'super', group: 'access' },
+  // Platform staff (super admin, platform admin): accounts and platform tools (league roles live in Lega → Membri e ruoli)
+  { id: 'accessi', icon: ShieldCheck, access: 'staff', group: 'access' },
 ];
 const GROUPS: SectionDef['group'][] = ['account', 'league', 'match', 'access'];
 
@@ -59,7 +59,7 @@ function useSummary(
 ): { values: Partial<Record<SectionId, string>>; alerts: Partial<Record<SectionId, number>> } {
   const [settings, setSettings] = useState<AppSettings>({});
   const [fields, setFields] = useState<SportField[]>([]);
-  // Account chiusi che hanno chiesto di rientrare (pallino su "Account e piattaforma", solo super admin)
+  // Account chiusi che hanno chiesto di rientrare (pallino su "Account e piattaforma", staff di piattaforma)
   const [returning, setReturning] = useState(0);
   const [notifyMode, setNotifyMode] = useState<string>('');
   const [officialDate, setOfficialDate] = useState('');
@@ -91,7 +91,7 @@ function useSummary(
     return () => unsubs.forEach((u) => u());
   }, [admin]);
 
-  // Gli account chiusi li riattiva solo il super admin (Account e piattaforma → Account disattivati)
+  // Gli account chiusi li riattiva solo lo staff di piattaforma (Account e piattaforma → Account disattivati)
   useEffect(() => {
     if (!isFirebaseConfigured || !superAdmin) return;
     return subscribeProfiles((list: Profile[]) => setReturning((list || []).filter((p) => p.restore_requested_at && !p.archived_at).length), 'deactivated');
@@ -124,10 +124,10 @@ function useSummary(
 const ALIASES: Record<string, string> = { rosa: 'accessi', 'account-chiusi': 'accessi' };
 
 function SettingsContent() {
-  const { user, profile, isAdmin, isSuperAdmin, isLoading } = useAuth();
+  const { user, profile, isAdmin, isPlatformStaff, isLoading } = useAuth();
   const params = useSearchParams();
   const admin = Boolean(isAdmin || profile?.role === 'admin');
-  const { values: summary, alerts } = useSummary(admin, Boolean(isSuperAdmin), user?.email);
+  const { values: summary, alerts } = useSummary(admin, Boolean(isPlatformStaff), user?.email);
 
   const raw = params.get('sezione') || '';
   const t = useTranslations('settings');
@@ -149,7 +149,7 @@ function SettingsContent() {
     );
   }
 
-  const visible = SECTIONS.filter((s) => s.access === 'all' || (s.access === 'admin' && admin) || (s.access === 'super' && isSuperAdmin));
+  const visible = SECTIONS.filter((s) => s.access === 'all' || (s.access === 'admin' && admin) || (s.access === 'staff' && isPlatformStaff));
   const wanted = ALIASES[raw] || raw;
   const requested = visible.find((s) => s.id === wanted);
   const current = requested || visible[0];

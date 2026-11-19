@@ -42,8 +42,10 @@ import { currentLeagueId } from '@/lib/league/leagueRefs';
 const DEFAULT_CATEGORIES: StatCategory[] = DEFAULT_BASE_CATEGORIES;
 
 export default function GiocatoriPage() {
-  const { user, profile, isAdmin, isSuperAdmin } = useAuth();
-  const { leagueRole } = useActiveLeague();
+  const { user, profile, isAdmin, isSuperAdmin, isPlatformStaff } = useAuth();
+  const { leagueRole: cardRole, isPresident } = useActiveLeague();
+  // Platform staff (SUPER_ADMIN / GLOBAL_ADMIN) act as PRESIDENT in every league
+  const leagueRole = isPlatformStaff ? 'PRESIDENT' : cardRole;
   const [mounted, setMounted] = useState(false);
   const [players, setPlayers] = useState<Profile[]>([]);
   const [categories, setCategories] = useState<StatCategory[]>(DEFAULT_CATEGORIES);
@@ -145,11 +147,12 @@ export default function GiocatoriPage() {
   // Tre azioni distinte (stessi controlli del server):
   //  - ospite: un gestore cancella la scheda;
   //  - membro registrato: un gestore lo toglie SOLO da questa lega (l'account resta, anche nelle altre leghe);
-  //  - account globale: disattivarlo è solo del super admin della piattaforma.
+  //  - account globale: disattivarlo è solo dello staff di piattaforma (mai l'account di un super admin).
   const canRemove = (p: Profile) =>
-    Boolean(profile) && canRemoveFromLeague({ id: profile!.id, leagueRole }, p as Profile & Partial<LeagueMemberPlayer>, SUPER_ADMIN_PROFILE_ID);
+    Boolean(profile) &&
+    canRemoveFromLeague({ id: profile!.id, leagueRole }, p as Profile & Partial<LeagueMemberPlayer>, isSuperAdmin ? '' : SUPER_ADMIN_PROFILE_ID);
   const canDeleteGuest = (p: Profile) => isStrictAdmin && p.is_guest && p.id !== SUPER_ADMIN_PROFILE_ID;
-  const canDeactivateAccount = (p: Profile) => isSuperAdmin && !p.is_guest && p.id !== SUPER_ADMIN_PROFILE_ID;
+  const canDeactivateAccount = (p: Profile) => isPlatformStaff && !p.is_guest && p.id !== SUPER_ADMIN_PROFILE_ID;
 
   const dropFromList = (playerId: string) => {
     removeStoredPlayer(playerId);
@@ -212,8 +215,7 @@ ${link}`;
   };
 
   // Ruoli di lega: solo il presidente (come il server). Da qui: nomina presidente / torna giocatore;
-  // collaboratori e tutti i ruoli anche da Impostazioni → Lega → Membri e ruoli.
-  const isPresident = leagueRole === 'PRESIDENT';
+  // collaboratori e tutti i ruoli anche da Impostazioni → Lega → Membri e ruoli. (isPresident: anche lo staff)
   const roleOf = (p: Profile) => (p as Profile & Partial<LeagueMemberPlayer>).leagueRole || 'PLAYER';
   const handleToggleRole = async (p: Profile) => {
     if (!isPresident || p.is_guest || p.id === SUPER_ADMIN_PROFILE_ID) return;

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { adminAuth, adminDb, isAdminConfigured } from '@/lib/firebase/admin';
 import { mirrorOnCards, scoped } from '@/lib/server/leagueScope';
-import { platformAccount } from '@/lib/server/platformAccount';
+import { isSuperAdminProfile, platformAccount } from '@/lib/server/platformAccount';
 import {
   DELETE_REASONS,
   SUPER_ADMIN_PROFILE_ID,
@@ -51,8 +51,9 @@ async function handlePost(request: Request) {
     // Account di un altro (disattivare, eliminare, riattivare l'account GLOBALE): solo il super admin della piattaforma.
     // I gestori di una lega tolgono un membro solo da quella lega (/api/league-admin, action 'remove').
     if (body.targetProfileId && body.targetProfileId !== caller.uid) {
-      if (!isSuper) return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
-      if (body.targetProfileId === SUPER_ADMIN_PROFILE_ID) {
+      if (!me.isPlatformStaff) return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
+      // A super admin's account (any platformRole SUPER_ADMIN) is never disabled or deleted from here
+      if (body.targetProfileId === SUPER_ADMIN_PROFILE_ID || (await isSuperAdminProfile(body.targetProfileId))) {
         return NextResponse.json({ ok: false, error: 'super_admin' }, { status: 400 });
       }
       const exists = await adminDb().doc(`profiles/${body.targetProfileId}`).get();
@@ -73,7 +74,7 @@ async function handlePost(request: Request) {
       if (!exists.data()?.is_guest && !exists.data()?.deactivated_at) {
         await saveDeletionFeedback({
           name: res.name,
-          reason: body.reason || (mode === 'deactivate' ? 'Disattivato dal super admin' : 'Eliminato dal super admin'),
+          reason: body.reason || `${mode === 'deactivate' ? 'Disattivato' : 'Eliminato'} ${isSuper ? 'dal super admin' : 'da un admin di piattaforma'}`,
           details,
           deletedBy: 'super_admin',
           mode,

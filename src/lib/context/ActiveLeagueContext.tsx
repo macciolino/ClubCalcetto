@@ -4,7 +4,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { useTranslations } from 'next-intl';
 import { notify } from '@/components/ui/Feedback';
 import { usePathname } from 'next/navigation';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { collection, doc, onSnapshot } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '@/lib/firebase/config';
 import { setActiveLeagueForData } from '@/lib/league/leagueRefs';
 import { canManageLeague, canManageMatchesAndCash, isPresident } from '@/lib/utils/leaguePermissions';
@@ -51,6 +51,7 @@ const NO_LEAGUE_PATHS = ['/login', '/join'];
 export interface LeagueSummary {
   id: string;
   name: string;
+  /** The user's card in that league; '' = no card (platform staff opening any league of the platform) */
   playerId: string;
 }
 
@@ -66,6 +67,8 @@ interface ActiveLeagueValue {
   canManageMatchesAndCash: boolean;
   /** Platform governance (not a league role) */
   isSuperAdmin: boolean;
+  /** SUPER_ADMIN or GLOBAL_ADMIN: PRESIDENT powers in every league (also without a card, also when suspended) */
+  isPlatformStaff: boolean;
   /** Step 4: the platform super admin suspended the active league (read-only) */
   isSuspended: boolean;
   isLoading: boolean;
@@ -84,12 +87,15 @@ const readStored = () => {
 export function ActiveLeagueProvider({
   uid,
   isSuperAdmin,
+  isPlatformStaff = false,
   accountReady,
   noLeague,
   children,
 }: {
   uid: string | null;
   isSuperAdmin: boolean;
+  /** SUPER_ADMIN / GLOBAL_ADMIN: every league of the platform is in the switcher */
+  isPlatformStaff?: boolean;
   /** The account profile is loaded (so an empty membership list really means "no league yet") */
   accountReady: boolean;
   /** Shown instead of the pages to a signed-in account that belongs to no league */
@@ -116,8 +122,24 @@ export function ActiveLeagueProvider({
     );
   }, [uid]);
 
-  const leagues = useMemo(() => (memberships && memberships.uid === uid ? memberships.leagues : []), [memberships, uid]);
-  const membershipsReady = !uid || (memberships !== null && memberships.uid === uid);
+  // Platform staff: every league of the platform (the ones without a card of theirs are opened as PRESIDENT)
+  const [allLeagues, setAllLeagues] = useState<{ id: string; name: string }[] | null>(null);
+  useEffect(() => {
+    if (!uid || !isPlatformStaff || !isFirebaseConfigured) return;
+    return onSnapshot(
+      collection(db, 'leagues'),
+      (snap) => setAllLeagues(snap.docs.map((d) => ({ id: d.id, name: String(d.data().name || d.id) }))),
+      () => setAllLeagues([])
+    );
+  }, [uid, isPlatformStaff]);
+
+  const leagues = useMemo(() => {
+    const own = memberships && memberships.uid === uid ? memberships.leagues : [];
+    if (!isPlatformStaff || !allLeagues) return own;
+    const others = allLeagues.filter((l) => !own.some((o) => o.id === l.id)).map((l) => ({ ...l, playerId: '' }));
+    return [...own, ...others].sort((a, b) => a.name.localeCompare(b.name));
+  }, [memberships, uid, isPlatformStaff, allLeagues]);
+  const membershipsReady = !uid || (memberships !== null && memberships.uid === uid && (!isPlatformStaff || allLeagues !== null));
   const wanted = chosen || readStored();
   const active = leagues.find((l) => l.id === wanted) || leagues[0] || null;
   const activeLeagueId = active?.id ?? null;
@@ -128,7 +150,7 @@ export function ActiveLeagueProvider({
   if (activeLeagueId) claimLocalCaches(activeLeagueId);
 
   useEffect(() => {
-    if (!active || !isFirebaseConfigured) return;
+    if (!active || !active.playerId || !isFirebaseConfigured) return;
     const key = `${active.id}/${active.playerId}`;
     return onSnapshot(
       doc(db, 'leagues', active.id, 'players', active.playerId),
@@ -155,7 +177,8 @@ export function ActiveLeagueProvider({
         setStatus({ id: activeLeagueId, suspended });
         const justSuspended = wasSuspended === false && suspended;
         wasSuspended = suspended;
-        if (!justSuspended) return;
+        // Platform staff keep working on a suspended league (they can still write there)
+        if (!justSuspended || isPlatformStaff) return;
         const name = leaguesNow.current.find((l) => l.id === activeLeagueId)?.name || '';
         const other = leaguesNow.current.find((l) => l.id !== activeLeagueId);
         if (!other) return notify(tf('suspendedStay', { name }), 'info');
@@ -169,7 +192,7 @@ export function ActiveLeagueProvider({
       },
       () => undefined
     );
-  }, [activeLeagueId, tf]);
+  }, [activeLeagueId, tf, isPlatformStaff]);
   const isSuspended = Boolean(status && status.id === activeLeagueId && status.suspended);
 
   // Fallback (no blank pages, no loops of permission errors): the active league disappears from the memberships
@@ -200,9 +223,12 @@ export function ActiveLeagueProvider({
     setChosen(leagueId);
   }, []);
 
-  const member = card && card.key === cardKey ? card.member : null;
-  const cardReady = !active || (card !== null && card.key === cardKey);
+  const member = active?.playerId && card && card.key === cardKey ? card.member : null;
+  const cardReady = !active || !active.playerId || (card !== null && card.key === cardKey);
   const leagueRole = member?.leagueRole ?? null;
+  // Effective powers: platform staff = PRESIDENT everywhere (also suspended); members manage only an active league
+  const manages = isPlatformStaff || (!isSuspended && canManageMatchesAndCash(leagueRole));
+  const presides = isPlatformStaff || (!isSuspended && isPresident(leagueRole));
 
   const value = useMemo<ActiveLeagueValue>(
     () => ({
@@ -211,14 +237,15 @@ export function ActiveLeagueProvider({
       setActiveLeague,
       member,
       leagueRole,
-      isPresident: isPresident(leagueRole),
-      canManageLeague: canManageLeague(leagueRole),
-      canManageMatchesAndCash: canManageMatchesAndCash(leagueRole),
+      isPresident: presides,
+      canManageLeague: presides && (isPlatformStaff || canManageLeague(leagueRole)),
+      canManageMatchesAndCash: manages,
       isSuperAdmin,
+      isPlatformStaff,
       isSuspended,
       isLoading: !membershipsReady || !cardReady,
     }),
-    [leagues, activeLeagueId, setActiveLeague, member, leagueRole, isSuperAdmin, isSuspended, membershipsReady, cardReady]
+    [leagues, activeLeagueId, setActiveLeague, member, leagueRole, presides, manages, isSuperAdmin, isPlatformStaff, isSuspended, membershipsReady, cardReady]
   );
 
   const showWelcome =

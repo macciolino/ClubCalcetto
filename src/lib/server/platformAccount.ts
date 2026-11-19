@@ -22,6 +22,12 @@ export interface PlatformAccount {
 const PLATFORM_ROLES: PlatformRole[] = ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'USER'];
 export const isPlatformRole = (v: unknown): v is PlatformRole => PLATFORM_ROLES.includes(v as PlatformRole);
 
+/** The account `profileId` has platformRole SUPER_ADMIN: protected from everyone but a super admin. */
+export async function isSuperAdminProfile(profileId: string): Promise<boolean> {
+  if (!profileId) return false;
+  return (await adminDb().doc(`profiles/${profileId}`).get()).data()?.platformRole === 'SUPER_ADMIN';
+}
+
 export async function platformAccount(decoded: { uid: string; email?: string | null; email_verified?: boolean }): Promise<PlatformAccount> {
   const db = adminDb();
   const verified = decoded.email_verified === true;

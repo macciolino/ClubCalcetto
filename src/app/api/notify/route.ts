@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
-import { adminAuth, adminDb, isAdminConfigured } from '@/lib/firebase/admin';
+import { adminDb, isAdminConfigured } from '@/lib/firebase/admin';
 import { isLeagueActive, isLeagueManager, leagueDb, memberCard, scoped } from '@/lib/server/leagueScope';
 import { Message, adminProfileIds, deliver, italianDate, registeredProfileIds, sendToProfiles, sendToTokens } from '@/lib/server/push';
 import { checkPromotions } from '@/lib/server/presenceWatch';
+import { callerFrom } from '@/lib/server/adminRequests';
 import { reconcileTeams } from '@/lib/utils/teamUtils';
 import { GeneratedTeamRecord } from '@/types/database';
 
@@ -95,19 +96,16 @@ async function handlePost(request: Request) {
     return NextResponse.json({ ok: false, error: 'not_configured' }, { status: 503 });
   }
   try {
-    const idToken = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
-    if (!idToken) return NextResponse.json({ ok: false, error: 'unauthenticated' }, { status: 401 });
-    // Token scaduto o falso: non autorizzato (non "errore del server")
-    const caller = await adminAuth()
-      .verifyIdToken(idToken)
-      .catch(() => null);
+    // Token mancante, scaduto o falso: non autorizzato (non "errore del server")
+    const caller = await callerFrom(request);
     if (!caller) return NextResponse.json({ ok: false, error: 'unauthenticated' }, { status: 401 });
+    const staff = caller.isPlatformStaff; // SUPER_ADMIN / GLOBAL_ADMIN: PRESIDENT in every league
     const body = (await request.json()) as NotifyRequest;
 
     // Chiunque abbia fatto l'accesso può chiedere il controllo sostituzioni (il server decide da solo)
     if (body.type === 'reconcile') {
-      // members of the league only (the super admin too: no bypass in leagues it does not belong to)
-      if (!(await memberCard(caller.uid))) return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
+      // members of the league (and platform staff)
+      if (!staff && !(await memberCard(caller.uid))) return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
       if (!(await isLeagueActive())) return NextResponse.json({ ok: true, substitutions: 0, skipped: true }); // lega sospesa: niente scritture
       if (!isDate(body.date)) return NextResponse.json({ ok: false, error: 'bad_request' }, { status: 400 });
       // C11: only days that can still change (yesterday … 30 days ahead): any other date costs reads for nothing
@@ -115,8 +113,8 @@ async function handlePost(request: Request) {
       return NextResponse.json({ ok: true, ...(await reconcile(body.date)) });
     }
 
-    // Tutto il resto solo per chi gestisce la lega (presidenti e collaboratori), super admin compreso: nessun bypass
-    if (!(await isLeagueManager(caller.uid))) {
+    // Tutto il resto solo per chi gestisce la lega (presidenti e collaboratori) e per lo staff di piattaforma
+    if (!staff && !(await isLeagueManager(caller.uid))) {
       return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
     }
 

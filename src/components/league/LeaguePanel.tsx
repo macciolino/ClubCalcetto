@@ -229,6 +229,15 @@ function MembersCard({ editable }: { editable: boolean }) {
     notify(res === 'ok' ? t('changed', { name: p.full_name, role: tr(role) }) : t(`errors.${res}`));
   };
 
+  // Presidents: "plays / organiser only" for any member (an organiser never signs up; future sign-ups go away)
+  const changePlaying = async (p: LeagueMemberPlayer, active: boolean) => {
+    if (busyId) return;
+    setBusyId(p.id);
+    const res = await leagueAdminRequest({ action: 'playing', active, playerId: p.id });
+    setBusyId(null);
+    notify(res === 'ok' ? t(active ? 'playingOn' : 'playingOff', { name: p.full_name }) : t(`errors.${res}`));
+  };
+
   return (
     <section className={card} aria-labelledby="members-title">
       <div>
@@ -261,6 +270,17 @@ function MembersCard({ editable }: { editable: boolean }) {
               </p>
               {p.isActivePlayer === false && <p className="text-xs text-muted">{t('organiser')}</p>}
             </div>
+            {editable && (
+              <input
+                type="checkbox"
+                checked={p.isActivePlayer !== false}
+                onChange={(e) => changePlaying(p, e.target.checked)}
+                disabled={busyId !== null}
+                aria-label={t('playingOf', { name: p.full_name })}
+                title={t('playingOf', { name: p.full_name })}
+                className="h-4 w-4 accent-[rgb(var(--accent-primary))]"
+              />
+            )}
             {editable ? (
               <select
                 value={p.leagueRole}

@@ -17,8 +17,8 @@ import { PlatformAdminsCard } from '@/components/platform/PlatformAdminsCard';
 /**
  * Platform console (menu → "Console piattaforma"), for platform roles only:
  *  - SUPER_ADMIN: every league (suspend / re-activate) and the platform admins (appoint / revoke);
- *  - GLOBAL_ADMIN: reads the leagues and their numbers, no destructive action.
- * Nobody enters other people's leagues from here.
+ *  - GLOBAL_ADMIN: the same on leagues (suspend, re-activate, delete); never appoints platform admins.
+ * Opening a league (with PRESIDENT powers) happens from the league switcher, not here.
  */
 export default function SuperAdminPage() {
   const t = useTranslations('superAdmin');
@@ -44,7 +44,7 @@ export default function SuperAdminPage() {
   }, [isLoading, isPlatformStaff]);
 
   const change = async (l: PlatformLeague) => {
-    if (busy.current || !isPlatformSuperAdmin) return;
+    if (busy.current || !isPlatformStaff) return;
     const next = l.status === 'active' ? 'suspended' : 'active';
     if (!(await askConfirm(next === 'suspended' ? t('confirmSuspend', { name: l.name }) : t('confirmActivate', { name: l.name })))) return;
     busy.current = true;
@@ -122,7 +122,7 @@ export default function SuperAdminPage() {
                     {t('members', { count: l.members })} · {t('guests', { count: l.guests })} · {t('created', { date: date(l.createdAt) })}
                   </p>
                 </div>
-                {isPlatformSuperAdmin && (
+                {isPlatformStaff && (
                 <button
                   type="button"
                   onClick={() => change(l)}
@@ -139,7 +139,7 @@ export default function SuperAdminPage() {
                   {l.status === 'active' ? t('suspend') : t('activate')}
                 </button>
                 )}
-                {isPlatformSuperAdmin && l.id !== CALCETTARI_LEAGUE_ID && (
+                {isPlatformStaff && l.id !== CALCETTARI_LEAGUE_ID && (
                   <button type="button" onClick={() => setDeleting(l)} disabled={busyId !== null} className={btnInline.danger}>
                     <Trash2 className="h-4 w-4" aria-hidden="true" /> {td('short')}
                   </button>

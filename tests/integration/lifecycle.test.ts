@@ -146,7 +146,7 @@ describe('Account chiuso (soft delete) e rientro', () => {
     expect((await ldb().doc('admin_requests/closed_m1').get()).data()).toMatchObject({ type: 'account_closed', mode: 'deactivate', status: 'open' });
   });
 
-  it('tentativo di rientro → "attesa ripristino" + una sola richiesta; decide l’admin: ripristina', async () => {
+  it('tentativo di rientro → "attesa ripristino" + una sola richiesta; decide lo staff di piattaforma: ripristina', async () => {
     const u = await closeOwnAccount('m2');
     const r1 = await call(returnRequest, { email: u.email.toUpperCase() });
     expect(r1.data).toMatchObject({ ok: true, pending: true });
@@ -155,7 +155,10 @@ describe('Account chiuso (soft delete) e rientro', () => {
     const open = await ldb().collection('admin_requests').where('type', '==', 'restore').get();
     expect(open.size).toBe(1);
 
-    expect((await call(resolveRequest, { id: 'restore_m2', action: 'restore' }, admin.token)).data.ok).toBe(true);
+    // account GLOBALE: il presidente della lega non decide, l'admin di piattaforma sì
+    expect((await call(resolveRequest, { id: 'restore_m2', action: 'restore' }, admin.token)).status).toBe(403);
+    const staff = await makeUser('staff1', { platformRole: 'GLOBAL_ADMIN' });
+    expect((await call(resolveRequest, { id: 'restore_m2', action: 'restore' }, staff.token)).data.ok).toBe(true);
     const p = (await ldb().doc('players/m2').get()).data()!;
     expect(p.deactivated_at).toBeUndefined();
     expect(p.restore_requested_at).toBeUndefined();
@@ -163,10 +166,12 @@ describe('Account chiuso (soft delete) e rientro', () => {
     expect((await adminAuth().getUser('m2')).disabled).toBe(false);
   });
 
-  it('decide l’admin: riparti da zero → storico archiviato con il vecchio nome, account pulito', async () => {
+  it('decide lo staff di piattaforma: riparti da zero → storico archiviato con il vecchio nome, account pulito', async () => {
     const u = await closeOwnAccount('m3');
     await call(returnRequest, { email: u.email });
-    expect((await call(resolveRequest, { id: 'restore_m3', action: 'reset' }, admin.token)).data.ok).toBe(true);
+    expect((await call(resolveRequest, { id: 'restore_m3', action: 'reset' }, admin.token)).status).toBe(403);
+    const sup = await makeUser('sup1', { platformRole: 'SUPER_ADMIN' });
+    expect((await call(resolveRequest, { id: 'restore_m3', action: 'reset' }, sup.token)).data.ok).toBe(true);
 
     const fresh = (await ldb().doc('players/m3').get()).data()!;
     expect(fresh).toMatchObject({ matches_won: 0, matches_drawn: 0, matches_lost: 0, role: 'player', full_name: 'Mario m3' });

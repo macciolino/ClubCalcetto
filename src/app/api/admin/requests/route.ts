@@ -14,7 +14,8 @@ export const runtime = 'nodejs';
 /**
  * POST { id, action, guestId? } (admins): resolves a request of the admins' notification centre.
  *  new_signup:     'link' (with guestId: the guest's history goes to the new account) | 'new' (new player, nothing to link)
- *  restore:        'restore' (profile and history back) | 'reset' (old record archived, account starts from zero)
+ *  restore:        'restore' (profile and history back) | 'reset' (old record archived, account starts from zero);
+ *                  GLOBAL accounts: platform staff only (SUPER_ADMIN / GLOBAL_ADMIN), never a league manager
  *  account_closed: 'dismiss' (read)
  *  guest_claim:    'approve' (the guest's card, history and stats go to the account) | 'reject' (stays a new player)
  *  format_proposal: 'apply_format' (the day switches to the proposed format) | 'dismiss' (keep the current one)
@@ -31,6 +32,7 @@ async function handlePost(request: Request) {
     if (!req || req.status !== 'open') return NextResponse.json({ ok: false, error: 'already_done' }, { status: 409 });
     const by = caller.profileId;
     const profileId = String(req.profile_id);
+    if (req.type === 'restore' && !caller.isPlatformStaff) return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
 
     if (req.type === 'new_signup' && action === 'link' && guestId) {
       const { guestName } = await claimGuest(guestId, profileId);

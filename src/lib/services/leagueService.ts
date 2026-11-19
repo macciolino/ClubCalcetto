@@ -106,7 +106,7 @@ export async function leagueAdminRequest(
   body:
     | { action: 'settings'; name?: string; visibility?: LeagueVisibility }
     | { action: 'role'; playerId: string; role: LeagueRole }
-    | { action: 'playing'; active: boolean }
+    | { action: 'playing'; active: boolean; playerId?: string }
     | { action: 'remove'; playerId: string }
     | { action: 'delete'; confirmName: string }
 ): Promise<'ok' | LeagueAdminError> {

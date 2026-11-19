@@ -9,6 +9,7 @@ import { FORMAT_INFO, dayFormat, maxPlayersFor } from '@/lib/utils/matchFormat';
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/context/AuthContext';
+import { useActiveLeague } from '@/lib/context/ActiveLeagueContext';
 import { Presence, Profile } from '@/types/database';
 import {
   subscribePresencesRange,
@@ -47,6 +48,9 @@ import { btn } from '@/components/ui/buttons';
 
 export default function PresenzePage() {
   const { user, profile, isAdmin } = useAuth();
+  // Organisers ("Gioco anch'io" off) and platform staff without a card here never sign up for the pitch
+  const { member } = useActiveLeague();
+  const canPlay: boolean | null = member ? member.isActivePlayer !== false : null;
   const [mounted, setMounted] = useState(false);
   const t = useTranslations('attendance');
   const { locale } = useLocaleSetting();
@@ -231,6 +235,7 @@ export default function PresenzePage() {
     isLocked: isDayLocked(day.dateString),
     isFirstToTen: firstToTen.has(day.dateString),
     isToggling: busyDate === day.dateString,
+    canPlay,
     maxPlayers: maxOf(day.dateString),
   });
   const focusDay = days.find((d) => d.dateString === selectedDayString) || days[0];

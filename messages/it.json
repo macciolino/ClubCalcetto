@@ -639,6 +639,9 @@
     "result": "Risultato, MVP e marcatori"
   },
   "home": {
+    "notPlaying": "Non giochi in questa lega",
+    "notPlayingHint": "Sei segnato come organizzatore: per iscriverti attiva \"Gioco anch’io in questa lega\" in Impostazioni → Lega.",
+    "noCard": "Non hai una scheda giocatore in questa lega",
     "today": "oggi",
     "tomorrow": "domani",
     "playerFallback": "Giocatore",
@@ -765,6 +768,9 @@
     "selectedDay": "Giorno scelto"
   },
   "presenceCard": {
+    "notPlaying": "Non giochi in questa lega",
+    "notPlayingHint": "Sei segnato come organizzatore: per iscriverti attiva \"Gioco anch’io\" in Impostazioni → Lega.",
+    "noCard": "Non hai una scheda giocatore in questa lega",
     "ringAria": "{count} titolari su {max}",
     "playerFallback": "Giocatore",
     "confirmWithdraw": "Vuoi ritirarti da {day}? Il tuo posto passa al primo in lista d'attesa.",
@@ -1505,6 +1511,9 @@
       "intro": "Presidenti: gestiscono la lega e i ruoli. Collaboratori: partite, squadre, presenze e cassa. Ci vuole sempre almeno un presidente.",
       "you": "tu",
       "organiser": "solo organizza",
+      "playingOf": "{name} gioca in questa lega",
+      "playingOn": "{name} ora gioca in questa lega.",
+      "playingOff": "{name} ora è solo organizzatore: le sue iscrizioni future sono state tolte.",
       "roleOf": "Ruolo di {name}",
       "changed": "{name}: {role}.",
       "errors": {
@@ -1518,7 +1527,7 @@
         "suspended": "La lega è sospesa: nessuna modifica possibile."
       },
       "playing": "Gioco anch’io in questa lega",
-      "playingHint": "Se lo spegni non compari tra i giocatori (presenze, squadre) ma resti nella lega.",
+      "playingHint": "Se lo spegni non compari tra i giocatori (presenze, squadre) e non puoi iscriverti alle partite: le tue iscrizioni future vengono tolte. Resti nella lega.",
       "search": "Cerca un membro",
       "searchPlaceholder": "Cerca per nome",
       "noResults": "Nessun membro con questo nome."
@@ -1551,7 +1560,7 @@
   },
   "superAdmin": {
     "title": "Console piattaforma",
-    "subtitle": "Tutte le leghe della piattaforma: puoi sospenderle o riattivarle. Non entri nelle leghe degli altri.",
+    "subtitle": "Tutte le leghe della piattaforma: puoi sospenderle, riattivarle o eliminarle. Dal selettore delle leghe le apri tutte con i poteri del presidente.",
     "loading": "Carico le leghe…",
     "failed": "Leghe non caricate: controlla la connessione e riprova.",
     "forbidden": "Questa pagina è riservata al super admin e agli admin della piattaforma.",
@@ -1573,7 +1582,7 @@
     "changeFailed": "Stato non cambiato: riprova.",
     "suspendedBanner": "Questa lega è sospesa: puoi consultare i dati, ma iscrizioni, partite e cassa sono bloccate.",
     "home": "Vai alla Home",
-    "subtitleStaff": "Tutte le leghe della piattaforma, in sola lettura (sei admin della piattaforma). Non entri nelle leghe degli altri.",
+    "subtitleStaff": "Tutte le leghe della piattaforma (sei admin della piattaforma): puoi sospenderle, riattivarle o eliminarle. Dal selettore delle leghe le apri tutte con i poteri del presidente.",
     "staff": {
       "title": "Admin della piattaforma",
       "intro": "Ti aiutano a seguire la piattaforma: vedono la console delle leghe in sola lettura, senza poter sospendere leghe o nominare altri. Non è un ruolo di lega: nelle leghe contano solo presidente e collaboratori.",

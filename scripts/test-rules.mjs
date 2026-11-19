@@ -468,7 +468,7 @@ await expectDenied('newbie-2 (no league) reads the league', () => getDoc(doc(new
 await expectDenied('admin C writes a match of a league it is not in', () =>
   setDoc(doc(adminC.db, 'leagues', 'other', 'matches', '2026-01-02'), { status: 'completed' }));
 await expectAllowed('super admin reads any league (governance)', () => getDoc(doc(superAdmin.db, 'leagues', 'other', 'matches', '2026-01-01')));
-await expectDenied('super admin writes a league it is not in', () =>
+await expectAllowed('super admin writes a league it is not in (PRESIDENT everywhere)', () =>
   setDoc(doc(superAdmin.db, 'leagues', 'other', 'matches', '2026-01-02'), { status: 'completed' }));
 await expectDenied('impostor (not verified) reads a league', () => getDoc(doc(impostor.db, 'leagues', 'calcettari')));
 await expectDenied('anyone creates a league from the app', () => setDoc(doc(adminC.db, 'leagues', 'new'), { name: 'x' }));
@@ -478,7 +478,20 @@ console.log('\nPlatform roles come from profiles.platformRole, never from the em
   const helper = await client({ google: { sub: 'helper', email: 'helper@example.com' } });
   await ownerSet(`profiles/${helper.uid}`, baseProfile(helper.uid, { platformRole: 'GLOBAL_ADMIN' }));
   await expectDenied('GLOBAL_ADMIN has no super admin power in the rules (emails)', () => getDocs(collection(helper.db, 'private_profiles')));
-  await expectDenied('GLOBAL_ADMIN reads a league it is not in', () => getDoc(doc(helper.db, 'leagues', 'calcettari')));
+  await expectAllowed('GLOBAL_ADMIN reads a league it is not in', () => getDoc(doc(helper.db, 'leagues', 'calcettari')));
+  await expectAllowed('GLOBAL_ADMIN lists every league (switcher)', () => getDocs(collection(helper.db, 'leagues')));
+  await expectDenied('player B lists every league', () => getDocs(collection(playerB.db, 'leagues')));
+  await expectAllowed('GLOBAL_ADMIN writes a match of a league it is not in', () =>
+    setDoc(doc(helper.db, 'leagues', 'other', 'matches', '2026-01-03'), { status: 'scheduled' }));
+  await expectAllowed('GLOBAL_ADMIN signs up player B (as a manager)', () => join(helper, NEXT_SUNDAY, playerB.uid));
+  await expectAllowed('GLOBAL_ADMIN makes player A collaborator', () =>
+    updateDoc(doc(helper.db, ...LG, 'players', playerA.uid), { leagueRole: 'COLLABORATOR', role: 'admin' }));
+  await expectAllowed('GLOBAL_ADMIN reads the managers\' requests', () => getDocs(collection(helper.db, ...LG, 'admin_requests')));
+  await expectDenied('GLOBAL_ADMIN changes the super admin\'s card role', () =>
+    updateDoc(doc(helper.db, ...LG, 'players', 'p-1'), { leagueRole: 'PLAYER', role: 'player' }));
+  await expectDenied('president C changes the super admin\'s card role', () =>
+    updateDoc(doc(adminC.db, ...LG, 'players', 'p-1'), { leagueRole: 'PLAYER', role: 'player' }));
+  await ownerSet(`leagues/calcettari/players/${playerA.uid}`, card(playerA.uid, playerA.uid, 'PLAYER'));
   await expectDenied('GLOBAL_ADMIN gives itself SUPER_ADMIN', () =>
     setDoc(doc(helper.db, 'profiles', helper.uid), { platformRole: 'SUPER_ADMIN' }, { merge: true }));
   const boss2 = await client({ google: { sub: 'boss-2', email: 'boss2@example.com' } });
@@ -488,7 +501,19 @@ console.log('\nPlatform roles come from profiles.platformRole, never from the em
   await ownerSet('profiles/p-1', baseProfile('p-1', { role: 'admin', user_id: superAdmin.uid, platformRole: 'USER' }));
   await expectDenied('founder with platformRole USER on p-1: no super admin power', () => getDocs(collection(superAdmin.db, 'private_profiles')));
   await ownerSet('profiles/p-1', baseProfile('p-1', { role: 'admin', user_id: superAdmin.uid, platformRole: 'SUPER_ADMIN' }));
+  // Any SUPER_ADMIN account is protected by its role (not only p-1): a president can't demote its card
+  await ownerSet(`leagues/calcettari/players/${boss2.uid}`, card(boss2.uid, boss2.uid, 'COLLABORATOR'));
+  await expectDenied('president C demotes another super admin\'s card', () =>
+    updateDoc(doc(adminC.db, ...LG, 'players', boss2.uid), { leagueRole: 'PLAYER', role: 'player' }));
+  await expectAllowed('super admin changes another super admin\'s card', () =>
+    updateDoc(doc(superAdmin.db, ...LG, 'players', boss2.uid), { leagueRole: 'PLAYER', role: 'player' }));
 }
+
+console.log('\nOrganiser ("Gioco anch\'io" off): never signs up for the pitch');
+await ownerSet(`leagues/calcettari/players/${playerA.uid}`, card(playerA.uid, playerA.uid, 'PLAYER', { isActivePlayer: false }));
+await expectDenied('organiser A signs up', () => join(playerA, TODAY, playerA.uid));
+await ownerSet(`leagues/calcettari/players/${playerA.uid}`, card(playerA.uid, playerA.uid, 'PLAYER'));
+await expectAllowed('playing again: A signs up', () => join(playerA, NEXT_SUNDAY, playerA.uid));
 
 console.log('\nPlayer cards');
 await expectAllowed('player B renames own card', () => updateDoc(LC(playerB, 'players', playerB.uid), { full_name: 'B nuovo', updated_at: 'y' }));
@@ -547,7 +572,7 @@ await expectAllowed('newbie-3 creates its own profile normally', () => setDoc(do
 await expectDenied('old global admin C edits someone else\'s profile', () => setDoc(doc(adminC.db, 'profiles', playerB.uid), { full_name: 'B ok' }, { merge: true }));
 await expectAllowed('super admin edits someone else\'s profile', () => setDoc(doc(superAdmin.db, 'profiles', playerB.uid), { full_name: 'B ok' }, { merge: true }));
 
-console.log('\nSuspended league (step 4): read-only for everyone');
+console.log('\nSuspended league (step 4): read-only for members, platform staff still write');
 await ownerSet('leagues/calcettari', { id: 'calcettari', name: 'I Calcettari', status: 'suspended', visibility: 'private' });
 await expectAllowed('member B still reads the matches', () => getDocs(collection(playerB.db, ...LG, 'matches')));
 await expectAllowed('super admin reads the suspended league', () => getDoc(doc(superAdmin.db, 'leagues', 'calcettari')));
@@ -556,6 +581,13 @@ await expectDenied('president C marks cash', () => setDoc(LC(adminC, 'match_paym
 await expectDenied('president C changes a role', () => updateDoc(LC(adminC, 'players', playerA.uid), { leagueRole: 'COLLABORATOR' }));
 await expectDenied('player B signs up today', () => join(playerB, TODAY, playerB.uid));
 await expectDenied('player B renames own card', () => updateDoc(LC(playerB, 'players', playerB.uid), { full_name: 'B sospeso', updated_at: 'z' }));
+await expectAllowed('super admin (platform staff) still writes a match', () => setDoc(LC(superAdmin, 'matches', '2026-03-02'), { status: 'scheduled' }));
+{
+  const helper2 = await client({ google: { sub: 'helper-2', email: 'helper2@example.com' } });
+  await ownerSet(`profiles/${helper2.uid}`, baseProfile(helper2.uid, { platformRole: 'GLOBAL_ADMIN' }));
+  await expectAllowed('GLOBAL_ADMIN still marks cash in the suspended league', () =>
+    setDoc(doc(helper2.db, ...LG, 'match_payments', '2026-03-02'), { payments: { x: true } }, { merge: true }));
+}
 await ownerSet('leagues/calcettari', { id: 'calcettari', name: 'I Calcettari', status: 'active', visibility: 'private' });
 await expectAllowed('re-activated: president C writes a match again', () => setDoc(LC(adminC, 'matches', '2026-03-01'), { status: 'scheduled' }));
 

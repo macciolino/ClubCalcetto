@@ -4,8 +4,8 @@ rules_version = '2';
 // ClubCalcetto - Firestore Security Rules
 // ----------------------------------------------------------------------------
 // Roles
-//  - Platform    : profiles.platformRole (written ONLY by the server). SUPER_ADMIN is the only global power in
-//                  these rules; GLOBAL_ADMIN (platform helper) works through the server console, not here.
+//  - Platform    : profiles.platformRole (written ONLY by the server). SUPER_ADMIN and GLOBAL_ADMIN (platform
+//                  staff) count as PRESIDENT in every league; emails and global accounts stay SUPER_ADMIN only here.
 //  - League roles: PRESIDENT / COLLABORATOR / PLAYER on leagues/{id}/players (see "Multi-league" below):
 //                  they count ONLY inside their league. There is no global "admin" any more (the old
 //                  profiles.role == 'admin' grants nothing).
@@ -46,6 +46,18 @@ service cloud.firestore {
       return signedIn()
         && request.auth.token.email_verified == true
         && myPlatformRole() == 'SUPER_ADMIN';
+    }
+    // Platform staff = SUPER_ADMIN or GLOBAL_ADMIN (verified email): they count as PRESIDENT in EVERY league,
+    // even without a card there and even when the league is suspended (members stay read-only)
+    function isPlatformStaff() {
+      return signedIn()
+        && request.auth.token.email_verified == true
+        && myPlatformRole() in ['SUPER_ADMIN', 'GLOBAL_ADMIN'];
+    }
+    // A super admin's account (and its league cards, same id): changed only by a super admin
+    function isSuperAdminAccount(profileId) {
+      return exists(/databases/$(database)/documents/profiles/$(profileId))
+        && get(/databases/$(database)/documents/profiles/$(profileId)).data.get('platformRole', 'USER') == 'SUPER_ADMIN';
     }
 
     function changedKeys() {
@@ -217,13 +229,13 @@ service cloud.firestore {
         && myCard(leagueId).get('deactivated_at', null) == null;
     }
     function isLeagueManager(leagueId) {
-      return hasLeagueRole(leagueId, ['PRESIDENT', 'COLLABORATOR']);
+      return hasLeagueRole(leagueId, ['PRESIDENT', 'COLLABORATOR']) || isPlatformStaff();
     }
     function isLeaguePresident(leagueId) {
-      return hasLeagueRole(leagueId, ['PRESIDENT']);
+      return hasLeagueRole(leagueId, ['PRESIDENT']) || isPlatformStaff();
     }
     function canReadLeague(leagueId) {
-      return isLeagueMember(leagueId) || isSuperAdmin();
+      return isLeagueMember(leagueId) || isPlatformStaff();
     }
 
     // Current week is always open; later days only up to settings/calendar.open_until (set by a manager)
@@ -280,10 +292,11 @@ service cloud.firestore {
                 && request.time < dateToTimestamp(data.date) + duration.value(3, 'd')));
     }
 
-    // Role changes on a card: presidents only; never the platform super admin's card, guests never become managers.
+    // Role changes on a card: presidents (and platform staff) only; a super admin's card only by a super admin;
+    // guests never become managers.
     function leagueRoleChange(leagueId, playerId) {
       return isLeaguePresident(leagueId)
-        && playerId != 'p-1'
+        && (isSuperAdmin() || !isSuperAdminAccount(playerId))
         && request.resource.data.get('leagueRole', 'PLAYER') in ['PRESIDENT', 'COLLABORATOR', 'PLAYER']
         && request.resource.data.get('role', 'player') in ['admin', 'player']
         && (request.resource.data.get('leagueRole', 'PLAYER') == 'PLAYER' || resource.data.get('is_guest', false) == false);
@@ -325,11 +338,13 @@ service cloud.firestore {
       // Titolari / waitlist are COMPUTED by the app from the sign-up order (joined_at = server time).
       match /presences/{presenceId} {
         allow read: if canReadLeague(leagueId);
-        // Players sign up only themselves (their card), only on open days. Managers add anyone on any day.
-        allow create: if canWriteLeague(leagueId)
-          && isValidNewPresence(presenceId)
+        // Players sign up only themselves (their card), only on open days, only if they play ("Gioco anch'io":
+        // isActivePlayer false = organiser, never on the pitch). Managers add anyone on any day.
+        allow create: if isValidNewPresence(presenceId)
           && (isLeagueManager(leagueId)
-              || (request.resource.data.player_id == myPlayerId(leagueId)
+              || (canWriteLeague(leagueId)
+                  && request.resource.data.player_id == myPlayerId(leagueId)
+                  && myCard(leagueId).get('isActivePlayer', true) != false
                   && isDateOpenForPlayers(leagueId, request.resource.data.date)));
         // Withdraw: own presence (not during the withdrawal lock, C12), or anyone's for managers
         allow delete: if isLeagueManager(leagueId)

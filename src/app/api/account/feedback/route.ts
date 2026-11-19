@@ -15,7 +15,7 @@ export async function GET(request: Request) {
       .verifyIdToken(idToken)
       .catch(() => null);
     if (!caller) return NextResponse.json({ ok: false, error: 'unauthenticated' }, { status: 401 });
-    if (!(await platformAccount(caller)).isSuper) {
+    if (!(await platformAccount(caller)).isPlatformStaff) {
       return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
     }
     const snap = await adminDb().collection('account_feedback').orderBy('at', 'desc').limit(100).get();

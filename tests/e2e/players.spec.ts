@@ -51,7 +51,8 @@ test.describe('Giocatori in italiano e in inglese', () => {
     await expect(sheet.getByRole('menuitem', { name: /admin/i })).toHaveCount(0);
     await page.keyboard.press('Escape');
 
-    // lo stesso account da collaboratore: niente azioni sui ruoli (le fa solo il presidente)
+    // lo stesso account da collaboratore (e non staff di piattaforma): niente azioni sui ruoli (le fa solo il presidente)
+    await db.doc('profiles/p-1').update({ platformRole: 'USER' });
     await db.doc(`${LEAGUE}/players/p-1`).update({ leagueRole: 'COLLABORATOR' });
     await page.reload();
     await page.getByRole('button', { name: new RegExp(`^${p.name}, `) }).click();

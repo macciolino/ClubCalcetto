@@ -20,6 +20,8 @@ interface PresenceCardProps {
   onAddGuestPresence?: (dateString: string, guestId: string) => void;
   onRemovePresence?: (presenceId: string) => void;
   isToggling?: boolean;
+  /** The user can sign up for the pitch: false = organiser ("Gioco anch'io" off); null = no card in this league */
+  canPlay?: boolean | null;
   /** Day not open yet for players (next week before the admin opens voting) */
   isLocked?: boolean;
   /** This day was complete first in its week */
@@ -90,6 +92,7 @@ export function PresenceCard({
   onAddGuestPresence,
   onRemovePresence,
   isToggling = false,
+  canPlay,
   isLocked = false,
   isFirstToTen = false,
   onSetOverride,
@@ -213,6 +216,11 @@ export function PresenceCard({
                 <LogOut className="h-3.5 w-3.5" /> {t('withdraw')}
               </button>
             )}
+          </div>
+        ) : canPlay !== true && canPlay !== undefined ? (
+          <div className="w-full rounded-xl border border-line-strong bg-card-hover/60 px-4 py-3 text-center">
+            <span className="text-sm font-semibold text-secondary">{canPlay === null ? t('noCard') : t('notPlaying')}</span>
+            {canPlay === false && <span className="block text-xs text-secondary mt-0.5">{t('notPlayingHint')}</span>}
           </div>
         ) : isLocked ? (
           <div className="w-full rounded-xl border border-line-strong bg-card-hover/60 px-4 py-3 text-center">

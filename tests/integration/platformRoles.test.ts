@@ -1,6 +1,7 @@
 /**
- * Integration: platform roles come ONLY from profiles.platformRole (never from the email), GLOBAL_ADMIN is a
- * read-only platform helper, and the super admin has no shortcut inside leagues it does not manage.
+ * Integration: platform roles come ONLY from profiles.platformRole (never from the email); SUPER_ADMIN and
+ * GLOBAL_ADMIN act as PRESIDENT in every league; only SUPER_ADMIN appoints platform admins and touches the
+ * reserved system tools; a super admin's account and cards are protected from everyone else.
  * Real route handlers on the Firestore and Auth EMULATORS.
  */
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -10,6 +11,9 @@ import { POST as emailPrivacy } from '@/app/api/admin/email-privacy/route';
 import { POST as inviteRoute } from '@/app/api/league-invite/route';
 import { POST as resolveRequest } from '@/app/api/admin/requests/route';
 import { GET as leagueEmails } from '@/app/api/league-emails/route';
+import { POST as leagueAdmin } from '@/app/api/league-admin/route';
+import { POST as accountDelete } from '@/app/api/account/delete/route';
+import { POST as notifyRoute } from '@/app/api/notify/route';
 import { adminAuth } from '@/lib/firebase/admin';
 import { assertEmulators, call, db, idToken, ldb, makeUser, profileDoc, resetEmulators } from './helpers';
 
@@ -52,7 +56,7 @@ describe('Super admin = platformRole, non l’email', () => {
 });
 
 describe('Admin della piattaforma (GLOBAL_ADMIN)', () => {
-  it('il super admin lo nomina per email esatta e lo toglie; l’admin vede le leghe ma non agisce', async () => {
+  it('il super admin lo nomina per email esatta e lo toglie; l’admin agisce sulle leghe ma non sui ruoli di piattaforma', async () => {
     const sup = await makeUser('sup', { platformRole: 'SUPER_ADMIN' });
     const helper = await makeUser('helper', {});
     expect((await call(setStaff, { email: 'nessuno@example.com', role: 'GLOBAL_ADMIN' }, sup.token)).status).toBe(404);
@@ -60,9 +64,10 @@ describe('Admin della piattaforma (GLOBAL_ADMIN)', () => {
     expect((await call(setStaff, { email: 'HELPER@example.com', role: 'GLOBAL_ADMIN' }, sup.token)).data.ok).toBe(true);
     expect((await db().doc('profiles/helper').get()).data()?.platformRole).toBe('GLOBAL_ADMIN');
 
-    // vede la console, non sospende, non nomina, non tocca la privacy
+    // vede la console e sospende / riattiva; non nomina, non tocca la privacy (sezione riservata)
     expect((await call(listLeagues, undefined, helper.token, leaguesUrl)).status).toBe(200);
-    expect((await call(setStatus, { leagueId: 'calcettari', status: 'suspended' }, helper.token)).status).toBe(403);
+    expect((await call(setStatus, { leagueId: 'calcettari', status: 'suspended' }, helper.token)).data.ok).toBe(true);
+    expect((await call(setStatus, { leagueId: 'calcettari', status: 'active' }, helper.token)).data.ok).toBe(true);
     expect((await call(listStaff, undefined, helper.token, staffUrl)).status).toBe(403);
     expect((await call(setStaff, { email: 'sup@example.com', role: 'USER' }, helper.token)).status).toBe(403);
     expect((await call(emailPrivacy, {}, helper.token)).status).toBe(403);
@@ -81,16 +86,61 @@ describe('Admin della piattaforma (GLOBAL_ADMIN)', () => {
   });
 });
 
-describe('Nessuna scorciatoia del super admin nelle leghe', () => {
-  it('in una lega dove non è gestore: niente inviti, richieste o email dei membri', async () => {
-    const sup = await makeUser('sup', { platformRole: 'SUPER_ADMIN' });
+describe('Staff di piattaforma = presidente in ogni lega', () => {
+  it('senza scheda nella lega: inviti, richieste, email dei membri, ruoli; anche se sospesa', async () => {
     await db().doc('leagues/other').set({ id: 'other', name: 'Altra', status: 'active', visibility: 'private' });
     await db().doc('leagues/other/admin_requests/x').set({ type: 'new_signup', status: 'open', profile_id: 'zz', name: 'Z' });
-    expect((await call(inviteRoute, {}, sup.token, undefined, asOther)).status).toBe(403);
-    expect((await call(resolveRequest, { id: 'x', action: 'new' }, sup.token, undefined, asOther)).status).toBe(403);
-    expect((await call(leagueEmails, undefined, sup.token, 'http://localhost/api/league-emails', asOther)).status).toBe(403);
-    // giocatore semplice nella propria lega: nemmeno lì
-    await ldb().doc('players/sup').update({ leagueRole: 'PLAYER' });
-    expect((await call(inviteRoute, {}, sup.token)).status).toBe(403);
+    await db().doc('leagues/other/players/m').set({ id: 'm', userId: 'm', full_name: 'M', leagueRole: 'PLAYER', is_guest: false });
+    for (const platformRole of ['SUPER_ADMIN', 'GLOBAL_ADMIN'] as const) {
+      const staff = await makeUser(`st-${platformRole}`, { platformRole });
+      expect((await call(inviteRoute, {}, staff.token, undefined, asOther)).data.ok).toBe(true);
+      expect((await call(leagueEmails, undefined, staff.token, 'http://localhost/api/league-emails', asOther)).data.ok).toBe(true);
+      expect((await call(leagueAdmin, { action: 'role', playerId: 'm', role: 'COLLABORATOR' }, staff.token, undefined, asOther)).data.ok).toBe(true);
+      expect((await call(leagueAdmin, { action: 'role', playerId: 'm', role: 'PLAYER' }, staff.token, undefined, asOther)).data.ok).toBe(true);
+    }
+    const ga = await makeUser('ga', { platformRole: 'GLOBAL_ADMIN' });
+    expect((await call(resolveRequest, { id: 'x', action: 'new' }, ga.token, undefined, asOther)).data.ok).toBe(true);
+    // lega sospesa: i membri sono in sola lettura, lo staff lavora ancora
+    await db().doc('leagues/other').update({ status: 'suspended' });
+    expect((await call(leagueAdmin, { action: 'role', playerId: 'm', role: 'COLLABORATOR' }, ga.token, undefined, asOther)).data.ok).toBe(true);
+    // un utente qualunque, fuori dalla lega: niente
+    const u = await makeUser('u', {});
+    expect((await call(inviteRoute, {}, u.token, undefined, asOther)).status).toBe(403);
+    expect((await call(leagueAdmin, { action: 'role', playerId: 'm', role: 'PLAYER' }, u.token, undefined, asOther)).status).toBe(403);
+    expect((await call(notifyRoute, { type: 'test' }, u.token, undefined, asOther)).status).toBe(403);
+  });
+
+  it('account e schede di un super admin: protetti da tutti tranne un super admin', async () => {
+    const sup = await makeUser('sup', { platformRole: 'SUPER_ADMIN' });
+    const ga = await makeUser('ga', { platformRole: 'GLOBAL_ADMIN' });
+    const pres = await makeUser('pres', { role: 'admin' });
+    const victim = await makeUser('victim', {});
+    // l'admin di piattaforma disattiva l'account globale di un utente, non quello di un super admin
+    expect((await call(accountDelete, { targetProfileId: 'sup', mode: 'deactivate' }, ga.token)).data.error).toBe('super_admin');
+    expect((await call(accountDelete, { targetProfileId: 'victim', mode: 'deactivate' }, pres.token)).status).toBe(403);
+    expect((await call(accountDelete, { targetProfileId: 'victim', mode: 'deactivate' }, ga.token)).data.ok).toBe(true);
+    expect((await adminAuth().getUser(victim.uid)).disabled).toBe(true);
+    // ruolo e uscita dalla lega della scheda di un super admin: no per presidenti e admin di piattaforma
+    expect((await call(leagueAdmin, { action: 'role', playerId: 'sup', role: 'COLLABORATOR' }, pres.token)).data.error).toBe('protected');
+    expect((await call(leagueAdmin, { action: 'role', playerId: 'sup', role: 'COLLABORATOR' }, ga.token)).data.error).toBe('protected');
+    expect((await call(leagueAdmin, { action: 'remove', playerId: 'sup' }, ga.token)).status).toBe(403);
+    expect((await call(leagueAdmin, { action: 'role', playerId: 'sup', role: 'COLLABORATOR' }, sup.token)).data.ok).toBe(true);
+  });
+});
+
+describe('Iscritto che non gioca (organizzatore)', () => {
+  it('il presidente lo imposta per un membro: le iscrizioni future vanno via; un giocatore non può farlo', async () => {
+    const pres = await makeUser('pres', { role: 'admin' });
+    const pl = await makeUser('pl', {});
+    const other = await makeUser('other', {});
+    const day = new Date(Date.now() + 2 * 86400000).toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' });
+    await ldb().doc(`presences/${day}_pl`).set({ date: day, player_id: 'pl', joined_at: new Date().toISOString() });
+    expect((await call(leagueAdmin, { action: 'playing', active: false, playerId: 'pl' }, other.token)).status).toBe(403);
+    expect((await call(leagueAdmin, { action: 'playing', active: false, playerId: 'pl' }, pres.token)).data.ok).toBe(true);
+    expect((await ldb().doc('players/pl').get()).data()?.isActivePlayer).toBe(false);
+    expect((await ldb().doc(`presences/${day}_pl`).get()).exists).toBe(false);
+    // il diretto interessato lo riaccende per sé
+    expect((await call(leagueAdmin, { action: 'playing', active: true }, pl.token)).data.ok).toBe(true);
+    expect((await ldb().doc('players/pl').get()).data()?.isActivePlayer).toBe(true);
   });
 });

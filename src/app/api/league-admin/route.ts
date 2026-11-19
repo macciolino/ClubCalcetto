@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { isAdminConfigured } from '@/lib/firebase/admin';
+import { adminDb, isAdminConfigured } from '@/lib/firebase/admin';
 import { callerFrom } from '@/lib/server/adminRequests';
 import { currentLeague, isLeagueActive, memberCard, scoped } from '@/lib/server/leagueScope';
 import { removeLeagueMember, setActivePlayer, setMemberRole, updateLeagueSettings } from '@/lib/server/leagueMembers';
@@ -14,9 +14,11 @@ export const dynamic = 'force-dynamic';
  * Multi-league step 3, active league (header x-league-id):
  *  - { action: 'settings', name?, visibility? }  presidents: name and visibility
  *  - { action: 'role', playerId, role }          presidents: PRESIDENT | COLLABORATOR | PLAYER (never without a president)
- *  - { action: 'playing', active }               any member: "Gioco anch'io" on their own card
+ *  - { action: 'playing', active, playerId? }    any member: "Gioco anch'io" on their own card; presidents for anyone
  *  - { action: 'remove', playerId }              managers: take a member out of THIS league (never the global account)
  *  - { action: 'delete', confirmName }           presidents: delete the league for good (typed name must match)
+ * Platform staff (SUPER_ADMIN, GLOBAL_ADMIN) act as PRESIDENT in every league, without a card and also when the
+ * league is suspended; members of a suspended league are read-only (423).
  */
 async function handlePost(request: Request) {
   if (!isAdminConfigured()) return NextResponse.json({ ok: false, error: 'not_configured' }, { status: 503 });
@@ -24,25 +26,40 @@ async function handlePost(request: Request) {
     const caller = await callerFrom(request);
     if (!caller) return NextResponse.json({ ok: false, error: 'unauthenticated' }, { status: 401 });
     const leagueId = currentLeague();
-    const card = await memberCard(caller.uid, leagueId);
-    if (!card || card.data.deactivated_at) return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
-    if (!(await isLeagueActive(leagueId))) return NextResponse.json({ ok: false, error: 'suspended' }, { status: 423 });
+    const staff = caller.isPlatformStaff;
+    const rawCard = await memberCard(caller.uid, leagueId);
+    const card = rawCard && !rawCard.data.deactivated_at ? rawCard : null;
+    if (staff) {
+      if (!(await adminDb().doc(`leagues/${leagueId}`).get()).exists) return NextResponse.json({ ok: false, error: 'not_found' }, { status: 404 });
+    } else {
+      if (!card) return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
+      if (!(await isLeagueActive(leagueId))) return NextResponse.json({ ok: false, error: 'suspended' }, { status: 423 });
+    }
+    // Effective role here: platform staff = PRESIDENT everywhere
+    const role: LeagueRole = staff ? 'PRESIDENT' : (card!.data.leagueRole as LeagueRole) || 'PLAYER';
+    const myId = card?.playerId || caller.profileId;
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
 
     if (body.action === 'playing') {
-      await setActivePlayer(leagueId, card.playerId, body.active !== false);
+      const target = typeof body.playerId === 'string' && body.playerId ? body.playerId : card?.playerId;
+      if (!target) return NextResponse.json({ ok: false, error: 'not_found' }, { status: 404 });
+      // Someone else's card: presidents only
+      if (target !== card?.playerId && role !== 'PRESIDENT') return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
+      const res = await setActivePlayer(leagueId, target, body.active !== false);
+      if (!res.ok) return NextResponse.json({ ok: false, error: res.error }, { status: 404 });
+      // An organiser leaves the pitch: their places on future days go to the waiting list
+      await Promise.all(res.dates.map((d) => checkPromotions(d).catch(() => undefined)));
       return NextResponse.json({ ok: true });
     }
     if (body.action === 'remove') {
-      const role = (card.data.leagueRole as LeagueRole) || 'PLAYER';
       if (role === 'PLAYER') return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
-      const res = await removeLeagueMember(leagueId, String(body.playerId || ''), { profileId: card.playerId, leagueRole: role });
+      const res = await removeLeagueMember(leagueId, String(body.playerId || ''), { profileId: myId, leagueRole: role, isSuper: caller.isSuper });
       if (!res.ok) return NextResponse.json({ ok: false, error: res.error }, { status: res.error === 'not_found' ? 404 : 403 });
       // Their places on future days go to the waiting list (notifications to who moves up)
       await Promise.all(res.dates.map((d) => checkPromotions(d).catch(() => undefined)));
       return NextResponse.json({ ok: true });
     }
-    if (card.data.leagueRole !== 'PRESIDENT') return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
+    if (role !== 'PRESIDENT') return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
     if (body.action === 'delete') {
       const res = await deleteLeague(leagueId, body.confirmName);
       if (res === 'ok') return NextResponse.json({ ok: true });

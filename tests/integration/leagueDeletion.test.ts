@@ -54,17 +54,18 @@ describe('Eliminare una lega', () => {
     expect((await db().doc('leagues/calcettari').get()).exists).toBe(true);
   });
 
-  it('"I Calcettari" non si elimina; il super admin elimina dalla console, l’admin piattaforma no', async () => {
+  it('"I Calcettari" non si elimina; lo staff di piattaforma elimina dalla console, un utente qualunque no', async () => {
     const { pres } = await seedLeague();
     await db().doc('leagues/calcettari/players/pres').update({ leagueRole: 'PRESIDENT' });
     expect((await call(leagueAdmin, { action: 'delete', confirmName: 'I Calcettari' }, pres.token)).data.error).toBe('protected');
 
+    expect((await call(platformLeagues, { leagueId: ID, action: 'delete', confirmName: NAME }, pres.token)).status).toBe(403);
     const helper = await makeUser('helper', { platformRole: 'GLOBAL_ADMIN' });
-    expect((await call(platformLeagues, { leagueId: ID, action: 'delete', confirmName: NAME }, helper.token)).status).toBe(403);
+    expect((await call(platformLeagues, { leagueId: 'calcettari', action: 'delete', confirmName: 'I Calcettari' }, helper.token)).data.error).toBe('protected');
     const sup = await makeUser('sup', { platformRole: 'SUPER_ADMIN' });
     expect((await call(platformLeagues, { leagueId: 'calcettari', action: 'delete', confirmName: 'I Calcettari' }, sup.token)).data.error).toBe('protected');
     expect((await call(platformLeagues, { leagueId: ID, action: 'delete', confirmName: 'sbagliato' }, sup.token)).data.error).toBe('name_mismatch');
-    expect((await call(platformLeagues, { leagueId: ID, action: 'delete', confirmName: NAME }, sup.token)).data.ok).toBe(true);
+    expect((await call(platformLeagues, { leagueId: ID, action: 'delete', confirmName: NAME }, helper.token)).data.ok).toBe(true);
     expect((await db().doc(`leagues/${ID}`).get()).exists).toBe(false);
     expect(Object.keys((await db().doc('memberships/pres').get()).data()?.leagues || {})).toEqual(['calcettari']);
   });

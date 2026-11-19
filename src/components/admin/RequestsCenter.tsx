@@ -182,7 +182,7 @@ function ago(iso: string, tb: (key: string, values?: Record<string, number>) => 
  * format proposal) and parameters to review. A request's push opens the app with ?richieste=1 → opens the sheet.
  */
 export function RequestsBell() {
-  const { profile, isAdmin } = useAuth();
+  const { profile, isAdmin, isPlatformStaff } = useAuth();
   const router = useRouter();
   const tb = useTranslations('bell');
   const tr = useTranslations('requests');
@@ -209,7 +209,11 @@ export function RequestsBell() {
       (snap) => {
         setDenied(false);
         setRequests(
-          snap.docs.map((d) => ({ ...(d.data() as AdminRequest), id: d.id })).sort((a, b) => b.created_at.localeCompare(a.created_at))
+          snap.docs
+            .map((d) => ({ ...(d.data() as AdminRequest), id: d.id }))
+            // Coming back of a closed GLOBAL account: platform staff only (the server refuses league managers)
+            .filter((r) => r.type !== 'restore' || isPlatformStaff)
+            .sort((a, b) => b.created_at.localeCompare(a.created_at))
         );
       },
       (err) => {
@@ -219,7 +223,7 @@ export function RequestsBell() {
       }
     );
     return () => unsub();
-  }, [admin]);
+  }, [admin, isPlatformStaff]);
 
   // Giocatori sempre in ascolto (servono anche per il contatore: valutazioni da rivedere)
   useEffect(() => {

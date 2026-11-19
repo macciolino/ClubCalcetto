@@ -82,11 +82,11 @@ export async function callerFrom(request: Request) {
 }
 
 /**
- * Caller that manages the current league (president / collaborator); null otherwise.
- * The platform super admin has NO bypass here: in a league it is a manager only if its card says so.
+ * Caller that manages the current league: its presidents / collaborators, or platform staff (SUPER_ADMIN and
+ * GLOBAL_ADMIN count as PRESIDENT in every league, also without a card and also when it is suspended).
  */
 export async function adminCaller(request: Request) {
   const caller = await callerFrom(request);
   if (!caller) return null;
-  return (await isLeagueManager(caller.uid)) ? caller : null;
+  return caller.isPlatformStaff || (await isLeagueManager(caller.uid)) ? caller : null;
 }

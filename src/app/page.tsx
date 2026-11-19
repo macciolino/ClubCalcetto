@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/context/AuthContext';
+import { useActiveLeague } from '@/lib/context/ActiveLeagueContext';
 import { AppSettings, GeneratedTeamRecord, Match, MvpVote, Presence, Profile, SportField } from '@/types/database';
 import {
   joinPresence,
@@ -63,6 +64,9 @@ function shortDate(date: string, locale: string): string {
  */
 export default function HomePage() {
   const { user, profile, isAdmin, isLoading } = useAuth();
+  // Organisers ("Gioco anch'io" off) and platform staff without a card here never sign up for the pitch
+  const { member } = useActiveLeague();
+  const canPlay = Boolean(member && member.isActivePlayer !== false);
   const [date, setDate] = useState<string>(() => getOfficialMatchDate());
   const [presences, setPresences] = useState<Presence[] | null>(null);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -332,6 +336,11 @@ export default function HomePage() {
                   <LogOut className="h-4 w-4" /> {t('withdraw')}
                 </button>
               )}
+            </div>
+          ) : !canPlay ? (
+            <div className="rounded-xl border border-line-strong bg-card-hover/60 px-4 py-3.5 text-center">
+              <span className="text-base font-semibold text-secondary">{member ? t('notPlaying') : t('noCard')}</span>
+              {member && <span className="block text-xs text-secondary mt-0.5">{t('notPlayingHint')}</span>}
             </div>
           ) : locked ? (
             <div className="rounded-xl border border-line-strong bg-card-hover/60 px-4 py-3.5 text-center">
