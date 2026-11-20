@@ -164,7 +164,7 @@ Lo staff **non** agisce come giocatore dove non ha una scheda: non si iscrive e 
 | Stato | Campi | Effetto |
 |---|---|---|
 | **Ospite** | `is_guest: true`, `userId: null` | Giocatore senza account, creato da un gestore. Non accede. Le sue partite si passano a un account (§3.1). Si elimina, non si "toglie" |
-| **Non gioca** (organizzatore) | `isActivePlayer: false` | Resta nella lega ma **non scende in campo**: è fuori dagli elenchi (Giocatori, Presenze, Squadre, Home) e le regole **rifiutano le sue iscrizioni**. Quando lo si spegne, le iscrizioni future vengono tolte e sale chi è in lista d'attesa. Lo cambia l'interessato oppure il presidente o lo staff (`/api/league-admin` `playing`) |
+| **Non gioca** (organizzatore) | `isActivePlayer: false` | Resta nella lega ma **non scende in campo**: è fuori dagli elenchi (Giocatori, Presenze, Squadre, Home) e le regole **rifiutano le sue iscrizioni**, anche se a iscriverlo è un gestore o lo staff (`playsOnPitch`). Un gestore che non gioca continua comunque a iscrivere chi gioca. Quando lo si spegne, le iscrizioni future vengono tolte e sale chi è in lista d'attesa. Lo cambia l'interessato oppure il presidente o lo staff (`/api/league-admin` `playing`) |
 | **Tolto dalla lega** | `removed_at`, `removed_by` | Nessun accesso, nascosto dagli elenchi, la scheda resta per lo storico. Rientra con un link di invito |
 | **Account disattivato** | `deactivated_at` (profilo e schede) | Accesso bloccato (Auth disabilitato), dati conservati, può chiedere di rientrare |
 | **Archiviato** | `archived_at` | Vecchio storico dopo un "riparti da zero" |
