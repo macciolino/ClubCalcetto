@@ -733,7 +733,7 @@ export function TabOverviewMatch({
   return (
     <div className="space-y-4">
       {/* 1. Selettore del giorno: tutto ciò che c'è sotto riguarda solo il giorno scelto */}
-      <div ref={selectorRef} className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none" role="radiogroup" aria-label={t('selectorAria')}>
+      <div ref={selectorRef} className="flex gap-2 overflow-x-auto -mx-1 -my-1 px-1 py-1.5 scrollbar-none" role="radiogroup" aria-label={t('selectorAria')}>
         {allDays.map((d) => {
           const dd = Number(d.split('-')[2]);
           const st = statusOf(d);
