@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { collection, doc, limit, onSnapshot, orderBy, query, updateDoc, where, writeBatch } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDocs, limit, onSnapshot, orderBy, query, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { lcol, ldoc, currentLeagueId } from '@/lib/league/leagueRefs';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -14,7 +14,7 @@ import { Sheet } from '@/components/ui/Sheet';
 import { askConfirm, notify } from '@/components/ui/Feedback';
 import { btn, btnInline } from '@/components/ui/buttons';
 import { initialsOf, uploadedPhoto } from '@/lib/utils/playerUtils';
-import { Bell, Check, Link2, Loader2, RotateCcw, UserPlus, UserX, Eraser, ClipboardCheck, ChevronDown, Lightbulb } from 'lucide-react';
+import { Bell, Check, Link2, Loader2, RotateCcw, UserPlus, UserX, Eraser, ClipboardCheck, ChevronDown, Lightbulb, Trash2, X } from 'lucide-react';
 import { useMatchFormats } from '@/lib/hooks/useMatchFormats';
 import { FORMAT_INFO, dayFormat, isMatchFormat } from '@/lib/utils/matchFormat';
 import { formatLongDate } from '@/lib/utils/dateUtils';
@@ -197,6 +197,7 @@ export function RequestsBell() {
   const [players, setPlayers] = useState<Profile[]>([]);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const [clearing, setClearing] = useState(false);
   // Lettura negata: di solito le regole Firestore aggiornate non sono ancora pubblicate
   const [denied, setDenied] = useState(false);
   const categories = useStatCategories();
@@ -235,7 +236,7 @@ export function RequestsBell() {
   useEffect(() => {
     if (!profileId || !isFirebaseConfigured) return;
     const unsub = onSnapshot(
-      query(collection(db, 'profiles', profileId, 'notifications'), orderBy('created_at', 'desc'), limit(30)),
+      query(collection(db, 'profiles', profileId, 'notifications'), orderBy('created_at', 'desc'), limit(50)),
       (snap) => setInbox(snap.docs.map((d) => ({ ...(d.data() as InboxNotification), id: d.id }))),
       (err) => {
         console.warn('notifiche:', err?.code || err);
@@ -289,6 +290,30 @@ export function RequestsBell() {
   if (!profile) return null;
   const todo = admin ? requests.length + reviews.length : 0;
   const unreadCount = inbox.filter((n) => !n.read).length;
+
+  // Delete one notification, or all of them (each person deletes only their own: firestore.rules)
+  const removeNotification = (id: string) => {
+    if (!profileId) return;
+    setInbox((list) => list.filter((n) => n.id !== id));
+    deleteDoc(doc(db, 'profiles', profileId, 'notifications', id)).catch(() => notify(tb('deleteFailed')));
+  };
+  const clearAll = async () => {
+    if (!profileId || clearing || !(await askConfirm(tb('confirmClearAll')))) return;
+    setClearing(true);
+    try {
+      const all = await getDocs(collection(db, 'profiles', profileId, 'notifications'));
+      for (let i = 0; i < all.docs.length; i += 400) {
+        const batch = writeBatch(db);
+        all.docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+        await batch.commit();
+      }
+      notify(tb('cleared'));
+    } catch {
+      notify(tb('deleteFailed'));
+    } finally {
+      setClearing(false);
+    }
+  };
   const count = todo + unreadCount;
 
   const run = async (key: string, fn: () => Promise<boolean>, done: string) => {
@@ -411,7 +436,19 @@ export function RequestsBell() {
               type="button"
               disabled={busy !== null}
               onClick={() =>
-                run(`${r.id}:apply`, () => resolve(msg, r.id, 'apply_format'), tr('formatApplied', { date: formatLongDate(r.date!, locale), label: FORMAT_INFO[next].label }))
+                run(
+                  `${r.id}:apply`,
+                  async () => {
+                    const ok = await resolve(msg, r.id, 'apply_format');
+                    // Nuovo formato: in Squadre le squadre bilanciate si generano da sole (?auto=1)
+                    if (ok) {
+                      setOpen(false);
+                      router.push(`/teams?date=${r.date}&auto=1`);
+                    }
+                    return ok;
+                  },
+                  tr('formatApplied', { date: formatLongDate(r.date!, locale), label: FORMAT_INFO[next].label })
+                )
               }
               className={btn.primary}
             >
@@ -603,7 +640,22 @@ export function RequestsBell() {
 
           {/* Notifiche personali: le stesse che arrivano sul telefono */}
           <section className="space-y-2" aria-label={tr('notificationsAria')}>
-            {admin && todo > 0 && <h3 className="px-1 text-xs font-semibold text-muted">{tb('sectionNotifications')}</h3>}
+            {(inbox.length > 0 || (admin && todo > 0)) && (
+              <div className="flex items-center justify-between gap-3 px-1">
+                <h3 className="text-xs font-semibold text-muted">{tb('sectionNotifications')}</h3>
+                {inbox.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={clearAll}
+                    disabled={clearing}
+                    className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-semibold text-secondary hover:text-danger hover:bg-card-hover disabled:opacity-50"
+                  >
+                    {clearing ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />}
+                    {tb('clearAll')}
+                  </button>
+                )}
+              </div>
+            )}
             {inbox.length === 0 ? (
               todo > 0 ? (
                 <p className="px-1 text-sm text-muted">{tb('none')}</p>
@@ -619,18 +671,23 @@ export function RequestsBell() {
                 </div>
               )
             ) : (
-              <ul className="rounded-2xl bg-app/50 divide-y divide-line overflow-hidden">
+              <ul
+                className={`rounded-2xl bg-app/50 divide-y divide-line ${
+                  inbox.length > 10 ? 'max-h-[min(60vh,34rem)] overflow-y-auto overscroll-contain' : 'overflow-hidden'
+                }`}
+                aria-label={tb('listAria', { count: inbox.length })}
+              >
                 {inbox.map((n) => {
                   const isNew = !n.read || freshIds.has(n.id);
                   return (
-                    <li key={n.id}>
+                    <li key={n.id} className={`flex items-start transition-colors hover:bg-card-hover/60 ${isNew ? 'bg-accent/[0.06]' : ''}`}>
                       <button
                         type="button"
                         onClick={() => {
                           setOpen(false);
                           if (n.url) router.push(n.url);
                         }}
-                        className={`w-full text-left flex items-start gap-3 px-4 py-3 transition-colors hover:bg-card-hover/60 ${isNew ? 'bg-accent/[0.06]' : ''}`}
+                        className="flex-1 min-w-0 text-left flex items-start gap-3 pl-4 pr-1 py-3"
                       >
                         <span
                           className={`mt-1.5 h-2 w-2 flex-shrink-0 rounded-full ${isNew ? 'bg-accent/90' : 'bg-transparent'}`}
@@ -643,6 +700,15 @@ export function RequestsBell() {
                           </span>
                           <span className="block text-sm text-secondary leading-snug mt-0.5">{n.body}</span>
                         </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeNotification(n.id)}
+                        aria-label={tb('deleteOne', { title: n.title })}
+                        title={tb('deleteOneShort')}
+                        className="flex-shrink-0 m-2 p-2 rounded-lg text-muted hover:text-danger hover:bg-card-hover"
+                      >
+                        <X className="h-4 w-4" aria-hidden="true" />
                       </button>
                     </li>
                   );

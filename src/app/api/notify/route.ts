@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminDb, isAdminConfigured } from '@/lib/firebase/admin';
 import { isLeagueActive, isLeagueManager, leagueDb, memberCard, scoped } from '@/lib/server/leagueScope';
-import { Message, adminProfileIds, deliver, italianDate, registeredProfileIds, sendToProfiles, sendToTokens } from '@/lib/server/push';
+import { Message, adminProfileIds, deliver, deliverToAdmins, italianDate, registeredProfileIds, sendToProfiles, sendToTokens } from '@/lib/server/push';
+import { FORMAT_INFO, isMatchFormat } from '@/lib/utils/matchFormat';
 import { checkPromotions } from '@/lib/server/presenceWatch';
 import { callerFrom } from '@/lib/server/adminRequests';
 import { reconcileTeams } from '@/lib/utils/teamUtils';
@@ -26,13 +27,18 @@ type NotifyRequest =
   /** Test notification to every admin's devices */
   | { type: 'test_admins' }
   /** Admin archived a match: new players who just played their FIRST match → the admins review their parameters */
-  | { type: 'first_match'; date: string };
+  | { type: 'first_match'; date: string }
+  /** A manager made the format of a day smaller (e.g. 8vs8 → 7vs7): the teams must be redone and confirmed again */
+  | { type: 'format_reduced'; date: string; from: string; to: string };
 
 
 const isDate = (d: unknown): d is string => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d);
 
 function buildMessage(
-  req: Exclude<NotifyRequest, { type: 'test' } | { type: 'reconcile' } | { type: 'voting_open' } | { type: 'admin_devices' } | { type: 'test_admins' }>
+  req: Exclude<
+    NotifyRequest,
+    { type: 'test' } | { type: 'reconcile' } | { type: 'voting_open' } | { type: 'admin_devices' } | { type: 'test_admins' } | { type: 'format_reduced' }
+  >
 ): Message {
   const when = italianDate(req.date);
   const url = `/teams?date=${req.date}`;
@@ -187,6 +193,29 @@ async function handlePost(request: Request) {
         url: '/?richieste=1',
       }).catch(() => 0);
       return NextResponse.json({ ok: true, sent });
+    }
+
+    if (body.type === 'format_reduced') {
+      if (!isDate(body.date) || !isMatchFormat(body.from) || !isMatchFormat(body.to)) {
+        return NextResponse.json({ ok: false, error: 'bad_request' }, { status: 400 });
+      }
+      const from = FORMAT_INFO[body.from];
+      const to = FORMAT_INFO[body.to];
+      if (to.players >= from.players) return NextResponse.json({ ok: true, skipped: 'not_reduced' });
+      // The saved teams were made for the bigger format: no longer confirmed ("Conferma partita" shows again in Squadre)
+      const teamsRef = leagueDb().doc(`generated_teams/${body.date}`);
+      const [teams, match] = await Promise.all([teamsRef.get(), leagueDb().doc(`matches/${body.date}`).get()]);
+      if (match.data()?.status === 'completed') return NextResponse.json({ ok: true, skipped: 'completed' });
+      if (teams.exists && teams.data()?.confirmed) {
+        await teamsRef.update({ confirmed: false, confirmed_at: null, confirmed_by: null, updated_at: new Date().toISOString() });
+      }
+      // Presidents and collaborators only (bell + push)
+      const res = await deliverToAdmins({
+        title: `📉 Partita ridotta a ${to.label}`,
+        body: `La partita di ${italianDate(body.date)} passa dal ${from.label} al ${to.label} (${to.players} titolari): le squadre vengono ribilanciate in Squadre, controllale e conferma la partita.`,
+        url: `/teams?date=${body.date}`,
+      });
+      return NextResponse.json({ ok: true, sent: res.sent });
     }
 
     if (body.type === 'voting_open') {

@@ -271,9 +271,21 @@ Calendario → Iscrizioni (titolari / attesa) → Formato → Squadre → Partit
    - I gestori possono forzare un giocatore tra i titolari o in attesa.
    - **Blocco dei ritiri**: da N ore prima della partita, se `app_config.timelock_enabled` (`isWithdrawLocked`).
    - Quando qualcuno si ritira sale il primo in attesa, che riceve una notifica push (`checkPromotions`).
+   - **Contano solo le iscrizioni di schede che possono giocare** (`cardCanPlay`): un ospite cancellato, un giocatore
+     tolto dalla lega o disattivato e un organizzatore non occupano posti, né nell'app (Home, Presenze, Squadre) né sul
+     server. Cancellando un ospite si cancellano insieme scheda e iscrizioni future.
+   - **Avvisi a presidente e collaboratori** (campanella e push, mai ai giocatori):
+     - "Raggiunti N iscritti" ogni volta che la partita torna al completo;
+     - "Manca un giocatore" / "Mancano N giocatori" quando una partita al completo perde titolari, o quando nelle
+       squadre salvate resta un posto che nessuno in attesa può prendere.
 3. **Formato** (5v5, 7v7, 8v8, 11v11; [matchFormat.ts](../src/lib/utils/matchFormat.ts))
    - Ogni giorno ha il suo formato.
    - Se gli iscritti superano i posti, il server propone ai gestori un formato più grande (richiesta `format_proposal`).
+     "Passa al …" cambia il formato e apre Squadre, dove le nuove squadre bilanciate si generano da sole.
+   - **Formato più piccolo** (es. 8vs8 → 7vs7, `/api/notify` `format_reduced`): avviso a presidente e collaboratori,
+     la partita torna da confermare ("Conferma partita") e in Squadre le squadre si ribilanciano da sole.
+   - In Squadre, squadre salvate per un formato diverso da quello del giorno vengono rigenerate in automatico appena un
+     gestore apre la pagina, e vanno confermate di nuovo.
 4. **Squadre** (`generated_teams`)
    - Le genera un algoritmo locale bilanciato sull'OVR ([teamUtils.ts](../src/lib/utils/teamUtils.ts)), senza AI esterna.
    - Le sostituzioni dopo un ritiro vengono ricalcolate dal server (`/api/notify` `reconcile`).

@@ -23,6 +23,7 @@ import { db, isFirebaseConfigured } from './config';
 import { reportWriteError } from '@/lib/utils/writeErrors';
 import { Profile, Presence, StatCategory, Match, GeneratedTeamRecord, AppSettings, CalendarSettings, MatchOutcome, MatchScorer, MatchTeamPlayer, TeamSubstitution, MvpVote, MatchPenaltySave } from '@/types/database';
 import { rankDayPresences, rankPresencesByDate } from '@/lib/services/presenceService';
+import { cardCanPlay } from '@/lib/utils/presenceRanking';
 import { DayFormats, MatchFormat, maxPlayersFor } from '@/lib/utils/matchFormat';
 import { requestTeamsCheck, requestFirstMatchCheck } from '@/lib/services/notificationService';
 
@@ -137,10 +138,23 @@ export async function updateProfileFields(
   }
 }
 
+/**
+ * Deletes a guest card AND its sign-ups from today on, in one batch (nothing left on the starters or the waiting
+ * list of any view); then the server re-checks those days: the waiting list moves up, saved teams get a
+ * substitute or the presidents and collaborators are told a player is missing.
+ */
 export async function deleteProfileDoc(id: string): Promise<void> {
   if (!isFirebaseConfigured) return;
   try {
-    await deleteDoc(ldoc('players', id));
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' });
+    const signUps = (await getDocs(query(lcol('presences'), where('player_id', '==', id)))).docs.filter(
+      (d) => String(d.data().date || '') >= today
+    );
+    const batch = writeBatch(db);
+    batch.delete(ldoc('players', id));
+    signUps.forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+    Array.from(new Set(signUps.map((d) => String(d.data().date)))).forEach((date) => requestTeamsCheck(date));
   } catch (err) {
     console.warn('[Firestore] deleteProfileDoc error:', err);
     reportWriteError(err);
@@ -210,9 +224,26 @@ function subscribeRanked(
 ): () => void {
   let docs: Presence[] | null = null;
   let formats: DayFormats | null = null;
+  // Cards that can play: a sign-up left by a deleted guest / removed or deactivated player / organiser takes no
+  // place anywhere (Home, Presenze, Squadre), so no ghost "Giocatore" stays on the starters or the waiting list
+  let playable: Set<string> | null = null;
   const emit = () => {
-    if (docs !== null && formats !== null) callback(rank(docs, formats));
+    if (docs !== null && formats !== null && playable !== null) {
+      const ok = playable;
+      callback(rank(docs.filter((p) => ok.has(p.player_id)), formats));
+    }
   };
+  const unsubC = onSnapshot(
+    lcol('players'),
+    (snapshot) => {
+      // by card id, and by the account id for old sign-ups saved with it
+      playable = new Set(
+        snapshot.docs.filter((d) => cardCanPlay(d.data())).flatMap((d) => [d.id, d.data().user_id, d.data().userId].filter(Boolean) as string[])
+      );
+      emit();
+    },
+    (err) => console.warn(`[Firestore] ${label} players warning:`, err.message)
+  );
   const unsubP = onSnapshot(
     q,
     (snapshot) => {
@@ -228,6 +259,7 @@ function subscribeRanked(
   return () => {
     unsubP();
     unsubF();
+    unsubC();
   };
 }
 
@@ -758,13 +790,15 @@ export async function saveTeams(
   date: string,
   white: MatchTeamPlayer[],
   black: MatchTeamPlayer[],
-  extra: { manual: boolean; whiteAvg?: number; blackAvg?: number }
+  extra: { manual: boolean; whiteAvg?: number; blackAvg?: number; resetConfirm?: boolean }
 ): Promise<void> {
   if (!isFirebaseConfigured) return;
   const now = new Date().toISOString();
   const ref = ldoc('generated_teams', date);
   const snap = await getDoc(ref);
-  const existing = snap.exists() ? (snap.data() as GeneratedTeamRecord) : null;
+  const found = snap.exists() ? (snap.data() as GeneratedTeamRecord) : null;
+  // resetConfirm (teams redone for a new format): the match has to be confirmed again ("Conferma partita")
+  const existing = found && extra.resetConfirm ? { ...found, confirmed: false, confirmed_at: undefined, confirmed_by: undefined } : found;
   const record: GeneratedTeamRecord = {
     id: date,
     date,

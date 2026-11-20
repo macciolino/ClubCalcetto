@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { SportField } from '@/types/database';
 import { saveDayFormat } from '@/lib/firebase/firestoreService';
 import { requestTeamsCheck } from '@/lib/services/notificationService';
+import { callNotifyApi } from '@/lib/services/pushService';
 import { askConfirm, notify } from '@/components/ui/Feedback';
 import { FORMAT_INFO, MATCH_FORMATS, MatchFormat, fieldHostsFormat } from '@/lib/utils/matchFormat';
 import { formatLongDate } from '@/lib/utils/dateUtils';
@@ -61,6 +62,10 @@ export function MatchFormatPicker({
     try {
       await saveDayFormat(date, next, target, adminId);
       if (!sameFormat) requestTeamsCheck(date); // titolari ricalcolati: notifiche a chi entra
+      // Formato più piccolo: avviso a presidente e collaboratori, squadre da rifare e da confermare di nuovo
+      if (!sameFormat && FORMAT_INFO[next].players < info.players) {
+        callNotifyApi({ type: 'format_reduced', date, from: format, to: next }).catch(() => undefined);
+      }
       notify(sameFormat ? t('formationSaved', { formation: target }) : t('formatSaved', { label: FORMAT_INFO[next].label, date: fmtDate(date) }));
     } catch (err) {
       console.warn('[Formato] salvataggio non riuscito:', err);

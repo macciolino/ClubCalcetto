@@ -73,3 +73,12 @@ export function firstToTenByWeek(
   });
   return new Set(Array.from(best.values()).map((b) => b.date));
 }
+
+/**
+ * A sign-up counts only for a card that can play in the league: it exists (a deleted guest leaves nothing behind),
+ * is not taken out of the league, not deactivated, not archived and not an organiser ("Gioco anch'io" off).
+ * Same rule in the app (every view) and on the server (notifications, substitutions).
+ */
+export function cardCanPlay(card: { removed_at?: unknown; deactivated_at?: unknown; archived_at?: unknown; isActivePlayer?: unknown } | null | undefined): boolean {
+  return Boolean(card) && !card!.removed_at && !card!.deactivated_at && !card!.archived_at && card!.isActivePlayer !== false;
+}

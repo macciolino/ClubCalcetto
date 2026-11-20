@@ -216,6 +216,8 @@ describe('Proposta di cambio formato agli admin', () => {
     const day = futureDate(5);
     const batch = db().batch();
     for (let i = 0; i < 15; i++) {
+      // ogni iscritto ha la sua scheda nella lega (le iscrizioni senza scheda non occupano posti)
+      batch.set(ldb().doc(`players/p${i}`), { id: `p${i}`, full_name: `Giocatore ${i}`, is_guest: true, userId: null, leagueRole: 'PLAYER' });
       batch.set(ldb().doc(`presences/${day}_p${i}`), { id: `${day}_p${i}`, date: day, player_id: `p${i}`, status: 'waitlist', order_index: i + 1, created_at: new Date(1000 + i).toISOString() });
     }
     await batch.commit();
