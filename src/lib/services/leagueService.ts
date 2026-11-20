@@ -109,6 +109,7 @@ export async function leagueAdminRequest(
     | { action: 'playing'; active: boolean; playerId?: string }
     | { action: 'remove'; playerId: string }
     | { action: 'delete'; confirmName: string }
+    | { action: 'leave' }
 ): Promise<'ok' | LeagueAdminError> {
   const { data } = await leagueFetch('/api/league-admin', { method: 'POST', body: JSON.stringify(body) });
   if (data.ok) return 'ok';

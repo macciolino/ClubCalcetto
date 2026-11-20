@@ -49,8 +49,10 @@ import { btn } from '@/components/ui/buttons';
 export default function PresenzePage() {
   const { user, profile, isAdmin } = useAuth();
   // Organisers ("Gioco anch'io" off) and platform staff without a card here never sign up for the pitch
-  const { member } = useActiveLeague();
-  const canPlay: boolean | null = member ? member.isActivePlayer !== false : null;
+  const { member, isSuspended: suspendedLeague, isPlatformStaff } = useActiveLeague();
+  const isSuspended = suspendedLeague && !isPlatformStaff;
+  // Suspended league: read-only for members (false = no sign-up button)
+  const canPlay: boolean | null = member ? member.isActivePlayer !== false && !isSuspended : null;
   const [mounted, setMounted] = useState(false);
   const t = useTranslations('attendance');
   const { locale } = useLocaleSetting();
@@ -236,6 +238,7 @@ export default function PresenzePage() {
     isFirstToTen: firstToTen.has(day.dateString),
     isToggling: busyDate === day.dateString,
     canPlay,
+    suspended: isSuspended,
     maxPlayers: maxOf(day.dateString),
   });
   const focusDay = days.find((d) => d.dateString === selectedDayString) || days[0];

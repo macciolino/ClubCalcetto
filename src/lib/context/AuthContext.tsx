@@ -2,6 +2,7 @@
 
 import { markJustSignedIn } from '@/components/SplashScreen';
 import { notify } from '@/components/ui/Feedback';
+import { useTranslations } from 'next-intl';
 
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Profile, UserRole, FieldPosition } from '@/types/database';
@@ -207,6 +208,12 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  // Messages shown from the sign-in callbacks (kept in a ref: the callbacks outlive renders)
+  const tNotice = useTranslations('authNotices');
+  const tNoticeRef = useRef(tNotice);
+  useEffect(() => {
+    tNoticeRef.current = tNotice;
+  }, [tNotice]);
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -261,9 +268,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           updateStoredPlayer(resolved);
         }
         if (res?.claimed) {
-          notify(`Profilo di ${res.guestName} collegato: partite e statistiche sono tue.`);
+          notify(tNoticeRef.current('guestLinked', { name: res.guestName || '' }));
         } else if (invite && res && !res.ok) {
-          notify('Il link di invito non è più valido: chiedi un nuovo link all’amministratore.');
+          notify(tNoticeRef.current('inviteInvalid'));
         }
       }
       void ensurePrivateEmail(docId, fbUser.email);

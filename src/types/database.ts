@@ -151,6 +151,8 @@ export interface Profile {
   self_rated_at?: string;
   /** New player: an admin reviews the parameters after the FIRST match played; false once reviewed */
   needs_stat_review?: boolean;
+  /** Parameters brought from another league (joined after leaving it): a president of this league approves them */
+  stats_from?: { leagueId: string; leagueName: string };
   stat_reviewed_at?: string;
   stat_reviewed_by?: string;
   /** Server: the admins were told (push) that this new player played the first match */

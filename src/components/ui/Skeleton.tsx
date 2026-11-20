@@ -1,4 +1,7 @@
+'use client';
+
 import React from 'react';
+import { useTranslations } from 'next-intl';
 
 /** Grey pulsing shape shown where content is about to appear (instead of a spinner). */
 export function Skeleton({ className = '' }: { className?: string }) {
@@ -7,8 +10,9 @@ export function Skeleton({ className = '' }: { className?: string }) {
 
 /** Generic page placeholder: title, subtitle and two cards. */
 export function PageSkeleton() {
+  const tc = useTranslations('common');
   return (
-    <div className="space-y-6" role="status" aria-label="Caricamento in corso">
+    <div className="space-y-6" role="status" aria-label={tc('loading')}>
       <div className="space-y-2">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-4 w-72 max-w-full" />

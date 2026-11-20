@@ -739,7 +739,8 @@
     "place": "Campo",
     "openMaps": "Apri in Google Maps",
     "scoreboard": "Risultato",
-    "winner": "Vincitori"
+    "winner": "Vincitori",
+    "suspendedNoSignup": "Lega sospesa: iscrizioni ferme, puoi solo consultare."
   },
   "attendance": {
     "profileNotLoaded": "Profilo non ancora caricato, riprova tra un attimo.",
@@ -815,7 +816,8 @@
     "toWaitlist": "Sposta in lista d'attesa",
     "makeStarter": "Fai titolare",
     "confirmRemove": "Rimuovere {name} da {day}?",
-    "removeFromDay": "Rimuovi dal giorno"
+    "removeFromDay": "Rimuovi dal giorno",
+    "suspendedNoSignup": "Lega sospesa: iscrizioni ferme, puoi solo consultare."
   },
   "profile": {
     "playerFallback": "Giocatore",
@@ -1384,7 +1386,9 @@
     "rejectClaim": "Rifiuta",
     "claimApproved": "{name} ora ha lo storico di \"{guest}\".",
     "claimRejected": "Richiesta di {name} rifiutata: resta un giocatore nuovo.",
-    "claimGone": "Questa scheda ospite non è più disponibile (già collegata o eliminata)."
+    "claimGone": "Questa scheda ospite non è più disponibile (già collegata o eliminata).",
+    "statsFrom": "Parametri portati da \"{league}\": da riapprovare",
+    "statsFromHint": "Questi parametri vengono dalla lega \"{league}\". Controllali e approvali per la tua lega."
   },
   "emailPrivacy": {
     "title": "Protezione delle email",
@@ -1568,6 +1572,18 @@
         "not_found": "Questa lega non esiste più.",
         "failed": "Eliminazione non riuscita: controlla la connessione e riprova."
       }
+    },
+    "leave": {
+      "title": "Esci dalla lega",
+      "intro": "Esci subito: non vedi più la lega e le tue iscrizioni future vengono tolte. Il tuo storico resta; i tuoi parametri ti seguono in un’altra lega, dove un presidente o un collaboratore li riapprova. Per tornare basta un link di invito.",
+      "button": "Esci dalla lega",
+      "confirm": "Uscire da \"{name}\"? Il presidente e i collaboratori verranno avvisati.",
+      "errors": {
+        "last_president": "Sei l’unico presidente: nomina un altro presidente prima di uscire.",
+        "failed": "Non sono riuscito a farti uscire: controlla la connessione e riprova.",
+        "last_president_or_delete": "Sei l’unico presidente: nomina un altro presidente, oppure elimina la lega dalla Zona pericolosa."
+      },
+      "done": "Hai lasciato \"{name}\": ora sei in \"{other}\"."
     }
   },
   "superAdmin": {
@@ -1598,7 +1614,7 @@
     "staff": {
       "title": "Admin della piattaforma",
       "intro": "Ti aiutano a gestire la piattaforma: valgono come presidente in ogni lega, sospendono ed eliminano leghe, gestiscono gli account e approvano i campi del catalogo. Non possono nominare altri admin, toccare privacy email e migrazione, né cambiare un super admin.",
-      "loading": "Carico gli admin…",
+      "loading": "Carico gli admin piattaforma…",
       "failed": "Elenco non caricato: riprova.",
       "roleSuper": "Super admin",
       "roleGlobal": "Admin piattaforma",
@@ -1705,5 +1721,9 @@
         "failed": "Operazione non riuscita: controlla la connessione e riprova."
       }
     }
+  },
+  "authNotices": {
+    "guestLinked": "Profilo di {name} collegato: partite e statistiche sono tue.",
+    "inviteInvalid": "Il link di invito non è più valido: chiedine uno nuovo al presidente o a un collaboratore."
   }
 }

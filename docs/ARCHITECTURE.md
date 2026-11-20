@@ -127,7 +127,7 @@ Il ruolo è copiato dal server in `memberships/{uid}.leagues.{id}.league_role`, 
 **Vincoli**
 - La lega non resta mai senza un presidente (`canChangeLeagueRole`).
 - Un ospite non diventa mai gestore.
-- Nessuno toglie sé stesso dalla lega (un'uscita volontaria non esiste ancora).
+- Nessuno toglie sé stesso dalla lega: per andarsene si usa "Esci dalla lega".
 - Un presidente va prima declassato, poi si può togliere.
 - `userId`, cioè il collegamento della scheda all'account, non si cambia mai dal client.
 
@@ -166,7 +166,8 @@ Lo staff **non** agisce come giocatore dove non ha una scheda: non si iscrive e 
 |---|---|---|
 | **Ospite** | `is_guest: true`, `userId: null` | Giocatore senza account, creato da un gestore. Non accede. Le sue partite si passano a un account (§3.1). Si elimina, non si "toglie" |
 | **Non gioca** (organizzatore) | `isActivePlayer: false` | Resta nella lega ma **non scende in campo**: è fuori dagli elenchi (Giocatori, Presenze, Squadre, Home) e le regole **rifiutano le sue iscrizioni**, anche se a iscriverlo è un gestore o lo staff (`playsOnPitch`). Un gestore che non gioca continua comunque a iscrivere chi gioca. Quando lo si spegne, le iscrizioni future vengono tolte e sale chi è in lista d'attesa. Lo cambia l'interessato oppure il presidente o lo staff (`/api/league-admin` `playing`) |
-| **Tolto dalla lega** | `removed_at`, `removed_by` | Nessun accesso, nascosto dagli elenchi, la scheda resta per lo storico. Rientra con un link di invito |
+| **Tolto dalla lega / uscito** | `removed_at`, `removed_by` | Nessun accesso, nascosto dagli elenchi, la scheda resta per lo storico. Rientra con un link di invito e riprende la stessa scheda |
+| **Parametri da un'altra lega** | `stats_from`, `needs_stat_review` | Entrando in una lega nuova, la scheda parte dai parametri (Velocità, Fisico…) dell'ultima scheda dell'account in un'altra lega, anche lasciata, al posto dell'autovalutazione. Il **presidente o un collaboratore** della nuova lega li riapprova dal centro richieste, subito (senza aspettare la prima partita) |
 | **Account disattivato** | `deactivated_at` (profilo e schede) | Accesso bloccato (Auth disabilitato), dati conservati, può chiedere di rientrare |
 | **Archiviato** | `archived_at` | Vecchio storico dopo un "riparti da zero" |
 
@@ -200,6 +201,7 @@ La colonna **Staff** vale per `SUPER_ADMIN` e `GLOBAL_ADMIN`, salvo dove è indi
 | Rientro di un account chiuso | ✅ | ❌ | ❌ | ❌ | — |
 | Email dei membri della lega | ✅ | ✅ | ✅ | ❌ | gestori leggono |
 | Togliere un giocatore dalla lega | ✅ | ✅ | ✅ | ❌ | solo staff |
+| Uscire dalla lega | ⚙️ | ✅ (mai l'ultimo presidente) | ✅ | ✅ | anche sospesa |
 | Togliere un collaboratore | ✅ | ✅ | ❌ | ❌ | solo staff |
 | Ruoli di lega | ✅ (super admin: solo SA) | ✅ (non super admin) | ❌ | ❌ | solo staff |
 | "Non gioca" per un altro membro | ✅ | ✅ | ❌ | sé | solo staff |
@@ -392,7 +394,7 @@ Va bene fino a qualche centinaio di campi; oltre, servirà un filtro per città 
 | Azione | Chi | Effetto |
 |---|---|---|
 | **Togli dalla lega** (`/api/league-admin` `remove`) | Gestori della lega, staff | La scheda viene marcata `removed_at` e la voce sparisce da `memberships`. Le iscrizioni future vengono tolte (sale chi è in attesa). Account e altre leghe restano intatti |
-| **Esci dalla lega** | — | ⚠️ Non esiste ancora: un membro non può uscire da solo, lo toglie un gestore |
+| **Esci dalla lega** (`/api/league-admin` `leave`, Impostazioni → Lega) | Il membro stesso, anche in una lega sospesa | Subito, senza approvazione: stessi effetti di "Togli dalla lega". Presidente e collaboratori ricevono un avviso (campanella e push). L'**ultimo presidente** non può uscire: nomina un altro presidente, oppure elimina la lega dalla Zona pericolosa ("I Calcettari" non si elimina: lì deve nominarne un altro). L'app passa a un'altra lega, o al benvenuto se non ne restano |
 | **Chiudi il mio account** (`/api/account/delete`) | Il titolare (non il super admin) | Disattiva (dati conservati) oppure elimina. I gestori ricevono la richiesta `account_closed`, che è solo un avviso |
 | **Disattiva o elimina l'account di altri** | Solo lo staff, mai su un super admin | Agisce sull'account globale e su tutte le sue schede |
 | **Rientro** (`/api/account/return-request`, pubblica) | Chi ha l'account chiuso chiede; **lo staff** decide | **Ripristina** (profilo e storico tornano) oppure **riparti da zero** (vecchio storico archiviato come ospite). Per privacy la risposta è sempre la stessa (C10) |

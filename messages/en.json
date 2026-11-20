@@ -739,7 +739,8 @@
     "place": "Pitch",
     "openMaps": "Open in Google Maps",
     "scoreboard": "Score",
-    "winner": "Winners"
+    "winner": "Winners",
+    "suspendedNoSignup": "League suspended: sign-ups are frozen, you can only look."
   },
   "attendance": {
     "profileNotLoaded": "Profile not loaded yet, try again in a moment.",
@@ -815,7 +816,8 @@
     "toWaitlist": "Move to the waiting list",
     "makeStarter": "Make starter",
     "confirmRemove": "Remove {name} from {day}?",
-    "removeFromDay": "Remove from the day"
+    "removeFromDay": "Remove from the day",
+    "suspendedNoSignup": "League suspended: sign-ups are frozen, you can only look."
   },
   "profile": {
     "playerFallback": "Player",
@@ -1384,7 +1386,9 @@
     "rejectClaim": "Reject",
     "claimApproved": "{name} now has the history of \"{guest}\".",
     "claimRejected": "{name}'s request rejected: they stay a new player.",
-    "claimGone": "This guest card is no longer available (already linked or deleted)."
+    "claimGone": "This guest card is no longer available (already linked or deleted).",
+    "statsFrom": "Ratings brought from \"{league}\": to be approved again",
+    "statsFromHint": "These ratings come from the league \"{league}\". Check them and approve them for your league."
   },
   "emailPrivacy": {
     "title": "Email protection",
@@ -1568,6 +1572,18 @@
         "not_found": "This league no longer exists.",
         "failed": "Delete failed: check your connection and try again."
       }
+    },
+    "leave": {
+      "title": "Leave the league",
+      "intro": "You leave at once: you no longer see the league and your future sign-ups are removed. Your history stays; your ratings follow you to another league, where a president or a collaborator approves them again. An invite link brings you back.",
+      "button": "Leave the league",
+      "confirm": "Leave \"{name}\"? The president and the collaborators will be told.",
+      "errors": {
+        "last_president": "You are the only president: appoint another president before leaving.",
+        "failed": "Could not leave: check your connection and try again.",
+        "last_president_or_delete": "You are the only president: appoint another president, or delete the league from the danger zone."
+      },
+      "done": "You left \"{name}\": you are now in \"{other}\"."
     }
   },
   "superAdmin": {
@@ -1598,7 +1614,7 @@
     "staff": {
       "title": "Platform admins",
       "intro": "They help you run the platform: they count as president in every league, suspend and delete leagues, manage accounts and approve catalog pitches. They cannot appoint other admins, touch email privacy and migration, or change a super admin.",
-      "loading": "Loading admins…",
+      "loading": "Loading platform admins…",
       "failed": "List not loaded: try again.",
       "roleSuper": "Super admin",
       "roleGlobal": "Platform admin",
@@ -1705,5 +1721,9 @@
         "failed": "It did not work: check your connection and try again."
       }
     }
+  },
+  "authNotices": {
+    "guestLinked": "{name}’s profile is linked: matches and stats are yours.",
+    "inviteInvalid": "This invite link is no longer valid: ask the president or a collaborator for a new one."
   }
 }

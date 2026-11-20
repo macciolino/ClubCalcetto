@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { adminDb, isAdminConfigured } from '@/lib/firebase/admin';
 import { callerFrom } from '@/lib/server/adminRequests';
 import { currentLeague, isLeagueActive, memberCard, scoped } from '@/lib/server/leagueScope';
-import { removeLeagueMember, setActivePlayer, setMemberRole, updateLeagueSettings } from '@/lib/server/leagueMembers';
+import { leaveLeague, removeLeagueMember, setActivePlayer, setMemberRole, updateLeagueSettings } from '@/lib/server/leagueMembers';
+import { deliverToAdmins } from '@/lib/server/push';
 import { checkPromotions } from '@/lib/server/presenceWatch';
 import { deleteLeague } from '@/lib/server/leagueDeletion';
 import type { LeagueRole } from '@/types/league';
@@ -17,6 +18,8 @@ export const dynamic = 'force-dynamic';
  *  - { action: 'playing', active, playerId? }    any member: "Gioco anch'io" on their own card; presidents for anyone
  *  - { action: 'remove', playerId }              managers: take a member out of THIS league (never the global account)
  *  - { action: 'delete', confirmName }           presidents: delete the league for good (typed name must match)
+ *  - { action: 'leave' }                         any member: leaves THIS league at once (never the last president);
+ *                                                presidents and collaborators are told (bell + push)
  * Platform staff (SUPER_ADMIN, GLOBAL_ADMIN) act as PRESIDENT in every league, without a card and also when the
  * league is suspended; members of a suspended league are read-only (423).
  */
@@ -29,6 +32,21 @@ async function handlePost(request: Request) {
     const staff = caller.isPlatformStaff;
     const rawCard = await memberCard(caller.uid, leagueId);
     const card = rawCard && !rawCard.data.deactivated_at ? rawCard : null;
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+
+    // Leaving is always possible for a member with a card, also in a suspended league
+    if (body.action === 'leave') {
+      if (!card) return NextResponse.json({ ok: false, error: 'not_found' }, { status: 404 });
+      const res = await leaveLeague(leagueId, card.playerId, caller.uid);
+      if (!res.ok) return NextResponse.json({ ok: false, error: res.error }, { status: res.error === 'not_found' ? 404 : 400 });
+      await Promise.all(res.dates.map((d) => checkPromotions(d).catch(() => undefined)));
+      await deliverToAdmins({
+        title: '👋 Uscita dalla lega',
+        body: `${res.name} ha lasciato la lega: non ha più accesso, lo storico resta.`,
+        url: '/players',
+      }).catch(() => undefined);
+      return NextResponse.json({ ok: true });
+    }
     if (staff) {
       if (!(await adminDb().doc(`leagues/${leagueId}`).get()).exists) return NextResponse.json({ ok: false, error: 'not_found' }, { status: 404 });
     } else {
@@ -38,7 +56,6 @@ async function handlePost(request: Request) {
     // Effective role here: platform staff = PRESIDENT everywhere
     const role: LeagueRole = staff ? 'PRESIDENT' : (card!.data.leagueRole as LeagueRole) || 'PLAYER';
     const myId = card?.playerId || caller.profileId;
-    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
 
     if (body.action === 'playing') {
       const target = typeof body.playerId === 'string' && body.playerId ? body.playerId : card?.playerId;

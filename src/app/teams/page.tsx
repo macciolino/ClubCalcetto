@@ -8,6 +8,7 @@ import { withForm, formatForm } from '@/lib/utils/formUtils';
 import { NumberInput } from '@/components/NumberInput';
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useActiveLeague } from '@/lib/context/ActiveLeagueContext';
 import { useAuth } from '@/lib/context/AuthContext';
 import { Profile, Presence, Match, GeneratedTeamRecord, SportField, MatchTeamPlayer } from '@/types/database';
 import { reconcileTeams, profileForTeamPlayer, splitKey, toTeamPlayer, slotLabel } from '@/lib/utils/teamUtils';
@@ -110,6 +111,7 @@ function SquadreContent() {
     () => profiles.map((p) => withForm(p, forms.get(p.id))),
     [profiles, forms]
   );
+  const { member } = useActiveLeague();
   const [teamRecord, setTeamRecord] = useState<GeneratedTeamRecord | null>(null);
   // Data already read from Firestore for the selected day (needed before generating teams on its own)
   const [teamsReadyFor, setTeamsReadyFor] = useState('');
@@ -1058,7 +1060,7 @@ function SquadreContent() {
               matchTime={matchTime}
               white={teams.white}
               black={teams.black}
-              voterUid={user?.uid || null}
+              voterUid={member ? user?.uid || null : null}
               isAdmin={isClientAdmin}
               testMode={teamRecord?.mvp_vote_test === 'all' ? 'all' : teamRecord?.mvp_vote_test ? 'admins' : false}
             />

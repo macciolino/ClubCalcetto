@@ -65,7 +65,9 @@ function shortDate(date: string, locale: string): string {
 export default function HomePage() {
   const { user, profile, isAdmin, isLoading } = useAuth();
   // Organisers ("Gioco anch'io" off) and platform staff without a card here never sign up for the pitch
-  const { member } = useActiveLeague();
+  const { member, isSuspended: suspendedLeague, isPlatformStaff } = useActiveLeague();
+  // Suspended league: read-only for members (platform staff still work there)
+  const isSuspended = suspendedLeague && !isPlatformStaff;
   const canPlay = Boolean(member && member.isActivePlayer !== false);
   const [date, setDate] = useState<string>(() => getOfficialMatchDate());
   const [presences, setPresences] = useState<Presence[] | null>(null);
@@ -337,10 +339,10 @@ export default function HomePage() {
                 </button>
               )}
             </div>
-          ) : !canPlay ? (
+          ) : !canPlay || isSuspended ? (
             <div className="rounded-xl border border-line-strong bg-card-hover/60 px-4 py-3.5 text-center">
-              <span className="text-base font-semibold text-secondary">{member ? t('notPlaying') : t('noCard')}</span>
-              {member && <span className="block text-xs text-secondary mt-0.5">{t('notPlayingHint')}</span>}
+              <span className="text-base font-semibold text-secondary">{isSuspended ? t('suspendedNoSignup') : member ? t('notPlaying') : t('noCard')}</span>
+              {member && !isSuspended && <span className="block text-xs text-secondary mt-0.5">{t('notPlayingHint')}</span>}
             </div>
           ) : locked ? (
             <div className="rounded-xl border border-line-strong bg-card-hover/60 px-4 py-3.5 text-center">

@@ -221,6 +221,47 @@ test.describe('Ciclo di vita della lega', () => {
     await expect(page.getByRole('button', { name: 'Ci sono' })).toHaveCount(0);
   });
 
+  test('esci dalla lega: esce subito, torna nell’altra lega, il presidente è avvisato', async ({ page }) => {
+    await db.doc('profiles/p-1').update({ platformRole: 'USER' });
+    // un altro presidente nella Lega del giovedì: così Marco può uscire
+    await db.doc('leagues/giovedi/players/t1').set({ id: 't1', userId: 't1', full_name: 'Test Uno', leagueRole: 'PRESIDENT', isActivePlayer: true, is_guest: false });
+    await loginAsAdmin(page);
+    await openLeague(page, /Lega del giovedì/);
+    await page.goto('/settings?sezione=lega');
+    await page.getByRole('button', { name: 'Esci dalla lega' }).click();
+    await page.getByRole('button', { name: 'Conferma', exact: true }).click();
+    await expect(page.getByText('Hai lasciato "Lega del giovedì": ora sei in "I Calcettari".')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('button', { name: /Lega attiva: I Calcettari/ })).toBeVisible();
+    expect((await db.doc('leagues/giovedi/players/p-1').get()).data()?.removed_at).toBeTruthy();
+    await expect
+      .poll(async () => (await db.collection('profiles/t1/notifications').get()).docs.map((d) => String(d.data().body)).join(' '), { timeout: 15_000 })
+      .toContain('Marco Test ha lasciato la lega');
+  });
+
+  test('unico presidente: non esce, il messaggio indica le due strade (o solo la nomina nei Calcettari)', async ({ page }) => {
+    await db.doc('profiles/p-1').update({ platformRole: 'USER' });
+    await loginAsAdmin(page);
+    // I Calcettari: non si elimina, quindi solo "nomina un altro presidente"
+    await page.goto('/settings?sezione=lega');
+    await page.getByRole('button', { name: 'Esci dalla lega' }).click();
+    await page.getByRole('button', { name: 'Conferma', exact: true }).click();
+    await expect(page.getByText('Sei l’unico presidente: nomina un altro presidente prima di uscire.')).toBeVisible({ timeout: 15_000 });
+    // Lega del giovedì: anche "oppure elimina la lega"
+    await openLeague(page, /Lega del giovedì/);
+    await page.goto('/settings?sezione=lega');
+    await page.getByRole('button', { name: 'Esci dalla lega' }).click();
+    await page.getByRole('button', { name: 'Conferma', exact: true }).click();
+    await expect(page.getByText('Sei l’unico presidente: nomina un altro presidente, oppure elimina la lega dalla Zona pericolosa.')).toBeVisible({ timeout: 15_000 });
+    expect((await db.doc('memberships/e2e-super').get()).data()?.leagues?.giovedi).toBeTruthy();
+  });
+
+  test('parametri portati da un’altra lega: il presidente li vede subito da riapprovare', async ({ page }) => {
+    await db.doc('leagues/calcettari/players/t2').update({ needs_stat_review: true, stats_from: { leagueId: 'giovedi', leagueName: 'Lega del giovedì' } });
+    await loginAsAdmin(page);
+    await page.getByRole('button', { name: /^Notifiche/ }).first().click();
+    await expect(page.getByText('Parametri portati da "Lega del giovedì": da riapprovare')).toBeVisible({ timeout: 15_000 });
+  });
+
   test('tolto dalla lega aperta: avviso e passaggio all’altra; lega sospesa: avviso e passaggio', async ({ page }) => {
     // un presidente qualunque (lo staff di piattaforma invece resta in ogni lega, anche sospesa)
     await db.doc('profiles/p-1').update({ platformRole: 'USER' });
@@ -269,6 +310,15 @@ test.describe('Super admin della piattaforma', () => {
     await page.getByRole('button', { name: 'Conferma', exact: true }).click();
     await expect(row).toContainText('Attiva', { timeout: 15_000 });
     await expect(page.getByText(/Questa lega è sospesa/)).toHaveCount(0);
+  });
+
+  test('lega sospesa vista da un membro (non staff): niente "Ci sono", solo consultazione', async ({ page }) => {
+    await db.doc('profiles/p-1').update({ platformRole: 'USER' });
+    await db.doc('leagues/calcettari').update({ status: 'suspended' });
+    await loginAsAdmin(page);
+    await expect(page.getByText(/Questa lega è sospesa/)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('Lega sospesa: iscrizioni ferme, puoi solo consultare.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Ci sono' })).toHaveCount(0);
   });
 
   test('presidente senza ruolo di piattaforma: niente voce nel menu e pagina chiusa', async ({ page }) => {

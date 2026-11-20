@@ -111,7 +111,7 @@ export function Navbar() {
           {/* User Info & Actions */}
           <div className="flex items-center justify-end gap-3 min-w-0">
             {/* Campanella: notifiche per tutti, più le richieste da gestire per gli admin */}
-            <RequestsBell />
+            {user && <RequestsBell />}
             {/* Nuovo giocatore: autovalutazione dei parametri (una volta) */}
             <SelfRatingPrompt />
             {/* Icona, nome e ruolo: aprono il menu dell'utente */}

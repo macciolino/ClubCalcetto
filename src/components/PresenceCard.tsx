@@ -22,6 +22,8 @@ interface PresenceCardProps {
   isToggling?: boolean;
   /** The user can sign up for the pitch: false = organiser ("Gioco anch'io" off); null = no card in this league */
   canPlay?: boolean | null;
+  /** League suspended by the platform: members only look (no sign-up) */
+  suspended?: boolean;
   /** Day not open yet for players (next week before the admin opens voting) */
   isLocked?: boolean;
   /** This day was complete first in its week */
@@ -93,6 +95,7 @@ export function PresenceCard({
   onRemovePresence,
   isToggling = false,
   canPlay,
+  suspended = false,
   isLocked = false,
   isFirstToTen = false,
   onSetOverride,
@@ -219,8 +222,8 @@ export function PresenceCard({
           </div>
         ) : canPlay !== true && canPlay !== undefined ? (
           <div className="w-full rounded-xl border border-line-strong bg-card-hover/60 px-4 py-3 text-center">
-            <span className="text-sm font-semibold text-secondary">{canPlay === null ? t('noCard') : t('notPlaying')}</span>
-            {canPlay === false && <span className="block text-xs text-secondary mt-0.5">{t('notPlayingHint')}</span>}
+            <span className="text-sm font-semibold text-secondary">{suspended ? t('suspendedNoSignup') : canPlay === null ? t('noCard') : t('notPlaying')}</span>
+            {canPlay === false && !suspended && <span className="block text-xs text-secondary mt-0.5">{t('notPlayingHint')}</span>}
           </div>
         ) : isLocked ? (
           <div className="w-full rounded-xl border border-line-strong bg-card-hover/60 px-4 py-3 text-center">

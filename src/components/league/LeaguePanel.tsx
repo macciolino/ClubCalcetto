@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { Copy, Link2, Loader2, RefreshCw, Save, Search, Share2, Trash2, UserCheck, Users } from 'lucide-react';
+import { Copy, Link2, Loader2, LogOut, RefreshCw, Save, Search, Share2, Trash2, UserCheck, Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { db, isFirebaseConfigured } from '@/lib/firebase/config';
 import { lcol } from '@/lib/league/leagueRefs';
@@ -41,6 +41,7 @@ export function LeaguePanel() {
       <MembersCard editable={isPresident} />
       {/* Presidents only (the server checks it too); the base league "I Calcettari" can never be deleted */}
       {isPresident && league && league.id !== CALCETTARI_LEAGUE_ID && <DeleteLeagueCard league={league} />}
+      <LeaveLeagueCard leagueName={league?.name || ''} />
     </div>
   );
 }
@@ -64,6 +65,51 @@ function DeleteLeagueCard({ league }: { league: League }) {
         <Trash2 className="h-4 w-4" aria-hidden="true" /> {t('open')}
       </button>
       {open && <DeleteLeagueSheet leagueName={league.name} onDelete={remove} onClose={() => setOpen(false)} />}
+    </section>
+  );
+}
+
+/**
+ * "Esci dalla lega": any member with a card leaves at once (presidents and collaborators are told). Card and history
+ * stay; the parameters come along to another league, where a president approves them again. The last president
+ * has to appoint another one first. The app then moves to another league (or the welcome screen) by itself.
+ */
+function LeaveLeagueCard({ leagueName }: { leagueName: string }) {
+  const t = useTranslations('league.leave');
+  const { member, leagues, activeLeagueId, setActiveLeague } = useActiveLeague();
+  const [busy, setBusy] = useState(false);
+  if (!member) return null;
+  const leave = async () => {
+    if (busy || !(await askConfirm(t('confirm', { name: leagueName })))) return;
+    setBusy(true);
+    const res = await leagueAdminRequest({ action: 'leave' });
+    setBusy(false);
+    if (res === 'last_president') {
+      // Every league but "I Calcettari" (never deleted) can also be closed from the danger zone
+      return notify(t(activeLeagueId === CALCETTARI_LEAGUE_ID ? 'errors.last_president' : 'errors.last_president_or_delete'));
+    }
+    if (res !== 'ok') return notify(t('errors.failed'));
+    // Straight to another league of the user (or, with none left, a fresh start on the welcome screen)
+    const other = leagues.find((l) => l.id !== activeLeagueId);
+    if (other) {
+      setActiveLeague(other.id);
+      notify(t('done', { name: leagueName, other: other.name }));
+    } else {
+      window.location.assign('/');
+    }
+  };
+  return (
+    <section className={card} aria-labelledby="leave-league">
+      <div>
+        <h2 id="leave-league" className="text-sm font-bold text-primary flex items-center gap-2">
+          <LogOut className="h-5 w-5 text-secondary" aria-hidden="true" /> {t('title')}
+        </h2>
+        <p className="text-xs text-secondary mt-0.5">{t('intro')}</p>
+      </div>
+      <button type="button" onClick={leave} disabled={busy} className={btn.danger}>
+        {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <LogOut className="h-4 w-4" aria-hidden="true" />}
+        {t('button')}
+      </button>
     </section>
   );
 }

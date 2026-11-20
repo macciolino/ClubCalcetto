@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { collection, deleteDoc, doc, getDocs, limit, onSnapshot, orderBy, query, updateDoc, where, writeBatch } from 'firebase/firestore';
+import { collection, deleteDoc, deleteField, doc, getDocs, limit, onSnapshot, orderBy, query, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { lcol, ldoc, currentLeagueId } from '@/lib/league/leagueRefs';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -115,6 +115,7 @@ function StatReviewCard({ player, categories, reviewerId }: { player: Profile; c
         stats,
         overall_rating: ovrOf(values),
         needs_stat_review: false,
+        stats_from: deleteField(),
         stat_reviewed_at: now,
         stat_reviewed_by: reviewerId,
         updated_at: now,
@@ -133,7 +134,9 @@ function StatReviewCard({ player, categories, reviewerId }: { player: Profile; c
         <span className="flex-1 min-w-0">
           <span className="block text-sm font-semibold text-primary truncate">{player.full_name}</span>
           <span className="block text-xs text-muted">
-            {tr('played', { count: played })} · {player.self_stats ? tr('selfRated') : tr('notSelfRated')}
+            {player.stats_from
+              ? tr('statsFrom', { league: player.stats_from.leagueName })
+              : `${tr('played', { count: played })} · ${player.self_stats ? tr('selfRated') : tr('notSelfRated')}`}
           </span>
         </span>
         <span className="text-right flex-shrink-0">
@@ -145,7 +148,7 @@ function StatReviewCard({ player, categories, reviewerId }: { player: Profile; c
       {open && (
         <div className="space-y-4 pt-1">
           <p className="text-sm text-secondary">
-            {tr('reviewHint')}
+            {player.stats_from ? tr('statsFromHint', { league: player.stats_from.leagueName }) : tr('reviewHint')}
           </p>
           <StatRatingFields
             categories={categories}
@@ -282,7 +285,11 @@ export function RequestsBell() {
   const reviews = useMemo(
     () =>
       players.filter(
-        (p) => p.needs_stat_review && !p.is_guest && (p.matches_won || 0) + (p.matches_drawn || 0) + (p.matches_lost || 0) >= 1
+        (p) =>
+          p.needs_stat_review &&
+          !p.is_guest &&
+          // parameters from another league: a manager approves them at once; otherwise after the first match
+          (Boolean(p.stats_from) || (p.matches_won || 0) + (p.matches_drawn || 0) + (p.matches_lost || 0) >= 1)
       ),
     [players]
   );

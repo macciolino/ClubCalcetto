@@ -4,7 +4,7 @@ import { adminDb } from '@/lib/firebase/admin';
 import { DEFAULT_BASE_CATEGORIES } from '@/lib/utils/defaultCategories';
 import { canChangeLeagueRole, canRemoveFromLeague, leagueSlug } from '@/lib/utils/leaguePermissions';
 import { openRequest } from '@/lib/server/adminRequests';
-import { inLeague, leagueDb } from '@/lib/server/leagueScope';
+import { inLeague, leagueDb, leaguesWithPlayer } from '@/lib/server/leagueScope';
 import { SUPER_ADMIN_PROFILE_ID } from '@/lib/superAdmin';
 import { isSuperAdminProfile } from '@/lib/server/platformAccount';
 import type { LeagueRole, LeagueVisibility } from '@/types/league';
@@ -79,8 +79,14 @@ export async function ensureLeagueCard(leagueId: string, caller: { uid: string; 
   if (!card.exists) {
     const profile = profileSnap.data() || {};
     const categories = cats.empty ? DEFAULT_BASE_CATEGORIES : cats.docs.map((c) => c.data() as { name: string; default_value?: number });
+    // Parameters (Velocità, Fisico…) of the last card the account had in another league, even one it left:
+    // they come along, and a president of THIS league approves them again (no self-assessment)
+    const previous = await previousLeagueStats(caller.profileId, leagueId);
     const stats: Record<string, number> = {};
-    categories.forEach((c) => (stats[String(c.name)] = Number(c.default_value ?? 6)));
+    categories.forEach((c) => {
+      const carried = Number(previous?.stats[String(c.name)]);
+      stats[String(c.name)] = carried >= 1 && carried <= 10 ? carried : Number(c.default_value ?? 6);
+    });
     const values = Object.values(stats);
     batch.create(cardRef, {
       id: caller.profileId,
@@ -89,7 +95,7 @@ export async function ensureLeagueCard(leagueId: string, caller: { uid: string; 
       full_name: profile.full_name || 'Giocatore',
       ...(profile.first_name ? { first_name: profile.first_name, last_name: profile.last_name } : {}),
       avatar_url: profile.avatar_url || null,
-      position: profile.position || 'Esterno',
+      position: previous?.position || profile.position || 'Esterno',
       role: 'player',
       leagueRole: 'PLAYER',
       isActivePlayer: true,
@@ -99,8 +105,9 @@ export async function ensureLeagueCard(leagueId: string, caller: { uid: string; 
       matches_won: 0,
       matches_drawn: 0,
       matches_lost: 0,
-      // new in this league: rates themselves once, a manager reviews after the first match
-      self_rating_pending: true,
+      // new in this league: rates themselves once, a manager reviews after the first match;
+      // with parameters from another league: no self-assessment, a president approves them again
+      ...(previous ? { stats_from: { leagueId: previous.leagueId, leagueName: previous.leagueName } } : { self_rating_pending: true }),
       needs_stat_review: true,
       created_at: now,
       updated_at: now,
@@ -118,6 +125,24 @@ export async function ensureLeagueCard(leagueId: string, caller: { uid: string; 
   );
   await batch.commit();
   return created;
+}
+
+/** Parameters of the account's most recent card in another league (reviewed ones first), or null. */
+async function previousLeagueStats(profileId: string, exceptLeague: string) {
+  const ids = (await leaguesWithPlayer(profileId)).filter((id) => id !== exceptLeague);
+  if (ids.length === 0) return null;
+  const db = adminDb();
+  const [cards, leagues] = await Promise.all([
+    db.getAll(...ids.map((id) => leagueDb(id).doc(`players/${profileId}`))),
+    db.getAll(...ids.map((id) => db.doc(`leagues/${id}`))),
+  ]);
+  const found = cards
+    .map((c, i) => ({ data: c.data() || {}, leagueId: ids[i], leagueName: String(leagues[i].data()?.name || ids[i]) }))
+    .filter((c) => c.data.stats && Object.keys(c.data.stats).length > 0 && !c.data.is_guest)
+    .sort((a, b) => String(b.data.stat_reviewed_at || b.data.updated_at || '').localeCompare(String(a.data.stat_reviewed_at || a.data.updated_at || '')))[0];
+  return found
+    ? { stats: found.data.stats as Record<string, number>, position: found.data.position as string | undefined, leagueId: found.leagueId, leagueName: found.leagueName }
+    : null;
 }
 
 export type JoinResult =
@@ -263,7 +288,6 @@ export async function removeLeagueMember(
   by: { profileId: string; leagueRole: LeagueRole; isSuper?: boolean }
 ): Promise<{ ok: true; dates: string[] } | { ok: false; error: RemoveMemberError }> {
   if (!/^[A-Za-z0-9_-]{1,128}$/.test(playerId)) return { ok: false, error: 'not_found' };
-  const db = adminDb();
   const L = leagueDb(leagueId);
   const ref = L.doc(`players/${playerId}`);
   const snap = await ref.get();
@@ -282,15 +306,48 @@ export async function removeLeagueMember(
   // Any super admin account is protected (only a super admin takes it out)
   if (!by.isSuper && (await isSuperAdminProfile(playerId))) return { ok: false, error: 'forbidden' };
 
+  return { ok: true, dates: await takeOutOfLeague(leagueId, playerId, target.userId!, by.profileId) };
+}
+
+/**
+ * Out of THIS league (taken out by a manager, or left by the member): card kept for the history (removed_at,
+ * hidden from the lists, parameters kept), membership entry removed, future sign-ups cancelled.
+ * Returns the dates whose sign-ups were removed (the waiting list moves up).
+ */
+async function takeOutOfLeague(leagueId: string, playerId: string, userId: string, byId: string): Promise<string[]> {
+  const db = adminDb();
+  const L = leagueDb(leagueId);
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' });
   const presences = (await L.collection('presences').where('player_id', '==', playerId).get()).docs.filter(
     (d) => String(d.data().date || '') >= today
   );
   const now = new Date().toISOString();
   const batch = db.batch();
-  batch.update(ref, { removed_at: now, removed_by: by.profileId, leagueRole: 'PLAYER', role: 'player', isActivePlayer: false, updated_at: now });
-  batch.set(db.doc(`memberships/${target.userId}`), { leagues: { [leagueId]: FieldValue.delete() }, updated_at: now }, { merge: true });
+  batch.update(L.doc(`players/${playerId}`), { removed_at: now, removed_by: byId, leagueRole: 'PLAYER', role: 'player', isActivePlayer: false, updated_at: now });
+  batch.set(db.doc(`memberships/${userId}`), { leagues: { [leagueId]: FieldValue.delete() }, updated_at: now }, { merge: true });
   presences.forEach((d) => batch.delete(d.ref));
   await batch.commit();
-  return { ok: true, dates: Array.from(new Set(presences.map((d) => String(d.data().date)))) };
+  return Array.from(new Set(presences.map((d) => String(d.data().date))));
+}
+
+export type LeaveError = 'not_found' | 'last_president';
+
+/** "Esci dalla lega": the member leaves at once (same effects as being taken out). Never the last president. */
+export async function leaveLeague(
+  leagueId: string,
+  playerId: string,
+  userId: string
+): Promise<{ ok: true; dates: string[]; name: string } | { ok: false; error: LeaveError }> {
+  const L = leagueDb(leagueId);
+  const snap = await L.doc(`players/${playerId}`).get();
+  const card = snap.data();
+  if (!card || card.removed_at || card.userId !== userId) return { ok: false, error: 'not_found' };
+  if (card.leagueRole === 'PRESIDENT') {
+    const presidents = (await L.collection('players').where('leagueRole', '==', 'PRESIDENT').get()).docs.filter(
+      (d) => d.id !== playerId && !d.data().deactivated_at && !d.data().removed_at
+    );
+    if (presidents.length === 0) return { ok: false, error: 'last_president' };
+  }
+  const dates = await takeOutOfLeague(leagueId, playerId, userId, playerId);
+  return { ok: true, dates, name: String(card.full_name || 'Un giocatore') };
 }
