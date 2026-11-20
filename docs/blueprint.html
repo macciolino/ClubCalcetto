@@ -293,8 +293,8 @@
       <h2 class="text-xl font-bold tracking-tight flex items-center gap-2"><span data-icon="map-pin" class="text-accent"></span>Campi e cassa</h2>
       <div class="grid lg:grid-cols-2 gap-4">
         <div class="card rounded-2xl p-5 space-y-3">
-          <div class="flex items-center gap-2"><span class="rounded-full bg-accent/15 text-accent text-[10px] font-bold uppercase px-2 py-0.5">Implementato</span><p class="font-semibold">Oggi: campi per lega</p></div>
-          <p class="text-xs muted">I campi stanno in <span class="font-mono">leagues/{id}/sport_fields</span> e li gestiscono i gestori in Impostazioni → Campi (prezzo base, prezzo per formato, indirizzo, note, link Maps che segue l'indirizzo).</p>
+          <div class="flex items-center gap-2"><span class="rounded-full bg-accent/15 text-accent text-[10px] font-bold uppercase px-2 py-0.5">Implementato</span><p class="font-semibold">Campi della lega e costo</p></div>
+          <p class="text-xs muted">I campi stanno in <span class="font-mono">leagues/{id}/sport_fields</span> e li gestiscono i gestori in Impostazioni → Campi: privati della lega oppure collegati al catalogo globale (prezzo base, prezzo per formato, note, link Maps che segue l'indirizzo).</p>
           <p class="text-xs font-semibold">Costo di una partita: il primo che c'è vince</p>
           <ol class="space-y-2 text-sm">
             <li class="flex gap-3 rounded-xl border line p-3"><span class="h-6 w-6 rounded-full bg-accent text-[#04130a] text-xs font-bold grid place-items-center flex-shrink-0">1</span><div><p class="font-semibold">Costo personalizzato della partita</p><p class="text-xs muted">Totale, oppure <strong>quota a testa</strong> × giocatori (<span class="font-mono">cost_override</span>)</p></div></li>
@@ -306,11 +306,11 @@
             <p class="muted">Chi paga: i giocatori della partita archiviata, altrimenti quelli delle squadre salvate, altrimenti i titolari iscritti. Quota = costo ÷ paganti. I gestori segnano chi ha pagato.</p>
           </div>
         </div>
-        <div class="card rounded-2xl p-5 space-y-3 border-dashed" style="border-style:dashed">
-          <div class="flex items-center gap-2"><span class="rounded-full bg-amber-500/15 text-amber-500 text-[10px] font-bold uppercase px-2 py-0.5">Non implementato · progetto</span><p class="font-semibold">Catalogo globale dei campi</p></div>
-          <p class="text-xs muted">Il flusso desiderato, ancora da progettare: oggi non esistono né la collezione né le API.</p>
+        <div class="card rounded-2xl p-5 space-y-3">
+          <div class="flex items-center gap-2"><span class="rounded-full bg-accent/15 text-accent text-[10px] font-bold uppercase px-2 py-0.5">Implementato</span><p class="font-semibold">Catalogo globale dei campi</p></div>
+          <p class="text-xs muted"><span class="font-mono">field_catalog</span>, scritto solo dal server. I campi collegati prendono nome, indirizzo, Maps, telefono e fondo dal catalogo; la lega cambia solo prezzi e note.</p>
           <div class="flow space-y-2" data-flow="fields"></div>
-          <p class="text-[11px] muted">Proposta tecnica: collezione di primo livello scritta solo dal server, letta da chi ha un account; il prezzo del catalogo resta il valore di partenza.</p>
+          <p class="text-[11px] muted">Prezzo: partita &gt; prezzo della lega (price_override) &gt; prezzo di partenza del catalogo. Il catalogo non viene mai toccato dai prezzi delle leghe.</p>
         </div>
       </div>
     </section>
@@ -441,6 +441,8 @@ var MATRIX = [
   { g: 'Partite', a: 'Votare l\'MVP', v: ['c:se ha una scheda', 'c:se ha una scheda', 'y:sempre', 'y:sempre', 's:finestra del voto', 'n'], sus: 'nessuno' },
   { g: 'Gestione', a: 'Statistiche, OVR, storici, parametri', v: ['y', 'y', 'y', 'y', 'n', 'n'], sus: 'solo staff' },
   { g: 'Gestione', a: 'Cassa, campi, costo e quota della partita', v: ['y', 'y', 'y', 'y', 'n', 'n'], sus: 'solo staff' },
+  { g: 'Gestione', a: 'Catalogo campi: cercare, aggiungere, proporre, scollegare', v: ['y', 'y', 'y', 'y', 'n', 'n'], sus: 'solo staff' },
+  { g: 'Gestione', a: 'Catalogo campi (staff): approvare, correggere, rifiutare, unire, eliminare', v: ['y', 'y', 'n', 'n', 'n', 'n'], sus: '—' },
   { g: 'Gestione', a: 'Ospiti (crea ed elimina) e inviti', v: ['y', 'y', 'y', 'y', 'n', 'n'], sus: 'solo staff' },
   { g: 'Gestione', a: 'Centro richieste (iscrizioni, reclami, formati)', v: ['y', 'y', 'y', 'y', 'n', 'n'], sus: 'solo staff' },
   { g: 'Gestione', a: 'Email dei membri della lega', v: ['y', 'y', 'y', 'y', 'n', 'n'], sus: 'i gestori leggono' },
@@ -489,9 +491,9 @@ var FLOWS = {
     { t: '7 · Storico', d: 'Partite archiviate per anno, classifica, card "Ultima partita" in Home con tabellone, vincitori e badge MVP ed esito.', who: ['PLAYER', 'COLL', 'PRES', 'SA', 'GA'], ic: 'history' },
   ],
   fields: [
-    { t: 'Proposta dalla lega', d: 'Un gestore propone un campo al catalogo: stato pending.', who: ['PRES', 'COLL'], ic: 'map-pin', planned: true },
-    { t: 'Approvazione dello staff', d: 'Il Super admin o l\'Admin piattaforma lo approva o lo rifiuta.', who: ['SA', 'GA'], ic: 'check', planned: true },
-    { t: 'Disponibile a tutte le leghe', d: 'Il prezzo del catalogo è solo il valore di partenza: ogni partita può avere il suo totale o la sua quota a testa (già implementato).', who: ['PRES', 'COLL', 'SA', 'GA'], ic: 'wallet', planned: true },
+    { t: 'Cerca o proponi', d: 'Impostazioni → Campi → "Campo": cerca nel catalogo e aggiungi (collegato). Non c\'è? Prima vengono mostrati i campi simili, poi la proposta parte: pending, ma subito usabile nella lega.', who: ['PRES', 'COLL', 'SA', 'GA'], ic: 'map-pin' },
+    { t: 'Revisione dello staff', d: 'Console piattaforma → Campi del catalogo: approva (anche correggendo), rifiuta (resta privato della lega), unisci a un doppione, elimina. Notifiche a chi ha proposto.', who: ['SA', 'GA'], ic: 'check' },
+    { t: 'Disponibile a tutte le leghe', d: 'Le correzioni arrivano a ogni lega collegata. La lega cambia solo prezzi e note; ogni partita può avere il suo totale o la sua quota a testa. Il catalogo resta pulito.', who: ['PRES', 'COLL', 'SA', 'GA'], ic: 'wallet' },
   ],
 };
 

@@ -382,9 +382,18 @@ service cloud.firestore {
         allow read: if canReadLeague(leagueId);
         allow write: if isLeagueManager(leagueId);
       }
+      // Fields of the league. Linked to the global catalog (catalog_id, set only by the server): name, address,
+      // Maps, phone and surface come from there; managers change only prices and notes.
       match /sport_fields/{id} {
         allow read: if canReadLeague(leagueId);
-        allow write: if isLeagueManager(leagueId);
+        allow create: if isLeagueManager(leagueId)
+          && !request.resource.data.keys().hasAny(['catalog_id', 'catalog_status', 'price_override']);
+        allow update: if isLeagueManager(leagueId)
+          && !changedKeys().hasAny(['catalog_id', 'catalog_status'])
+          && (resource.data.get('catalog_id', null) == null
+              ? !('price_override' in changedKeys())
+              : onlyChanges(['cost', 'costs', 'notes', 'price_override', 'updated_at']));
+        allow delete: if isLeagueManager(leagueId);
       }
       match /mvp_votes/{voteId} {
         allow read: if canReadLeague(leagueId);
@@ -396,6 +405,15 @@ service cloud.firestore {
         allow read: if isLeagueManager(leagueId);
         allow write: if false;
       }
+    }
+
+    // ---------- global fields catalog (docs/ARCHITECTURE.md §3.3) ----------
+    // Written only by the server. Approved pitches: anyone signed in; pending / rejected: platform staff
+    // (the league that proposed them sees its own through the server, /api/field-catalog).
+    match /field_catalog/{id} {
+      allow read: if isPlatformStaff()
+        || (signedIn() && request.auth.token.email_verified == true && resource.data.status == 'approved');
+      allow write: if false;
     }
 
     // ---------- single-group collections (before multi-league): read-only backup ----------

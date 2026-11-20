@@ -47,6 +47,7 @@ leagues/{leagueId}/...          TUTTI i dati del club, isolati per lega
 | `leagues/{id}/mvp_votes` | Voti MVP (`{data}_{uid}`) | Ogni membro per sé |
 | `leagues/{id}/admin_requests` | Centro richieste dei gestori | **Solo il server** |
 | `league_invites/{code}` | Link di invito della lega | **Solo il server** |
+| `field_catalog/{id}` | **Catalogo globale dei campi** (§3.3): dati del campo, prezzi di partenza, stato, leghe collegate | **Solo il server** |
 | `push_tokens/{token}` | Dispositivi per le notifiche | Ognuno solo i propri |
 | `profiles/{id}/notifications` | Campanella personale | Il server; il titolare legge e segna come letto |
 
@@ -192,6 +193,8 @@ La colonna **Staff** vale per `SUPER_ADMIN` e `GLOBAL_ADMIN`, salvo dove è indi
 | Votare l'MVP | ⚙️ | sempre | sempre | finestra del voto | ❌ |
 | Statistiche, OVR, storici, parametri | ✅ | ✅ | ✅ | ❌ | solo staff |
 | Cassa, campi, costo e quota della partita | ✅ | ✅ | ✅ | ❌ | solo staff |
+| Catalogo campi: cercare, aggiungere alla lega, proporre, scollegare | ✅ | ✅ | ✅ | ❌ | solo staff |
+| Catalogo campi: approvare, correggere, rifiutare, unire, eliminare | ✅ | ❌ | ❌ | ❌ | — |
 | Ospiti (crea, elimina), inviti | ✅ | ✅ | ✅ | ❌ | solo staff |
 | Centro richieste (iscrizioni, reclami, formati) | ✅ | ✅ | ✅ | ❌ | solo staff |
 | Rientro di un account chiuso | ✅ | ❌ | ❌ | ❌ | — |
@@ -289,10 +292,10 @@ Calendario → Iscrizioni (titolari / attesa) → Formato → Squadre → Partit
 7. **Storico**: le partite archiviate formano la cronologia per anno e la classifica. Le squadre archiviate sono una
    lista congelata.
 
-### 3.3 Campi e cassa
+### 3.3 Campi, catalogo globale e cassa
 
-**Stato attuale: i campi sono per lega.** Stanno in `leagues/{id}/sport_fields` e li gestiscono i gestori in
-Impostazioni → Campi.
+**Campi della lega** (`leagues/{id}/sport_fields`): li gestiscono i gestori in Impostazioni → Campi. Possono essere
+**privati** (solo di quella lega, modificabili in tutto) oppure **collegati al catalogo globale** (`catalog_id`).
 
 Ogni campo ha:
 - nome, indirizzo e note;
@@ -314,11 +317,61 @@ Ogni campo ha:
 
 La quota mostrata è il costo diviso per i paganti. I gestori segnano chi ha pagato.
 
-> ⚠️ **Catalogo globale dei campi (crowdsourced): NON implementato.** Il flusso target prevede che un utente proponga
-> un campo (`pending`) e che il `SUPER_ADMIN` o il `GLOBAL_ADMIN` lo approvi, rendendolo disponibile a tutte le
-> leghe. Il prezzo del catalogo sarebbe solo il valore di partenza, sovrascrivibile per partita con il meccanismo
-> qui sopra. Oggi non esistono né la collezione né le API: va progettato (collezione di primo livello, scrittura solo
-> dal server, lettura per chi ha un account) prima di scriverne il codice.
+#### Catalogo globale dei campi
+
+Codice: [fieldCatalog.ts](../src/lib/server/fieldCatalog.ts) (server), [fieldCatalog.ts](../src/lib/utils/fieldCatalog.ts) (doppioni,
+ricerca), `/api/field-catalog` (lega attiva), `/api/super-admin/fields` (staff).
+
+**Dati**
+- `field_catalog/{id}`:
+  - nome, indirizzo, Maps, telefono, fondo, note;
+  - `default_cost` e `default_costs` (prezzi di partenza);
+  - `status`: `pending` / `approved` / `rejected`;
+  - `dedup_key`;
+  - `proposed_by` (persona e lega), `reviewed_by`;
+  - `linked` = `{ "leagueId:fieldId": true }`, cioè le leghe che lo usano, tenute dal server.
+- Sul campo della lega: `catalog_id`, `catalog_status` (`pending` / `approved`), `price_override` (la lega ha messo
+  i suoi prezzi).
+
+**Flussi**
+
+| Passo | Chi | Cosa succede |
+|---|---|---|
+| Cerca e aggiungi | Presidente, collaboratore, staff | Impostazioni → Campi → "Campo": ricerca nel catalogo per nome o via (nel browser), poi "Aggiungi". Nasce un campo della lega **collegato**, con i dati e i prezzi di partenza del catalogo. Una volta sola per lega |
+| Proponi un campo nuovo | Presidente, collaboratore, staff | Prima il server mostra i campi **simili** (stesso indirizzo normalizzato, oppure stesso nome nella stessa città): "Usa questo" oppure "Proponi comunque". La proposta è `pending` nel catalogo e **subito usabile** nella lega ("In attesa di approvazione"). Lo staff riceve una notifica |
+| Proponi un campo esistente | Gestori | Pulsante sul campo privato: diventa una proposta collegata. I prezzi della lega restano i suoi |
+| Approva (anche corretto) | Staff | Visibile a tutte le leghe. Le correzioni arrivano ai campi collegati; chi ha proposto riceve una notifica |
+| Rifiuta | Staff | Il campo della lega resta **privato**, con i suoi dati. Chi ha proposto riceve una notifica |
+| Unisci (doppione) | Staff | Le leghe della proposta passano al campo già approvato; la proposta sparisce |
+| Correggi o elimina un campo approvato | Staff | Le correzioni arrivano a tutte le leghe collegate. Con l'eliminazione ogni lega tiene una copia privata |
+| Scollega | Gestori | Il campo diventa privato e modificabile. Se era una proposta solo di quella lega, la proposta viene ritirata |
+
+**Campi collegati**
+- Nome, indirizzo, Maps, telefono e fondo li cura **solo lo staff**: nel modulo della lega sono in sola lettura e le
+  regole lo impongono.
+- La lega cambia solo **prezzi** e **note**. Quando cambia un prezzo, `price_override` diventa vero e le correzioni
+  dei prezzi del catalogo non la toccano più. "Usa il prezzo del catalogo" la riporta ai prezzi di partenza.
+- Le partite salvano il **nome del luogo** al momento del salvataggio: una correzione del catalogo non riscrive lo storico.
+- I campi che le leghe avevano prima del catalogo restano privati. Si pubblicano con "Proponi al catalogo".
+
+**Prezzo di una partita**, dal più forte al più debole:
+1. costo della singola partita;
+2. prezzo della lega (`price_override`);
+3. prezzo di partenza del catalogo, copiato nel campo della lega.
+
+Il prezzo di una lega o di una partita **non modifica mai il catalogo**.
+
+**Regole**
+- `field_catalog`:
+  - lettura dei campi `approved` per chi ha fatto l'accesso con email verificata;
+  - `pending` e `rejected` li legge solo lo staff (la lega che li ha proposti li vede tramite l'API);
+  - nessuna scrittura dal browser.
+- `sport_fields`:
+  - `catalog_id` e `catalog_status` li scrive solo il server;
+  - su un campo collegato i gestori cambiano solo `cost`, `costs`, `notes`, `price_override`.
+
+**Limiti** (piano Spark): il catalogo si legge una volta all'apertura della ricerca e il filtro avviene nel browser.
+Va bene fino a qualche centinaio di campi; oltre, servirà un filtro per città sul server.
 
 ### 3.4 Chiusura e fallback
 
@@ -411,7 +464,7 @@ Gli avvisi sopravvivono al rimontaggio perché `FeedbackHost` sta fuori da `Auth
 |---|---|---|
 | Unitari | `npm run test:unit` | Permessi puri (`leaguePermissions`), formati, cassa, Home |
 | Regole | `npm run test:rules` | Ogni regola di §2 sulle regole Firestore (emulatore) |
-| Integrazione | `npm run test:integration` | API reali su emulatori: ruoli, staff, eliminazione, inviti e reclami, rientro, "non gioca" |
+| Integrazione | `npm run test:integration` | API reali su emulatori: ruoli, staff, eliminazione, inviti e reclami, rientro, "non gioca", catalogo campi |
 | End-to-end | `npm run test:e2e` | Flussi nel browser (Pixel 7): leghe, fallback, console, presenze, giocatori |
 
 Prima di un commit si eseguono tutti i controlli (skill `pre-commit-testing-gate`).

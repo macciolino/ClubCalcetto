@@ -186,6 +186,36 @@ export interface SportField {
   /** Total cost for the other formats (€). Empty = this field does NOT host that format. */
   costs?: Partial<Record<Exclude<MatchFormat, '5v5'>, number>>;
   created_at?: string;
+  /** Linked to the global catalog (field_catalog/{id}): name, address, Maps, phone, surface come from there */
+  catalog_id?: string;
+  /** 'pending' = proposed by this league, waiting for the platform staff; 'approved' = in the catalog */
+  catalog_status?: 'pending' | 'approved';
+  /** The league set its own prices (otherwise they follow the catalog's starting prices) */
+  price_override?: boolean;
+}
+
+export type CatalogFieldStatus = 'pending' | 'approved' | 'rejected';
+
+/** field_catalog/{id}: a pitch shared by every league (written only by the server). */
+export interface CatalogField {
+  id: string;
+  name: string;
+  address: string;
+  maps_url?: string;
+  phone?: string;
+  court_type?: string;
+  notes?: string;
+  /** Starting price of a 5vs5 (€); leagues and single matches can change it */
+  default_cost?: number;
+  default_costs?: Partial<Record<Exclude<MatchFormat, '5v5'>, number>>;
+  status: CatalogFieldStatus;
+  dedup_key: string;
+  proposed_by: { profileId: string; leagueId: string; leagueName?: string; at: string };
+  reviewed_by?: { profileId: string; at: string; outcome: CatalogFieldStatus | 'merged' };
+  /** League fields that use it: key `${leagueId}:${fieldId}` (kept by the server, used to spread corrections) */
+  linked?: Record<string, true>;
+  created_at: string;
+  updated_at?: string;
 }
 
 // Tracciamento Cassa & Quota Partita

@@ -130,7 +130,12 @@ export async function updateStoredField(field: SportField): Promise<SportField> 
 
   if (isFirebaseConfigured) {
     try {
-      await setDoc(ldoc('sport_fields', field.id), toFirestore(field, true), { merge: true });
+      // Linked to the global catalog: the league changes only its prices and notes (firestore.rules)
+      const data = toFirestore(field, true);
+      const payload = field.catalog_id
+        ? { cost: data.cost, costs: data.costs, notes: data.notes ?? deleteField(), price_override: field.price_override === true, updated_at: new Date().toISOString() }
+        : data;
+      await setDoc(ldoc('sport_fields', field.id), payload, { merge: true });
     } catch (e) {
       console.warn('[Firestore] Error updating field:', e);
       reportWriteError(e);

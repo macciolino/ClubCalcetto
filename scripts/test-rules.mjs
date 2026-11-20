@@ -7,7 +7,7 @@
  */
 import { initializeApp } from 'firebase/app';
 import {
-  getFirestore, connectFirestoreEmulator, doc, getDoc, setDoc, deleteDoc, collection, getDocs, serverTimestamp, updateDoc, increment, runTransaction, deleteField, FieldPath,
+  getFirestore, connectFirestoreEmulator, doc, getDoc, setDoc, deleteDoc, collection, getDocs, serverTimestamp, updateDoc, increment, runTransaction, deleteField, FieldPath, query, where,
 } from 'firebase/firestore';
 import {
   getAuth, connectAuthEmulator, signInWithCredential, GoogleAuthProvider, createUserWithEmailAndPassword,
@@ -579,6 +579,33 @@ await expectDenied('newbie-3 creates its own profile already SUPER_ADMIN', () =>
 await expectAllowed('newbie-3 creates its own profile normally', () => setDoc(doc(newbie3.db, 'profiles', newbie3.uid), baseProfile(newbie3.uid)));
 await expectDenied('old global admin C edits someone else\'s profile', () => setDoc(doc(adminC.db, 'profiles', playerB.uid), { full_name: 'B ok' }, { merge: true }));
 await expectAllowed('super admin edits someone else\'s profile', () => setDoc(doc(superAdmin.db, 'profiles', playerB.uid), { full_name: 'B ok' }, { merge: true }));
+
+console.log('\nGlobal fields catalog (field_catalog) and linked league fields');
+await ownerSet('field_catalog/ok', { name: 'Campo Luini', address: 'Via Luini 5', status: 'approved', linked: {} });
+await ownerSet('field_catalog/wait', { name: 'Campo Nuovo', address: 'Via Nuova 1', status: 'pending', linked: {} });
+await expectAllowed('player B reads an approved catalog pitch', () => getDoc(doc(playerB.db, 'field_catalog', 'ok')));
+await expectAllowed('player B lists the approved catalog', () => getDocs(query(collection(playerB.db, 'field_catalog'), where('status', '==', 'approved'))));
+await expectDenied('player B reads a pending catalog pitch', () => getDoc(doc(playerB.db, 'field_catalog', 'wait')));
+await expectDenied('president C reads a pending catalog pitch from the app', () => getDoc(doc(adminC.db, 'field_catalog', 'wait')));
+await expectAllowed('super admin (staff) reads a pending catalog pitch', () => getDoc(doc(superAdmin.db, 'field_catalog', 'wait')));
+await expectDenied('anonymous reads the catalog', () => getDoc(doc(anon.db, 'field_catalog', 'ok')));
+await expectDenied('president C writes the catalog', () => setDoc(doc(adminC.db, 'field_catalog', 'ok'), { status: 'approved', name: 'x' }, { merge: true }));
+await expectDenied('super admin writes the catalog from the app', () => setDoc(doc(superAdmin.db, 'field_catalog', 'x'), { name: 'x', status: 'approved' }));
+await ownerSet('leagues/calcettari/sport_fields/linked', { id: 'linked', name: 'Campo Luini', address: 'Via Luini 5', cost: 80, catalog_id: 'ok', catalog_status: 'approved', price_override: false });
+await ownerSet('leagues/calcettari/sport_fields/mine', { id: 'mine', name: 'Campo Privato', address: 'Via Mia 3', cost: 60 });
+await expectAllowed('president C sets the league price of a linked field', () =>
+  setDoc(LC(adminC, 'sport_fields', 'linked'), { cost: 95, price_override: true, notes: 'campo 3' }, { merge: true }));
+await expectDenied('president C renames a linked field', () => setDoc(LC(adminC, 'sport_fields', 'linked'), { name: 'Altro nome' }, { merge: true }));
+await expectDenied('president C moves a linked field', () => setDoc(LC(adminC, 'sport_fields', 'linked'), { address: 'Via Altra 9' }, { merge: true }));
+await expectDenied('president C unlinks a field from the app', () => setDoc(LC(adminC, 'sport_fields', 'linked'), { catalog_id: null }, { merge: true }));
+await expectDenied('president C marks its own field as approved in the catalog', () =>
+  setDoc(LC(adminC, 'sport_fields', 'mine'), { catalog_id: 'ok', catalog_status: 'approved' }, { merge: true }));
+await expectDenied('president C creates a field already "linked"', () =>
+  setDoc(LC(adminC, 'sport_fields', 'fake'), { id: 'fake', name: 'x', address: 'y', catalog_id: 'ok', catalog_status: 'approved' }));
+await expectAllowed('president C still edits a private field freely', () => setDoc(LC(adminC, 'sport_fields', 'mine'), { name: 'Campo Mio', cost: 65 }, { merge: true }));
+await expectAllowed('president C creates a private field', () => setDoc(LC(adminC, 'sport_fields', 'new1'), { id: 'new1', name: 'Nuovo', address: 'Via 1' }));
+await expectDenied('player B sets the price of a linked field', () => setDoc(LC(playerB, 'sport_fields', 'linked'), { cost: 1 }, { merge: true }));
+await expectAllowed('president C deletes a linked field of the league', () => deleteDoc(LC(adminC, 'sport_fields', 'linked')));
 
 console.log('\nSuspended league (step 4): read-only for members, platform staff still write');
 await ownerSet('leagues/calcettari', { id: 'calcettari', name: 'I Calcettari', status: 'suspended', visibility: 'private' });

@@ -39,7 +39,7 @@ export function inviteCodeFrom(text: string): string | null {
   return m ? m[1] : null;
 }
 
-async function leagueFetch(url: string, init: RequestInit = {}, withAuth = true): Promise<{ status: number; data: Record<string, unknown> }> {
+export async function leagueFetch(url: string, init: RequestInit = {}, withAuth = true): Promise<{ status: number; data: Record<string, unknown> }> {
   const user = auth.currentUser;
   const headers: Record<string, string> = { 'Content-Type': 'application/json', 'x-league-id': currentLeagueId() };
   if (withAuth && user) headers.Authorization = `Bearer ${await user.getIdToken()}`;

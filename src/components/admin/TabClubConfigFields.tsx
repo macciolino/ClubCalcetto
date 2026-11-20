@@ -1,6 +1,17 @@
 'use client';
 
-import { askConfirm } from '@/components/ui/Feedback';
+import { askConfirm, notify } from '@/components/ui/Feedback';
+import { FieldCatalogSheet, SimilarFieldsSheet } from '@/components/admin/FieldCatalogSheet';
+import {
+  addCatalogField,
+  findSimilarFields,
+  proposeCatalogField,
+  proposeExistingField,
+  resetFieldPrice,
+  unlinkCatalogField,
+  type CatalogEntry,
+  type FieldDraft,
+} from '@/lib/services/fieldCatalogService';
 import { StatParametersCard } from '@/components/admin/StatParametersCard';
 import { FormSettingsCard } from '@/components/admin/FormSettingsCard';
 import { NumberInput } from '@/components/NumberInput';
@@ -10,7 +21,7 @@ import { FORMAT_INFO, MatchFormat } from '@/lib/utils/matchFormat';
 import { fieldMapsUrl } from '@/lib/utils/matchUtils';
 import { FieldModal } from './FieldModal';
 import { StatsLegendModal } from './StatsLegendModal';
-import { MapPin, Phone, Plus, ExternalLink, Edit3, Trash2, Check, Star } from 'lucide-react';
+import { MapPin, Phone, Plus, ExternalLink, Edit3, Trash2, Check, Star, Globe2, Unlink } from 'lucide-react';
 import { btnInline } from '@/components/ui/buttons';
 import { useTranslations } from 'next-intl';
 
@@ -84,6 +95,11 @@ export function TabClubConfigFields({
   const [editingField, setEditingField] = useState<SportField | null>(null);
   const [isLegendOpen, setIsLegendOpen] = useState(false);
   const t = useTranslations('clubConfig');
+  const tc = useTranslations('fieldCatalog');
+  // Global catalog: search sheet, "propose" mode of the field form, similar pitches found before proposing
+  const [catalogOpen, setCatalogOpen] = useState(false);
+  const [proposing, setProposing] = useState(false);
+  const [similar, setSimilar] = useState<{ list: CatalogEntry[]; draft: FieldDraft } | null>(null);
 
   const [costInput, setCostInput] = useState<number>(standardCost || 80);
   const [timeInput, setTimeInput] = useState<string>(standardTime || '20:30');
@@ -100,7 +116,54 @@ export function TabClubConfigFields({
 
   const handleSaveField = (fieldData: Omit<SportField, 'id'> | SportField) => {
     if ('id' in fieldData) onUpdateField(fieldData);
+    else if (proposing) void proposeNew(fieldData);
     else onAddField(fieldData);
+  };
+
+  const draftOf = (f: Omit<SportField, 'id'>): FieldDraft => ({
+    name: f.name,
+    address: f.address,
+    maps_url: f.maps_url,
+    phone: f.phone,
+    court_type: f.court_type,
+    notes: f.notes,
+    cost: f.cost,
+    costs: f.costs,
+  });
+  const sendProposal = async (draft: FieldDraft) => {
+    setSimilar(null);
+    const res = await proposeCatalogField(draft);
+    notify(res === 'ok' ? tc('proposed', { name: draft.name }) : tc(`errors.${res}`));
+  };
+  // Before proposing: is it already in the catalog (or proposed by someone)?
+  const proposeNew = async (f: Omit<SportField, 'id'>) => {
+    setProposing(false);
+    const draft = draftOf(f);
+    const list = await findSimilarFields(draft);
+    if (list.length) setSimilar({ list, draft });
+    else await sendProposal(draft);
+  };
+  const pickSimilar = async (c: CatalogEntry) => {
+    setSimilar(null);
+    const res = await addCatalogField(c.id);
+    notify(res === 'ok' ? tc('added', { name: c.name }) : tc(`errors.${res}`));
+  };
+  const proposeExisting = async (field: SportField) => {
+    if (!(await askConfirm(tc('confirmProposeExisting', { name: field.name })))) return;
+    const res = await proposeExistingField(field.id);
+    notify(res === 'ok' ? tc('proposed', { name: field.name }) : tc(`errors.${res}`));
+  };
+  const unlink = async (field: SportField) => {
+    const msg = field.catalog_status === 'pending' ? tc('confirmWithdraw', { name: field.name }) : tc('confirmUnlink', { name: field.name });
+    if (!(await askConfirm(msg))) return;
+    const res = await unlinkCatalogField(field.id);
+    notify(res === 'ok' ? tc('unlinked', { name: field.name }) : tc(`errors.${res}`));
+  };
+  const resetPrice = async () => {
+    if (!editingField) return;
+    const res = await resetFieldPrice(editingField.id);
+    setIsFieldModalOpen(false);
+    notify(res === 'ok' ? tc('priceReset') : tc(`errors.${res}`));
   };
 
   const handleSaveDefaults = (e: React.FormEvent) => {
@@ -128,10 +191,7 @@ export function TabClubConfigFields({
             action={
               <button
                 type="button"
-                onClick={() => {
-                  setEditingField(null);
-                  setIsFieldModalOpen(true);
-                }}
+                onClick={() => setCatalogOpen(true)}
                 className={`${btnInline.primary} flex-shrink-0`}
               >
                 <Plus className="h-4 w-4" /> {t('addField')}
@@ -151,6 +211,14 @@ export function TabClubConfigFields({
                           <span className="text-sm font-semibold text-primary">{field.name}</span>
                           {isDefault && (
                             <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-accent/15 text-accent-text">{t('default')}</span>
+                          )}
+                          {field.catalog_id && field.catalog_status === 'pending' && (
+                            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-500/15 text-warning">{tc('badgePending')}</span>
+                          )}
+                          {field.catalog_id && field.catalog_status !== 'pending' && (
+                            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-600 dark:text-sky-400 inline-flex items-center gap-1">
+                              <Globe2 className="h-3 w-3" aria-hidden="true" /> {tc('badgeCatalog')}
+                            </span>
                           )}
                         </div>
                         <p className="text-sm text-secondary tabular-nums">
@@ -201,6 +269,27 @@ export function TabClubConfigFields({
                             aria-label={t('setDefaultAria', { name: field.name })}
                           >
                             <Star className="h-4 w-4" />
+                          </button>
+                        )}
+                        {field.catalog_id ? (
+                          <button
+                            type="button"
+                            onClick={() => unlink(field)}
+                            className="p-2 rounded-lg text-muted hover:text-primary hover:bg-card-hover"
+                            title={tc('unlink')}
+                            aria-label={tc('unlinkAria', { name: field.name })}
+                          >
+                            <Unlink className="h-4 w-4" />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => proposeExisting(field)}
+                            className="p-2 rounded-lg text-muted hover:text-sky-500 hover:bg-card-hover"
+                            title={tc('proposeExisting')}
+                            aria-label={tc('proposeExistingAria', { name: field.name })}
+                          >
+                            <Globe2 className="h-4 w-4" />
                           </button>
                         )}
                         <button
@@ -330,7 +419,44 @@ export function TabClubConfigFields({
         </>
       )}
 
-      <FieldModal isOpen={isFieldModalOpen} onClose={() => setIsFieldModalOpen(false)} fieldToEdit={editingField} onSave={handleSaveField} />
+      <FieldModal
+        isOpen={isFieldModalOpen}
+        onClose={() => {
+          setIsFieldModalOpen(false);
+          setProposing(false);
+        }}
+        fieldToEdit={editingField}
+        onSave={handleSaveField}
+        propose={proposing}
+        onResetPrice={resetPrice}
+      />
+      {catalogOpen && (
+        <FieldCatalogSheet
+          fields={fields}
+          onClose={() => setCatalogOpen(false)}
+          onPropose={() => {
+            setCatalogOpen(false);
+            setEditingField(null);
+            setProposing(true);
+            setIsFieldModalOpen(true);
+          }}
+          onPrivate={() => {
+            setCatalogOpen(false);
+            setEditingField(null);
+            setProposing(false);
+            setIsFieldModalOpen(true);
+          }}
+        />
+      )}
+      {similar && (
+        <SimilarFieldsSheet
+          similar={similar.list}
+          fields={fields}
+          onUse={pickSimilar}
+          onProposeAnyway={() => sendProposal(similar.draft)}
+          onClose={() => setSimilar(null)}
+        />
+      )}
       <StatsLegendModal isOpen={isLegendOpen} onClose={() => setIsLegendOpen(false)} />
     </div>
   );

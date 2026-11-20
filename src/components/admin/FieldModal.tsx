@@ -12,9 +12,15 @@ interface FieldModalProps {
   onClose: () => void;
   fieldToEdit: SportField | null;
   onSave: (field: Omit<SportField, 'id'> | SportField) => void;
+  /** New pitch proposed to the global catalog (same form, different title) */
+  propose?: boolean;
+  /** Prices of a linked field back to the catalog's starting prices */
+  onResetPrice?: () => void;
 }
 
-export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalProps) {
+export function FieldModal({ isOpen, onClose, fieldToEdit, onSave, propose = false, onResetPrice }: FieldModalProps) {
+  // Linked to the global catalog: name, address, phone and surface come from there (only prices and notes here)
+  const linked = Boolean(fieldToEdit?.catalog_id);
   const t = useTranslations('fieldModal');
   const surfaceLabels = t.raw('surfaces') as string[];
   const [name, setName] = useState('');
@@ -67,10 +73,15 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
 
     // Only a link chosen by hand is stored; otherwise the link follows the address (see fieldMapsUrl)
     const computedMapsUrl = isAutoMapsUrl(mapsUrl) ? undefined : mapsUrl.trim();
+    const newCost = Number(cost.replace(',', '.')) > 0 ? Number(cost.replace(',', '.')) : undefined;
+    // A linked field whose prices change gets its own league prices (they stop following the catalog)
+    const priceChanged =
+      Boolean(fieldToEdit) && (newCost !== fieldToEdit!.cost || JSON.stringify(costsOut() || {}) !== JSON.stringify(fieldToEdit!.costs || {}));
 
     if (fieldToEdit) {
       onSave({
         ...fieldToEdit,
+        ...(linked ? { price_override: fieldToEdit.price_override === true || priceChanged } : {}),
         name: name.trim(),
         address: address.trim(),
         maps_url: computedMapsUrl,
@@ -98,8 +109,8 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
   return (
     <Sheet
       onClose={onClose}
-      title={fieldToEdit ? t('editTitle') : t('newTitle')}
-      subtitle={t('subtitle')}
+      title={fieldToEdit ? t('editTitle') : propose ? t('proposeTitle') : t('newTitle')}
+      subtitle={linked ? t('linkedHint') : propose ? t('proposeSubtitle') : t('subtitle')}
       footer={
         <>
           <button type="button" onClick={onClose} className={sheetBtn.secondary}>
@@ -121,7 +132,8 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
               placeholder={t('namePh')}
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-app border border-line rounded-xl text-primary font-medium focus:outline-none focus:border-accent"
+              disabled={linked}
+              className="disabled:opacity-60 w-full px-3.5 py-2.5 bg-app border border-line rounded-xl text-primary font-medium focus:outline-none focus:border-accent"
             />
           </div>
 
@@ -135,7 +147,8 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
                 placeholder={t('addressPh')}
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                className="w-full pl-9 pr-3.5 py-2.5 bg-app border border-line rounded-xl text-primary font-medium focus:outline-none focus:border-accent"
+                disabled={linked}
+                className="disabled:opacity-60 w-full pl-9 pr-3.5 py-2.5 bg-app border border-line rounded-xl text-primary font-medium focus:outline-none focus:border-accent"
               />
             </div>
           </div>
@@ -150,7 +163,8 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
                   placeholder={t('phonePh')}
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="w-full pl-9 pr-3.5 py-2.5 bg-app border border-line rounded-xl text-primary font-medium focus:outline-none focus:border-accent"
+                  disabled={linked}
+                  className="disabled:opacity-60 w-full pl-9 pr-3.5 py-2.5 bg-app border border-line rounded-xl text-primary font-medium focus:outline-none focus:border-accent"
                 />
               </div>
             </div>
@@ -160,7 +174,8 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
               <select
                 value={courtType}
                 onChange={(e) => setCourtType(e.target.value)}
-                className="w-full px-3 py-2.5 bg-app border border-line rounded-xl text-primary font-medium focus:outline-none focus:border-accent"
+                disabled={linked}
+                className="disabled:opacity-60 w-full px-3 py-2.5 bg-app border border-line rounded-xl text-primary font-medium focus:outline-none focus:border-accent"
               >
                 {/* Valori salvati in italiano (dato), etichette nella lingua dell'app */}
                 {['Erba Sintetica 4G Outdoor', 'Erba Sintetica 5G Intaso Naturale', 'Indoor Parquet Professionale', 'Indoor Gomma / Resina', 'Erba Naturale'].map(
@@ -212,6 +227,11 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave }: FieldModalP
                 );
               })}
             </div>
+            {linked && fieldToEdit?.price_override && onResetPrice && (
+              <button type="button" onClick={onResetPrice} className="text-xs font-semibold text-accent-text underline">
+                {t('useCatalogPrice')}
+              </button>
+            )}
           </fieldset>
 
           <div>

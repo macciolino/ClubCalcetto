@@ -13,6 +13,7 @@ import { deletePlatformLeague, fetchPlatformLeagues, setPlatformLeagueStatus, ty
 import { DeleteLeagueSheet } from '@/components/league/DeleteLeagueSheet';
 import { CALCETTARI_LEAGUE_ID } from '@/types/league';
 import { PlatformAdminsCard } from '@/components/platform/PlatformAdminsCard';
+import { PlatformFieldsCard } from '@/components/platform/PlatformFieldsCard';
 
 /**
  * Platform console (menu → "Console piattaforma"), for platform roles only:
@@ -91,6 +92,7 @@ export default function SuperAdminPage() {
       </header>
 
       {isPlatformSuperAdmin && <PlatformAdminsCard />}
+      <PlatformFieldsCard />
 
       {leagues === 'loading' && (
         <p className="text-sm text-secondary flex items-center gap-2">
