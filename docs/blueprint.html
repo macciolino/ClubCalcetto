@@ -1,0 +1,695 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Club Soccer Blueprint</title>
+<meta name="description" content="Documentazione visiva e interattiva di Club Soccer: architettura multi-lega, ruoli, permessi e flussi. Fedele a docs/ARCHITECTURE.md.">
+<script>
+  // Tema: scelta salvata sul dispositivo, altrimenti quello del sistema
+  (function () {
+    var t = null;
+    try { t = localStorage.getItem('blueprint-theme'); } catch (e) {}
+    if (!t) t = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    document.documentElement.classList.toggle('dark', t === 'dark');
+  })();
+</script>
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'Roboto', 'sans-serif'] },
+        colors: { accent: { DEFAULT: '#22c55e', soft: '#16a34a' } },
+      },
+    },
+  };
+</script>
+<style>
+  :root { --bg: #f7f8fa; --card: #ffffff; --line: #e4e7ec; --text: #0f172a; --muted: #5b6474; }
+  .dark { --bg: #0b0d12; --card: #12151c; --line: #232834; --text: #e7eaf0; --muted: #8b93a3; }
+  body { background: var(--bg); color: var(--text); }
+  .card { background: var(--card); border: 1px solid var(--line); }
+  .line { border-color: var(--line); }
+  .muted { color: var(--muted); }
+  html { scroll-behavior: smooth; scroll-padding-top: 88px; }
+  .dim { opacity: .32; filter: saturate(.4); }
+  .hit { box-shadow: 0 0 0 2px #22c55e; }
+  .col-hit { background: rgba(34, 197, 94, .10); }
+  .nav-link.active { color: #22c55e; background: rgba(34, 197, 94, .10); }
+  .chip[aria-pressed="true"] { background: #22c55e; color: #04130a; border-color: #22c55e; }
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+  svg.i { width: 1em; height: 1em; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+  .transition-soft { transition: opacity .2s, box-shadow .2s, background .2s; }
+  .grid > * { min-width: 0; }
+  main .font-mono { overflow-wrap: anywhere; }
+  main { overflow-wrap: break-word; }
+</style>
+</head>
+<body class="font-sans antialiased">
+
+<!-- Barra in alto: titolo, simulatore ruoli, tema -->
+<header class="sticky top-0 z-30 border-b line backdrop-blur" style="background: color-mix(in srgb, var(--bg) 88%, transparent)">
+  <div class="mx-auto max-w-[1400px] px-4 py-3 flex flex-col gap-3 lg:flex-row lg:items-center">
+    <div class="flex items-center gap-3 min-w-0">
+      <span class="h-8 w-8 rounded-lg bg-accent/15 text-accent grid place-items-center text-lg" data-icon="ball"></span>
+      <div class="min-w-0">
+        <p class="text-sm font-semibold leading-tight">Club Soccer · Blueprint</p>
+        <p class="text-xs muted leading-tight">Fonte: docs/ARCHITECTURE.md · stato al 19/11/2026</p>
+      </div>
+      <button id="themeBtn" type="button" class="ml-auto lg:hidden h-9 w-9 grid place-items-center rounded-lg border line" aria-label="Cambia tema"></button>
+    </div>
+    <div class="lg:ml-auto flex items-center gap-2 min-w-0">
+      <span class="hidden sm:inline text-xs muted whitespace-nowrap">Vedi come:</span>
+      <div id="roleBar" class="flex gap-1.5 overflow-x-auto scrollbar-none" role="group" aria-label="Simulatore ruoli"></div>
+      <button id="themeBtn2" type="button" class="hidden lg:grid h-9 w-9 place-items-center rounded-lg border line flex-shrink-0" aria-label="Cambia tema"></button>
+    </div>
+  </div>
+</header>
+
+<div class="mx-auto max-w-[1400px] px-4 flex gap-8">
+  <!-- Sidebar -->
+  <nav class="hidden md:block w-56 flex-shrink-0">
+    <div class="sticky top-[88px] py-6 space-y-1 text-sm" id="sidebar"></div>
+  </nav>
+
+  <main class="flex-1 min-w-0 py-6 space-y-14 pb-24">
+
+    <!-- Panoramica -->
+    <section id="panoramica" class="space-y-4">
+      <h1 class="text-2xl sm:text-3xl font-bold tracking-tight">Come funziona Club Soccer</h1>
+      <p class="muted max-w-3xl">
+        Una piattaforma con più <strong>leghe</strong> indipendenti. Ogni persona ha <strong>un account globale</strong> e
+        <strong>una scheda per ogni lega</strong> in cui gioca. I ruoli sono su due livelli separati: <em>piattaforma</em>
+        (chi governa l'app) e <em>lega</em> (chi gestisce quel gruppo). Scegli un ruolo in alto: matrice e flussi mostrano
+        cosa può fare.
+      </p>
+      <div id="roleSummary" class="card rounded-2xl p-5"></div>
+      <div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-3">
+        <div class="card rounded-xl p-4"><p class="text-xs muted">Sicurezza vera</p><p class="font-semibold mt-1">Regole Firestore + API server</p><p class="text-xs muted mt-1">L'interfaccia nasconde soltanto: il server ricontrolla sempre.</p></div>
+        <div class="card rounded-xl p-4"><p class="text-xs muted">Campi di potere</p><p class="font-semibold mt-1">Scritti solo dal server</p><p class="text-xs muted mt-1">platformRole, memberships, leghe, inviti, richieste.</p></div>
+        <div class="card rounded-xl p-4"><p class="text-xs muted">Email</p><p class="font-semibold mt-1">private_profiles</p><p class="text-xs muted mt-1">Ai gestori solo quelle dei membri della loro lega.</p></div>
+        <div class="card rounded-xl p-4"><p class="text-xs muted">Lega di base</p><p class="font-semibold mt-1">"I Calcettari"</p><p class="text-xs muted mt-1">Dati storici reali: non si può eliminare.</p></div>
+      </div>
+    </section>
+
+    <!-- Architettura multi-lega -->
+    <section id="architettura" class="space-y-4">
+      <h2 class="text-xl font-bold tracking-tight flex items-center gap-2"><span data-icon="database" class="text-accent"></span>Architettura multi-lega</h2>
+      <p class="muted max-w-3xl text-sm">Esempio: <strong>Luca</strong> è <em>Giocatore</em> nei Calcettari e <em>Presidente</em> nella Lega del giovedì. Un solo account, un indice, due schede con numeri e ruoli diversi.</p>
+
+      <div class="card rounded-2xl p-4 sm:p-6 overflow-x-auto">
+        <div class="grid grid-cols-1 lg:grid-cols-[1fr_auto_1.15fr_auto_1.35fr] gap-4 items-center min-w-0">
+          <!-- profiles -->
+          <div class="rounded-xl border line p-4 space-y-2">
+            <p class="text-[11px] font-semibold uppercase tracking-wide text-sky-500">Globale</p>
+            <p class="font-mono text-sm font-semibold">profiles/luca</p>
+            <ul class="text-xs space-y-1 muted">
+              <li>full_name, avatar, position</li>
+              <li>locale, theme</li>
+              <li><span class="font-mono text-amber-500">platformRole</span>: USER</li>
+            </ul>
+            <div class="mt-2 rounded-lg border line p-2 text-xs"><span class="font-mono">private_profiles/luca</span><span class="muted"> · email</span></div>
+          </div>
+          <div class="hidden lg:flex flex-col items-center muted text-xs"><span data-icon="arrow-right" class="text-2xl"></span>uid</div>
+          <div class="lg:hidden text-center muted"><span data-icon="arrow-down" class="text-xl"></span></div>
+          <!-- memberships -->
+          <div class="rounded-xl border line p-4 space-y-2">
+            <p class="text-[11px] font-semibold uppercase tracking-wide text-violet-500">Indice (solo server)</p>
+            <p class="font-mono text-sm font-semibold">memberships/luca</p>
+            <div class="font-mono text-[11px] leading-relaxed rounded-lg p-2.5 border line">
+              leagues: {<br>
+              &nbsp;&nbsp;calcettari: { player_id: <span class="text-accent">"luca"</span>, league_role: "PLAYER" },<br>
+              &nbsp;&nbsp;giovedi-3f2a: { player_id: <span class="text-accent">"luca"</span>, league_role: "PRESIDENT" }<br>
+              }
+            </div>
+            <p class="text-xs muted">Dice in quali leghe entra e con quale scheda. Le regole lo leggono per ogni accesso.</p>
+          </div>
+          <div class="hidden lg:flex flex-col items-center muted text-xs"><span data-icon="arrow-right" class="text-2xl"></span>player_id</div>
+          <div class="lg:hidden text-center muted"><span data-icon="arrow-down" class="text-xl"></span></div>
+          <!-- league cards -->
+          <div class="space-y-3">
+            <div class="rounded-xl border line p-4">
+              <div class="flex items-center justify-between gap-2"><p class="font-mono text-sm font-semibold truncate">leagues/calcettari/players/luca</p><span class="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase bg-slate-500/15 muted">Giocatore</span></div>
+              <p class="text-xs muted mt-1">OVR 7.1 · V/P/S 12/4/9 · isActivePlayer: true</p>
+            </div>
+            <div class="rounded-xl border line p-4">
+              <div class="flex items-center justify-between gap-2"><p class="font-mono text-sm font-semibold truncate">leagues/giovedi-3f2a/players/luca</p><span class="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase bg-accent/15 text-accent">Presidente</span></div>
+              <p class="text-xs muted mt-1">OVR 6.0 · V/P/S 0/0/0 · isActivePlayer: false <span class="text-amber-500">(organizza soltanto)</span></p>
+            </div>
+            <p class="text-xs muted">Ogni lega ha le sue sottocollezioni isolate: presences, matches, generated_teams, match_payments, sport_fields, stat_categories, settings, mvp_votes, admin_requests.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-3 text-sm">
+        <div class="card rounded-xl p-4"><p class="font-semibold">Lega attiva</p><p class="text-xs muted mt-1">Scelta dal selettore, salvata sul dispositivo e mandata al server nell'header <span class="font-mono">x-league-id</span>. Se manca, vale "I Calcettari".</p></div>
+        <div class="card rounded-xl p-4"><p class="font-semibold">Profilo nell'app</p><p class="text-xs muted mt-1"><span class="font-mono">useAuth().profile</span> = account globale fuso con la scheda della lega attiva (id, lingua e tema restano dell'account).</p></div>
+        <div class="card rounded-xl p-4"><p class="font-semibold">Staff di piattaforma</p><p class="text-xs muted mt-1">Nel selettore vede <strong>tutte</strong> le leghe, anche quelle in cui non ha una scheda (aperte con i poteri del presidente).</p></div>
+      </div>
+    </section>
+
+    <!-- Ruoli -->
+    <section id="ruoli" class="space-y-4">
+      <h2 class="text-xl font-bold tracking-tight flex items-center gap-2"><span data-icon="shield" class="text-accent"></span>Ruoli</h2>
+      <div class="grid lg:grid-cols-2 gap-4">
+        <div class="card rounded-2xl p-5 space-y-3">
+          <p class="text-xs font-semibold uppercase tracking-wide text-amber-500">Livello piattaforma · profiles.platformRole</p>
+          <p class="text-xs muted">Un solo valore (si escludono a vicenda), scritto solo dal server, sempre con email verificata.</p>
+          <div id="platformRoles" class="space-y-2"></div>
+          <div class="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs">
+            <p class="font-semibold text-amber-500">L'unica differenza tra Super admin e Admin piattaforma</p>
+            <p class="mt-1">La sezione di sistema riservata: nomina e revoca degli admin piattaforma, privacy email, migrazione dei dati, lettura diretta di tutte le email. E nessuno, salvo un super admin, tocca un super admin (né ruolo, né scheda, né account).</p>
+          </div>
+        </div>
+        <div class="card rounded-2xl p-5 space-y-3">
+          <p class="text-xs font-semibold uppercase tracking-wide text-accent">Livello lega · players/{id}.leagueRole</p>
+          <p class="text-xs muted">Vale solo dentro quella lega. Lo stesso account può avere ruoli diversi in leghe diverse.</p>
+          <div id="leagueRoles" class="space-y-2"></div>
+          <div class="rounded-xl border border-accent/30 bg-accent/5 p-3 text-xs">
+            <p class="font-semibold text-accent">Regola gerarchica</p>
+            <p class="mt-1">Super admin e Admin piattaforma valgono come <strong>Presidente in ogni lega</strong>: anche senza una scheda e anche se la lega è sospesa (i membri lì restano in sola lettura). Non giocano dove non hanno una scheda: niente iscrizioni né voti MVP.</p>
+          </div>
+        </div>
+      </div>
+      <div class="grid md:grid-cols-2 xl:grid-cols-4 gap-3 text-sm">
+        <div class="card rounded-xl p-4"><p class="font-semibold">Ospite</p><p class="text-xs muted mt-1"><span class="font-mono">is_guest: true</span>, <span class="font-mono">userId: null</span>. Lo crea un gestore e non accede all'app. Il suo storico può passare a un account (reclamo approvato o invito personale).</p></div>
+        <div class="card rounded-xl p-4"><p class="font-semibold">Non gioca (organizzatore)</p><p class="text-xs muted mt-1"><span class="font-mono">isActivePlayer: false</span> (nei documenti anche "isParticipating"). È fuori dagli elenchi e le regole rifiutano le sue iscrizioni; quelle future vengono tolte. Lo cambia lui stesso o il presidente.</p></div>
+        <div class="card rounded-xl p-4"><p class="font-semibold">Tolto dalla lega</p><p class="text-xs muted mt-1"><span class="font-mono">removed_at</span>: perde l'accesso e la scheda resta per lo storico. Rientra con un link di invito.</p></div>
+        <div class="card rounded-xl p-4"><p class="font-semibold">Account disattivato</p><p class="text-xs muted mt-1"><span class="font-mono">deactivated_at</span>: accesso bloccato, dati conservati. Il rientro lo decide solo lo staff di piattaforma.</p></div>
+      </div>
+    </section>
+
+    <!-- Matrice -->
+    <section id="matrice" class="space-y-4">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <h2 class="text-xl font-bold tracking-tight flex items-center gap-2"><span data-icon="grid" class="text-accent"></span>Matrice dei permessi</h2>
+        <label class="flex items-center gap-2 text-xs muted cursor-pointer"><input id="onlyAllowed" type="checkbox" class="accent-green-500"> Mostra solo cosa può fare il ruolo scelto</label>
+      </div>
+      <p class="text-xs muted">Le colonne Presidente, Collaboratore e Giocatore valgono per un account <span class="font-mono">USER</span>. L'ultima colonna dice cosa succede in una <strong>lega sospesa</strong>.</p>
+      <div class="flex flex-wrap gap-3 text-xs" id="legend"></div>
+      <div class="card rounded-2xl overflow-x-auto">
+        <table class="w-full text-sm min-w-[860px]">
+          <thead id="matrixHead"></thead>
+          <tbody id="matrixBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Onboarding -->
+    <section id="onboarding" class="space-y-4">
+      <h2 class="text-xl font-bold tracking-tight flex items-center gap-2"><span data-icon="link" class="text-accent"></span>Onboarding e inviti</h2>
+      <div class="flow grid md:grid-cols-2 xl:grid-cols-4 gap-3" data-flow="onboarding"></div>
+      <div class="grid lg:grid-cols-2 gap-4">
+        <div class="space-y-2">
+          <p class="text-xs font-semibold uppercase tracking-wide muted">Mockup · pagina dell'invito /join/{code}</p>
+          <div class="card rounded-2xl p-5 max-w-md space-y-4">
+            <div class="text-center space-y-1"><p class="text-xs muted">Sei stato invitato in</p><p class="text-lg font-bold">Lega del giovedì</p></div>
+            <p class="text-xs font-semibold muted">Sei uno di loro? (ospiti senza account)</p>
+            <div class="space-y-2">
+              <div class="flex items-center justify-between rounded-xl border line px-3 py-2.5"><span class="text-sm">Ospite Luca <span class="muted text-xs">· 7 partite</span></span><span class="rounded-lg bg-accent/15 text-accent text-xs font-semibold px-2.5 py-1">Sono io</span></div>
+              <div class="flex items-center justify-between rounded-xl border line px-3 py-2.5"><span class="text-sm">Ospite Paolo <span class="muted text-xs">· 2 partite</span></span><span class="rounded-lg border line text-xs px-2.5 py-1 muted">Sono io</span></div>
+            </div>
+            <div class="rounded-xl bg-accent text-[#04130a] text-sm font-semibold py-2.5 text-center">Entra come nuovo giocatore</div>
+            <p class="text-[11px] muted">Con "Sono io" entri subito come giocatore nuovo: lo storico dell'ospite passa a te solo dopo l'approvazione di un gestore.</p>
+          </div>
+        </div>
+        <div class="space-y-2">
+          <p class="text-xs font-semibold uppercase tracking-wide muted">Mockup · centro richieste del gestore</p>
+          <div class="card rounded-2xl p-4 max-w-md space-y-3" id="claimMock">
+            <div class="flex items-start gap-3">
+              <span class="h-9 w-9 rounded-full bg-sky-500/15 text-sky-500 grid place-items-center" data-icon="link"></span>
+              <div class="min-w-0">
+                <p class="text-sm font-semibold">Nuovo Arrivato dice di essere "Ospite Luca"</p>
+                <p class="text-xs muted mt-0.5">Se approvi, passano a lui partite, gol, OVR e V/P/S dell'ospite.</p>
+              </div>
+            </div>
+            <div class="rounded-xl border line p-3 text-xs space-y-1">
+              <p class="muted">Ultime partite di Ospite Luca</p>
+              <p>12/11 · Bianchi 4–3 · 1 gol</p>
+              <p>05/11 · Neri 2–5 · MVP</p>
+            </div>
+            <div class="flex flex-col gap-2" id="claimActions">
+              <button type="button" data-claim="approve" class="w-full rounded-xl bg-accent text-[#04130a] text-sm font-semibold py-2.5 flex items-center justify-center gap-2"><span data-icon="check"></span>Approva, è lui</button>
+              <button type="button" data-claim="reject" class="w-full rounded-xl border line text-sm font-semibold py-2.5 flex items-center justify-center gap-2"><span data-icon="x"></span>Rifiuta</button>
+            </div>
+            <p id="claimResult" class="text-xs muted" aria-live="polite">Lo vedono Presidente, Collaboratore e staff di piattaforma. Prova i pulsanti.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Ciclo partita -->
+    <section id="partita" class="space-y-4">
+      <h2 class="text-xl font-bold tracking-tight flex items-center gap-2"><span data-icon="trophy" class="text-accent"></span>Ciclo di vita della partita</h2>
+      <div class="flow grid md:grid-cols-2 xl:grid-cols-3 gap-3" data-flow="match"></div>
+      <div class="grid lg:grid-cols-2 gap-4">
+        <div class="space-y-2">
+          <p class="text-xs font-semibold uppercase tracking-wide muted">Mockup · Home, prossima partita e campo riga per riga</p>
+          <div class="card rounded-2xl p-5 space-y-4 max-w-md">
+            <div class="flex items-center justify-between"><p class="font-bold">Sabato 21 novembre</p><span class="rounded-full bg-accent/15 text-accent text-[10px] font-bold uppercase px-2 py-0.5">Ufficiale</span></div>
+            <div class="rounded-xl border line divide-y" style="border-color:var(--line)" role="group" aria-label="Campo">
+              <div class="px-3 py-2.5 flex items-center gap-2 text-sm"><span data-icon="clock" class="muted"></span>20:00 · 5vs5</div>
+              <div class="px-3 py-2.5 flex items-center gap-2 text-sm" style="border-color:var(--line)"><span data-icon="map-pin" class="muted"></span><span class="font-semibold">Campo Luini</span></div>
+              <div class="px-3 py-2.5 text-sm muted" style="border-color:var(--line)">Via Luini 5, Milano<br><span class="text-accent text-xs font-semibold">Apri in Google Maps ↗</span></div>
+              <div class="px-3 py-2.5 text-xs muted" style="border-color:var(--line)">Note: parcheggio interno</div>
+            </div>
+            <div class="rounded-xl bg-accent text-[#04130a] text-base font-semibold py-3 text-center">Ci sono</div>
+            <div class="flex items-center gap-3 text-sm"><span class="h-12 w-12 rounded-full border-4 border-accent grid place-items-center text-xs font-bold">8/10</span><div><p class="font-semibold">2 posti liberi</p><p class="muted text-xs">Nessuno in attesa</p></div></div>
+            <p class="text-[11px] muted">Chi non gioca vede "Non giochi in questa lega". Lo staff senza scheda vede "Non hai una scheda giocatore in questa lega".</p>
+          </div>
+        </div>
+        <div class="space-y-2">
+          <p class="text-xs font-semibold uppercase tracking-wide muted">Mockup · card "Ultima partita"</p>
+          <div class="card rounded-2xl p-5 space-y-4 max-w-md">
+            <div class="flex items-center justify-between"><p class="font-bold">Ultima partita</p><span class="text-xs muted">mar 10 nov</span></div>
+            <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center">
+              <div class="rounded-xl border line py-3"><p class="text-xs muted">Bianchi</p><p class="text-3xl font-black">3</p></div>
+              <span class="muted">–</span>
+              <div class="rounded-xl border-2 border-accent py-3 bg-accent/5"><p class="text-xs text-accent font-semibold">Neri · vincitori</p><p class="text-3xl font-black">5</p></div>
+            </div>
+            <div class="flex flex-wrap gap-2 text-xs">
+              <span class="rounded-full bg-amber-500/15 text-amber-500 font-semibold px-2.5 py-1">⭐ MVP: Marco</span>
+              <span class="rounded-full bg-accent/15 text-accent font-semibold px-2.5 py-1">Hai vinto</span>
+            </div>
+            <p class="text-xs muted">Marcatori: Marco 2, Luca 1, Paolo 1, Gianni 1</p>
+          </div>
+          <p class="text-xs font-semibold uppercase tracking-wide muted pt-3">Mockup · selettore del giorno (Partita della settimana)</p>
+          <div class="card rounded-2xl p-3 overflow-x-auto scrollbar-none">
+            <div class="flex gap-2 py-1.5 px-1">
+              <div class="flex-shrink-0 w-[5.25rem] rounded-2xl px-2 py-2.5 text-center border line"><p class="text-xs muted">Mar</p><p class="text-xl font-bold">10</p><span class="mt-1.5 block rounded-full bg-slate-500/15 text-[10px] font-semibold py-0.5">Archiviata</span><p class="mt-1 text-[11px] text-accent font-semibold">10/10</p></div>
+              <div class="flex-shrink-0 w-[5.25rem] rounded-2xl px-2 py-2.5 text-center border line"><p class="text-xs muted">Ven</p><p class="text-xl font-bold">13</p><span class="mt-1.5 block rounded-full bg-amber-500/15 text-amber-500 text-[10px] font-semibold py-0.5">Da chiudere</span><p class="mt-1 text-[11px] muted">15/16</p></div>
+              <div class="flex-shrink-0 w-[5.25rem] rounded-2xl px-2 py-2.5 text-center ring-2 ring-accent"><p class="text-xs muted">Sab</p><p class="text-xl font-bold">21</p><span class="mt-1.5 block rounded-full bg-accent/15 text-accent text-[10px] font-semibold py-0.5">Ufficiale</span><p class="mt-1 text-[11px] text-accent font-semibold">10/10</p></div>
+              <div class="flex-shrink-0 w-[5.25rem] rounded-2xl px-2 py-2.5 text-center border line"><p class="text-xs muted">Dom</p><p class="text-xl font-bold">22</p><span class="mt-1.5 block rounded-full bg-slate-500/15 text-[10px] font-semibold py-0.5">In programma</span><p class="mt-1 text-[11px] muted">0/10</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Campi -->
+    <section id="campi" class="space-y-4">
+      <h2 class="text-xl font-bold tracking-tight flex items-center gap-2"><span data-icon="map-pin" class="text-accent"></span>Campi e cassa</h2>
+      <div class="grid lg:grid-cols-2 gap-4">
+        <div class="card rounded-2xl p-5 space-y-3">
+          <div class="flex items-center gap-2"><span class="rounded-full bg-accent/15 text-accent text-[10px] font-bold uppercase px-2 py-0.5">Implementato</span><p class="font-semibold">Oggi: campi per lega</p></div>
+          <p class="text-xs muted">I campi stanno in <span class="font-mono">leagues/{id}/sport_fields</span> e li gestiscono i gestori in Impostazioni → Campi (prezzo base, prezzo per formato, indirizzo, note, link Maps che segue l'indirizzo).</p>
+          <p class="text-xs font-semibold">Costo di una partita: il primo che c'è vince</p>
+          <ol class="space-y-2 text-sm">
+            <li class="flex gap-3 rounded-xl border line p-3"><span class="h-6 w-6 rounded-full bg-accent text-[#04130a] text-xs font-bold grid place-items-center flex-shrink-0">1</span><div><p class="font-semibold">Costo personalizzato della partita</p><p class="text-xs muted">Totale, oppure <strong>quota a testa</strong> × giocatori (<span class="font-mono">cost_override</span>)</p></div></li>
+            <li class="flex gap-3 rounded-xl border line p-3"><span class="h-6 w-6 rounded-full bg-slate-500/20 text-xs font-bold grid place-items-center flex-shrink-0">2</span><div><p class="font-semibold">Prezzo del campo per quel formato</p><p class="text-xs muted">"Usa il costo del campo" torna qui</p></div></li>
+            <li class="flex gap-3 rounded-xl border line p-3"><span class="h-6 w-6 rounded-full bg-slate-500/20 text-xs font-bold grid place-items-center flex-shrink-0">3</span><div><p class="font-semibold">Costo standard delle impostazioni</p></div></li>
+          </ol>
+          <div class="rounded-xl border line p-3 text-xs space-y-1">
+            <p class="font-semibold">Cassa (match_payments)</p>
+            <p class="muted">Chi paga: i giocatori della partita archiviata, altrimenti quelli delle squadre salvate, altrimenti i titolari iscritti. Quota = costo ÷ paganti. I gestori segnano chi ha pagato.</p>
+          </div>
+        </div>
+        <div class="card rounded-2xl p-5 space-y-3 border-dashed" style="border-style:dashed">
+          <div class="flex items-center gap-2"><span class="rounded-full bg-amber-500/15 text-amber-500 text-[10px] font-bold uppercase px-2 py-0.5">Non implementato · progetto</span><p class="font-semibold">Catalogo globale dei campi</p></div>
+          <p class="text-xs muted">Il flusso desiderato, ancora da progettare: oggi non esistono né la collezione né le API.</p>
+          <div class="flow space-y-2" data-flow="fields"></div>
+          <p class="text-[11px] muted">Proposta tecnica: collezione di primo livello scritta solo dal server, letta da chi ha un account; il prezzo del catalogo resta il valore di partenza.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Lifecycle -->
+    <section id="lifecycle" class="space-y-4">
+      <h2 class="text-xl font-bold tracking-tight flex items-center gap-2"><span data-icon="alert" class="text-accent"></span>Chiusura, sicurezza e fallback</h2>
+      <div class="grid md:grid-cols-3 gap-3" id="removalCards"></div>
+      <div class="grid lg:grid-cols-2 gap-4">
+        <div class="card rounded-2xl p-5 space-y-3">
+          <p class="font-semibold">Fallback automatico sulla lega aperta</p>
+          <p class="text-xs muted">Niente schermate bianche e niente cicli di errori di permesso. Gli avvisi sopravvivono al cambio di lega.</p>
+          <div class="space-y-2" id="fallbackRows"></div>
+        </div>
+        <div class="card rounded-2xl p-5 space-y-3">
+          <p class="font-semibold">Eliminare una lega</p>
+          <div class="rounded-xl border border-rose-500/30 p-4 space-y-3">
+            <p class="text-sm font-semibold text-rose-500 flex items-center gap-2"><span data-icon="trash"></span>Elimina per sempre</p>
+            <p class="text-xs muted">Spariscono partite, squadre, cassa, campi, iscrizioni, inviti e le voci nelle memberships. Gli account restano.</p>
+            <label class="block text-xs" for="delName">Per confermare scrivi il nome esatto della lega: <strong>Lega del giovedì</strong></label>
+            <input id="delName" type="text" autocomplete="off" class="w-full rounded-lg border line bg-transparent px-3 py-2 text-sm focus:outline-none focus:border-rose-500" placeholder="Lega del giovedì">
+            <button id="delBtn" type="button" disabled class="w-full rounded-xl bg-rose-500 text-white text-sm font-semibold py-2.5 disabled:opacity-40">Elimina per sempre</button>
+            <p id="delMsg" class="text-xs muted" aria-live="polite">Presidente della lega o staff di piattaforma. "I Calcettari" è protetta.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Convenzioni -->
+    <section id="convenzioni" class="space-y-4">
+      <h2 class="text-xl font-bold tracking-tight flex items-center gap-2"><span data-icon="type" class="text-accent"></span>Convenzioni UI e sicurezza</h2>
+      <div class="grid lg:grid-cols-2 gap-4">
+        <div class="card rounded-2xl overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead><tr class="border-b line text-left text-xs muted"><th class="px-4 py-2.5 font-medium">Contesto</th><th class="px-4 py-2.5 font-medium">Usare</th><th class="px-4 py-2.5 font-medium">Evitare</th></tr></thead>
+            <tbody class="divide-y" style="border-color:var(--line)">
+              <tr style="border-color:var(--line)"><td class="px-4 py-2.5">Dentro una lega</td><td class="px-4 py-2.5 font-semibold">Presidente · Collaboratore · Giocatore</td><td class="px-4 py-2.5 text-rose-500">Admin, Amministratore</td></tr>
+              <tr style="border-color:var(--line)"><td class="px-4 py-2.5">Livello globale</td><td class="px-4 py-2.5 font-semibold">Super admin · Admin piattaforma · Console piattaforma</td><td class="px-4 py-2.5 text-rose-500">"Admin" da solo</td></tr>
+              <tr style="border-color:var(--line)"><td class="px-4 py-2.5">Chi non gioca</td><td class="px-4 py-2.5 font-semibold">Organizzatore · "Gioco anch'io in questa lega"</td><td class="px-4 py-2.5 muted">—</td></tr>
+              <tr style="border-color:var(--line)"><td class="px-4 py-2.5">Senza account</td><td class="px-4 py-2.5 font-semibold">Ospite</td><td class="px-4 py-2.5 muted">—</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul class="card rounded-2xl p-5 space-y-2.5 text-sm">
+          <li class="flex gap-2"><span data-icon="check" class="text-accent mt-0.5"></span>Nessun testo scritto nei componenti: tutto in <span class="font-mono">messages/it.json</span> e <span class="font-mono">en.json</span>.</li>
+          <li class="flex gap-2"><span data-icon="check" class="text-accent mt-0.5"></span>Nascondi le azioni usando i permessi <strong>effettivi</strong> (<span class="font-mono">useActiveLeague()</span>, <span class="font-mono">useAuth()</span>), non il ruolo grezzo della scheda.</li>
+          <li class="flex gap-2"><span data-icon="check" class="text-accent mt-0.5"></span>Ogni API con l'Admin SDK ricontrolla il ruolo (<span class="font-mono">adminCaller</span>, <span class="font-mono">platformStaffCaller</span>, …).</li>
+          <li class="flex gap-2"><span data-icon="check" class="text-accent mt-0.5"></span>Ordine delle iscrizioni = ora del server; voti MVP solo per sé; parametri iniziali limitati.</li>
+          <li class="flex gap-2"><span data-icon="check" class="text-accent mt-0.5"></span>Le regole Firestore si pubblicano a mano dopo il deploy, con i test in <span class="font-mono">scripts/test-rules.mjs</span>.</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+/* ---------- icone (tracciati in stile Lucide) ---------- */
+var ICONS = {
+  ball: '<circle cx="12" cy="12" r="10"/><path d="m12 7 4 3-1.5 5h-5L8 10z"/><path d="M12 2v5M22 10l-6 0M2 10h6M18.5 20l-4-5M5.5 20l4-5"/>',
+  database: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/>',
+  'arrow-right': '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  'arrow-down': '<path d="M12 5v14M6 13l6 6 6-6"/>',
+  shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+  crown: '<path d="m2 6 5 5 5-7 5 7 5-5-2 12H4z"/>',
+  users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/>',
+  'user-plus': '<circle cx="9" cy="8" r="4"/><path d="M2 21v-1a6 6 0 0 1 6-6h2M19 8v6M16 11h6"/>',
+  link: '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>',
+  grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+  trophy: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>',
+  'map-pin': '<path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/>',
+  alert: '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
+  type: '<path d="M4 7V4h16v3M9 20h6M12 4v16"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  x: '<path d="M18 6 6 18M6 6l12 12"/>',
+  eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
+  clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+  trash: '<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>',
+  'log-out': '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',
+  calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  shuffle: '<path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>',
+  star: '<path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/>',
+  history: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l4 2"/>',
+  ban: '<circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/>',
+  wallet: '<path d="M20 12V8H6a2 2 0 0 1 0-4h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/>',
+};
+function icon(name) { return '<svg class="i" viewBox="0 0 24 24" aria-hidden="true">' + (ICONS[name] || '') + '</svg>'; }
+function paintIcons(root) { (root || document).querySelectorAll('[data-icon]').forEach(function (el) { if (!el.dataset.done) { el.innerHTML = icon(el.dataset.icon); el.dataset.done = '1'; } }); }
+
+/* ---------- ruoli ---------- */
+var ROLES = [
+  { id: 'SA', label: 'Super admin', tech: 'SUPER_ADMIN', level: 'Piattaforma', icon: 'crown', tone: 'text-amber-500',
+    summary: 'Tutto, su tutta la piattaforma. Presidente in ogni lega (anche sospesa, anche senza scheda). Unico ad avere la sezione di sistema riservata: admin piattaforma, privacy email, migrazione.',
+    can: ['Console piattaforma: sospende, riattiva ed elimina leghe', 'Account globali: disattiva, elimina, riattiva (anche il rientro)', 'Nomina e revoca gli admin piattaforma', 'Privacy email e migrazione dati', 'Poteri del presidente in ogni lega'],
+    cannot: ['Chiudere il proprio account', 'Iscriversi o votare dove non ha una scheda'] },
+  { id: 'GA', label: 'Admin piattaforma', tech: 'GLOBAL_ADMIN', level: 'Piattaforma', icon: 'shield', tone: 'text-amber-500',
+    summary: 'Come il super admin, ma senza la sezione di sistema riservata. Presidente in ogni lega. Non tocca mai un super admin.',
+    can: ['Console piattaforma: sospende, riattiva ed elimina leghe', 'Account globali di altri (mai di un super admin)', 'Rientro degli account chiusi', 'Poteri del presidente in ogni lega'],
+    cannot: ['Nominare admin piattaforma', 'Privacy email e migrazione', 'Cambiare ruolo, scheda o account di un super admin'] },
+  { id: 'PRES', label: 'Presidente', tech: 'PRESIDENT', level: 'Lega', icon: 'crown', tone: 'text-accent',
+    summary: 'Controllo completo della SUA lega: impostazioni, visibilità, ruoli, membri, eliminazione della lega e tutta la gestione operativa.',
+    can: ['Tutto quello che fa il collaboratore', 'Nominare e revocare presidenti e collaboratori', 'Nome e visibilità della lega', 'Togliere collaboratori', '"Non gioca" per un membro', 'Eliminare la lega (nome esatto)'],
+    cannot: ['Toccare l\'account globale di altri', 'Decidere il rientro di un account', 'Cambiare la scheda di un super admin', 'Agire su leghe di cui non è membro'] },
+  { id: 'COLL', label: 'Collaboratore', tech: 'COLLABORATOR', level: 'Lega', icon: 'users', tone: 'text-accent',
+    summary: 'Il vicepresidente operativo: presenze, squadre, partite, MVP, cassa, campi, inviti e richieste. Niente impostazioni strutturali né ruoli.',
+    can: ['Presenze di tutti e sblocco del calendario', 'Formati, squadre, risultati e MVP finale', 'Cassa, campi, costo e quota della partita', 'Statistiche, parametri, ospiti, inviti', 'Centro richieste ed email dei membri', 'Togliere giocatori dalla lega'],
+    cannot: ['Ruoli dei membri', 'Nome, visibilità o eliminazione della lega', 'Togliere collaboratori o presidenti'] },
+  { id: 'PLAYER', label: 'Giocatore', tech: 'PLAYER', level: 'Lega', icon: 'user', tone: 'muted',
+    summary: 'Membro standard: legge la lega, si iscrive e si ritira per sé, vota l\'MVP, modifica solo nome, foto e ruolo in campo della propria scheda.',
+    can: ['Leggere partite, giocatori, storico', 'Iscriversi (se gioca e il giorno è aperto) e ritirarsi', 'Votare l\'MVP nella finestra del voto', '"Gioco anch\'io" per sé', 'Creare una propria lega'],
+    cannot: ['Gestire presenze altrui, squadre, cassa', 'Vedere il centro richieste'] },
+  { id: 'NONE', label: 'Utente senza lega', tech: 'USER, nessuna membership', level: 'Piattaforma', icon: 'user-plus', tone: 'muted',
+    summary: 'Account registrato che non è in nessuna lega: vede solo la schermata di benvenuto.',
+    can: ['Creare una lega (diventa presidente, max 5)', 'Entrare con un link di invito', 'Reclamare la scheda di un ospite (con approvazione)', 'Chiudere il proprio account'],
+    cannot: ['Leggere i dati di qualsiasi lega'] },
+];
+var COLS = ['SA', 'GA', 'PRES', 'COLL', 'PLAYER', 'NONE'];
+
+/* ---------- matrice (da docs/ARCHITECTURE.md §2.5) ---------- */
+// y = sì · s = solo per sé · c = dipende dalla scheda · r = lettura · n = no
+var MATRIX = [
+  { g: 'Lega', a: 'Leggere i dati di una lega', v: ['y:tutte', 'y:tutte', 'y', 'y', 'y', 'n'], sus: 'tutti leggono' },
+  { g: 'Partite', a: 'Iscriversi a una partita', v: ['c:se ha una scheda', 'c:se ha una scheda', 's', 's', 's:se gioca e il giorno è aperto', 'n'], sus: 'nessuno' },
+  { g: 'Partite', a: 'Iscrivere o ritirare altri, sbloccare il calendario', v: ['y', 'y', 'y', 'y', 'n', 'n'], sus: 'solo staff' },
+  { g: 'Partite', a: 'Formati, squadre, risultati, MVP finale', v: ['y', 'y', 'y', 'y', 'n', 'n'], sus: 'solo staff' },
+  { g: 'Partite', a: 'Votare l\'MVP', v: ['c:se ha una scheda', 'c:se ha una scheda', 'y:sempre', 'y:sempre', 's:finestra del voto', 'n'], sus: 'nessuno' },
+  { g: 'Gestione', a: 'Statistiche, OVR, storici, parametri', v: ['y', 'y', 'y', 'y', 'n', 'n'], sus: 'solo staff' },
+  { g: 'Gestione', a: 'Cassa, campi, costo e quota della partita', v: ['y', 'y', 'y', 'y', 'n', 'n'], sus: 'solo staff' },
+  { g: 'Gestione', a: 'Ospiti (crea ed elimina) e inviti', v: ['y', 'y', 'y', 'y', 'n', 'n'], sus: 'solo staff' },
+  { g: 'Gestione', a: 'Centro richieste (iscrizioni, reclami, formati)', v: ['y', 'y', 'y', 'y', 'n', 'n'], sus: 'solo staff' },
+  { g: 'Gestione', a: 'Email dei membri della lega', v: ['y', 'y', 'y', 'y', 'n', 'n'], sus: 'i gestori leggono' },
+  { g: 'Membri', a: 'Togliere un giocatore dalla lega', v: ['y', 'y', 'y', 'y', 'n', 'n'], sus: 'solo staff' },
+  { g: 'Membri', a: 'Togliere un collaboratore', v: ['y', 'y', 'y', 'n', 'n', 'n'], sus: 'solo staff' },
+  { g: 'Membri', a: 'Ruoli di lega (nomina e revoca)', v: ['y', 'y:mai un super admin', 'y:mai un super admin', 'n', 'n', 'n'], sus: 'solo staff' },
+  { g: 'Membri', a: '"Non gioca" per un altro membro', v: ['y', 'y', 'y', 'n', 's:solo per sé', 'n'], sus: 'solo staff' },
+  { g: 'Lega', a: 'Nome e visibilità della lega', v: ['y', 'y', 'y', 'n', 'n', 'n'], sus: 'solo staff' },
+  { g: 'Lega', a: 'Eliminare la lega (nome esatto)', v: ['y', 'y', 'y', 'n', 'n', 'n'], sus: 'solo staff' },
+  { g: 'Lega', a: 'Creare una lega', v: ['y', 'y', 'y', 'y', 'y:max 5', 'y:max 5'], sus: '—' },
+  { g: 'Piattaforma', a: 'Console piattaforma (elenco leghe)', v: ['y', 'y', 'n', 'n', 'n', 'n'], sus: '—' },
+  { g: 'Piattaforma', a: 'Sospendere o riattivare una lega', v: ['y', 'y', 'n', 'n', 'n', 'n'], sus: '—' },
+  { g: 'Piattaforma', a: 'Account globale di altri (disattiva, elimina, riattiva)', v: ['y', 'y:mai un super admin', 'n', 'n', 'n', 'n'], sus: '—' },
+  { g: 'Piattaforma', a: 'Rientro di un account chiuso', v: ['y', 'y', 'n', 'n', 'n', 'n'], sus: '—' },
+  { g: 'Piattaforma', a: 'Chiudere il proprio account', v: ['n:il super admin no', 'y', 'y', 'y', 'y', 'y'], sus: '—' },
+  { g: 'Sistema riservato', a: 'Nominare o revocare gli admin piattaforma', v: ['y', 'n', 'n', 'n', 'n', 'n'], sus: '—' },
+  { g: 'Sistema riservato', a: 'Privacy email e migrazione dati', v: ['y', 'n', 'n', 'n', 'n', 'n'], sus: '—' },
+];
+var CELL = {
+  y: { t: 'Sì', cls: 'bg-accent/15 text-accent', ic: 'check' },
+  s: { t: 'Per sé', cls: 'bg-sky-500/15 text-sky-500', ic: 'user' },
+  c: { t: 'Dipende', cls: 'bg-violet-500/15 text-violet-500', ic: 'eye' },
+  r: { t: 'Lettura', cls: 'bg-slate-500/15 muted', ic: 'eye' },
+  n: { t: 'No', cls: 'bg-rose-500/10 text-rose-500', ic: 'x' },
+};
+
+/* ---------- flussi (attori = chi esegue o approva il passo) ---------- */
+var FLOWS = {
+  onboarding: [
+    { t: 'Registrazione', d: 'Accesso con Google o email e password (serve l\'email verificata). Il profilo nasce come giocatore semplice con parametri iniziali bassi; poi c\'è l\'autovalutazione, che un gestore rivede dopo la prima partita.', who: ['NONE'], ic: 'user-plus' },
+    { t: 'Benvenuto', d: 'Senza leghe si vede solo la schermata di benvenuto: crea una lega oppure entra con un invito.', who: ['NONE'], ic: 'eye' },
+    { t: 'Crea una lega', d: 'Chi la crea diventa Presidente e sceglie se gioca anche lui. Massimo 5 leghe create per account. La "visibilità pubblica" oggi è solo un\'etichetta.', who: ['NONE', 'PLAYER', 'COLL', 'PRES', 'SA', 'GA'], ic: 'crown' },
+    { t: 'Link della lega', d: 'Un gestore crea il link /join/{code}. Chi lo apre vede la lega, fa l\'accesso, torna all\'invito ed entra come Giocatore (se era stato tolto riprende la sua scheda).', who: ['PRES', 'COLL', 'SA', 'GA', 'NONE'], ic: 'link' },
+    { t: '"Sono io" su un ospite', d: 'La persona entra come giocatore NUOVO e parte la richiesta guest_claim. Lo storico non passa ancora.', who: ['NONE', 'PLAYER'], ic: 'user' },
+    { t: 'Approvazione del gestore', d: 'Presidente, Collaboratore o staff: "Approva, è lui" passa partite, gol, OVR e V/P/S; "Rifiuta" lo lascia nuovo. Notifica in entrambi i casi. Due reclami sullo stesso ospite: ne vince uno solo.', who: ['PRES', 'COLL', 'SA', 'GA'], ic: 'check' },
+    { t: 'Invito WhatsApp personale', d: 'Generato da un gestore per un ospite preciso: il collegamento è immediato, senza approvazione.', who: ['PRES', 'COLL', 'SA', 'GA'], ic: 'link' },
+    { t: 'Iscrizione simile a un ospite', d: 'Richiesta new_signup: i gestori collegano l\'ospite oppure lo lasciano come giocatore nuovo.', who: ['PRES', 'COLL', 'SA', 'GA'], ic: 'users' },
+  ],
+  match: [
+    { t: '1 · Calendario', d: 'La settimana corrente è sempre aperta. Le successive restano chiuse finché un gestore non le apre (open_until), con controllo in ora italiana anche nelle regole.', who: ['PRES', 'COLL', 'SA', 'GA'], ic: 'calendar' },
+    { t: '2 · Iscrizioni', d: '"Ci sono": l\'ordine è dato dall\'ora del server. Titolari e lista d\'attesa sono calcolati sul formato; chi si ritira lascia il posto al primo in attesa (notifica push). Ritiri bloccati N ore prima, se attivo.', who: ['PLAYER', 'COLL', 'PRES'], ic: 'user' },
+    { t: '3 · Formato', d: '5v5, 7v7, 8v8 o 11v11 per giorno. Se gli iscritti crescono, il server propone ai gestori un formato più grande.', who: ['PRES', 'COLL', 'SA', 'GA'], ic: 'grid' },
+    { t: '4 · Squadre', d: 'Algoritmo locale bilanciato sull\'OVR (nessuna AI esterna). Dopo un ritiro le sostituzioni si ricalcolano sul server.', who: ['PRES', 'COLL', 'SA', 'GA'], ic: 'shuffle' },
+    { t: '5 · Risultato', d: 'Il gestore registra risultato, marcatori ed MVP. V/P/S si aggiornano in una transazione idempotente: salvare di nuovo applica solo la differenza. Niente assist.', who: ['PRES', 'COLL', 'SA', 'GA'], ic: 'trophy' },
+    { t: '6 · Voto MVP', d: 'Si apre a inizio + 1 h 45 min e resta aperto 24 h nell\'app (le regole accettano voti fino a 3 giorni dopo). Notifica dal cron. I gestori votano sempre; ognuno vota solo per sé.', who: ['PLAYER', 'COLL', 'PRES'], ic: 'star' },
+    { t: '7 · Storico', d: 'Partite archiviate per anno, classifica, card "Ultima partita" in Home con tabellone, vincitori e badge MVP ed esito.', who: ['PLAYER', 'COLL', 'PRES', 'SA', 'GA'], ic: 'history' },
+  ],
+  fields: [
+    { t: 'Proposta dalla lega', d: 'Un gestore propone un campo al catalogo: stato pending.', who: ['PRES', 'COLL'], ic: 'map-pin', planned: true },
+    { t: 'Approvazione dello staff', d: 'Il Super admin o l\'Admin piattaforma lo approva o lo rifiuta.', who: ['SA', 'GA'], ic: 'check', planned: true },
+    { t: 'Disponibile a tutte le leghe', d: 'Il prezzo del catalogo è solo il valore di partenza: ogni partita può avere il suo totale o la sua quota a testa (già implementato).', who: ['PRES', 'COLL', 'SA', 'GA'], ic: 'wallet', planned: true },
+  ],
+};
+
+var REMOVALS = [
+  { t: 'Togli dalla lega', who: 'Gestori della lega · staff', ic: 'log-out', tone: 'border-sky-500/40', head: 'text-sky-500',
+    pts: ['Scheda marcata removed_at, voce tolta da memberships', 'Iscrizioni future tolte (sale chi è in attesa)', 'Account e altre leghe intatti', 'Rientra con un link di invito'] },
+  { t: 'Elimina la lega', who: 'Presidente · staff (nome esatto)', ic: 'trash', tone: 'border-amber-500/40', head: 'text-amber-500',
+    pts: ['Lega e tutte le sottocollezioni cancellate', 'Inviti e voci in memberships di ogni membro tolti', 'Gli account restano', '"I Calcettari" protetta; lega sospesa: solo lo staff'] },
+  { t: 'Elimina l\'account globale', who: 'Il titolare (sé) · staff (altri, mai un super admin)', ic: 'ban', tone: 'border-rose-500/40', head: 'text-rose-500',
+    pts: ['Agisce su account e su tutte le sue schede', 'Disattiva (dati conservati) o elimina', 'Rientro: lo decide solo lo staff', 'Un Presidente o un Collaboratore non può mai farlo'] },
+];
+var FALLBACK = [
+  { e: 'Tolto dalla lega oppure lega eliminata', r: 'Passa a un\'altra sua lega con un avviso, o al benvenuto se non ne ha altre.', who: ['PRES', 'COLL', 'PLAYER'] },
+  { e: 'Lega sospesa, utente membro', r: 'Passa a un\'altra sua lega con un avviso; se non ne ha altre resta in sola lettura con il banner.', who: ['PRES', 'COLL', 'PLAYER'] },
+  { e: 'Lega sospesa, staff di piattaforma', r: 'Resta lì e continua a gestire: i membri sono in sola lettura.', who: ['SA', 'GA'] },
+];
+
+/* ---------- stato ---------- */
+var role = 'PRES';
+try { role = localStorage.getItem('blueprint-role') || 'PRES'; } catch (e) {}
+if (!ROLES.some(function (r) { return r.id === role; })) role = 'PRES';
+
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+function roleOf(id) { return ROLES.filter(function (r) { return r.id === id; })[0]; }
+function short(id) { return { SA: 'Super admin', GA: 'Admin piatt.', PRES: 'Presidente', COLL: 'Collab.', PLAYER: 'Giocatore', NONE: 'Senza lega' }[id]; }
+
+function renderRoleBar() {
+  document.getElementById('roleBar').innerHTML = ROLES.map(function (r) {
+    return '<button type="button" class="chip flex-shrink-0 rounded-lg border line px-2.5 py-1.5 text-xs font-semibold whitespace-nowrap transition-soft" data-role="' + r.id + '" aria-pressed="' + (r.id === role) + '" title="' + esc(r.tech) + '">' + esc(r.label) + '</button>';
+  }).join('');
+}
+
+function renderSummary() {
+  var r = roleOf(role);
+  document.getElementById('roleSummary').innerHTML =
+    '<div class="flex flex-col lg:flex-row gap-5">' +
+      '<div class="lg:w-1/3 space-y-2">' +
+        '<p class="text-xs muted">Stai guardando come</p>' +
+        '<p class="text-xl font-bold flex items-center gap-2"><span class="' + r.tone + '">' + icon(r.icon) + '</span>' + esc(r.label) + '</p>' +
+        '<p class="text-xs"><span class="font-mono rounded bg-slate-500/15 px-1.5 py-0.5">' + esc(r.tech) + '</span> <span class="muted">· livello ' + esc(r.level) + '</span></p>' +
+        '<p class="text-sm muted">' + esc(r.summary) + '</p>' +
+      '</div>' +
+      '<div class="lg:w-1/3"><p class="text-xs font-semibold text-accent mb-2">Può</p><ul class="space-y-1.5 text-sm">' +
+        r.can.map(function (c) { return '<li class="flex gap-2"><span class="text-accent mt-0.5">' + icon('check') + '</span>' + esc(c) + '</li>'; }).join('') +
+      '</ul></div>' +
+      '<div class="lg:w-1/3"><p class="text-xs font-semibold text-rose-500 mb-2">Non può</p><ul class="space-y-1.5 text-sm">' +
+        r.cannot.map(function (c) { return '<li class="flex gap-2"><span class="text-rose-500 mt-0.5">' + icon('x') + '</span>' + esc(c) + '</li>'; }).join('') +
+      '</ul></div>' +
+    '</div>';
+}
+
+function renderRoleCards() {
+  function card(r) {
+    var on = r.id === role;
+    return '<button type="button" data-role="' + r.id + '" class="w-full text-left rounded-xl border line p-3 flex gap-3 transition-soft ' + (on ? 'hit' : '') + '">' +
+      '<span class="' + r.tone + ' text-lg mt-0.5">' + icon(r.icon) + '</span>' +
+      '<span class="min-w-0"><span class="block text-sm font-semibold">' + esc(r.label) + ' <span class="font-mono text-[11px] muted font-normal">' + esc(r.tech) + '</span></span>' +
+      '<span class="block text-xs muted mt-0.5">' + esc(r.summary) + '</span></span></button>';
+  }
+  document.getElementById('platformRoles').innerHTML = ['SA', 'GA', 'NONE'].map(function (id) { return card(roleOf(id)); }).join('');
+  document.getElementById('leagueRoles').innerHTML = ['PRES', 'COLL', 'PLAYER'].map(function (id) { return card(roleOf(id)); }).join('');
+}
+
+function renderLegend() {
+  document.getElementById('legend').innerHTML = ['y', 's', 'c', 'n'].map(function (k) {
+    var c = CELL[k];
+    return '<span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-semibold ' + c.cls + '">' + icon(c.ic) + c.t + '</span>';
+  }).join('');
+}
+
+function renderMatrix() {
+  var ci = COLS.indexOf(role);
+  var only = document.getElementById('onlyAllowed').checked;
+  document.getElementById('matrixHead').innerHTML = '<tr class="border-b line text-xs">' +
+    '<th class="text-left font-medium muted px-4 py-3 sticky left-0" style="background:var(--card)">Azione</th>' +
+    COLS.map(function (c, i) { return '<th class="px-2 py-3 font-semibold text-center whitespace-nowrap ' + (i === ci ? 'col-hit text-accent' : 'muted') + '">' + esc(short(c)) + '</th>'; }).join('') +
+    '<th class="px-3 py-3 font-medium muted text-left whitespace-nowrap">Lega sospesa</th></tr>';
+  var lastG = '';
+  document.getElementById('matrixBody').innerHTML = MATRIX.map(function (row) {
+    var mine = row.v[ci].split(':')[0];
+    var allowed = mine !== 'n';
+    if (only && !allowed) return '';
+    var groupRow = '';
+    if (row.g !== lastG) { lastG = row.g; groupRow = '<tr><td colspan="' + (COLS.length + 2) + '" class="px-4 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wide muted">' + esc(row.g) + '</td></tr>'; }
+    return groupRow + '<tr class="border-t line transition-soft ' + (allowed ? '' : 'dim') + '">' +
+      '<td class="px-4 py-2.5 sticky left-0" style="background:var(--card)">' + esc(row.a) + '</td>' +
+      row.v.map(function (val, i) {
+        var p = val.split(':'); var c = CELL[p[0]]; var note = p[1] || '';
+        return '<td class="px-2 py-2 text-center ' + (i === ci ? 'col-hit' : '') + '">' +
+          '<span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ' + c.cls + '" title="' + esc(note || c.t) + '">' + icon(c.ic) + '<span class="hidden xl:inline">' + esc(c.t) + '</span></span>' +
+          (note ? '<span class="block text-[10px] muted mt-0.5 leading-tight">' + esc(note) + '</span>' : '') + '</td>';
+      }).join('') +
+      '<td class="px-3 py-2 text-xs muted whitespace-nowrap">' + esc(row.sus) + '</td></tr>';
+  }).join('');
+}
+
+function renderFlows() {
+  document.querySelectorAll('.flow').forEach(function (box) {
+    var steps = FLOWS[box.dataset.flow];
+    box.innerHTML = steps.map(function (s) {
+      var mine = s.who.indexOf(role) >= 0;
+      return '<div class="card rounded-xl p-4 space-y-2 transition-soft ' + (mine ? 'hit' : 'dim') + (s.planned ? ' border-dashed' : '') + '"' + (s.planned ? ' style="border-style:dashed"' : '') + '>' +
+        '<div class="flex items-center gap-2"><span class="h-8 w-8 rounded-lg grid place-items-center ' + (mine ? 'bg-accent/15 text-accent' : 'bg-slate-500/15 muted') + '">' + icon(s.ic) + '</span>' +
+        '<p class="text-sm font-semibold">' + esc(s.t) + '</p>' + (s.planned ? '<span class="ml-auto rounded-full bg-amber-500/15 text-amber-500 text-[9px] font-bold uppercase px-1.5 py-0.5">da fare</span>' : '') + '</div>' +
+        '<p class="text-xs muted leading-relaxed">' + esc(s.d) + '</p>' +
+        '<p class="flex flex-wrap gap-1 pt-1">' + s.who.map(function (w) { return '<span class="rounded px-1.5 py-0.5 text-[10px] font-semibold ' + (w === role ? 'bg-accent text-[#04130a]' : 'bg-slate-500/15 muted') + '">' + esc(short(w)) + '</span>'; }).join('') + '</p>' +
+        '</div>';
+    }).join('');
+  });
+}
+
+function renderLifecycle() {
+  document.getElementById('removalCards').innerHTML = REMOVALS.map(function (r) {
+    return '<div class="card rounded-2xl p-5 space-y-3 border-2 ' + r.tone + '" style="border-width:1px">' +
+      '<p class="font-semibold flex items-center gap-2 ' + r.head + '">' + icon(r.ic) + esc(r.t) + '</p>' +
+      '<p class="text-xs muted">' + esc(r.who) + '</p>' +
+      '<ul class="space-y-1.5 text-sm">' + r.pts.map(function (p) { return '<li class="flex gap-2"><span class="muted mt-0.5">•</span>' + esc(p) + '</li>'; }).join('') + '</ul></div>';
+  }).join('');
+  document.getElementById('fallbackRows').innerHTML = FALLBACK.map(function (f) {
+    var mine = f.who.indexOf(role) >= 0;
+    return '<div class="rounded-xl border line p-3 transition-soft ' + (mine ? 'hit' : 'dim') + '">' +
+      '<p class="text-sm font-semibold">' + esc(f.e) + '</p><p class="text-xs muted mt-0.5">→ ' + esc(f.r) + '</p></div>';
+  }).join('');
+}
+
+function renderAll() {
+  renderRoleBar(); renderSummary(); renderRoleCards(); renderMatrix(); renderFlows(); renderLifecycle();
+}
+
+/* ---------- interazioni ---------- */
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-role]');
+  if (b) {
+    role = b.dataset.role;
+    try { localStorage.setItem('blueprint-role', role); } catch (err) {}
+    renderAll();
+    return;
+  }
+  var c = e.target.closest('[data-claim]');
+  if (c) {
+    var ok = c.dataset.claim === 'approve';
+    var managers = ['PRES', 'COLL', 'SA', 'GA'].indexOf(role) >= 0;
+    var msg = document.getElementById('claimResult');
+    if (!managers) { msg.innerHTML = '<span class="text-rose-500 font-semibold">403 · forbidden</span> — come ' + esc(roleOf(role).label) + ' non vedi il centro richieste.'; return; }
+    msg.innerHTML = ok
+      ? '<span class="text-accent font-semibold">Approvato.</span> claimGuest: storico, OVR e V/P/S passano all\'account; la scheda dell\'ospite sparisce; notifica "Scheda ospite collegata".'
+      : '<span class="text-amber-500 font-semibold">Rifiutato.</span> Resta un giocatore nuovo; la richiesta si chiude con una notifica.';
+  }
+});
+document.getElementById('onlyAllowed').addEventListener('change', renderMatrix);
+
+var delName = document.getElementById('delName');
+var delBtn = document.getElementById('delBtn');
+function norm(s) { return s.trim().replace(/\s+/g, ' '); }
+delName.addEventListener('input', function () { delBtn.disabled = norm(delName.value) !== 'Lega del giovedì'; });
+delBtn.addEventListener('click', function () {
+  var allowed = ['PRES', 'SA', 'GA'].indexOf(role) >= 0;
+  document.getElementById('delMsg').innerHTML = allowed
+    ? '<span class="text-accent font-semibold">Eliminata.</span> recursiveDelete + inviti e memberships ripuliti; i membri vengono portati in un\'altra lega con un avviso.'
+    : '<span class="text-rose-500 font-semibold">403 · forbidden</span> — solo il Presidente della lega o lo staff di piattaforma.';
+});
+
+/* ---------- tema ---------- */
+function paintTheme() {
+  var dark = document.documentElement.classList.contains('dark');
+  ['themeBtn', 'themeBtn2'].forEach(function (id) { document.getElementById(id).innerHTML = icon(dark ? 'sun' : 'moon'); });
+}
+['themeBtn', 'themeBtn2'].forEach(function (id) {
+  document.getElementById(id).addEventListener('click', function () {
+    var dark = !document.documentElement.classList.contains('dark');
+    document.documentElement.classList.toggle('dark', dark);
+    try { localStorage.setItem('blueprint-theme', dark ? 'dark' : 'light'); } catch (e) {}
+    paintTheme();
+  });
+});
+
+/* ---------- sidebar ---------- */
+var SECTIONS = [
+  ['panoramica', 'Panoramica', 'eye'], ['architettura', 'Architettura multi-lega', 'database'], ['ruoli', 'Ruoli', 'shield'],
+  ['matrice', 'Matrice permessi', 'grid'], ['onboarding', 'Onboarding e inviti', 'link'], ['partita', 'Ciclo della partita', 'trophy'],
+  ['campi', 'Campi e cassa', 'map-pin'], ['lifecycle', 'Chiusura e fallback', 'alert'], ['convenzioni', 'Convenzioni', 'type'],
+];
+document.getElementById('sidebar').innerHTML = '<p class="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wide muted">Sezioni</p>' +
+  SECTIONS.map(function (s) { return '<a href="#' + s[0] + '" class="nav-link flex items-center gap-2.5 rounded-lg px-3 py-2 muted hover:text-accent" data-sec="' + s[0] + '">' + icon(s[2]) + s[1] + '</a>'; }).join('');
+var links = document.querySelectorAll('.nav-link');
+if ('IntersectionObserver' in window) {
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      if (en.isIntersecting) links.forEach(function (l) { l.classList.toggle('active', l.dataset.sec === en.target.id); });
+    });
+  }, { rootMargin: '-30% 0px -60% 0px' });
+  SECTIONS.forEach(function (s) { var el = document.getElementById(s[0]); if (el) io.observe(el); });
+}
+
+renderLegend();
+renderAll();
+paintIcons();
+paintTheme();
+</script>
+</body>
+</html>
