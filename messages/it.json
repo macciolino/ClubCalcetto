@@ -22,7 +22,8 @@
     "guest": "Ospite",
     "userMenu": "Menu utente",
     "mainNav": "Navigazione principale",
-    "platformConsole": "Console piattaforma"
+    "platformConsole": "Console piattaforma",
+    "board": "Bacheca"
   },
   "language": {
     "label": "Lingua",
@@ -1091,7 +1092,7 @@
     "removeOpen": "Disattiva o elimina",
     "whatToDo": "Cosa vuoi fare?",
     "deactivateLabel": "Disattiva (posso tornare)",
-    "deactivateHelp": "Non potrai più entrare, ma scheda, parametri e statistiche restano salvati: il super admin può riattivare l’account e ritrovi tutto.",
+    "deactivateHelp": "Non potrai più entrare, ma scheda, parametri e statistiche restano salvati: lo staff della piattaforma può riattivare l’account e ritrovi tutto.",
     "deleteLabel": "Elimina tutto",
     "deleteHelp": "Accesso, scheda, parametri e statistiche vengono cancellati. Nelle partite giocate resta solo il tuo nome. Non si può annullare.",
     "bothCases": "In entrambi i casi vengono tolte le tue iscrizioni e le notifiche.",
@@ -1481,7 +1482,8 @@
       "codePlaceholder": "Incolla il link o il codice",
       "go": "Entra",
       "badCode": "Codice non valido: incolla il link ricevuto o il codice.",
-      "logout": "Esci"
+      "logout": "Esci",
+      "board": "Cerca una partita da giocare"
     },
     "join": {
       "title": "Invito alla lega",
@@ -1731,5 +1733,93 @@
   "authNotices": {
     "guestLinked": "Profilo di {name} collegato: partite e statistiche sono tue.",
     "inviteInvalid": "Il link di invito non è più valido: chiedine uno nuovo al presidente o a un collaboratore."
+  },
+  "board": {
+    "title": "Cerco giocatore",
+    "subtitle": "Partite di tutte le leghe che cercano giocatori. Prendi un posto: giochi quella partita senza entrare nella lega.",
+    "newNotice": "Nuovo avviso",
+    "leagueNotices": "Avvisi di \"{league}\"",
+    "noLeagueNotices": "La tua lega non ha avvisi. Se ti manca qualcuno per una partita, pubblica un avviso.",
+    "openNotices": "Avvisi aperti",
+    "empty": "Nessuna partita cerca giocatori in questo momento.",
+    "spotsLeft": "{count, plural, one {Manca # posto} other {Mancano # posti}}",
+    "spotsOf": "{filled}/{total} presi",
+    "perHead": "{amount} a testa",
+    "free": "Gratis",
+    "take": "Prendi il posto",
+    "taken": "Hai preso il posto",
+    "confirmTake": "Prendi un posto per {where} con \"{league}\"? I gestori della lega vengono avvisati.",
+    "tookIt": "Posto preso: i gestori della lega sono stati avvisati.",
+    "roles": {
+      "ANY": "Qualsiasi ruolo",
+      "GOALKEEPER": "Portiere",
+      "ROTATION_GOALKEEPER": "Portiere a rotazione",
+      "OUTFIELD": "Giocatore di movimento"
+    },
+    "shirts": {
+      "DARK": "Maglia scura",
+      "LIGHT": "Maglia chiara"
+    },
+    "status": {
+      "OPEN": "In bacheca",
+      "CLOSED": "Chiuso",
+      "CANCELLED": "Annullato"
+    },
+    "form": {
+      "newTitle": "Nuovo avviso",
+      "editTitle": "Modifica avviso",
+      "subtitle": "Visibile a tutti gli utenti della piattaforma. Chi prende un posto non entra nella lega.",
+      "date": "Giorno",
+      "time": "Ora",
+      "field": "Campo della lega",
+      "place": "Nome del campo",
+      "address": "Indirizzo",
+      "format": "Formato",
+      "spots": "Posti da coprire",
+      "totalCost": "Costo del campo (€)",
+      "perHead": "Quota a testa (€)",
+      "role": "Ruolo cercato",
+      "shirt": "Colore della maglia",
+      "notes": "Note",
+      "notesPh": "Es. portare i parastinchi",
+      "cancel": "Annulla",
+      "publish": "Pubblica",
+      "save": "Salva",
+      "published": "Avviso pubblicato.",
+      "saved": "Avviso aggiornato.",
+      "errWhen": "Scegli giorno e ora.",
+      "errPast": "La partita deve essere nel futuro.",
+      "errPlace": "Inserisci nome e indirizzo del campo.",
+      "errCost": "La quota a testa non può superare il costo del campo.",
+      "errSpots": "Da 1 a {max} posti."
+    },
+    "manage": {
+      "edit": "Modifica",
+      "close": "Chiudi",
+      "cancel": "Annulla avviso",
+      "confirmClose": "Chiudere l’avviso? Esce dalla bacheca e nessuno potrà più prendere un posto.",
+      "confirmCancel": "Annullare l’avviso? È definitivo: chi ha già preso un posto va avvisato da voi.",
+      "closed": "Avviso chiuso.",
+      "cancelled": "Avviso annullato.",
+      "applicants": "Chi ha preso il posto ({filled}/{total})",
+      "noApplicants": "Ancora nessuno.",
+      "applicantsHint": "Non sono membri della lega: giocano solo questa partita."
+    },
+    "errors": {
+      "bad_request": "Dati dell’avviso non validi.",
+      "not_found": "Questo avviso non esiste più.",
+      "forbidden": "Non puoi farlo: solo i gestori della lega gestiscono gli avvisi, e per prendere un posto serve l’email verificata.",
+      "suspended": "La lega è sospesa: avvisi fermi.",
+      "not_open": "L’avviso è stato chiuso.",
+      "cancelled": "L’avviso è stato annullato.",
+      "expired": "La partita è già iniziata o passata.",
+      "full": "Posti esauriti: qualcuno è stato più veloce.",
+      "already_joined": "Hai già preso un posto in questa partita.",
+      "already_in_match": "Sei già iscritto a questa partita nella lega.",
+      "below_filled": "Non puoi scendere sotto i posti già presi.",
+      "failed": "Non sono riuscito: controlla la connessione e riprova.",
+      "not_configured": "Servizio non disponibile in questo momento.",
+      "unauthenticated": "Accedi di nuovo e riprova."
+    }
   }
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cleanNoticeInput, patchNotice, statusFor } from '@/lib/utils/matchNotice';
+import { cleanNoticeInput, patchNotice, romeTime, romeToIso, statusFor } from '@/lib/utils/matchNotice';
 import type { MatchNotice } from '@/types/matchNotice';
 
 const valid = {
@@ -61,6 +61,17 @@ describe('patchNotice', () => {
 
   it('una modifica non valida rende nullo tutto', () => {
     expect(patchNotice(current, { format: 'x' })).toBeNull();
+  });
+});
+
+describe('ora italiana del modulo', () => {
+  it('inverno +1h, estate +2h', () => {
+    expect(romeToIso('2026-12-06', '20:30')).toBe('2026-12-06T19:30:00.000Z');
+    expect(romeToIso('2026-07-06', '20:30')).toBe('2026-07-06T18:30:00.000Z');
+    expect(romeTime('2026-07-06T18:30:00.000Z')).toBe('20:30');
+  });
+  it('dati incompleti: vuoto', () => {
+    expect(romeToIso('2026-12-06', '')).toBe('');
   });
 });
 

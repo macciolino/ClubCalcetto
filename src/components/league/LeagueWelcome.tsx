@@ -2,10 +2,11 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { LinkIcon, LogOut, Plus } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowRight, LinkIcon, LogOut, Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { BrandLogo } from '@/components/BrandLogo';
-import { btn } from '@/components/ui/buttons';
+import { btn, textLink } from '@/components/ui/buttons';
 import { useAuth } from '@/lib/context/AuthContext';
 import { inviteCodeFrom } from '@/lib/services/leagueService';
 import { CreateLeagueSheet } from '@/components/league/CreateLeagueSheet';
@@ -74,6 +75,10 @@ export function LeagueWelcome() {
             )}
           </form>
         )}
+        {/* "Cerco giocatore": partite di altre leghe da giocare anche senza farne parte */}
+        <Link href="/board" className={`${textLink} justify-center`}>
+          {t('board')} <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </Link>
         <button type="button" onClick={() => signOut()} className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-secondary">
           <LogOut className="h-3.5 w-3.5" aria-hidden="true" /> {t('logout')}
         </button>

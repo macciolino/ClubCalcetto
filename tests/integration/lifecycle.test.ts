@@ -146,6 +146,24 @@ describe('Account chiuso (soft delete) e rientro', () => {
     expect((await ldb().doc('admin_requests/closed_m1').get()).data()).toMatchObject({ type: 'account_closed', mode: 'deactivate', status: 'open' });
   });
 
+  it('elimina tutto: notifiche personali e richieste aperte spariscono, nell’avviso ai gestori resta solo il nome', async () => {
+    const u = await makeUser('d1', { full_name: 'Mario d1' });
+    await db().doc('profiles/d1/notifications/n1').set({ title: 'Prova', body: 'x', read: false, created_at: new Date().toISOString() });
+    await ldb().doc('admin_requests/signup_d1').set({ type: 'new_signup', status: 'open', profile_id: 'd1', name: 'Mario d1', email: u.email, created_at: new Date().toISOString() });
+
+    const res = await call(closeAccount, { mode: 'delete', reason: 'Privacy: non voglio i miei dati qui' }, u.token);
+    expect(res.data.ok).toBe(true);
+
+    expect((await db().doc('profiles/d1').get()).exists).toBe(false);
+    expect((await db().collection('profiles/d1/notifications').get()).size).toBe(0);
+    const old = (await ldb().doc('admin_requests/signup_d1').get()).data()!;
+    expect(old).toMatchObject({ status: 'done', resolution: 'account_deleted' });
+    expect(old.email).toBeUndefined();
+    const notice = (await ldb().doc('admin_requests/closed_d1').get()).data()!;
+    expect(notice).toMatchObject({ type: 'account_closed', mode: 'delete', status: 'open', name: 'Mario d1' });
+    expect(notice.email).toBeNull();
+  });
+
   it('tentativo di rientro → "attesa ripristino" + una sola richiesta; decide lo staff di piattaforma: ripristina', async () => {
     const u = await closeOwnAccount('m2');
     const r1 = await call(returnRequest, { email: u.email.toUpperCase() });

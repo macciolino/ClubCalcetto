@@ -26,6 +26,7 @@ import { rankDayPresences, rankPresencesByDate } from '@/lib/services/presenceSe
 import { cardCanPlay } from '@/lib/utils/presenceRanking';
 import { DayFormats, MatchFormat, maxPlayersFor } from '@/lib/utils/matchFormat';
 import { requestTeamsCheck, requestFirstMatchCheck } from '@/lib/services/notificationService';
+import { clampStatValue } from '@/lib/utils/statUtils';
 
 /**
  * Subscription error: a listener that outlives the sign-out gets "permission-denied" for a moment (rules need the user).
@@ -414,9 +415,10 @@ export function subscribeStatCategories(
  * (parameter removed and added again) keep their old value. The OVR is NOT recalculated:
  * it changes only when an admin edits that player. Returns how many players were updated.
  */
-export async function addStatParameter(name: string, defaultValue: number): Promise<number> {
+export async function addStatParameter(name: string, rawDefaultValue: number): Promise<number> {
   if (!isFirebaseConfigured) return 0;
   const clean = name.trim();
+  const defaultValue = clampStatValue(rawDefaultValue);
   const id = `cat-${Date.now()}`;
   await setDoc(ldoc('stat_categories', id), {
     id,

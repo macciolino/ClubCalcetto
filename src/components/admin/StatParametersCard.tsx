@@ -6,6 +6,7 @@ import React, { useState } from 'react';
 import { StatCategory } from '@/types/database';
 import { addStatParameter, removeStatParameter } from '@/lib/firebase/firestoreService';
 import { NumberInput } from '@/components/NumberInput';
+import { clampStatValue } from '@/lib/utils/statUtils';
 import { CollapsibleCard } from '@/components/CollapsibleCard';
 import { Sliders, Plus, Trash2, Loader2, Info, Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -45,13 +46,16 @@ export function StatParametersCard({ categories, onOpenLegend }: StatParametersC
       setError(t('exists', { name: clean }));
       return;
     }
-    if (!(await askConfirm(t('confirmAdd', { name: clean, value: defaultValue })))) return;
+    // Anche con Invio nel campo (senza uscirne) il valore resta nella scala 1–10
+    const value = clampStatValue(defaultValue, DEFAULT_PARAMETER_VALUE);
+    setDefaultValue(value);
+    if (!(await askConfirm(t('confirmAdd', { name: clean, value })))) return;
     setBusy('add');
     try {
-      const updated = await addStatParameter(clean, defaultValue);
+      const updated = await addStatParameter(clean, value);
       setMessage(
         updated > 0
-          ? t('added', { name: clean, count: updated, value: defaultValue })
+          ? t('added', { name: clean, count: updated, value })
           : t('addedKept', { name: clean })
       );
       setName('');

@@ -46,6 +46,28 @@ export async function deleteAccount(profileId: string): Promise<{ name: string; 
     await batch.commit();
   }
 
+  // Le notifiche personali stanno in una sottocollezione del profilo: non si cancella da sola con il documento
+  await db.recursiveDelete(db.collection(`profiles/${profileId}/notifications`));
+
+  // Richieste di questa persona nella campanella dei gestori (nuovo iscritto, reclamo, rientro…): non c'è più chi
+  // decidere, quindi si chiudono; l'email esce da tutte (restano solo nome e motivo, come negli avvisi di chiusura)
+  for (const l of leagues) {
+    const reqs = await leagueDb(l).collection('admin_requests').where('profile_id', '==', profileId).get();
+    if (reqs.empty) continue;
+    const closing = db.batch();
+    const at = new Date().toISOString();
+    reqs.docs.forEach((r) =>
+      closing.set(
+        r.ref,
+        r.data().status === 'open'
+          ? { status: 'done', resolved_at: at, resolution: 'account_deleted', email: FieldValue.delete() }
+          : { email: FieldValue.delete() },
+        { merge: true }
+      )
+    );
+    await closing.commit();
+  }
+
   // Account di accesso (gli ospiti non ce l'hanno)
   const uid = (data.user_id as string) || (data.is_guest ? '' : profileId);
   if (uid) {

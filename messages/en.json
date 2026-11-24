@@ -22,7 +22,8 @@
     "guest": "Guest",
     "userMenu": "User menu",
     "mainNav": "Main navigation",
-    "platformConsole": "Platform console"
+    "platformConsole": "Platform console",
+    "board": "Board"
   },
   "language": {
     "label": "Language",
@@ -1091,7 +1092,7 @@
     "removeOpen": "Deactivate or delete",
     "whatToDo": "What do you want to do?",
     "deactivateLabel": "Deactivate (I can come back)",
-    "deactivateHelp": "You won't be able to sign in, but your profile, ratings and stats stay saved: the super admin can reactivate the account and you'll find everything.",
+    "deactivateHelp": "You won't be able to sign in, but your profile, ratings and stats stay saved: the platform staff can reactivate the account and you'll find everything.",
     "deleteLabel": "Delete everything",
     "deleteHelp": "Sign-in, profile, ratings and stats are deleted. Only your name stays in the matches played. This can't be undone.",
     "bothCases": "In both cases your sign-ups and notifications are removed.",
@@ -1481,7 +1482,8 @@
       "codePlaceholder": "Paste the link or the code",
       "go": "Join",
       "badCode": "Invalid code: paste the link you received or the code.",
-      "logout": "Sign out"
+      "logout": "Sign out",
+      "board": "Find a match to play"
     },
     "join": {
       "title": "League invite",
@@ -1731,5 +1733,93 @@
   "authNotices": {
     "guestLinked": "{name}’s profile is linked: matches and stats are yours.",
     "inviteInvalid": "This invite link is no longer valid: ask the president or a collaborator for a new one."
+  },
+  "board": {
+    "title": "Player wanted",
+    "subtitle": "Matches from every league looking for players. Take a spot: you play that match without joining the league.",
+    "newNotice": "New notice",
+    "leagueNotices": "Notices of \"{league}\"",
+    "noLeagueNotices": "Your league has no notices. If you are short of players for a match, post a notice.",
+    "openNotices": "Open notices",
+    "empty": "No match is looking for players right now.",
+    "spotsLeft": "{count, plural, one {# spot left} other {# spots left}}",
+    "spotsOf": "{filled}/{total} taken",
+    "perHead": "{amount} each",
+    "free": "Free",
+    "take": "Take the spot",
+    "taken": "You took the spot",
+    "confirmTake": "Take a spot for {where} with \"{league}\"? The league managers will be told.",
+    "tookIt": "Spot taken: the league managers have been told.",
+    "roles": {
+      "ANY": "Any role",
+      "GOALKEEPER": "Goalkeeper",
+      "ROTATION_GOALKEEPER": "Rotating goalkeeper",
+      "OUTFIELD": "Outfield player"
+    },
+    "shirts": {
+      "DARK": "Dark shirt",
+      "LIGHT": "Light shirt"
+    },
+    "status": {
+      "OPEN": "On the board",
+      "CLOSED": "Closed",
+      "CANCELLED": "Cancelled"
+    },
+    "form": {
+      "newTitle": "New notice",
+      "editTitle": "Edit notice",
+      "subtitle": "Visible to every user of the platform. Whoever takes a spot does not join the league.",
+      "date": "Day",
+      "time": "Time",
+      "field": "League field",
+      "place": "Field name",
+      "address": "Address",
+      "format": "Format",
+      "spots": "Spots to fill",
+      "totalCost": "Field cost (€)",
+      "perHead": "Cost each (€)",
+      "role": "Role wanted",
+      "shirt": "Shirt colour",
+      "notes": "Notes",
+      "notesPh": "E.g. bring shin guards",
+      "cancel": "Cancel",
+      "publish": "Publish",
+      "save": "Save",
+      "published": "Notice published.",
+      "saved": "Notice updated.",
+      "errWhen": "Choose day and time.",
+      "errPast": "The match must be in the future.",
+      "errPlace": "Enter the field name and address.",
+      "errCost": "The cost each cannot exceed the field cost.",
+      "errSpots": "From 1 to {max} spots."
+    },
+    "manage": {
+      "edit": "Edit",
+      "close": "Close",
+      "cancel": "Cancel notice",
+      "confirmClose": "Close the notice? It leaves the board and nobody can take a spot any more.",
+      "confirmCancel": "Cancel the notice? This is final: tell the people who already took a spot yourselves.",
+      "closed": "Notice closed.",
+      "cancelled": "Notice cancelled.",
+      "applicants": "Who took a spot ({filled}/{total})",
+      "noApplicants": "Nobody yet.",
+      "applicantsHint": "They are not league members: they play only this match."
+    },
+    "errors": {
+      "bad_request": "The notice data is not valid.",
+      "not_found": "This notice no longer exists.",
+      "forbidden": "You cannot do this: only league managers handle notices, and taking a spot needs a verified email.",
+      "suspended": "The league is suspended: notices are on hold.",
+      "not_open": "The notice has been closed.",
+      "cancelled": "The notice has been cancelled.",
+      "expired": "The match has already started or passed.",
+      "full": "No spots left: someone was quicker.",
+      "already_joined": "You already took a spot in this match.",
+      "already_in_match": "You are already signed up for this match in the league.",
+      "below_filled": "You cannot go below the spots already taken.",
+      "failed": "Something went wrong: check your connection and try again.",
+      "not_configured": "Service not available right now.",
+      "unauthenticated": "Sign in again and try again."
+    }
   }
 }

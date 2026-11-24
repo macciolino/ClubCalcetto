@@ -313,6 +313,12 @@
           <div class="flow space-y-2" data-flow="fields"></div>
           <p class="text-[11px] muted">Prezzo: partita &gt; prezzo della lega (price_override) &gt; prezzo di partenza del catalogo. Il catalogo non viene mai toccato dai prezzi delle leghe.</p>
         </div>
+        <div class="card rounded-2xl p-5 space-y-3">
+          <div class="flex items-center gap-2"><span class="rounded-full bg-accent/15 text-accent text-[10px] font-bold uppercase px-2 py-0.5">Implementato</span><p class="font-semibold">Bacheca "Cerco giocatore"</p></div>
+          <p class="text-xs muted"><span class="font-mono">match_notices</span> (+ <span class="font-mono">applicants</span>), scritti solo dal server. Pagina <span class="font-mono">/board</span>, aperta anche a chi non ha una lega.</p>
+          <div class="flow space-y-2" data-flow="board"></div>
+          <p class="text-[11px] muted">Chi prende un posto non entra nella lega: nessuna membership, nessuna scheda, nessun accesso a giocatori, cassa o impostazioni.</p>
+        </div>
       </div>
     </section>
 
@@ -427,7 +433,7 @@ var ROLES = [
     cannot: ['Gestire presenze altrui, squadre, cassa', 'Vedere il centro richieste'] },
   { id: 'NONE', label: 'Utente senza lega', tech: 'USER, nessuna membership', level: 'Piattaforma', icon: 'user-plus', tone: 'muted',
     summary: 'Account registrato che non è in nessuna lega: vede solo la schermata di benvenuto.',
-    can: ['Creare una lega (diventa presidente, max 5)', 'Entrare con un link di invito', 'Reclamare la scheda di un ospite (con approvazione)', 'Chiudere il proprio account'],
+    can: ['Creare una lega (diventa presidente, max 5)', 'Entrare con un link di invito', 'Reclamare la scheda di un ospite (con approvazione)', 'Chiudere il proprio account', 'Prendere un posto in Bacheca (senza entrare nella lega)'],
     cannot: ['Leggere i dati di qualsiasi lega'] },
 ];
 var COLS = ['SA', 'GA', 'PRES', 'COLL', 'PLAYER', 'NONE'];
@@ -444,6 +450,9 @@ var MATRIX = [
   { g: 'Gestione', a: 'Cassa, campi, costo e quota della partita', v: ['y', 'y', 'y', 'y', 'n', 'n'], sus: 'solo staff' },
   { g: 'Gestione', a: 'Catalogo campi: cercare, aggiungere, proporre, scollegare', v: ['y', 'y', 'y', 'y', 'n', 'n'], sus: 'solo staff' },
   { g: 'Gestione', a: 'Catalogo campi (staff): approvare, correggere, rifiutare, unire, eliminare', v: ['y', 'y', 'n', 'n', 'n', 'n'], sus: '—' },
+  { g: 'Bacheca', a: 'Avvisi "Cerco giocatore": creare, modificare, chiudere, annullare', v: ['y', 'y', 'y', 'y', 'n', 'n'], sus: 'solo staff' },
+  { g: 'Bacheca', a: 'Leggere gli avvisi e prendere un posto (senza entrare nella lega)', v: ['y', 'y', 'y', 'y', 'y', 'y:email verificata'], sus: 'si legge, posti fermi' },
+  { g: 'Bacheca', a: 'Vedere chi ha preso i posti', v: ['y', 'y', 'y', 'y', 's:solo il proprio', 's:solo il proprio'], sus: '—' },
   { g: 'Gestione', a: 'Ospiti (crea ed elimina) e inviti', v: ['y', 'y', 'y', 'y', 'n', 'n'], sus: 'solo staff' },
   { g: 'Gestione', a: 'Centro richieste (iscrizioni, reclami, formati)', v: ['y', 'y', 'y', 'y', 'n', 'n'], sus: 'solo staff' },
   { g: 'Gestione', a: 'Email dei membri della lega', v: ['y', 'y', 'y', 'y', 'n', 'n'], sus: 'i gestori leggono' },
@@ -475,7 +484,7 @@ var CELL = {
 var FLOWS = {
   onboarding: [
     { t: 'Registrazione', d: 'Accesso con Google o email e password (serve l\'email verificata). Il profilo nasce come giocatore semplice con parametri iniziali bassi; poi c\'è l\'autovalutazione, che un gestore rivede dopo la prima partita.', who: ['NONE'], ic: 'user-plus' },
-    { t: 'Benvenuto', d: 'Senza leghe si vede solo la schermata di benvenuto: crea una lega oppure entra con un invito.', who: ['NONE'], ic: 'eye' },
+    { t: 'Benvenuto', d: 'Senza leghe si vede solo la schermata di benvenuto: crea una lega, entra con un invito oppure cerca una partita in Bacheca.', who: ['NONE'], ic: 'eye' },
     { t: 'Crea una lega', d: 'Chi la crea diventa Presidente e sceglie se gioca anche lui. Massimo 5 leghe create per account. La "visibilità pubblica" oggi è solo un\'etichetta.', who: ['NONE', 'PLAYER', 'COLL', 'PRES', 'SA', 'GA'], ic: 'crown' },
     { t: 'Link della lega', d: 'Un gestore crea il link /join/{code}. Chi lo apre vede la lega, fa l\'accesso, torna all\'invito ed entra come Giocatore (se era stato tolto riprende la sua scheda).', who: ['PRES', 'COLL', 'SA', 'GA', 'NONE'], ic: 'link' },
     { t: '"Sono io" su un ospite', d: 'La persona entra come giocatore NUOVO e parte la richiesta guest_claim. Lo storico non passa ancora.', who: ['NONE', 'PLAYER'], ic: 'user' },
@@ -496,6 +505,11 @@ var FLOWS = {
     { t: 'Cerca o proponi', d: 'Impostazioni → Campi → "Campo": cerca nel catalogo e aggiungi (collegato). Non c\'è? Prima vengono mostrati i campi simili, poi la proposta parte: pending, ma subito usabile nella lega.', who: ['PRES', 'COLL', 'SA', 'GA'], ic: 'map-pin' },
     { t: 'Revisione dello staff', d: 'Console piattaforma → Campi del catalogo: approva (anche correggendo), rifiuta (resta privato della lega), unisci a un doppione, elimina. Notifiche a chi ha proposto.', who: ['SA', 'GA'], ic: 'check' },
     { t: 'Disponibile a tutte le leghe', d: 'Le correzioni arrivano a ogni lega collegata. La lega cambia solo prezzi e note; ogni partita può avere il suo totale o la sua quota a testa. Il catalogo resta pulito.', who: ['PRES', 'COLL', 'SA', 'GA'], ic: 'wallet' },
+  ],
+  board: [
+    { t: 'Pubblica', d: 'Bacheca, Nuovo avviso: il modulo parte dal giorno ufficiale, ora standard, campo predefinito e prezzo per il formato. Ruolo cercato, maglia, quota a testa, posti, note.', who: ['PRES', 'COLL', 'SA', 'GA'], ic: 'map-pin' },
+    { t: 'Prendi il posto', d: 'Chiunque con email verificata, anche senza lega. Transazione: mai più persone dei posti; rifiutato se già iscritto a quella partita o se ha già un posto. I gestori ricevono una notifica.', who: ['PLAYER', 'NONE', 'COLL', 'PRES'], ic: 'user' },
+    { t: 'Chiusura', d: 'Al completo si chiude da solo ed esce dalla bacheca; riapre se il gestore aggiunge posti. Chiudi a mano o Annulla avviso (definitivo).', who: ['PRES', 'COLL', 'SA', 'GA'], ic: 'check' },
   ],
 };
 

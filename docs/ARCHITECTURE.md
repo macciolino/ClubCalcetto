@@ -433,7 +433,14 @@ Gli avvisi sopravvivono al rimontaggio perché `FeedbackHost` sta fuori da `Auth
 Una lega cerca giocatori per una sua partita; chiunque sulla piattaforma può prendere un posto.
 Codice: [matchNotices.ts](../src/lib/server/matchNotices.ts) (server), [matchNotice.ts](../src/lib/utils/matchNotice.ts)
 (validazione e stato), [matchNotice.ts](../src/types/matchNotice.ts) (tipi), `/api/match-notices`,
-[matchNoticeService.ts](../src/lib/services/matchNoticeService.ts) (app). L'interfaccia della bacheca non c'è ancora.
+[matchNoticeService.ts](../src/lib/services/matchNoticeService.ts) (app).
+
+**Interfaccia:** pagina `/board` ("Bacheca" nella barra; [page.tsx](../src/app/board/page.tsx), componenti in
+`src/components/board/`). Funziona **anche senza lega** (dal benvenuto: "Cerca una partita da giocare").
+- Tutti: gli avvisi aperti di ogni lega, i più vicini prima, con "Prendi il posto" (conferma) o "Hai preso il posto".
+- Presidente, collaboratore, staff: "Nuovo avviso" (il modulo parte da giorno ufficiale, ora standard, campo
+  predefinito e suo prezzo per il formato, quota = prezzo / giocatori) e l'elenco degli avvisi della lega attiva;
+  toccando un avviso: dettagli, chi ha preso il posto, Modifica / Chiudi / Annulla avviso.
 
 **Dati** (`match_notices/{id}`):
 - `leagueId`, `leagueName`, `matchId` (il **giorno** della partita, `YYYY-MM-DD`, come `matches/{data}`), `dateTime` (ISO);
@@ -525,6 +532,6 @@ gestori della lega dell'avviso e lo staff; nessuna scrittura dal browser.
 | Unitari | `npm run test:unit` | Permessi puri (`leaguePermissions`), formati, cassa, Home |
 | Regole | `npm run test:rules` | Ogni regola di §2 sulle regole Firestore (emulatore) |
 | Integrazione | `npm run test:integration` | API reali su emulatori: ruoli, staff, eliminazione, inviti e reclami, rientro, "non gioca", catalogo campi, bacheca "Cerco giocatore" (anche 10 click insieme su 2 posti) |
-| End-to-end | `npm run test:e2e` | Flussi nel browser (Pixel 7): leghe, fallback, console, presenze, giocatori |
+| End-to-end | `npm run test:e2e` | Flussi nel browser (Pixel 7): leghe, fallback, console, presenze, giocatori, bacheca |
 
 Prima di un commit si eseguono tutti i controlli (skill `pre-commit-testing-gate`).

@@ -79,6 +79,27 @@ export function patchNotice(current: MatchNotice, raw: unknown): MatchNoticeInpu
   return cleanNoticeInput(next);
 }
 
+/** Kick-off typed in the form (Italian day and time, `YYYY-MM-DD` + `HH:mm`) as an ISO instant; '' if not valid. */
+export function romeToIso(date: string, time: string): string {
+  const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  const t = /^(\d{2}):(\d{2})$/.exec(time);
+  if (!d || !t) return '';
+  const guess = Date.UTC(+d[1], +d[2] - 1, +d[3], +t[1], +t[2]);
+  // What Rome's clock shows at that UTC instant: the difference is Rome's offset that day (+1h or +2h)
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Rome', hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+      .formatToParts(new Date(guess))
+      .map((p) => [p.type, p.value])
+  );
+  const wall = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour, +parts.minute);
+  return new Date(guess - (wall - guess)).toISOString();
+}
+
+/** The Italian time (`HH:mm`) of an ISO instant, to fill the form when editing. */
+export function romeTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString('en-GB', { timeZone: 'Europe/Rome', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+}
+
 /**
  * Status after the spots change: full → CLOSED ('full'); an automatic close reopens when a manager adds spots.
  * A manual close and a cancellation never change by themselves.

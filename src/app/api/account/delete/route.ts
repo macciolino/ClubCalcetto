@@ -94,7 +94,8 @@ async function handlePost(request: Request) {
     // Avviso nel centro notifiche degli admin
     await openRequest(
       `closed_${caller.uid}`,
-      { type: 'account_closed', profile_id: caller.uid, name: res.name, email: caller.email || null, mode, reason },
+      // Eliminando tutto non resta nemmeno l'email: solo il nome e il motivo
+      { type: 'account_closed', profile_id: caller.uid, name: res.name, email: mode === 'delete' ? null : caller.email || null, mode, reason },
       {
         title: mode === 'deactivate' ? '⏸️ Account disattivato' : '🗑️ Account eliminato',
         body: `${res.name} ha ${mode === 'deactivate' ? 'disattivato' : 'eliminato'} il proprio account.`,

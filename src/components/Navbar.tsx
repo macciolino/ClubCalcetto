@@ -17,6 +17,7 @@ import {
   Settings,
   ChevronDown,
   ShieldCheck,
+  Megaphone,
 } from 'lucide-react';
 import { useActiveLeague } from '@/lib/context/ActiveLeagueContext';
 import { menu } from '@/components/ui/buttons';
@@ -77,6 +78,8 @@ export function Navbar() {
     { href: '/players', label: t('players'), icon: Users },
     { href: '/teams', label: t('teams'), icon: Trophy },
     { href: '/history', label: t('history'), icon: History },
+    // "Cerco giocatore": avvisi di tutte le leghe della piattaforma
+    { href: '/board', label: t('board'), icon: Megaphone },
     // Profilo: si apre dal menu dell'utente (icona in alto a destra), non serve nella barra
     // Admin: non è più nella barra. Si entra da Impostazioni (menu dell'icona), che per gli admin apre la partita della settimana
   ];

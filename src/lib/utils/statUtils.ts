@@ -16,6 +16,17 @@ export function normalizeCategories(categories: StatCategory[]): StatCategory[] 
     );
 }
 
+/** Scale of the player parameters (abilities): whole numbers from 1 to 10. */
+export const STAT_MIN = 1;
+export const STAT_MAX = 10;
+
+/** Brings any typed number inside the 1–10 scale (whole number); anything that is not a number becomes the default. */
+export function clampStatValue(value: unknown, fallback = 6): number {
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(STAT_MAX, Math.max(STAT_MIN, Math.round(n)));
+}
+
 /** Value of a stat for a player, with the Tecnica -> Visione fallback and a default. */
 export function getStatValue(
   stats: Record<string, number> | undefined | null,

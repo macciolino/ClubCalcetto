@@ -3,7 +3,7 @@
 import { collection, doc, onSnapshot, query, where, type Unsubscribe } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { leagueFetch } from '@/lib/services/leagueService';
-import type { MatchNotice, MatchNoticeInput, NoticeError } from '@/types/matchNotice';
+import type { MatchNotice, MatchNoticeInput, NoticeApplicant, NoticeError } from '@/types/matchNotice';
 
 /** "Bacheca Avvisi / Cerco Giocatore" from the app. Reads from Firestore, writes through /api/match-notices. */
 
@@ -25,6 +25,25 @@ export function subscribeOpenNotices(onChange: (notices: MatchNotice[]) => void)
           .filter((n) => Date.parse(n.dateTime) > Date.now())
           .sort((a, b) => a.dateTime.localeCompare(b.dateTime))
       ),
+    () => onChange([])
+  );
+}
+
+/** Every notice of one league (managers' list: open, closed and cancelled), the latest match first. */
+export function subscribeLeagueNotices(leagueId: string, onChange: (notices: MatchNotice[]) => void): Unsubscribe {
+  return onSnapshot(
+    query(collection(db, 'match_notices'), where('leagueId', '==', leagueId)),
+    (snap) =>
+      onChange(snap.docs.map((d) => ({ ...(d.data() as MatchNotice), id: d.id })).sort((a, b) => b.dateTime.localeCompare(a.dateTime))),
+    () => onChange([])
+  );
+}
+
+/** Who took a spot (readable by the league's managers and platform staff), in order of arrival. */
+export function subscribeApplicants(noticeId: string, onChange: (list: NoticeApplicant[]) => void): Unsubscribe {
+  return onSnapshot(
+    collection(db, 'match_notices', noticeId, 'applicants'),
+    (snap) => onChange(snap.docs.map((d) => d.data() as NoticeApplicant).sort((a, b) => a.joinedAt.localeCompare(b.joinedAt))),
     () => onChange([])
   );
 }
