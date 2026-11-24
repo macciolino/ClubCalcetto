@@ -24,6 +24,7 @@ import { reportWriteError } from '@/lib/utils/writeErrors';
 import { Profile, Presence, StatCategory, Match, GeneratedTeamRecord, AppSettings, CalendarSettings, MatchOutcome, MatchScorer, MatchTeamPlayer, TeamSubstitution, MvpVote, MatchPenaltySave } from '@/types/database';
 import { rankDayPresences, rankPresencesByDate } from '@/lib/services/presenceService';
 import { cardCanPlay } from '@/lib/utils/presenceRanking';
+import { externalProfile } from '@/lib/utils/externalPlayers';
 import { DayFormats, MatchFormat, maxPlayersFor } from '@/lib/utils/matchFormat';
 import { requestTeamsCheck, requestFirstMatchCheck } from '@/lib/services/notificationService';
 import { clampStatValue } from '@/lib/utils/statUtils';
@@ -181,7 +182,9 @@ function toPresence(docSnap: QueryDocumentSnapshot<DocumentData>): Presence {
   const data = docSnap.data({ serverTimestamps: 'estimate' }) as Presence & { joined_at?: { toMillis?: () => number } };
   const { joined_at, ...rest } = data;
   const joined_ms = joined_at && typeof joined_at.toMillis === 'function' ? joined_at.toMillis() : undefined;
-  return { ...rest, id: rest.id || docSnap.id, joined_ms };
+  // External player (board "Spot"): no card in the league, the sign-up carries who they are
+  const profile = rest.external ? externalProfile(rest) : rest.profile;
+  return { ...rest, id: rest.id || docSnap.id, joined_ms, ...(profile ? { profile } : {}) };
 }
 
 // ---------- formato di ogni giorno di partita (settings/match_formats, `days[date]`) ----------
@@ -240,7 +243,8 @@ function subscribeRanked(
   const emit = () => {
     if (docs !== null && formats !== null && playable !== null) {
       const ok = playable;
-      callback(rank(docs.filter((p) => ok.has(p.player_id)), formats));
+      // External players (board "Spot") play that day without a card: their sign-up is written only by the server
+      callback(rank(docs.filter((p) => ok.has(p.player_id) || Boolean(p.external)), formats));
     }
   };
   const unsubC = onSnapshot(
@@ -367,7 +371,8 @@ export async function clearPresencesForDate(date: string): Promise<void> {
     const q = query(lcol('presences'), where('date', '==', date));
     const snap = await getDocs(q);
     const batch = writeBatch(db);
-    snap.forEach((d) => batch.delete(d.ref));
+    // External players (board "Spot") stay: they leave through the notice (remove them, or cancel the notice)
+    snap.forEach((d) => !d.data().external && batch.delete(d.ref));
     await batch.commit();
   } catch (err) {
     console.warn('[Firestore] clearPresencesForDate error:', err);
@@ -740,6 +745,8 @@ export async function deleteMatchResult(date: string): Promise<void> {
     });
     tx.delete(matchRef);
   });
+  // External players (board "Spot"): their copy of the result is cleared on the server
+  requestFirstMatchCheck(date);
 }
 
 // ==========================================

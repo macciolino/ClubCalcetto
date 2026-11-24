@@ -130,6 +130,8 @@ export interface Profile {
   platformRole?: 'SUPER_ADMIN' | 'GLOBAL_ADMIN' | 'USER';
   position?: FieldPosition; // 'Portiere' | 'Difensore' | 'Esterno' | 'Punta'
   is_guest: boolean;
+  /** App-only: a player from the "Cerco giocatore" board, in this league for ONE match (no card here) */
+  is_external?: boolean;
   /** Account deactivated (login blocked, hidden everywhere, data kept): set only by the server. Empty = active. */
   deactivated_at?: string;
   /** League card only: the member was taken out of THIS league by a manager (account untouched, history kept). */
@@ -302,6 +304,18 @@ export interface Presence {
   /** Set only by admins: force a player into the starters or onto the waitlist. */
   admin_override?: 'starter' | 'waitlist' | null;
   profile?: Profile;
+  /** External player (board "Spot"): written only by the server, player_id = `ext-<profileId>`. See lib/utils/externalPlayers.ts */
+  external?: ExternalSignup;
+}
+
+/** Who an external sign-up is: their global account and the notice they answered. */
+export interface ExternalSignup {
+  profileId: string;
+  userId: string;
+  name: string;
+  noticeId: string;
+  avatar_url?: string | null;
+  position?: string;
 }
 
 export interface CalendarSettings {

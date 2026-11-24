@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminDb, isAdminConfigured } from '@/lib/firebase/admin';
-import { isLeagueActive, isLeagueManager, leagueDb, memberCard, scoped } from '@/lib/server/leagueScope';
+import { currentLeague, isLeagueActive, isLeagueManager, leagueDb, memberCard, scoped } from '@/lib/server/leagueScope';
+import { syncExternalResults } from '@/lib/server/externalPlayers';
 import { Message, adminProfileIds, deliver, deliverToAdmins, italianDate, registeredProfileIds, sendToProfiles, sendToTokens } from '@/lib/server/push';
 import { FORMAT_INFO, isMatchFormat } from '@/lib/utils/matchFormat';
 import { checkPromotions } from '@/lib/server/presenceWatch';
@@ -165,6 +166,8 @@ async function handlePost(request: Request) {
 
     if (body.type === 'first_match') {
       if (!isDate(body.date)) return NextResponse.json({ ok: false, error: 'bad_request' }, { status: 400 });
+      // External players (board "Spot"): their result goes to their own career, never to the league's cards
+      await syncExternalResults(currentLeague(), body.date).catch((err) => console.error('[notify] esterni:', err instanceof Error ? err.message : err));
       const match = (await leagueDb().doc(`matches/${body.date}`).get()).data();
       if (!match || match.status !== 'completed') return NextResponse.json({ ok: true, sent: 0 });
       const ids = Array.from(

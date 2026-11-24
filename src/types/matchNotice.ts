@@ -26,7 +26,11 @@ export type NoticeError =
   | 'already_in_match'
   | 'below_filled'
   | 'too_early'
-  | 'already_member';
+  | 'already_member'
+  | 'too_late'
+  | 'not_applicant'
+  | 'vote_closed'
+  | 'not_candidate';
 
 export const NOTICE_ROLES: NoticeRole[] = ['ANY', 'GOALKEEPER', 'ROTATION_GOALKEEPER', 'OUTFIELD'];
 export const SHIRT_COLORS: ShirtColor[] = ['DARK', 'LIGHT'];
@@ -87,7 +91,11 @@ export interface MySpot {
   costPerPlayer: number;
   roleNeeded: NoticeRole;
   shirtColor: ShirtColor;
-  /** CANCELLED = the league withdrew the notice (the person was told) */
-  status: 'ACTIVE' | 'CANCELLED';
+  /** CANCELLED = the league withdrew the notice; REMOVED = a manager took the person out (both: they were told) */
+  status: 'ACTIVE' | 'CANCELLED' | 'REMOVED';
   joinedAt: string;
+  /** After the archive: how the match went for them (only in their career, never in the league's numbers) */
+  result?: 'won' | 'drawn' | 'lost' | null;
+  goals?: number;
+  mvp?: boolean;
 }

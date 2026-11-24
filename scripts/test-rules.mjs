@@ -641,6 +641,13 @@ console.log('\n"Cerco giocatore" board (match_notices): everyone verified reads,
   await expectAllowed('the applicant reads their own spots', () => getDocs(collection(outsider.db, 'profiles', outsider.uid, 'spots')));
   await expectDenied('player B reads someone else’s spots', () => getDocs(collection(playerB.db, 'profiles', outsider.uid, 'spots')));
   await expectDenied('president C reads someone else’s spots', () => getDoc(doc(adminC.db, 'profiles', outsider.uid, 'spots', 'n1')));
+  // The external player's sign-up of that match leaves only through the server (it is tied to the notice)
+  await ownerSet(`leagues/calcettari/presences/${NEXT_SUNDAY}_ext-${outsider.uid}`, {
+    ...presence(NEXT_SUNDAY, `ext-${outsider.uid}`), joined_at: 'x', external: { profileId: outsider.uid, userId: outsider.uid, name: 'Outsider', noticeId: 'n1' },
+  });
+  await expectAllowed('members see the external player among the sign-ups', () => getDoc(LC(playerB, 'presences', `${NEXT_SUNDAY}_ext-${outsider.uid}`)));
+  await expectDenied('president C deletes the external sign-up from the app', () => deleteDoc(LC(adminC, 'presences', `${NEXT_SUNDAY}_ext-${outsider.uid}`)));
+  await expectDenied('the external player reads the league sign-ups', () => getDocs(collection(outsider.db, ...LG, 'presences')));
   await expectDenied('the applicant writes a fake spot', () =>
     setDoc(doc(outsider.db, 'profiles', outsider.uid, 'spots', 'fake'), { noticeId: 'fake', status: 'ACTIVE' }));
 }

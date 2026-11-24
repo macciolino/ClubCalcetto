@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { db, loginAs, loginAsAdmin, romeDay, seedAccountWithoutLeague, seedMatchDay } from './seed';
+import { PLAYERS, db, loginAs, loginAsAdmin, romeDay, seedAccountWithoutLeague, seedMatchDay } from './seed';
 
 /**
  * "Bacheca Avvisi / Cerco giocatore" (docs/ARCHITECTURE.md §3.5): the president publishes a notice from the
@@ -103,8 +103,39 @@ test.describe('Bacheca "Cerco giocatore"', () => {
     const career = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Carriera' }) });
     await expect(career.getByText('7 partite')).toBeVisible({ timeout: 15_000 });
     await expect(career.getByText('1 da esterno')).toBeVisible();
-    await expect(career.getByText('Da esterno', { exact: true })).toBeVisible();
-    await expect(career.getByText(/Lega Amici · Campo Amici/)).toBeVisible();
+    // storico personale: la partita da ospite con il suo badge, esito in attesa dell'archiviazione
+    await expect(career.getByText('Ospite · Lega Amici')).toBeVisible();
+    await expect(career.getByText('In attesa', { exact: true })).toBeVisible();
     await expect(page.getByText('Solo I Calcettari')).toBeVisible();
+  });
+});
+
+test.describe('Esterno nella partita', () => {
+  test('l’esterno è titolare e finisce nelle squadre generate, senza entrare nella rosa', async ({ page }) => {
+    await seedMatchDay();
+    const day = romeDay(1);
+    // 9 giocatori della lega + un esterno (iscrizione scritta dal server quando prende il posto)
+    await Promise.all(
+      PLAYERS.slice(0, 9).map((p, i) =>
+        db.doc(`leagues/calcettari/presences/${day}_${p.id}`).set({ id: `${day}_${p.id}`, date: day, player_id: p.id, status: 'confirmed', order_index: i, created_at: 'x', joined_at: new Date(Date.now() - (30 - i) * 60_000) })
+      )
+    );
+    await db.doc(`leagues/calcettari/presences/${day}_ext-luca`).set({
+      id: `${day}_ext-luca`, date: day, player_id: 'ext-luca', status: 'confirmed', order_index: 9, created_at: 'x', joined_at: new Date(),
+      external: { profileId: 'luca', userId: 'luca', name: 'Luca Esterno', noticeId: 'n1' },
+    });
+    await loginAsAdmin(page);
+    await page.goto(`/teams?date=${day}`);
+    await page.getByRole('button', { name: /Genera squadre/ }).first().click({ timeout: 20_000 });
+    await expect.poll(async () => (await db.doc(`leagues/calcettari/generated_teams/${day}`).get()).exists, { timeout: 20_000 }).toBe(true);
+    const teams = (await db.doc(`leagues/calcettari/generated_teams/${day}`).get()).data()!;
+    const ids = [...teams.team_white, ...teams.team_black].map((p: { id: string }) => p.id);
+    expect(ids).toHaveLength(10);
+    expect(ids).toContain('ext-luca');
+    await expect(page.getByText(/Luca/).first()).toBeVisible({ timeout: 15_000 });
+    // nella rosa della lega non c'è
+    await page.goto('/players');
+    await expect(page.getByText(PLAYERS[0].name).first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('Luca Esterno')).toHaveCount(0);
   });
 });

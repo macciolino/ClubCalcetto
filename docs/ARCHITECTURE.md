@@ -489,6 +489,8 @@ Codice: [matchNotices.ts](../src/lib/server/matchNotices.ts) (server), [matchNot
 | `close` | Gestori; staff | `CLOSED` a mano: non riapre da solo |
 | `cancel` | Gestori; staff | `CANCELLED`: definitivo, niente più modifiche né posti. Chi aveva preso il posto riceve **subito una notifica** (campanella + push) e il posto risulta "Annullata" nella sua copia |
 | `take` ("Partecipa alla partita") | Chiunque con email verificata | **Transazione**: legge l'avviso e il proprio posto, rifiuta se pieno, chiuso, annullato, passato o già preso, poi scrive il posto, la copia della persona e `spotsFilled + 1`. All'ultimo posto lo stato diventa `CLOSED` (`full`) e l'avviso esce dalla bacheca. I gestori della lega ricevono una notifica (campanella + push, secondo la modalità della lega) |
+| `remove` | Gestori; staff | Prima della partita: toglie la persona, libera il posto (l'avviso riapre se era pieno), toglie l'iscrizione esterna, avvisa la persona |
+| `match_view`, `mvp_vote` | Chi ha preso il posto (`match_view` anche i gestori) | Le squadre di quella partita, il proprio voto e la finestra; il voto MVP dell'esterno |
 | `invite` | Gestori; staff | **Solo dopo la partita** (`too_early` prima), mai a chi è già membro (`already_member`): la persona riceve una notifica con il link di invito della lega (`/join/{codice}`); entra solo se lo usa. `invitedAt` sul posto |
 
 - **Già convocato:** chi ha già un'iscrizione a quella partita con la sua scheda in quella lega non prende il posto
@@ -497,8 +499,36 @@ Codice: [matchNotices.ts](../src/lib/server/matchNotices.ts) (server), [matchNot
   impostazioni né altri dati della lega.
 - **Lega sospesa:** la bacheca si legge, ma nessuno prende posti (423); lo staff può ancora chiudere o annullare.
 
+#### L'esterno nella singola partita
+
+Codice: [externalPlayers.ts](../src/lib/server/externalPlayers.ts) (server), [externalPlayers.ts](../src/lib/utils/externalPlayers.ts)
+(regole pure).
+
+- **Iscrizione alla sola partita.** Quando prende il posto, il server scrive anche un'iscrizione di quel giorno,
+  `presences/{data}_ext-<profileId>`, con `player_id = ext-<profileId>` e `external = { profileId, userId, name,
+  noticeId, avatar_url, position }`, con l'ora del server come ordine. **Nessuna scheda** in `players`.
+- **Nella partita come gli altri.** App e server contano queste iscrizioni anche senza scheda: l'esterno è titolare
+  (o in attesa), entra nella generazione delle squadre (livello di partenza del club, maglia Bianchi / Neri),
+  nel risultato, nei marcatori, ed è **votabile come MVP**. In Presenze ha l'etichetta "esterno".
+- **Voto MVP dell'esterno.** Non può leggere la lega, quindi vota da Bacheca → "I miei posti" → "Vota l'MVP": il
+  server (`match_view`, `mvp_vote`) mostra le squadre di quella partita e scrive il voto in `mvp_votes/{data}_{uid}`
+  come per i membri. Finestra: da inizio + 1 h 45 per 24 ore; solo chi ha il posto; solo chi era in squadra.
+- **Tolto o annullato prima della partita.** "Togli" (nel pannello della partita o "Rimuovi" in Presenze, sempre
+  via server: le regole vietano di cancellare dall'app un'iscrizione esterna) libera il posto, riapre l'avviso se era
+  chiuso perché pieno, toglie l'iscrizione (sale chi è in attesa) e avvisa la persona (posto "Tolto"). Annullare
+  l'avviso prima della partita fa lo stesso per tutti. Dopo l'inizio non si toglie più (`too_late`).
+  "Azzera presenze del giorno" lascia gli esterni.
+- **Statistiche separate.**
+  - **Lega:** classifiche, presenze, gol, MVP e forma ignorano ogni id `ext-` (`computeMatchStats`,
+    `computeRecentResults`), e l'archiviazione non tocca nessuna scheda (gli `ext-` non ne hanno). La lega di
+    appartenenza dell'esterno non vede niente.
+  - **Carriera:** dopo l'archiviazione (e a ogni correzione o cancellazione della partita) il server copia esito,
+    gol e MVP sulla copia del posto (`result`, `goals`, `mvp`). Il profilo somma tutte le leghe più le partite da
+    ospite; "Le mie partite" elenca tutte le partite giocate, con il badge "**Ospite · Lega**" e il filtro per lega.
+
 **Regole:** `match_notices` si legge con email verificata; `applicants/{profileId}` lo legge la persona stessa, i
-gestori della lega dell'avviso e lo staff; `profiles/{id}/spots` lo legge solo il titolare; nessuna scrittura dal browser.
+gestori della lega dell'avviso e lo staff; `profiles/{id}/spots` lo legge solo il titolare; nessuna scrittura dal
+browser. Un'iscrizione con `external` non si cancella dall'app (solo il server).
 
 ---
 

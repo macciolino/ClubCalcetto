@@ -822,7 +822,8 @@
     "makeStarter": "Fai titolare",
     "confirmRemove": "Rimuovere {name} da {day}?",
     "removeFromDay": "Rimuovi dal giorno",
-    "suspendedNoSignup": "Lega sospesa: iscrizioni ferme, puoi solo consultare."
+    "suspendedNoSignup": "Lega sospesa: iscrizioni ferme, puoi solo consultare.",
+    "external": " · esterno"
   },
   "profile": {
     "playerFallback": "Giocatore",
@@ -875,10 +876,23 @@
       "externalCount": "{count, plural, =0 {Nessuna da esterno} other {# da esterno}}",
       "activeLeague": "attiva",
       "leagueLine": "{played} giocate · {won}V {drawn}P {lost}S",
-      "externalTitle": "Partite da esterno",
-      "externalBadge": "Da esterno",
-      "externalHint": "Le partite da esterno contano tra le giocate, non in vittorie e sconfitte: il risultato resta della lega che ti ha ospitato.",
-      "upcoming": "in programma"
+      "externalHint": "Le partite da ospite contano solo nella tua carriera, mai nelle classifiche delle leghe.",
+      "goalsMvp": "{goals} gol · {mvp} MVP",
+      "historyTitle": "Le mie partite",
+      "historyEmpty": "Ancora nessuna partita archiviata.",
+      "filterLabel": "Filtra per lega",
+      "allLeagues": "Tutte",
+      "showAll": "Mostra tutte ({count})",
+      "showLess": "Mostra meno",
+      "guestBadge": "Ospite · {league}",
+      "goalsShort": "{count, plural, one {# gol} other {# gol}}",
+      "mvpLabel": "MVP",
+      "result": {
+        "won": "Vinta",
+        "drawn": "Pari",
+        "lost": "Persa",
+        "pending": "In attesa"
+      }
     }
   },
   "login": {
@@ -1822,7 +1836,10 @@
       "invited": "Invito mandato a {name}.",
       "invite": "Invita nella lega",
       "inviteSent": "Invitato",
-      "inviteHint": "Dopo la partita puoi invitarli nella lega: ricevono il link di invito e decidono se entrare."
+      "inviteHint": "Dopo la partita puoi invitarli nella lega: ricevono il link di invito e decidono se entrare.",
+      "remove": "Togli",
+      "removed": "{name} è stato tolto: il posto è di nuovo libero.",
+      "confirmRemove": "Togliere {name} dalla partita? Il posto torna libero in bacheca e riceve una notifica."
     },
     "errors": {
       "bad_request": "Dati dell’avviso non validi.",
@@ -1840,7 +1857,11 @@
       "not_configured": "Servizio non disponibile in questo momento.",
       "unauthenticated": "Accedi di nuovo e riprova.",
       "too_early": "L’invito si manda dopo la partita.",
-      "already_member": "È già membro della lega."
+      "already_member": "È già membro della lega.",
+      "too_late": "La partita è già iniziata: non si può più togliere.",
+      "not_applicant": "Non hai un posto in questa partita.",
+      "vote_closed": "Il voto MVP non è aperto: si vota da 1 ora e 45 dopo l’inizio, per 24 ore.",
+      "not_candidate": "Puoi votare solo chi era in squadra in quella partita."
     },
     "spotsFree": "{count, plural, one {# posto libero} other {# posti liberi}}",
     "fieldTotal": "campo {amount}",
@@ -1877,6 +1898,18 @@
       "seeOnBoard": "Vedi in Bacheca",
       "nonePast": "Nessun avviso per questa partita.",
       "cancelledPast": "L’avviso di questa partita è stato annullato."
+    },
+    "spotRemoved": "Tolto",
+    "mvp": {
+      "cta": "Vota l’MVP",
+      "title": "Vota l’MVP",
+      "subtitle": "La partita con \"{league}\"",
+      "vote": "Vota",
+      "saved": "Voto salvato: puoi cambiarlo finché il voto è aperto.",
+      "noTeams": "Le squadre di questa partita non sono ancora pronte.",
+      "score": "Risultato: Bianchi {white} – {black} Neri",
+      "white": "Bianchi",
+      "black": "Neri"
     }
   }
 }

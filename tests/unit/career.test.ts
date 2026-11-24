@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { careerSummary } from '@/lib/utils/career';
+import { careerSummary, personalHistory } from '@/lib/utils/career';
 import { filterNotices, NO_FILTERS } from '@/lib/utils/matchNotice';
 import type { MySpot } from '@/types/matchNotice';
 
@@ -36,6 +36,20 @@ describe('careerSummary', () => {
     expect(c.leagues.map((l) => [l.leagueName, l.played])).toEqual([['I Calcettari', 6], ['Giovedì', 1]]);
   });
 
+  it('partita da esterno archiviata: esito, gol e MVP nella carriera; tolto o annullato non conta', () => {
+    const c = careerSummary(
+      [{ leagueId: 'a', leagueName: 'I Calcettari', won: 1, drawn: 0, lost: 0 }],
+      [
+        { ...spot('w', '2026-11-20T19:30:00.000Z'), result: 'won', goals: 2, mvp: true },
+        { ...spot('l', '2026-11-18T19:30:00.000Z'), result: 'lost', goals: 0 },
+        { ...spot('r', '2026-11-16T19:30:00.000Z', 'REMOVED'), result: 'won', goals: 5 },
+      ],
+      NOW
+    );
+    expect(c.totals).toEqual({ played: 3, won: 2, drawn: 0, lost: 1 });
+    expect(c.external).toMatchObject({ played: 2, goals: 2, mvp: 1 });
+  });
+
   it('senza leghe né posti: tutto a zero; valori strani ignorati', () => {
     expect(careerSummary([], [], NOW).totals).toEqual({ played: 0, won: 0, drawn: 0, lost: 0 });
     expect(careerSummary([{ leagueId: 'a', leagueName: 'A', won: -2, drawn: NaN, lost: 1 }], [], NOW).totals.played).toBe(1);
@@ -57,4 +71,25 @@ describe('filtri della bacheca', () => {
   });
   it('formato', () => expect(ids({ format: '5v5' })).toEqual(['oggi', 'venti']));
   it('ruolo: anche gli avvisi aperti a qualsiasi ruolo', () => expect(ids({ role: 'GOALKEEPER' })).toEqual(['oggi', 'tre']));
+});
+
+describe('storico personale', () => {
+  it('partite delle mie leghe + da ospite (solo già iniziate), più recenti prima', () => {
+    const mine = [
+      { key: 'a:1', date: '2026-11-10', leagueId: 'a', leagueName: 'I Calcettari', external: false, result: 'won' as const, score: { white: 3, black: 1 }, goals: 1, mvp: false },
+    ];
+    const h = personalHistory(
+      mine,
+      [
+        { ...spot('s1', '2026-11-20T19:30:00.000Z'), result: 'drawn', goals: 1 },
+        spot('s2', '2026-11-30T19:30:00.000Z'),
+        spot('s3', '2026-11-15T19:30:00.000Z', 'CANCELLED'),
+      ],
+      NOW
+    );
+    expect(h.map((e) => [e.date, e.external, e.result])).toEqual([
+      ['2026-11-20', true, 'drawn'],
+      ['2026-11-10', false, 'won'],
+    ]);
+  });
 });

@@ -822,7 +822,8 @@
     "makeStarter": "Make starter",
     "confirmRemove": "Remove {name} from {day}?",
     "removeFromDay": "Remove from the day",
-    "suspendedNoSignup": "League suspended: sign-ups are frozen, you can only look."
+    "suspendedNoSignup": "League suspended: sign-ups are frozen, you can only look.",
+    "external": " · external"
   },
   "profile": {
     "playerFallback": "Player",
@@ -875,10 +876,23 @@
       "externalCount": "{count, plural, =0 {None as external} other {# as external}}",
       "activeLeague": "active",
       "leagueLine": "{played} played · {won}W {drawn}D {lost}L",
-      "externalTitle": "Matches as external",
-      "externalBadge": "External",
-      "externalHint": "Matches as external count as played, not as wins or losses: the result belongs to the league that hosted you.",
-      "upcoming": "upcoming"
+      "externalHint": "Matches as a guest count only in your career, never in the leagues’ standings.",
+      "goalsMvp": "{goals} goals · {mvp} MVP",
+      "historyTitle": "My matches",
+      "historyEmpty": "No archived match yet.",
+      "filterLabel": "Filter by league",
+      "allLeagues": "All",
+      "showAll": "Show all ({count})",
+      "showLess": "Show less",
+      "guestBadge": "Guest · {league}",
+      "goalsShort": "{count, plural, one {# goal} other {# goals}}",
+      "mvpLabel": "MVP",
+      "result": {
+        "won": "Won",
+        "drawn": "Draw",
+        "lost": "Lost",
+        "pending": "Pending"
+      }
     }
   },
   "login": {
@@ -1822,7 +1836,10 @@
       "invited": "Invite sent to {name}.",
       "invite": "Invite to the league",
       "inviteSent": "Invited",
-      "inviteHint": "After the match you can invite them to the league: they get the invite link and decide."
+      "inviteHint": "After the match you can invite them to the league: they get the invite link and decide.",
+      "remove": "Remove",
+      "removed": "{name} was removed: the spot is free again.",
+      "confirmRemove": "Remove {name} from the match? The spot goes back on the board and they are told."
     },
     "errors": {
       "bad_request": "The notice data is not valid.",
@@ -1840,7 +1857,11 @@
       "not_configured": "Service not available right now.",
       "unauthenticated": "Sign in again and try again.",
       "too_early": "The invite is sent after the match.",
-      "already_member": "Already a member of the league."
+      "already_member": "Already a member of the league.",
+      "too_late": "The match has already started: nobody can be removed any more.",
+      "not_applicant": "You have no spot in this match.",
+      "vote_closed": "The MVP vote is not open: it opens 1 hour 45 after kick-off, for 24 hours.",
+      "not_candidate": "You can only vote for someone who was in the teams of that match."
     },
     "spotsFree": "{count, plural, one {# spot free} other {# spots free}}",
     "fieldTotal": "field {amount}",
@@ -1877,6 +1898,18 @@
       "seeOnBoard": "See on the Board",
       "nonePast": "No notice for this match.",
       "cancelledPast": "The notice for this match was cancelled."
+    },
+    "spotRemoved": "Removed",
+    "mvp": {
+      "cta": "Vote the MVP",
+      "title": "Vote the MVP",
+      "subtitle": "The match with \"{league}\"",
+      "vote": "Vote",
+      "saved": "Vote saved: you can change it while the vote is open.",
+      "noTeams": "The teams of this match are not ready yet.",
+      "score": "Result: Whites {white} – {black} Blacks",
+      "white": "Whites",
+      "black": "Blacks"
     }
   }
 }

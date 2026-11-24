@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Ban, Check, Lock, Mail, Pencil } from 'lucide-react';
+import { Ban, Check, Lock, Mail, Pencil, UserMinus } from 'lucide-react';
 import { Sheet, sheetBtn } from '@/components/ui/Sheet';
 import { askConfirm, notify } from '@/components/ui/Feedback';
 import { useLocaleSetting } from '@/i18n/I18nProvider';
@@ -10,6 +10,7 @@ import {
   cancelMatchNotice,
   closeMatchNotice,
   inviteNoticeApplicant,
+  removeNoticeApplicant,
   subscribeApplicants,
 } from '@/lib/services/matchNoticeService';
 import type { MatchNotice, NoticeApplicant } from '@/types/matchNotice';
@@ -30,6 +31,15 @@ export function ApplicantsList({ notice }: { notice: MatchNotice }) {
   useEffect(() => subscribeApplicants(notice.id, setApplicants), [notice.id]);
   const played = Date.parse(notice.dateTime) <= now && notice.status !== 'CANCELLED';
 
+  // Before the match a manager can take someone out: the spot is freed (the notice reopens if it was full)
+  const remove = async (a: NoticeApplicant) => {
+    if (!(await askConfirm(t('confirmRemove', { name: a.displayName })))) return;
+    setBusy(a.profileId);
+    const res = await removeNoticeApplicant(notice.id, a.profileId);
+    setBusy('');
+    notify(res === 'ok' ? t('removed', { name: a.displayName }) : tb(`errors.${res}`), res === 'ok' ? 'success' : 'error');
+  };
+
   const invite = async (a: NoticeApplicant) => {
     if (!(await askConfirm(t('confirmInvite', { name: a.displayName, league: notice.leagueName })))) return;
     setBusy(a.profileId);
@@ -48,6 +58,16 @@ export function ApplicantsList({ notice }: { notice: MatchNotice }) {
               <span className="block font-medium text-primary truncate">{a.displayName}</span>
               <span className="block text-xs text-muted">{noticeWhen(a.joinedAt, locale)}</span>
             </span>
+            {!played && notice.status !== 'CANCELLED' && (
+              <button
+                type="button"
+                onClick={() => remove(a)}
+                disabled={busy === a.profileId}
+                className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-rose-500/40 px-2.5 py-1.5 text-xs font-semibold text-danger hover:bg-rose-500/10 disabled:opacity-50"
+              >
+                <UserMinus className="h-3.5 w-3.5" aria-hidden="true" /> {t('remove')}
+              </button>
+            )}
             {played &&
               (a.invitedAt ? (
                 <span className="shrink-0 inline-flex items-center gap-1 text-xs text-accent-text">

@@ -1,6 +1,7 @@
 import { adminDb } from '@/lib/firebase/admin';
 import { inLeague, isLeagueActive, isLeagueManager, leagueDb } from '@/lib/server/leagueScope';
 import { leagueInviteCode } from '@/lib/server/leagueMembers';
+import { addSignup, matchViewFor, removeSignups, voteMvp } from '@/lib/server/externalPlayers';
 import { deliverToAdmins, italianDate, sendToProfiles } from '@/lib/server/push';
 import { cleanNoticeInput, patchNotice, statusFor } from '@/lib/utils/matchNotice';
 import type { MatchNotice, MySpot, NoticeApplicant, NoticeError } from '@/types/matchNotice';
@@ -14,7 +15,9 @@ export type { NoticeError };
  *    than spots, and the notice closes by itself when the last spot is taken;
  *  - who takes a spot does NOT become a member of the league: no membership, no card, no access to its data;
  *    they get their own copy of the spot (profiles/{id}/spots/{noticeId}), kept in sync, for their career;
- *  - a cancelled notice tells whoever took a spot; after the match a manager can send them the league's invite.
+ *  - a cancelled notice tells whoever took a spot; after the match a manager can send them the league's invite;
+ *  - the person plays THAT match as a sign-up `ext-<profileId>` (lib/server/externalPlayers.ts): teams, report,
+ *    MVP (they vote through here); a manager can take them out before the match, freeing the spot.
  */
 const NOTICES = 'match_notices';
 
@@ -142,6 +145,8 @@ export async function setNoticeStatus(caller: Caller, id: string, status: 'CLOSE
   if (status === 'CANCELLED') {
     // Whoever took a spot is told at once (bell + push) and the spot is marked as cancelled in their list
     const people = await syncSpots(id, 'CANCELLED');
+    // Before the match they also leave its sign-ups (the waiting list moves up); after it, the match is history
+    if (Date.parse(current.dateTime) > Date.now()) await removeSignups(current, people.map((a) => a.profileId));
     await sendToProfiles(
       people.map((a) => a.profileId),
       {
@@ -195,7 +200,8 @@ export async function takeSpot(caller: Caller, id: string): Promise<Result<{ spo
   if (playerId && (await leagueDb(notice.leagueId).doc(`presences/${notice.matchId}_${playerId}`).get()).exists) {
     return fail('already_in_match');
   }
-  const displayName = await profileName(caller.profileId, 'Un giocatore');
+  const account = (await adminDb().doc(`profiles/${caller.profileId}`).get()).data() || {};
+  const displayName = String(account.full_name || 'Un giocatore');
 
   const res = await adminDb().runTransaction(async (tx): Promise<Result<{ spotsFilled: number; status: string }>> => {
     const ref = adminDb().doc(`${NOTICES}/${id}`);
@@ -214,6 +220,14 @@ export async function takeSpot(caller: Caller, id: string): Promise<Result<{ spo
     const applicant: NoticeApplicant = { profileId: caller.profileId, userId: caller.uid, displayName, joinedAt: now };
     tx.set(mine, applicant);
     tx.set(spotRef(caller.profileId, id), spotFrom({ ...n, id }, now));
+    // The person joins THAT match's sign-ups (a starter, in the teams), without a card in the league
+    addSignup(tx, { ...n, id }, {
+      profileId: caller.profileId,
+      userId: caller.uid,
+      name: displayName,
+      avatar_url: typeof account.avatar_url === 'string' && account.avatar_url.startsWith('data:image/') ? account.avatar_url : null,
+      position: typeof account.position === 'string' ? account.position : undefined,
+    });
     tx.update(ref, { spotsFilled, ...next, closedReason: next.closedReason ?? null, updated_at: now });
     return { ok: true, spotsFilled, status: next.status };
   });
@@ -232,4 +246,59 @@ export async function takeSpot(caller: Caller, id: string): Promise<Result<{ spo
     ).catch(() => undefined);
   }
   return res;
+}
+
+/**
+ * A manager takes one person out of the match before it starts: the spot is freed (the notice reopens if it had
+ * closed because it was full), the sign-up goes, the person is told and their spot reads "removed".
+ */
+export async function removeApplicant(caller: Caller, id: string, profileId: string): Promise<Result> {
+  const notice = await loadNotice(id);
+  if (!notice) return fail('not_found');
+  if (!(await canManage(caller, notice.leagueId))) return fail('forbidden');
+  if (Date.parse(notice.dateTime) <= Date.now()) return fail('too_late');
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(profileId)) return fail('bad_request');
+
+  const res = await adminDb().runTransaction(async (tx): Promise<Result<{ applicant: NoticeApplicant }>> => {
+    const ref = adminDb().doc(`${NOTICES}/${id}`);
+    const mine = ref.collection('applicants').doc(profileId);
+    const [snap, who] = await Promise.all([tx.get(ref), tx.get(mine)]);
+    if (!who.exists) return fail('not_applicant');
+    const n = snap.data() as MatchNotice;
+    const spotsFilled = Math.max(0, n.spotsFilled - 1);
+    const next = statusFor(spotsFilled, n.spotsNeeded, n);
+    tx.delete(mine);
+    tx.update(ref, { spotsFilled, ...next, closedReason: next.closedReason ?? null, updated_at: new Date().toISOString() });
+    tx.set(spotRef(profileId, id), { status: 'REMOVED' }, { merge: true });
+    return { ok: true, applicant: who.data() as NoticeApplicant };
+  });
+  if (!res.ok) return res;
+
+  await removeSignups(notice, [profileId]);
+  await sendToProfiles([profileId], {
+    title: '↩️ Posto liberato',
+    body: `"${notice.leagueName}" ti ha tolto dalla partita di ${italianDate(notice.matchId)} (${notice.locationName}).`,
+    url: '/board',
+  }).catch(() => undefined);
+  return { ok: true };
+}
+
+/** The person who took a spot (or a manager of the league): teams, their MVP vote and the vote window of that match. */
+export async function externalMatchView(caller: Caller, id: string) {
+  const notice = await loadNotice(id);
+  if (!notice) return fail('not_found');
+  const isApplicant = (await adminDb().doc(`${NOTICES}/${id}/applicants/${caller.profileId}`).get()).exists;
+  if (!isApplicant && !(await canManage(caller, notice.leagueId))) return fail('not_applicant');
+  return { ok: true as const, ...(await matchViewFor(notice, caller.uid)) };
+}
+
+/** The external player votes the MVP of the match they played (one vote, changeable, in the usual window). */
+export async function externalMvpVote(caller: Caller, id: string, playerId: string): Promise<Result> {
+  const notice = await loadNotice(id);
+  if (!notice) return fail('not_found');
+  if (notice.status === 'CANCELLED') return fail('cancelled');
+  if (!(await adminDb().doc(`${NOTICES}/${id}/applicants/${caller.profileId}`).get()).exists) return fail('not_applicant');
+  if (typeof playerId !== 'string' || !/^[A-Za-z0-9_-]{1,140}$/.test(playerId)) return fail('bad_request');
+  const err = await voteMvp(notice, caller.uid, playerId);
+  return err ? fail(err) : { ok: true };
 }

@@ -1,4 +1,5 @@
 import { Match, StatCategory, STAT_DETAILS } from '@/types/database';
+import { isExternalId } from '@/lib/utils/externalPlayers';
 
 /**
  * 'Tecnica' was replaced by 'Visione'. Old data is NOT rewritten:
@@ -64,6 +65,8 @@ export function computeMatchStats(completedMatches: Match[]): Map<string, Player
     const b = m.score_black ?? 0;
     (['white', 'black'] as const).forEach((team) => {
       ((team === 'white' ? m.team_white : m.team_black) || []).forEach((p) => {
+        // External players (board "Spot") never count in the league's statistics: their result is in their career
+        if (isExternalId(p.id)) return;
         const st = of(p.id);
         st.played += 1;
         if (w === b) st.drawn += 1;
@@ -71,8 +74,8 @@ export function computeMatchStats(completedMatches: Match[]): Map<string, Player
         else st.lost += 1;
       });
     });
-    (m.scorers || []).forEach((sc) => (of(sc.player_id).goals += sc.goals || 0));
-    if (m.mvp_player_id) of(m.mvp_player_id).mvp += 1;
+    (m.scorers || []).forEach((sc) => !isExternalId(sc.player_id) && (of(sc.player_id).goals += sc.goals || 0));
+    if (m.mvp_player_id && !isExternalId(m.mvp_player_id)) of(m.mvp_player_id).mvp += 1;
   }
   return map;
 }
@@ -86,6 +89,7 @@ export function computeRecentResults(completedMatches: Match[], n = 5): Map<stri
     const b = m.score_black ?? 0;
     (['white', 'black'] as const).forEach((team) => {
       ((team === 'white' ? m.team_white : m.team_black) || []).forEach((p) => {
+        if (isExternalId(p.id)) return;
         const list = map.get(p.id) || [];
         if (list.length >= n) return;
         list.push(w === b ? 'drawn' : (team === 'white') === w > b ? 'won' : 'lost');

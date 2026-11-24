@@ -263,7 +263,8 @@ function SquadreContent() {
   // I titolari della data selezionata (già in ordine di iscrizione), tanti quanti ne chiede il formato
   const confirmedPresences = presences.filter((p) => p.date === selectedDate && p.status === 'confirmed');
   const starterProfiles: Profile[] = confirmedPresences
-    .map((p) => formProfiles.find((prof) => prof.id === p.player_id || prof.user_id === p.player_id))
+    // External players (board "Spot") have no card here: their sign-up carries who they are
+    .map((p) => formProfiles.find((prof) => prof.id === p.player_id || prof.user_id === p.player_id) ?? p.profile)
     .filter((prof): prof is Profile => prof !== undefined)
     .slice(0, fmt.players);
   const starters = starterProfiles.map(toTeamPlayer);

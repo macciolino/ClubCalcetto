@@ -78,5 +78,22 @@ export const closeMatchNotice = async (id: string) => result(await post({ action
 export const cancelMatchNotice = async (id: string) => result(await post({ action: 'cancel', id }));
 /** After the match: sends one person who took a spot the league's invite link. */
 export const inviteNoticeApplicant = async (id: string, profileId: string) => result(await post({ action: 'invite', id, profileId }));
+/** Before the match: takes one person out (frees the spot; the notice reopens if it was full). */
+export const removeNoticeApplicant = async (id: string, profileId: string) => result(await post({ action: 'remove', id, profileId }));
+/** The match as an external player sees it: teams, own MVP vote, vote window, score. */
+export async function fetchExternalMatch(id: string): Promise<ExternalMatchView | null> {
+  const data = await post({ action: 'match_view', id });
+  return data.ok ? (data as unknown as ExternalMatchView) : null;
+}
+/** The external player's MVP vote. */
+export const voteExternalMvp = async (id: string, playerId: string) => result(await post({ action: 'mvp_vote', id, playerId }));
+
+export interface ExternalMatchView {
+  teams: { white: { id: string; name: string }[]; black: { id: string; name: string }[] };
+  myVote: string | null;
+  opensAt: number;
+  closesAt: number;
+  score: { white: number; black: number } | null;
+}
 /** "Prendi il posto" */
 export const takeNoticeSpot = async (id: string) => result(await post({ action: 'take', id }));

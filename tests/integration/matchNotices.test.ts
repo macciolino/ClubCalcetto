@@ -5,6 +5,9 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { adminAuth } from '@/lib/firebase/admin';
 import { POST as notices } from '@/app/api/match-notices/route';
+import { POST as notify } from '@/app/api/notify/route';
+import { inLeague } from '@/lib/server/leagueScope';
+import { loadRankedPresences } from '@/lib/server/presenceWatch';
 import { assertEmulators, call, db, futureDate, idToken, ldb, makeUser, profileDoc, resetEmulators } from './helpers';
 
 assertEmulators();
@@ -201,5 +204,80 @@ describe('I miei posti, annullamento, invito dopo la partita', () => {
     // chi è già membro non viene invitato
     await db().doc('memberships/out').set({ leagues: { calcettari: { player_id: 'out', league_role: 'PLAYER' } } });
     expect((await invite(pres.token)).data.error).toBe('already_member');
+  });
+});
+
+describe('L’esterno nella singola partita', () => {
+  const ext = (id: string) => ldb().doc(`presences/${DAY}_ext-${id}`);
+
+  it('prende il posto → è iscritto a quella partita (titolare), senza scheda nella lega', async () => {
+    const id = String((await create(pres.token)).data.id);
+    await take(id, (await outsider('out')).token);
+    const p = (await ext('out').get()).data()!;
+    expect(p).toMatchObject({ date: DAY, player_id: 'ext-out', status: 'confirmed', external: { profileId: 'out', name: 'Esterno out', noticeId: id } });
+    expect((await ldb().doc('players/ext-out').get()).exists).toBe(false);
+    const { starterIds } = await inLeague('calcettari', () => loadRankedPresences(DAY));
+    expect(starterIds).toContain('ext-out');
+  });
+
+  it('il gestore lo toglie prima della partita: posto libero, avviso riaperto, persona avvisata', async () => {
+    const id = String((await create(pres.token, { spotsNeeded: 1 })).data.id);
+    await take(id, (await outsider('out')).token);
+    expect((await read(id)).status).toBe('CLOSED');
+    expect((await call(notices, { action: 'remove', id, profileId: 'out' }, pres.token)).data.ok).toBe(true);
+    expect(await read(id)).toMatchObject({ status: 'OPEN', spotsFilled: 0 });
+    expect((await ext('out').get()).exists).toBe(false);
+    expect((await db().doc(`profiles/out/spots/${id}`).get()).data()?.status).toBe('REMOVED');
+    const bell = (await db().collection('profiles/out/notifications').get()).docs.map((d) => String(d.data().title));
+    expect(bell).toContain('↩️ Posto liberato');
+    // a partita iniziata non si toglie più
+    await take(id, (await outsider('altro')).token);
+    await db().doc(`match_notices/${id}`).update({ dateTime: '2020-01-01T19:30:00.000Z' });
+    expect((await call(notices, { action: 'remove', id, profileId: 'altro' }, pres.token)).data.error).toBe('too_late');
+  });
+
+  it('avviso annullato prima della partita: l’esterno esce dagli iscritti', async () => {
+    const id = String((await create(pres.token)).data.id);
+    await take(id, (await outsider('out')).token);
+    await call(notices, { action: 'cancel', id }, pres.token);
+    expect((await ext('out').get()).exists).toBe(false);
+  });
+
+  it('partita archiviata: esito, gol e MVP solo nella sua carriera; partita cancellata: esito tolto', async () => {
+    const id = String((await create(pres.token)).data.id);
+    await take(id, (await outsider('out')).token);
+    await ldb().doc(`matches/${DAY}`).set({
+      id: DAY, match_date: DAY, status: 'completed', score_white: 3, score_black: 1,
+      team_white: [{ id: 'ext-out', name: 'Esterno out' }, { id: 'pres', name: 'Presidente' }], team_black: [],
+      scorers: [{ player_id: 'ext-out', goals: 2 }], mvp_player_id: 'ext-out', profile_effects: { pres: 'won' },
+    });
+    expect((await call(notify, { type: 'first_match', date: DAY }, pres.token)).data.ok).toBe(true);
+    expect((await db().doc(`profiles/out/spots/${id}`).get()).data()).toMatchObject({ result: 'won', goals: 2, mvp: true });
+    expect((await ldb().doc('players/ext-out').get()).exists).toBe(false); // la lega non lo conta
+
+    await ldb().doc(`matches/${DAY}`).delete();
+    await call(notify, { type: 'first_match', date: DAY }, pres.token);
+    expect((await db().doc(`profiles/out/spots/${id}`).get()).data()).toMatchObject({ result: null, goals: 0, mvp: false });
+  });
+
+  it('voto MVP dell’esterno: solo nella finestra, solo per chi era in squadra, solo chi ha il posto', async () => {
+    const id = String((await create(pres.token)).data.id);
+    const out = await outsider('out');
+    await take(id, out.token);
+    await ldb().doc(`generated_teams/${DAY}`).set({ id: DAY, date: DAY, team_white: [{ id: 'ext-out', name: 'Esterno out' }], team_black: [{ id: 'pres', name: 'Presidente' }] });
+    const vote = (token: string, playerId: string) => call(notices, { action: 'mvp_vote', id, playerId }, token);
+
+    expect((await vote(out.token, 'pres')).data.error).toBe('vote_closed'); // la partita non è ancora giocata
+    // la partita è iniziata 3 ore fa: il voto è aperto
+    await db().doc(`match_notices/${id}`).update({ dateTime: new Date(Date.now() - 3 * 3_600_000).toISOString() });
+    const view = (await call(notices, { action: 'match_view', id }, out.token)).data;
+    expect(view.teams).toEqual({ white: [{ id: 'ext-out', name: 'Esterno out' }], black: [{ id: 'pres', name: 'Presidente' }] });
+    expect((await vote(out.token, 'nessuno')).data.error).toBe('not_candidate');
+    expect((await vote(out.token, 'pres')).data.ok).toBe(true);
+    expect((await ldb().doc(`mvp_votes/${DAY}_out`).get()).data()).toMatchObject({ date: DAY, voter_id: 'out', player_id: 'pres' });
+    expect((await call(notices, { action: 'match_view', id }, out.token)).data.myVote).toBe('pres');
+
+    const stranger = await outsider('estraneo');
+    expect((await vote(stranger.token, 'pres')).status).toBe(403);
   });
 });

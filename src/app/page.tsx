@@ -121,7 +121,9 @@ export default function HomePage() {
 
   const today = toDateString(new Date());
   const admin = Boolean(isAdmin || profile?.role === 'admin');
-  const nameOf = (id: string) => profiles.find((p) => p.id === id)?.full_name || t('playerFallback');
+  // External players (board "Spot") are not cards of the league: their name comes with their sign-up
+  const nameOf = (id: string) =>
+    profiles.find((p) => p.id === id)?.full_name || (presences || []).find((p) => p.player_id === id)?.profile?.full_name || t('playerFallback');
   const starters = useMemo(() => (presences || []).filter((p) => p.status === 'confirmed'), [presences]);
   const waitlist = useMemo(() => (presences || []).filter((p) => p.status === 'waitlist'), [presences]);
   const mine = profile ? (presences || []).find((p) => p.player_id === profile.id) : undefined;

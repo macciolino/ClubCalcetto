@@ -2,7 +2,17 @@ import { NextResponse } from 'next/server';
 import { isAdminConfigured } from '@/lib/firebase/admin';
 import { callerFrom } from '@/lib/server/adminRequests';
 import { currentLeague, scoped } from '@/lib/server/leagueScope';
-import { createNotice, inviteApplicant, setNoticeStatus, takeSpot, updateNotice, type NoticeError } from '@/lib/server/matchNotices';
+import {
+  createNotice,
+  externalMatchView,
+  externalMvpVote,
+  inviteApplicant,
+  removeApplicant,
+  setNoticeStatus,
+  takeSpot,
+  updateNotice,
+  type NoticeError,
+} from '@/lib/server/matchNotices';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -17,6 +27,9 @@ export const dynamic = 'force-dynamic';
  *   { action: 'cancel', id }              managers, staff: the notice is withdrawn
  *   { action: 'take', id }                any signed-in user with a verified email: takes one spot (transaction)
  *   { action: 'invite', id, profileId }   managers, staff, after the match: sends that person the league's invite
+ *   { action: 'remove', id, profileId }   managers, staff, before the match: takes that person out, frees the spot
+ *   { action: 'match_view', id }          who took a spot (or managers): teams, own MVP vote, vote window, score
+ *   { action: 'mvp_vote', id, playerId }  who took a spot: votes the MVP of that match, in the vote window
  */
 const STATUS: Record<NoticeError, number> = {
   bad_request: 400,
@@ -32,6 +45,10 @@ const STATUS: Record<NoticeError, number> = {
   below_filled: 400,
   too_early: 409,
   already_member: 409,
+  too_late: 409,
+  not_applicant: 403,
+  vote_closed: 409,
+  not_candidate: 400,
 };
 
 async function handlePost(request: Request) {
@@ -61,6 +78,15 @@ async function handlePost(request: Request) {
         break;
       case 'invite':
         res = await inviteApplicant(caller, id, typeof body.profileId === 'string' ? body.profileId : '');
+        break;
+      case 'remove':
+        res = await removeApplicant(caller, id, typeof body.profileId === 'string' ? body.profileId : '');
+        break;
+      case 'match_view':
+        res = await externalMatchView(caller, id);
+        break;
+      case 'mvp_vote':
+        res = await externalMvpVote(caller, id, typeof body.playerId === 'string' ? body.playerId : '');
         break;
       default:
         return NextResponse.json({ ok: false, error: 'bad_request' }, { status: 400 });

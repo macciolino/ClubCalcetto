@@ -319,6 +319,7 @@ export function PresenceCard({
                   <span className="tabular-nums text-muted mr-1.5">{i + 1}.</span>
                   {p.name}
                   {p.profile?.is_guest && <span className="text-[10px] text-muted">{t('guest')}</span>}
+                  {p.profile?.is_external && <span className="text-[10px] text-muted">{t('external')}</span>}
                 </li>
               ))}
             </ol>

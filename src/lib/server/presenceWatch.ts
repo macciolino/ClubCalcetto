@@ -34,7 +34,8 @@ export async function loadRankedPresences(
       // by card id, and by the account id for old sign-ups saved with it
       .forEach((d) => [d.id, d.data().user_id, d.data().userId].forEach((k) => typeof k === 'string' && k && playable.add(k)));
   }
-  const presences = all.filter((p) => playable.has(p.player_id));
+  // External players (board "Spot", written only by the server) take their place without a card
+  const presences = all.filter((p) => playable.has(p.player_id) || Boolean(p.external));
   const ranked = rankDayPresences(presences, fmt.players);
   return {
     starterIds: ranked.filter((p) => p.status === 'confirmed').map((p) => p.player_id),

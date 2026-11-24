@@ -35,6 +35,7 @@ import {
   localizeDay,
 } from '@/lib/utils/dateUtils';
 import { useTranslations } from 'next-intl';
+import { removeNoticeApplicant } from '@/lib/services/matchNoticeService';
 import { useLocaleSetting } from '@/i18n/I18nProvider';
 import { PresenceCard } from '@/components/PresenceCard';
 import {
@@ -55,6 +56,7 @@ export default function PresenzePage() {
   const canPlay: boolean | null = member ? member.isActivePlayer !== false && !isSuspended : null;
   const [mounted, setMounted] = useState(false);
   const t = useTranslations('attendance');
+  const tb = useTranslations('board');
   const { locale } = useLocaleSetting();
   const fmtDate = (d: string) => formatLongDate(d, locale);
   const days = useMemo(() => getCalendarDays().map((d) => localizeDay(d, locale)), [locale]);
@@ -178,6 +180,13 @@ export default function PresenzePage() {
 
   // Azione Admin: rimuovi una presenza (la prima riserva subentra da sola)
   const handleRemovePresence = async (presenceId: string) => {
+    // External player (board "Spot"): the server takes them out of the notice too and frees the spot
+    const ext = presences.find((p) => p.id === presenceId)?.external;
+    if (ext) {
+      const res = await removeNoticeApplicant(ext.noticeId, ext.profileId);
+      notify(res === 'ok' ? tb('manage.removed', { name: ext.name }) : tb(`errors.${res}`), res === 'ok' ? 'success' : 'error');
+      return;
+    }
     try {
       await leavePresence(presenceId);
     } catch (err) {

@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { ChevronRight, Megaphone, Plus, SlidersHorizontal, X } from 'lucide-react';
+import { ChevronRight, Megaphone, Plus, SlidersHorizontal, Star, X } from 'lucide-react';
 import { btnInline } from '@/components/ui/buttons';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { NoticeCard, mapsFor, noticeStatusKey, noticeWhen } from '@/components/board/NoticeCard';
 import { JoinNoticeSheet } from '@/components/board/JoinNoticeSheet';
+import { ExternalMvpSheet } from '@/components/board/ExternalMvpSheet';
+import { externalVoteWindow } from '@/lib/utils/externalPlayers';
 import { NoticeFormSheet } from '@/components/board/NoticeFormSheet';
 import { NoticeManageSheet } from '@/components/board/NoticeManageSheet';
 import { useAuth } from '@/lib/context/AuthContext';
@@ -43,6 +45,7 @@ export default function BoardPage() {
   const [form, setForm] = useState<{ notice?: MatchNotice } | null>(null);
   const [managing, setManaging] = useState<string | null>(null);
   const [joining, setJoining] = useState<MatchNotice | null>(null);
+  const [voting, setVoting] = useState<MySpot | null>(null);
 
   const ready = Boolean(user && isFirebaseConfigured);
   useEffect(
@@ -71,14 +74,22 @@ export default function BoardPage() {
   );
 
   const takenIds = useMemo(() => new Set(spots.filter((s) => s.status === 'ACTIVE').map((s) => s.noticeId)), [spots]);
-  // My upcoming spots (a cancelled one stays visible until its day, marked, so the person knows)
+  // My spots still "alive": upcoming ones and the ones whose MVP vote is still open (a cancelled or removed one
+  // stays visible until its day, marked, so the person knows)
   const upcoming = useMemo(
-    () => spots.filter((s) => Date.parse(s.dateTime) > now).sort((a, b) => a.dateTime.localeCompare(b.dateTime)),
+    () =>
+      spots
+        .filter((s) => (s.status === 'ACTIVE' ? externalVoteWindow(s.dateTime).closesAt > now : Date.parse(s.dateTime) > now))
+        .sort((a, b) => a.dateTime.localeCompare(b.dateTime)),
     [spots, now]
   );
   const shown = useMemo(() => (open ? filterNotices(open, filters, now) : []), [open, filters, now]);
   const filtered = filters.when !== 'all' || filters.format !== 'all' || filters.role !== 'all';
 
+  const voteOpen = (s: MySpot) => {
+    const w = externalVoteWindow(s.dateTime);
+    return now >= w.opensAt && now < w.closesAt;
+  };
   const leagueName = leagues.find((l) => l.id === activeLeagueId)?.name || '';
   const managed = managing ? mine.find((n) => n.id === managing) : undefined;
 
@@ -112,13 +123,23 @@ export default function BoardPage() {
                     {s.locationName} · {s.address}
                   </a>
                 </span>
-                <span
-                  className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                    s.status === 'CANCELLED' ? 'bg-rose-500/10 text-danger' : 'bg-accent/15 text-accent-text'
-                  }`}
-                >
-                  {s.status === 'CANCELLED' ? t('spotCancelled') : t('spotConfirmed')}
-                </span>
+                {s.status === 'ACTIVE' && voteOpen(s) ? (
+                  <button
+                    type="button"
+                    onClick={() => setVoting(s)}
+                    className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-3 py-1.5 text-xs font-semibold text-warning"
+                  >
+                    <Star className="h-3.5 w-3.5" aria-hidden="true" /> {t('mvp.cta')}
+                  </button>
+                ) : (
+                  <span
+                    className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      s.status === 'ACTIVE' ? 'bg-accent/15 text-accent-text' : 'bg-rose-500/10 text-danger'
+                    }`}
+                  >
+                    {t(s.status === 'CANCELLED' ? 'spotCancelled' : s.status === 'REMOVED' ? 'spotRemoved' : 'spotConfirmed')}
+                  </span>
+                )}
               </li>
             ))}
           </ul>
@@ -235,6 +256,7 @@ export default function BoardPage() {
       </section>
 
       {joining && <JoinNoticeSheet notice={joining} onClose={() => setJoining(null)} />}
+      {voting && <ExternalMvpSheet spot={voting} onClose={() => setVoting(null)} />}
       {form && <NoticeFormSheet notice={form.notice} onClose={() => setForm(null)} />}
       {managed && !form && <NoticeManageSheet notice={managed} onEdit={() => setForm({ notice: managed })} onClose={() => setManaging(null)} />}
     </div>
