@@ -8,6 +8,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/context/AuthContext';
 import { useActiveLeague } from '@/lib/context/ActiveLeagueContext';
+import { CareerCard } from '@/components/profile/CareerCard';
 import { FieldPosition, FIELD_POSITIONS, sortStatsByCanonicalOrder } from '@/types/database';
 import { RadarChart } from '@/components/RadarChart';
 import { StatBadge } from '@/components/StatBadge';
@@ -38,7 +39,8 @@ export default function ProfiloPage() {
   const [mounted, setMounted] = useState(false);
   const t = useTranslations('profile');
   const tRole = useTranslations('league.roles');
-  const { leagueRole: myLeagueRole } = useActiveLeague();
+  const { leagueRole: myLeagueRole, leagues, activeLeagueId } = useActiveLeague();
+  const activeLeagueName = leagues.find((l) => l.id === activeLeagueId)?.name || '';
   const labels = usePlayerLabels();
   const [fullName, setFullName] = useState(profile?.full_name || t('playerFallback'));
   const [position, setPosition] = useState<FieldPosition>(profile?.position || 'Esterno');
@@ -343,6 +345,12 @@ export default function ProfiloPage() {
             <div className="flex items-center gap-2">
               <Trophy className="h-5 w-5 text-warning" />
               <h2 className="text-base font-bold text-primary">{t('myStats')}</h2>
+              {/* Solo la lega attiva: la carriera di tutte le leghe sta nella card "Carriera" */}
+              {activeLeagueName && (
+                <span className="ml-auto truncate rounded-full bg-app px-2.5 py-0.5 text-[11px] font-medium text-secondary">
+                  {t('leagueOnly', { league: activeLeagueName })}
+                </span>
+              )}
             </div>
             <p className="text-xs text-secondary mt-2">
               {t('statsHint', { count: record.played })}
@@ -380,6 +388,8 @@ export default function ProfiloPage() {
           </Link>
         </div>
       </div>
+
+      <CareerCard profileId={profile.id} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Link

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { isAdminConfigured } from '@/lib/firebase/admin';
 import { callerFrom } from '@/lib/server/adminRequests';
 import { currentLeague, scoped } from '@/lib/server/leagueScope';
-import { createNotice, setNoticeStatus, takeSpot, updateNotice, type NoticeError } from '@/lib/server/matchNotices';
+import { createNotice, inviteApplicant, setNoticeStatus, takeSpot, updateNotice, type NoticeError } from '@/lib/server/matchNotices';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -16,6 +16,7 @@ export const dynamic = 'force-dynamic';
  *   { action: 'close', id }               managers, staff: no more spots on offer
  *   { action: 'cancel', id }              managers, staff: the notice is withdrawn
  *   { action: 'take', id }                any signed-in user with a verified email: takes one spot (transaction)
+ *   { action: 'invite', id, profileId }   managers, staff, after the match: sends that person the league's invite
  */
 const STATUS: Record<NoticeError, number> = {
   bad_request: 400,
@@ -29,6 +30,8 @@ const STATUS: Record<NoticeError, number> = {
   already_joined: 409,
   already_in_match: 409,
   below_filled: 400,
+  too_early: 409,
+  already_member: 409,
 };
 
 async function handlePost(request: Request) {
@@ -55,6 +58,9 @@ async function handlePost(request: Request) {
         break;
       case 'take':
         res = await takeSpot(caller, id);
+        break;
+      case 'invite':
+        res = await inviteApplicant(caller, id, typeof body.profileId === 'string' ? body.profileId : '');
         break;
       default:
         return NextResponse.json({ ok: false, error: 'bad_request' }, { status: 400 });

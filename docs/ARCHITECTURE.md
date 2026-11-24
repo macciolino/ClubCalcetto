@@ -49,7 +49,8 @@ leagues/{leagueId}/...          TUTTI i dati del club, isolati per lega
 | `league_invites/{code}` | Link di invito della lega | **Solo il server** |
 | `field_catalog/{id}` | **Catalogo globale dei campi** (§3.3): dati del campo, prezzi di partenza, stato, leghe collegate | **Solo il server** |
 | `match_notices/{id}` | **Bacheca "Cerco giocatore"** (§3.5): avviso di una lega per una sua partita, posti, stato | **Solo il server** |
-| `match_notices/{id}/applicants/{profileId}` | Chi ha preso un posto (nome, `userId`, ora) | **Solo il server** |
+| `match_notices/{id}/applicants/{profileId}` | Chi ha preso un posto (nome, `userId`, ora, invito) | **Solo il server** |
+| `profiles/{id}/spots/{noticeId}` | La copia personale dei posti presi ("I miei posti", carriera) | **Solo il server**; la legge il titolare |
 | `push_tokens/{token}` | Dispositivi per le notifiche | Ognuno solo i propri |
 | `profiles/{id}/notifications` | Campanella personale | Il server; il titolare legge e segna come letto |
 
@@ -216,6 +217,7 @@ La colonna **Staff** vale per `SUPER_ADMIN` e `GLOBAL_ADMIN`, salvo dove è indi
 | Bacheca "Cerco giocatore": creare, modificare, chiudere, annullare un avviso | ✅ | ✅ | ✅ | ❌ | solo staff |
 | Bacheca: leggere gli avvisi, prendere un posto | ✅ | ✅ | ✅ | ✅ (qualsiasi utente con email verificata, anche di altre leghe) | si legge, posti fermi |
 | Bacheca: vedere chi ha preso i posti | ✅ | ✅ | ✅ | ❌ (solo il proprio posto) | — |
+| Bacheca: "Cerca giocatori esterni" dalla partita, invitare nella lega dopo la partita | ✅ | ✅ | ✅ | ❌ | solo staff |
 | Disattivare, eliminare o riattivare un account globale di altri | ✅ (mai un SA) | ❌ | ❌ | ❌ | — |
 | Chiudere il proprio account | ✅ (SA no) | ✅ | ✅ | ✅ | — |
 | Nominare o revocare gli admin piattaforma | solo SA | ❌ | ❌ | ❌ | — |
@@ -428,19 +430,39 @@ bianca e nessun ciclo di errori di permesso:
 
 Gli avvisi sopravvivono al rimontaggio perché `FeedbackHost` sta fuori da `AuthProvider` ([layout.tsx](../src/app/layout.tsx)).
 
-### 3.5 Bacheca Avvisi / "Cerco giocatore"
+### 3.5 Bacheca Avvisi & Partecipazioni Esterne (Spot)
 
 Una lega cerca giocatori per una sua partita; chiunque sulla piattaforma può prendere un posto.
 Codice: [matchNotices.ts](../src/lib/server/matchNotices.ts) (server), [matchNotice.ts](../src/lib/utils/matchNotice.ts)
 (validazione e stato), [matchNotice.ts](../src/types/matchNotice.ts) (tipi), `/api/match-notices`,
 [matchNoticeService.ts](../src/lib/services/matchNoticeService.ts) (app).
 
-**Interfaccia:** pagina `/board` ("Bacheca" nella barra; [page.tsx](../src/app/board/page.tsx), componenti in
-`src/components/board/`). Funziona **anche senza lega** (dal benvenuto: "Cerca una partita da giocare").
-- Tutti: gli avvisi aperti di ogni lega, i più vicini prima, con "Prendi il posto" (conferma) o "Hai preso il posto".
-- Presidente, collaboratore, staff: "Nuovo avviso" (il modulo parte da giorno ufficiale, ora standard, campo
-  predefinito e suo prezzo per il formato, quota = prezzo / giocatori) e l'elenco degli avvisi della lega attiva;
-  toccando un avviso: dettagli, chi ha preso il posto, Modifica / Chiudi / Annulla avviso.
+**Interfaccia** (componenti in `src/components/board/`)
+- **Navigazione:** voce "Bacheca" nella barra, con un **badge numerico solo quando ci sono avvisi aperti**
+  ([useOpenNoticeCount.ts](../src/lib/hooks/useOpenNoticeCount.ts)). La pagina `/board` funziona **anche senza lega**
+  (dal benvenuto: "Cerca una partita da giocare").
+- **Bacheca** ([page.tsx](../src/app/board/page.tsx)):
+  - card scansionabili ([NoticeCard.tsx](../src/components/board/NoticeCard.tsx)): lega, giorno e ora in evidenza,
+    badge "N posti liberi", formato, badge del ruolo (portieri in azzurro), pallino del colore della maglia, campo con
+    "Indicazioni" (Maps), **quota a testa** grande con il costo del campo accanto, note;
+  - filtri leggeri (Tutte / Oggi / 7 giorni, formato, ruolo; un filtro di ruolo tiene anche gli avvisi "qualsiasi
+    ruolo"; [matchNotice.ts](../src/lib/utils/matchNotice.ts) `filterNotices`), stato vuoto con e senza filtri;
+  - "**Partecipa alla partita**" apre una scheda di riepilogo ([JoinNoticeSheet.tsx](../src/components/board/JoinNoticeSheet.tsx))
+    che ricorda che **non si entra nella lega**; dopo, "Hai preso il posto";
+  - "**I miei posti**": le prossime partite prese (Confermato / Annullata).
+- **Gestori** (presidente, collaboratore, staff):
+  - in Bacheca: "Nuovo avviso" (il modulo parte da giorno ufficiale, ora standard, campo predefinito e suo prezzo
+    per il formato, quota = prezzo / giocatori) e l'elenco degli avvisi della lega attiva;
+  - **nella partita** (Impostazioni → Partita della settimana → Organizzazione, [MatchNoticePanel.tsx](../src/components/board/MatchNoticePanel.tsx)):
+    "Giocatori esterni" con "**Cerca giocatori esterni**", che apre il modulo **già compilato** con i dati di quella
+    partita (giorno bloccato, ora, campo, indirizzo, formato, costo, quota, posti = giocatori mancanti) e lascia al
+    gestore posti, ruolo, maglia e note. Poi lo stato dell'avviso (In bacheca / Completo / Chiuso / Annullato con N/M),
+    chi ha preso il posto, Modifica / Chiudi / Annulla avviso;
+  - dopo la partita, accanto a ogni persona: "**Invita nella lega**" (manda il link di invito; entra solo se vuole).
+- **Profilo** ([CareerCard.tsx](../src/components/profile/CareerCard.tsx), [career.ts](../src/lib/utils/career.ts)):
+  le statistiche della **lega attiva** restano nella loro card (etichetta "Solo &lt;lega&gt;"); la card "**Carriera**"
+  somma le schede di **tutte le leghe** dell'account più le **partite da esterno** (giocate, senza esito: il risultato
+  resta della lega ospitante), con l'elenco delle partite da esterno e il badge discreto "**Da esterno**".
 
 **Dati** (`match_notices/{id}`):
 - `leagueId`, `leagueName`, `matchId` (il **giorno** della partita, `YYYY-MM-DD`, come `matches/{data}`), `dateTime` (ISO);
@@ -450,8 +472,13 @@ Codice: [matchNotices.ts](../src/lib/server/matchNotices.ts) (server), [matchNot
 - `roleNeeded`: `ANY` / `GOALKEEPER` / `ROTATION_GOALKEEPER` / `OUTFIELD`; `shirtColor`: `DARK` / `LIGHT`; `notes` (max 300);
 - `status`: `OPEN` (in bacheca) / `CLOSED` (posti coperti o chiuso a mano, `closedReason` `full` / `manual`) / `CANCELLED`;
 - `createdBy`, `created_at`, `updated_at`.
-- Chi ha preso un posto sta nella sottocollezione `applicants/{profileId}` (`userId`, `displayName`, `joinedAt`), **non**
-  nell'avviso: la bacheca la legge tutta la piattaforma, l'elenco delle persone solo i gestori di quella lega e lo staff.
+- Chi ha preso un posto sta nella sottocollezione `applicants/{profileId}` (`userId`, `displayName`, `joinedAt`,
+  `invitedAt`), **non** nell'avviso: la bacheca la legge tutta la piattaforma, l'elenco delle persone solo i gestori di
+  quella lega e lo staff.
+- Ogni persona ha la **sua copia** dei posti presi in `profiles/{profileId}/spots/{noticeId}` (lega, giorno, campo,
+  formato, quota, ruolo, maglia, `status` `ACTIVE` / `CANCELLED`): la scrive solo il server, la legge solo lei. Serve
+  a "I miei posti" e alla carriera, e il server la tiene allineata a ogni modifica dell'avviso. Si cancella con
+  l'account.
 
 **Flussi** (tutte le scritture passano da `POST /api/match-notices`)
 
@@ -460,8 +487,9 @@ Codice: [matchNotices.ts](../src/lib/server/matchNotices.ts) (server), [matchNot
 | `create` | Presidente, collaboratore della lega attiva; staff | Avviso `OPEN` per una partita futura. Lega sospesa: solo lo staff (423 per gli altri) |
 | `update` | Gestori della lega dell'avviso; staff | Cambiano i dettagli e i posti, **mai** la lega o la partita. I posti non scendono sotto quelli presi (`below_filled`). Un avviso chiuso perché pieno **riapre** se si aggiungono posti |
 | `close` | Gestori; staff | `CLOSED` a mano: non riapre da solo |
-| `cancel` | Gestori; staff | `CANCELLED`: definitivo, niente più modifiche né posti |
-| `take` ("Prendi il posto") | Chiunque con email verificata | **Transazione**: legge l'avviso e il proprio posto, rifiuta se pieno, chiuso, annullato, passato o già preso, poi scrive il posto e `spotsFilled + 1`. All'ultimo posto lo stato diventa `CLOSED` (`full`) e l'avviso esce dalla bacheca. I gestori della lega ricevono una notifica (campanella + push, secondo la modalità della lega) |
+| `cancel` | Gestori; staff | `CANCELLED`: definitivo, niente più modifiche né posti. Chi aveva preso il posto riceve **subito una notifica** (campanella + push) e il posto risulta "Annullata" nella sua copia |
+| `take` ("Partecipa alla partita") | Chiunque con email verificata | **Transazione**: legge l'avviso e il proprio posto, rifiuta se pieno, chiuso, annullato, passato o già preso, poi scrive il posto, la copia della persona e `spotsFilled + 1`. All'ultimo posto lo stato diventa `CLOSED` (`full`) e l'avviso esce dalla bacheca. I gestori della lega ricevono una notifica (campanella + push, secondo la modalità della lega) |
+| `invite` | Gestori; staff | **Solo dopo la partita** (`too_early` prima), mai a chi è già membro (`already_member`): la persona riceve una notifica con il link di invito della lega (`/join/{codice}`); entra solo se lo usa. `invitedAt` sul posto |
 
 - **Già convocato:** chi ha già un'iscrizione a quella partita con la sua scheda in quella lega non prende il posto
   (`already_in_match`); chi ha già un posto non ne prende un altro (`already_joined`).
@@ -470,7 +498,7 @@ Codice: [matchNotices.ts](../src/lib/server/matchNotices.ts) (server), [matchNot
 - **Lega sospesa:** la bacheca si legge, ma nessuno prende posti (423); lo staff può ancora chiudere o annullare.
 
 **Regole:** `match_notices` si legge con email verificata; `applicants/{profileId}` lo legge la persona stessa, i
-gestori della lega dell'avviso e lo staff; nessuna scrittura dal browser.
+gestori della lega dell'avviso e lo staff; `profiles/{id}/spots` lo legge solo il titolare; nessuna scrittura dal browser.
 
 ---
 

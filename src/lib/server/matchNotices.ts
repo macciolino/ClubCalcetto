@@ -1,8 +1,9 @@
 import { adminDb } from '@/lib/firebase/admin';
 import { inLeague, isLeagueActive, isLeagueManager, leagueDb } from '@/lib/server/leagueScope';
-import { deliverToAdmins, italianDate } from '@/lib/server/push';
+import { leagueInviteCode } from '@/lib/server/leagueMembers';
+import { deliverToAdmins, italianDate, sendToProfiles } from '@/lib/server/push';
 import { cleanNoticeInput, patchNotice, statusFor } from '@/lib/utils/matchNotice';
-import type { MatchNotice, NoticeApplicant, NoticeError } from '@/types/matchNotice';
+import type { MatchNotice, MySpot, NoticeApplicant, NoticeError } from '@/types/matchNotice';
 
 export type { NoticeError };
 
@@ -11,7 +12,9 @@ export type { NoticeError };
  *  - presidents and collaborators of the league (and platform staff) create, edit, close and cancel a notice;
  *  - any signed-in user with a verified email takes a spot ("Prendi il posto") in a transaction: never more people
  *    than spots, and the notice closes by itself when the last spot is taken;
- *  - who takes a spot does NOT become a member of the league: no membership, no card, no access to its data.
+ *  - who takes a spot does NOT become a member of the league: no membership, no card, no access to its data;
+ *    they get their own copy of the spot (profiles/{id}/spots/{noticeId}), kept in sync, for their career;
+ *  - a cancelled notice tells whoever took a spot; after the match a manager can send them the league's invite.
  */
 const NOTICES = 'match_notices';
 
@@ -33,6 +36,43 @@ async function profileName(profileId: string, fallback: string) {
 /** Presidents and collaborators of THAT league (active), or platform staff (also when it is suspended). */
 async function canManage(caller: Caller, leagueId: string) {
   return caller.isPlatformStaff || (caller.emailVerified && (await isLeagueManager(caller.uid, leagueId)));
+}
+
+/** The person's copy of a spot, from the notice (details kept in sync by every change of the notice). */
+function spotFrom(n: MatchNotice, joinedAt: string, status: MySpot['status'] = 'ACTIVE'): MySpot {
+  return {
+    noticeId: n.id,
+    leagueId: n.leagueId,
+    leagueName: n.leagueName,
+    matchId: n.matchId,
+    dateTime: n.dateTime,
+    locationName: n.locationName,
+    address: n.address,
+    format: n.format,
+    costPerPlayer: n.costPerPlayer,
+    roleNeeded: n.roleNeeded,
+    shirtColor: n.shirtColor,
+    status,
+    joinedAt,
+  };
+}
+const spotRef = (profileId: string, noticeId: string) => adminDb().doc(`profiles/${profileId}/spots/${noticeId}`);
+
+async function applicantsOf(id: string): Promise<NoticeApplicant[]> {
+  return (await adminDb().collection(`${NOTICES}/${id}/applicants`).get()).docs.map((d) => d.data() as NoticeApplicant);
+}
+
+/** Copies the notice's current details on every applicant's spot (after an edit or a cancellation). */
+async function syncSpots(id: string, status: MySpot['status'] = 'ACTIVE') {
+  const notice = await loadNotice(id);
+  if (!notice) return [];
+  const people = await applicantsOf(id);
+  if (people.length) {
+    const batch = adminDb().batch();
+    people.forEach((a) => batch.set(spotRef(a.profileId, id), spotFrom(notice, a.joinedAt, status)));
+    await batch.commit();
+  }
+  return people;
 }
 
 async function loadNotice(id: string) {
@@ -76,7 +116,7 @@ export async function updateNotice(caller: Caller, id: string, raw: unknown): Pr
   if (!input) return fail('bad_request');
 
   // In a transaction: someone may be taking a spot right now
-  return adminDb().runTransaction(async (tx) => {
+  const res = await adminDb().runTransaction(async (tx): Promise<Result> => {
     const ref = adminDb().doc(`${NOTICES}/${id}`);
     const fresh = (await tx.get(ref)).data() as MatchNotice;
     if (fresh.status === 'CANCELLED') return fail('cancelled');
@@ -85,6 +125,9 @@ export async function updateNotice(caller: Caller, id: string, raw: unknown): Pr
     tx.update(ref, { ...input, notes: input.notes ?? '', ...next, closedReason: next.closedReason ?? null, updated_at: new Date().toISOString() });
     return { ok: true } as const;
   });
+  // Whoever took a spot sees the new day, time or place in their own list
+  if (res.ok) await syncSpots(id);
+  return res;
 }
 
 /** Closed by hand (stays visible to whoever took a spot) or cancelled (the match will not need anyone). */
@@ -96,6 +139,44 @@ export async function setNoticeStatus(caller: Caller, id: string, status: 'CLOSE
   await adminDb()
     .doc(`${NOTICES}/${id}`)
     .update({ status, closedReason: status === 'CLOSED' ? 'manual' : null, updated_at: new Date().toISOString() });
+  if (status === 'CANCELLED') {
+    // Whoever took a spot is told at once (bell + push) and the spot is marked as cancelled in their list
+    const people = await syncSpots(id, 'CANCELLED');
+    await sendToProfiles(
+      people.map((a) => a.profileId),
+      {
+        title: '❌ Partita annullata',
+        body: `"${current.leagueName}" ha annullato l’avviso per ${italianDate(current.matchId)} (${current.locationName}): il tuo posto non c’è più.`,
+        url: '/board',
+      }
+    ).catch(() => undefined);
+  }
+  return { ok: true };
+}
+
+/**
+ * After the match, a manager sends one person who took a spot the league's invite link (bell + push).
+ * Joining stays their choice, through the usual invite flow.
+ */
+export async function inviteApplicant(caller: Caller, id: string, profileId: string): Promise<Result> {
+  const notice = await loadNotice(id);
+  if (!notice) return fail('not_found');
+  if (!(await canManage(caller, notice.leagueId))) return fail('forbidden');
+  if (Date.parse(notice.dateTime) > Date.now()) return fail('too_early');
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(profileId)) return fail('bad_request');
+  const ref = adminDb().doc(`${NOTICES}/${id}/applicants/${profileId}`);
+  const applicant = (await ref.get()).data() as NoticeApplicant | undefined;
+  if (!applicant) return fail('not_found');
+  const member = (await adminDb().doc(`memberships/${applicant.userId}`).get()).data()?.leagues?.[notice.leagueId];
+  if (member) return fail('already_member');
+
+  const code = await leagueInviteCode(notice.leagueId, caller.profileId);
+  await sendToProfiles([profileId], {
+    title: `✉️ Invito in "${notice.leagueName}"`,
+    body: `Dopo la partita di ${italianDate(notice.matchId)} la lega ti invita a farne parte. Tocca per entrare.`,
+    url: `/join/${code}`,
+  });
+  await ref.update({ invitedAt: new Date().toISOString() });
   return { ok: true };
 }
 
@@ -132,6 +213,7 @@ export async function takeSpot(caller: Caller, id: string): Promise<Result<{ spo
     const now = new Date().toISOString();
     const applicant: NoticeApplicant = { profileId: caller.profileId, userId: caller.uid, displayName, joinedAt: now };
     tx.set(mine, applicant);
+    tx.set(spotRef(caller.profileId, id), spotFrom({ ...n, id }, now));
     tx.update(ref, { spotsFilled, ...next, closedReason: next.closedReason ?? null, updated_at: now });
     return { ok: true, spotsFilled, status: next.status };
   });

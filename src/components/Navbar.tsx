@@ -25,11 +25,13 @@ import { useTranslations } from 'next-intl';
 import { RequestsBell } from '@/components/admin/RequestsCenter';
 import { SelfRatingPrompt } from '@/components/SelfRatingPrompt';
 import { LeagueSwitcher } from '@/components/league/LeagueSwitcher';
+import { useOpenNoticeCount } from '@/lib/hooks/useOpenNoticeCount';
 
 export function Navbar() {
   const pathname = usePathname();
   const t = useTranslations('nav');
   const { user, profile, isAdmin, isPlatformStaff, isSuperAdmin, signOut } = useAuth();
+  const openNoticeCount = useOpenNoticeCount(Boolean(user));
   const { isSuspended, leagueRole } = useActiveLeague();
   const tRole = useTranslations('league.roles');
   const ts = useTranslations('superAdmin');
@@ -72,14 +74,16 @@ export function Navbar() {
   // Strumenti di gestione: solo per presidenti e collaboratori della lega ATTIVA (per chiunque altro non esistono nel DOM)
   const isStrictAdmin = Boolean(mounted && user && isAdmin);
 
-  const navItems = [
+  // "Cerco giocatore": the number of matches looking for players, only when there are some
+  const openNotices = openNoticeCount;
+  const navItems: { href: string; label: string; icon: typeof Home; badge?: number }[] = [
     { href: '/', label: t('home'), icon: Home },
     { href: '/attendance', label: t('attendance'), icon: CalendarDays },
     { href: '/players', label: t('players'), icon: Users },
     { href: '/teams', label: t('teams'), icon: Trophy },
     { href: '/history', label: t('history'), icon: History },
     // "Cerco giocatore": avvisi di tutte le leghe della piattaforma
-    { href: '/board', label: t('board'), icon: Megaphone },
+    { href: '/board', label: t('board'), icon: Megaphone, badge: openNotices },
     // Profilo: si apre dal menu dell'utente (icona in alto a destra), non serve nella barra
     // Admin: non è più nella barra. Si entra da Impostazioni (menu dell'icona), che per gli admin apre la partita della settimana
   ];
@@ -244,6 +248,11 @@ export function Navbar() {
                 >
                   <Icon className="h-4 w-4" />
                   <span>{item.label}</span>
+                  {Boolean(item.badge) && (
+                    <span className={`min-w-5 rounded-full px-1.5 text-[11px] font-bold tabular-nums ${isActive ? 'bg-on-accent/15' : 'bg-amber-500 text-white'}`}>
+                      {item.badge}
+                    </span>
+                  )}
                 </Link>
               );
             })}
@@ -269,8 +278,13 @@ export function Navbar() {
                     : 'text-secondary hover:text-primary font-medium'
                 }`}
               >
-                <div className={`p-1 rounded-lg ${isActive ? 'bg-accent/20' : ''}`}>
+                <div className={`relative p-1 rounded-lg ${isActive ? 'bg-accent/20' : ''}`}>
                   <Icon className="h-5 w-5" />
+                  {Boolean(item.badge) && (
+                    <span className="absolute -top-1 -right-1.5 min-w-4 rounded-full bg-amber-500 px-1 text-[10px] font-bold leading-4 text-white tabular-nums">
+                      {item.badge}
+                    </span>
+                  )}
                 </div>
                 <span className="text-[10px] tracking-tight mt-0.5 max-w-full truncate">{item.label}</span>
               </Link>

@@ -24,7 +24,9 @@ export type NoticeError =
   | 'full'
   | 'already_joined'
   | 'already_in_match'
-  | 'below_filled';
+  | 'below_filled'
+  | 'too_early'
+  | 'already_member';
 
 export const NOTICE_ROLES: NoticeRole[] = ['ANY', 'GOALKEEPER', 'ROTATION_GOALKEEPER', 'OUTFIELD'];
 export const SHIRT_COLORS: ShirtColor[] = ['DARK', 'LIGHT'];
@@ -64,5 +66,28 @@ export interface NoticeApplicant {
   profileId: string;
   userId: string;
   displayName: string;
+  joinedAt: string;
+  /** A manager sent them the league's invite link after the match */
+  invitedAt?: string;
+}
+
+/**
+ * The person's own copy of a spot they took (`profiles/{profileId}/spots/{noticeId}`, written only by the server,
+ * read only by that person): "le mie partite da esterno" and the career summary. Kept in sync with the notice.
+ */
+export interface MySpot {
+  noticeId: string;
+  leagueId: string;
+  leagueName: string;
+  matchId: string;
+  dateTime: string;
+  locationName: string;
+  address: string;
+  format: MatchNoticeInput['format'];
+  costPerPlayer: number;
+  roleNeeded: NoticeRole;
+  shirtColor: ShirtColor;
+  /** CANCELLED = the league withdrew the notice (the person was told) */
+  status: 'ACTIVE' | 'CANCELLED';
   joinedAt: string;
 }

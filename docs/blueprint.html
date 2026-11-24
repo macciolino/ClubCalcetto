@@ -314,8 +314,8 @@
           <p class="text-[11px] muted">Prezzo: partita &gt; prezzo della lega (price_override) &gt; prezzo di partenza del catalogo. Il catalogo non viene mai toccato dai prezzi delle leghe.</p>
         </div>
         <div class="card rounded-2xl p-5 space-y-3">
-          <div class="flex items-center gap-2"><span class="rounded-full bg-accent/15 text-accent text-[10px] font-bold uppercase px-2 py-0.5">Implementato</span><p class="font-semibold">Bacheca "Cerco giocatore"</p></div>
-          <p class="text-xs muted"><span class="font-mono">match_notices</span> (+ <span class="font-mono">applicants</span>), scritti solo dal server. Pagina <span class="font-mono">/board</span>, aperta anche a chi non ha una lega.</p>
+          <div class="flex items-center gap-2"><span class="rounded-full bg-accent/15 text-accent text-[10px] font-bold uppercase px-2 py-0.5">Implementato</span><p class="font-semibold">Bacheca Avvisi &amp; Partecipazioni Esterne (Spot)</p></div>
+          <p class="text-xs muted"><span class="font-mono">match_notices</span> (+ <span class="font-mono">applicants</span>) e la copia personale <span class="font-mono">profiles/{id}/spots</span>, scritti solo dal server. Pagina <span class="font-mono">/board</span> (badge con il numero di avvisi aperti), aperta anche a chi non ha una lega; pannello "Giocatori esterni" dentro la partita; card "Carriera" nel profilo.</p>
           <div class="flow space-y-2" data-flow="board"></div>
           <p class="text-[11px] muted">Chi prende un posto non entra nella lega: nessuna membership, nessuna scheda, nessun accesso a giocatori, cassa o impostazioni.</p>
         </div>
@@ -453,6 +453,8 @@ var MATRIX = [
   { g: 'Bacheca', a: 'Avvisi "Cerco giocatore": creare, modificare, chiudere, annullare', v: ['y', 'y', 'y', 'y', 'n', 'n'], sus: 'solo staff' },
   { g: 'Bacheca', a: 'Leggere gli avvisi e prendere un posto (senza entrare nella lega)', v: ['y', 'y', 'y', 'y', 'y', 'y:email verificata'], sus: 'si legge, posti fermi' },
   { g: 'Bacheca', a: 'Vedere chi ha preso i posti', v: ['y', 'y', 'y', 'y', 's:solo il proprio', 's:solo il proprio'], sus: '—' },
+  { g: 'Bacheca', a: 'Cerca giocatori esterni dalla partita; invitare nella lega dopo la partita', v: ['y', 'y', 'y', 'y', 'n', 'n'], sus: 'solo staff' },
+  { g: 'Bacheca', a: 'Carriera globale nel profilo (tutte le leghe + partite da esterno)', v: ['s', 's', 's', 's', 's', 'n'], sus: '—' },
   { g: 'Gestione', a: 'Ospiti (crea ed elimina) e inviti', v: ['y', 'y', 'y', 'y', 'n', 'n'], sus: 'solo staff' },
   { g: 'Gestione', a: 'Centro richieste (iscrizioni, reclami, formati)', v: ['y', 'y', 'y', 'y', 'n', 'n'], sus: 'solo staff' },
   { g: 'Gestione', a: 'Email dei membri della lega', v: ['y', 'y', 'y', 'y', 'n', 'n'], sus: 'i gestori leggono' },
@@ -507,9 +509,10 @@ var FLOWS = {
     { t: 'Disponibile a tutte le leghe', d: 'Le correzioni arrivano a ogni lega collegata. La lega cambia solo prezzi e note; ogni partita può avere il suo totale o la sua quota a testa. Il catalogo resta pulito.', who: ['PRES', 'COLL', 'SA', 'GA'], ic: 'wallet' },
   ],
   board: [
-    { t: 'Pubblica', d: 'Bacheca, Nuovo avviso: il modulo parte dal giorno ufficiale, ora standard, campo predefinito e prezzo per il formato. Ruolo cercato, maglia, quota a testa, posti, note.', who: ['PRES', 'COLL', 'SA', 'GA'], ic: 'map-pin' },
-    { t: 'Prendi il posto', d: 'Chiunque con email verificata, anche senza lega. Transazione: mai più persone dei posti; rifiutato se già iscritto a quella partita o se ha già un posto. I gestori ricevono una notifica.', who: ['PLAYER', 'NONE', 'COLL', 'PRES'], ic: 'user' },
-    { t: 'Chiusura', d: 'Al completo si chiude da solo ed esce dalla bacheca; riapre se il gestore aggiunge posti. Chiudi a mano o Annulla avviso (definitivo).', who: ['PRES', 'COLL', 'SA', 'GA'], ic: 'check' },
+    { t: 'Cerca giocatori esterni', d: 'Dalla partita (Partita della settimana, Organizzazione): il modulo arriva già compilato con giorno, ora, campo, indirizzo, formato, costo e giocatori mancanti; il gestore conferma posti, ruolo, maglia e note. Oppure Nuovo avviso dalla Bacheca.', who: ['PRES', 'COLL', 'SA', 'GA'], ic: 'map-pin' },
+    { t: 'Partecipa alla partita', d: 'Card con lega, data, formato, posti liberi, ruolo, maglia, quota a testa e Indicazioni; filtri per data, formato e ruolo. Una scheda riassume tutto e ricorda che non si entra nella lega. Transazione: mai più persone dei posti; rifiutato se già iscritto o se ha già un posto.', who: ['PLAYER', 'NONE', 'COLL', 'PRES'], ic: 'user' },
+    { t: 'Stato e chiusura', d: 'Nella partita: In bacheca / Completo / Chiuso / Annullato con i nomi di chi è entrato. Al completo si chiude da solo; riapre se il gestore aggiunge posti. Annulla avviso: chi aveva il posto riceve subito una notifica.', who: ['PRES', 'COLL', 'SA', 'GA'], ic: 'check' },
+    { t: 'Dopo la partita', d: 'Invita nella lega: la persona riceve il link di invito e decide se entrare. Nel profilo, la card Carriera somma tutte le leghe e le partite da esterno (badge Da esterno, senza esito).', who: ['PRES', 'COLL', 'SA', 'GA', 'NONE', 'PLAYER'], ic: 'wallet' },
   ],
 };
 

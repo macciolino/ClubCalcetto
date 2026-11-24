@@ -635,6 +635,14 @@ console.log('\n"Cerco giocatore" board (match_notices): everyone verified reads,
   await expectAllowed('super admin (staff) lists the applicants', () => getDocs(collection(superAdmin.db, 'match_notices', 'n1', 'applicants')));
   await expectDenied('the applicant does not get into the league (players)', () => getDocs(collection(outsider.db, ...LG, 'players')));
   await expectDenied('the applicant does not get into the league (cash)', () => getDocs(collection(outsider.db, ...LG, 'match_payments')));
+
+  // Each person's own copy of the spots taken (career, "i miei posti"): owner reads, nobody writes from the app
+  await ownerSet(`profiles/${outsider.uid}/spots/n1`, { noticeId: 'n1', leagueId: 'calcettari', status: 'ACTIVE' });
+  await expectAllowed('the applicant reads their own spots', () => getDocs(collection(outsider.db, 'profiles', outsider.uid, 'spots')));
+  await expectDenied('player B reads someone else’s spots', () => getDocs(collection(playerB.db, 'profiles', outsider.uid, 'spots')));
+  await expectDenied('president C reads someone else’s spots', () => getDoc(doc(adminC.db, 'profiles', outsider.uid, 'spots', 'n1')));
+  await expectDenied('the applicant writes a fake spot', () =>
+    setDoc(doc(outsider.db, 'profiles', outsider.uid, 'spots', 'fake'), { noticeId: 'fake', status: 'ACTIVE' }));
 }
 
 console.log('\nSuspended league (step 4): read-only for members, platform staff still write');

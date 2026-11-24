@@ -41,14 +41,21 @@ test.describe('Bacheca "Cerco giocatore"', () => {
     // dal benvenuto (nessuna lega) alla bacheca
     await other.getByRole('link', { name: 'Cerca una partita da giocare' }).click();
     await other.waitForURL('**/board');
-    await expect(other.getByText('I Calcettari')).toBeVisible({ timeout: 15_000 });
-    await expect(other.getByText('Portiere', { exact: true })).toBeVisible();
-    await expect(other.getByText('Manca 1 posto')).toBeVisible();
-    await other.getByRole('button', { name: 'Prendi il posto' }).click();
-    await other.getByRole('button', { name: 'Conferma', exact: true }).click();
+    const card = other.locator('article').filter({ hasText: 'I Calcettari' });
+    await expect(card).toBeVisible({ timeout: 15_000 });
+    await expect(card.getByText('Portiere', { exact: true })).toBeVisible();
+    await expect(card.getByText('1 posto libero')).toBeVisible();
+    await expect(card.getByText('8 € a testa')).toBeVisible();
+    // badge sulla voce Bacheca: 1 partita cerca giocatori
+    await expect(other.getByRole('navigation', { name: 'Navigazione principale' }).getByRole('link', { name: /Bacheca/ })).toContainText('1');
+    await card.getByRole('button', { name: 'Partecipa alla partita' }).click();
+    const join = other.getByRole('dialog');
+    await expect(join.getByText('Non entri nella lega', { exact: false })).toBeVisible();
+    await join.getByRole('button', { name: 'Conferma partecipazione' }).click();
     await expect(other.getByText('Posto preso: i gestori della lega sono stati avvisati.')).toBeVisible({ timeout: 15_000 });
-    // ultimo posto: l'avviso esce dalla bacheca
+    // ultimo posto: l'avviso esce dalla bacheca e finisce tra "I miei posti"
     await expect(other.getByText('Nessuna partita cerca giocatori in questo momento.')).toBeVisible({ timeout: 15_000 });
+    await expect(other.getByText('Confermato')).toBeVisible();
     expect((await db.doc('memberships/e2e-nolega').get()).exists).toBe(false);
 
     // Il presidente vede l'avviso chiuso e chi ha preso il posto
@@ -59,5 +66,45 @@ test.describe('Bacheca "Cerco giocatore"', () => {
     await expect(sheet.getByText('Nuovo Arrivato')).toBeVisible();
     // chiuso perché pieno: "Completo"
     await expect(sheet.getByText('Campo Test · Completo')).toBeVisible();
+  });
+
+  test('dalla partita: "Cerca giocatori esterni" già compilato, stato nella partita', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/settings?sezione=partita');
+    // il giorno ufficiale (domani), scheda Organizzazione
+    await page.getByRole('radio', { name: /Ufficiale/ }).click({ timeout: 15_000 });
+    await page.getByRole('tab', { name: /Organizzazione/ }).click();
+    await expect(page.getByText('Giocatori esterni', { exact: true })).toBeVisible({ timeout: 15_000 });
+    // domani nessun iscritto: mancano tutti e 10
+    await expect(page.getByText(/Mancano 10 giocatori/)).toBeVisible();
+    await page.getByRole('button', { name: 'Cerca giocatori esterni' }).click();
+    const form = page.getByRole('dialog');
+    await expect(form.locator('#notice-date')).toHaveValue(romeDay(1));
+    await expect(form.locator('#notice-date')).toBeDisabled();
+    await expect(form.locator('#notice-time')).toHaveValue('20:30');
+    await expect(form.locator('#notice-place')).toHaveValue('Campo Test');
+    await expect(form.locator('#notice-spots')).toHaveValue('10');
+    await expect(form.locator('#notice-head')).toHaveValue('8');
+    await form.locator('#notice-spots').fill('2');
+    await form.getByRole('button', { name: 'Pubblica' }).click();
+    await expect(page.getByText('Avviso pubblicato.')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('In bacheca · 0/2 presi')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('button', { name: 'Annulla avviso' })).toBeVisible();
+  });
+
+  test('profilo: carriera di tutte le leghe con le partite da esterno', async ({ page }) => {
+    await db.doc('leagues/calcettari/players/p-1').update({ matches_won: 3, matches_drawn: 1, matches_lost: 2 });
+    await db.doc('profiles/p-1/spots/x1').set({
+      noticeId: 'x1', leagueId: 'altra', leagueName: 'Lega Amici', matchId: romeDay(-3), dateTime: new Date(Date.now() - 3 * 86_400_000).toISOString(),
+      locationName: 'Campo Amici', address: 'Via Amici 1', format: '5v5', costPerPlayer: 8, roleNeeded: 'ANY', shirtColor: 'DARK', status: 'ACTIVE', joinedAt: 'x',
+    });
+    await loginAsAdmin(page);
+    await page.goto('/profile');
+    const career = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Carriera' }) });
+    await expect(career.getByText('7 partite')).toBeVisible({ timeout: 15_000 });
+    await expect(career.getByText('1 da esterno')).toBeVisible();
+    await expect(career.getByText('Da esterno', { exact: true })).toBeVisible();
+    await expect(career.getByText(/Lega Amici · Campo Amici/)).toBeVisible();
+    await expect(page.getByText('Solo I Calcettari')).toBeVisible();
   });
 });

@@ -853,7 +853,7 @@
     "inForm": "<b>In form {value}</b>: over the last 3 matches (MVP, votes, goals or wins) all your values and your OVR went up by {delta}. It's temporary.",
     "outOfForm": "<b>Out of form {value}</b>: over the last 3 matches (losses) all your values and your OVR went down by {delta}. It's temporary: it goes back up with wins, MVP votes or goals.",
     "myStats": "My stats",
-    "statsHint": "Totals of all archived matches ({count} played).",
+    "statsHint": "Archived matches in the active league ({count} played).",
     "won": "Won",
     "drawn": "Drawn",
     "lost": "Lost",
@@ -863,7 +863,23 @@
     "notifications": "Notifications",
     "notificationsHint": "Turn them on for this device",
     "account": "Account",
-    "accountHint": "Sign out of all devices, deactivate or delete"
+    "accountHint": "Sign out of all devices, deactivate or delete",
+    "leagueOnly": "Only {league}",
+    "career": {
+      "title": "Career",
+      "subtitle": "All your leagues and the matches played as an external through the Board.",
+      "played": "{count, plural, one {# match} other {# matches}}",
+      "won": "W",
+      "drawn": "D",
+      "lost": "L",
+      "externalCount": "{count, plural, =0 {None as external} other {# as external}}",
+      "activeLeague": "active",
+      "leagueLine": "{played} played · {won}W {drawn}D {lost}L",
+      "externalTitle": "Matches as external",
+      "externalBadge": "External",
+      "externalHint": "Matches as external count as played, not as wins or losses: the result belongs to the league that hosted you.",
+      "upcoming": "upcoming"
+    }
   },
   "login": {
     "expired": "Your session has expired (it lasts 30 days): sign in again with Google.",
@@ -1742,13 +1758,10 @@
     "noLeagueNotices": "Your league has no notices. If you are short of players for a match, post a notice.",
     "openNotices": "Open notices",
     "empty": "No match is looking for players right now.",
-    "spotsLeft": "{count, plural, one {# spot left} other {# spots left}}",
     "spotsOf": "{filled}/{total} taken",
     "perHead": "{amount} each",
     "free": "Free",
-    "take": "Take the spot",
     "taken": "You took the spot",
-    "confirmTake": "Take a spot for {where} with \"{league}\"? The league managers will be told.",
     "tookIt": "Spot taken: the league managers have been told.",
     "roles": {
       "ANY": "Any role",
@@ -1799,12 +1812,17 @@
       "close": "Close",
       "cancel": "Cancel notice",
       "confirmClose": "Close the notice? It leaves the board and nobody can take a spot any more.",
-      "confirmCancel": "Cancel the notice? This is final: tell the people who already took a spot yourselves.",
+      "confirmCancel": "Cancel the notice? This is final: whoever took a spot is told at once.",
       "closed": "Notice closed.",
       "cancelled": "Notice cancelled.",
       "applicants": "Who took a spot ({filled}/{total})",
       "noApplicants": "Nobody yet.",
-      "applicantsHint": "They are not league members: they play only this match."
+      "applicantsHint": "They are not league members: they play only this match.",
+      "confirmInvite": "Send {name} the invite to join \"{league}\"? They get a notification with the link and decide.",
+      "invited": "Invite sent to {name}.",
+      "invite": "Invite to the league",
+      "inviteSent": "Invited",
+      "inviteHint": "After the match you can invite them to the league: they get the invite link and decide."
     },
     "errors": {
       "bad_request": "The notice data is not valid.",
@@ -1820,7 +1838,45 @@
       "below_filled": "You cannot go below the spots already taken.",
       "failed": "Something went wrong: check your connection and try again.",
       "not_configured": "Service not available right now.",
-      "unauthenticated": "Sign in again and try again."
+      "unauthenticated": "Sign in again and try again.",
+      "too_early": "The invite is sent after the match.",
+      "already_member": "Already a member of the league."
+    },
+    "spotsFree": "{count, plural, one {# spot free} other {# spots free}}",
+    "fieldTotal": "field {amount}",
+    "directions": "Directions",
+    "join": "Join the match",
+    "joinTitle": "Join the match",
+    "joinSubtitle": "With \"{league}\"",
+    "joinConfirm": "Confirm",
+    "joinIsolation": "You do not join the league: you play only this match and cannot see its players, cash or settings.",
+    "joinManagersTold": "The league managers are told and see your name.",
+    "mySpots": "My spots",
+    "spotConfirmed": "Confirmed",
+    "spotCancelled": "Cancelled",
+    "emptyHint": "When a league is looking for players, the notice shows up here. The Board item shows a number when there are some.",
+    "emptyFiltered": "No notice matches these filters",
+    "emptyFilteredHint": "Try removing a filter: there are other matches on the board.",
+    "filters": {
+      "label": "Filters",
+      "all": "All",
+      "today": "Today",
+      "week": "7 days",
+      "format": "Format",
+      "anyFormat": "Format",
+      "role": "Role",
+      "anyRole": "Role",
+      "reset": "Clear filters"
+    },
+    "panel": {
+      "title": "External players",
+      "search": "Find external players",
+      "hint": "Short of players? Post a notice on the Board: the match details are already filled in.",
+      "missing": "{count, plural, one {# player missing: find one on the Board, with the match details already filled in.} other {# players missing: find them on the Board, with the match details already filled in.}}",
+      "previousCancelled": "The previous notice was cancelled.",
+      "seeOnBoard": "See on the Board",
+      "nonePast": "No notice for this match.",
+      "cancelledPast": "The notice for this match was cancelled."
     }
   }
 }

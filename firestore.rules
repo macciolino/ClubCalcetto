@@ -434,6 +434,11 @@ service cloud.firestore {
         allow write: if false;
       }
     }
+    // Each person's own copy of the spots they took ("partite da esterno", career): server only, owner reads
+    match /profiles/{profileId}/spots/{noticeId} {
+      allow read: if isOwnProfile(profileId) && request.auth.token.email_verified == true;
+      allow write: if false;
+    }
 
     // ---------- single-group collections (before multi-league): read-only backup ----------
     // The app now uses leagues/{leagueId}/…; nobody writes here any more (the migration copied them).

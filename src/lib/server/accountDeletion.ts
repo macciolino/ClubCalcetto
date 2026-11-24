@@ -48,6 +48,8 @@ export async function deleteAccount(profileId: string): Promise<{ name: string; 
 
   // Le notifiche personali stanno in una sottocollezione del profilo: non si cancella da sola con il documento
   await db.recursiveDelete(db.collection(`profiles/${profileId}/notifications`));
+  // Idem per la copia dei posti presi in Bacheca ("partite da esterno")
+  await db.recursiveDelete(db.collection(`profiles/${profileId}/spots`));
 
   // Richieste di questa persona nella campanella dei gestori (nuovo iscritto, reclamo, rientro…): non c'è più chi
   // decidere, quindi si chiudono; l'email esce da tutte (restano solo nome e motivo, come negli avvisi di chiusura)

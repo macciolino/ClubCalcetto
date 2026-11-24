@@ -159,3 +159,47 @@ describe('Modifica, chiusura, annullamento', () => {
     expect((await call(notices, { action: 'cancel', id }, ga.token)).data.ok).toBe(true);
   });
 });
+
+describe('I miei posti, annullamento, invito dopo la partita', () => {
+  it('chi prende il posto ne ha una copia sua, aggiornata quando il gestore cambia ora o campo', async () => {
+    const id = String((await create(pres.token)).data.id);
+    await take(id, (await outsider('out')).token);
+    expect((await db().doc(`profiles/out/spots/${id}`).get()).data()).toMatchObject({
+      noticeId: id, leagueId: 'calcettari', leagueName: 'I Calcettari', matchId: DAY, locationName: 'Campo Luini', status: 'ACTIVE',
+    });
+    await call(notices, { action: 'update', id, notice: { locationName: 'Campo Nuovo', dateTime: `${DAY}T20:00:00.000Z` } }, pres.token);
+    expect((await db().doc(`profiles/out/spots/${id}`).get()).data()).toMatchObject({ locationName: 'Campo Nuovo', dateTime: `${DAY}T20:00:00.000Z` });
+  });
+
+  it('avviso annullato: chi aveva il posto riceve una notifica e il posto risulta annullato', async () => {
+    const id = String((await create(pres.token)).data.id);
+    await take(id, (await outsider('out')).token);
+    expect((await call(notices, { action: 'cancel', id }, pres.token)).data.ok).toBe(true);
+    expect((await db().doc(`profiles/out/spots/${id}`).get()).data()?.status).toBe('CANCELLED');
+    const bell = (await db().collection('profiles/out/notifications').get()).docs.map((d) => `${d.data().title} ${d.data().body}`);
+    expect(bell.some((b) => b.includes('Partita annullata') && b.includes('I Calcettari'))).toBe(true);
+  });
+
+  it('invito nella lega: solo dopo la partita, solo i gestori, mai a chi è già membro', async () => {
+    const id = String((await create(pres.token)).data.id);
+    const out = await outsider('out');
+    await take(id, out.token);
+    const invite = (token: string, profileId = 'out') => call(notices, { action: 'invite', id, profileId }, token);
+    expect((await invite(pres.token)).data.error).toBe('too_early');
+
+    // la partita è passata
+    await db().doc(`match_notices/${id}`).update({ dateTime: '2020-01-01T19:30:00.000Z' });
+    expect((await invite(out.token)).status).toBe(403);
+    expect((await invite(pres.token)).data.ok).toBe(true);
+    const bell = (await db().collection('profiles/out/notifications').get()).docs.map((d) => d.data());
+    const msg = bell.find((b) => String(b.title).includes('Invito in "I Calcettari"'));
+    expect(String(msg?.url)).toMatch(/^\/join\/[A-Za-z0-9]+/);
+    expect((await db().doc(`match_notices/${id}/applicants/out`).get()).data()?.invitedAt).toBeTruthy();
+    // la persona non entra da sola nella lega: deve usare il link
+    expect((await db().doc('memberships/out').get()).exists).toBe(false);
+
+    // chi è già membro non viene invitato
+    await db().doc('memberships/out').set({ leagues: { calcettari: { player_id: 'out', league_role: 'PLAYER' } } });
+    expect((await invite(pres.token)).data.error).toBe('already_member');
+  });
+});

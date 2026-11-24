@@ -39,6 +39,7 @@ import {
   subscribeTeamDatesSince,
 } from '@/lib/firebase/firestoreService';
 import { getCachedMatchPayments, setPlayersPaid, subscribeMatchPayments } from '@/lib/services/paymentService';
+import { MatchNoticePanel } from '@/components/board/MatchNoticePanel';
 import { AppSettings, GeneratedTeamRecord, Match, MatchPaymentRecord, Presence, Profile, SportField } from '@/types/database';
 import { btn, btnInline, textLink } from '@/components/ui/buttons';
 import { ArrowRight, Check, Clock, Coins, Loader2, RotateCcw, Send, Settings2, Share2, Star, Trophy } from 'lucide-react';
@@ -545,6 +546,18 @@ export function TabOverviewMatch({
           />
         )}
       </div>
+
+      {/* Bacheca "Cerco giocatore": l'avviso di QUESTA partita, o "Cerca giocatori esterni" già compilato */}
+      <MatchNoticePanel
+        date={date}
+        time={time}
+        field={field}
+        location={location}
+        format={fmt.format}
+        totalCost={totalCost}
+        missing={Math.max(0, info.players - starterProfiles.length)}
+        past={date < today}
+      />
     </section>
   );
 

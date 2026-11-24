@@ -79,6 +79,33 @@ export function patchNotice(current: MatchNotice, raw: unknown): MatchNoticeInpu
   return cleanNoticeInput(next);
 }
 
+/** Quick filters of the board: when (any day, today, next 7 days), format, role. */
+export interface NoticeFilters {
+  when: 'all' | 'today' | 'week';
+  format: MatchFormat | 'all';
+  role: NoticeRole | 'all';
+}
+export const NO_FILTERS: NoticeFilters = { when: 'all', format: 'all', role: 'all' };
+
+const romeDay = (t: number) => new Date(t).toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' });
+
+/**
+ * Notices that match the filters. A role filter keeps the notices for that role AND those open to any role
+ * (a goalkeeper can take an "any role" spot).
+ */
+export function filterNotices<T extends Pick<MatchNotice, 'dateTime' | 'format' | 'roleNeeded'>>(list: T[], f: NoticeFilters, now: number): T[] {
+  const today = romeDay(now);
+  const weekEnd = now + 7 * 86_400_000;
+  return list.filter((n) => {
+    const at = Date.parse(n.dateTime);
+    if (f.when === 'today' && romeDay(at) !== today) return false;
+    if (f.when === 'week' && at > weekEnd) return false;
+    if (f.format !== 'all' && n.format !== f.format) return false;
+    if (f.role !== 'all' && n.roleNeeded !== f.role && n.roleNeeded !== 'ANY') return false;
+    return true;
+  });
+}
+
 /** Kick-off typed in the form (Italian day and time, `YYYY-MM-DD` + `HH:mm`) as an ISO instant; '' if not valid. */
 export function romeToIso(date: string, time: string): string {
   const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);

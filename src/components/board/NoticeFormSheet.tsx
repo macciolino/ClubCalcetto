@@ -12,7 +12,7 @@ import { FORMAT_INFO, MATCH_FORMATS, fieldFormatCost } from '@/lib/utils/matchFo
 import { DEFAULT_MATCH_TIME, standardCostFor } from '@/lib/utils/matchUtils';
 import { MAX_SPOTS, romeTime, romeToIso } from '@/lib/utils/matchNotice';
 import type { AppSettings, MatchFormat, SportField } from '@/types/database';
-import { NOTICE_ROLES, SHIRT_COLORS, type MatchNotice, type NoticeRole, type ShirtColor } from '@/types/matchNotice';
+import { NOTICE_ROLES, SHIRT_COLORS, type MatchNotice, type MatchNoticeInput, type NoticeRole, type ShirtColor } from '@/types/matchNotice';
 
 const input =
   'w-full px-3.5 py-2.5 bg-app border border-line rounded-xl text-primary font-medium focus:outline-none focus:border-accent';
@@ -22,43 +22,48 @@ const money = (n: number | undefined) => (n && n > 0 ? String(Math.round(n * 100
 
 /**
  * New notice for a match of the ACTIVE league, or changes to one (managers and platform staff).
- * A new notice starts from the league's data: official day, standard time, default field and its price.
+ *  - from the board: starts from the league's data (official day, standard time, default field and its price);
+ *  - from the match ("Cerca giocatori esterni"): `prefill` carries that match (day, time, field, format, cost,
+ *    missing players), the manager only confirms spots, role, shirt and notes.
  */
-export function NoticeFormSheet({ notice, onClose }: { notice?: MatchNotice; onClose: () => void }) {
+export function NoticeFormSheet({ notice, prefill, onClose }: { notice?: MatchNotice; prefill?: Partial<MatchNoticeInput>; onClose: () => void }) {
   const t = useTranslations('board.form');
   const tb = useTranslations('board');
   const editing = Boolean(notice);
+  const src: Partial<MatchNoticeInput> | undefined = notice || prefill;
+  // Only a notice started from the board reads the league's settings; edits and match notices already have data
+  const fromLeague = !src;
   const [fields, setFields] = useState<SportField[]>([]);
   const [settings, setSettings] = useState<AppSettings | null>(null);
-  const [date, setDate] = useState(notice?.matchId || '');
-  const [time, setTime] = useState(notice ? romeTime(notice.dateTime) : '');
+  const [date, setDate] = useState(src?.matchId || '');
+  const [time, setTime] = useState(src?.dateTime ? romeTime(src.dateTime) : '');
   const [fieldId, setFieldId] = useState('');
-  const [locationName, setLocationName] = useState(notice?.locationName || '');
-  const [address, setAddress] = useState(notice?.address || '');
-  const [format, setFormat] = useState<MatchFormat>(notice?.format || '5v5');
-  const [totalCost, setTotalCost] = useState(money(notice?.totalFieldCost));
-  const [perHead, setPerHead] = useState(money(notice?.costPerPlayer));
-  const [spots, setSpots] = useState(String(notice?.spotsNeeded || 1));
-  const [role, setRole] = useState<NoticeRole>(notice?.roleNeeded || 'ANY');
-  const [shirt, setShirt] = useState<ShirtColor>(notice?.shirtColor || 'DARK');
-  const [notes, setNotes] = useState(notice?.notes || '');
+  const [locationName, setLocationName] = useState(src?.locationName || '');
+  const [address, setAddress] = useState(src?.address || '');
+  const [format, setFormat] = useState<MatchFormat>(src?.format || '5v5');
+  const [totalCost, setTotalCost] = useState(money(src?.totalFieldCost));
+  const [perHead, setPerHead] = useState(money(src?.costPerPlayer));
+  const [spots, setSpots] = useState(String(src?.spotsNeeded || 1));
+  const [role, setRole] = useState<NoticeRole>(src?.roleNeeded || 'ANY');
+  const [shirt, setShirt] = useState<ShirtColor>(src?.shirtColor || 'DARK');
+  const [notes, setNotes] = useState(src?.notes || '');
   const [tried, setTried] = useState(false);
   const [busy, setBusy] = useState(false);
 
   // The league's data, only to fill a NEW notice (an edit keeps what was saved)
   useEffect(() => {
-    if (editing) return;
+    if (!fromLeague) return;
     const offs = [
       subscribeSportFields(setFields),
       subscribeAppSettings(setSettings),
       subscribeOfficialMatchDate((d) => setDate((cur) => cur || d)),
     ];
     return () => offs.forEach((off) => off());
-  }, [editing]);
+  }, [fromLeague]);
 
   // Defaults from the settings and the default field, once they arrive, never over what the manager typed
   useEffect(() => {
-    if (editing || !settings) return;
+    if (!fromLeague || !settings) return;
     const field = fields.find((f) => f.id === settings.default_field_id) || fields[0];
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time defaults from data that arrives later
     setTime((cur) => cur || settings.standard_match_time || DEFAULT_MATCH_TIME);
@@ -67,17 +72,17 @@ export function NoticeFormSheet({ notice, onClose }: { notice?: MatchNotice; onC
       setLocationName((cur) => cur || field.name);
       setAddress((cur) => cur || field.address || '');
     }
-  }, [editing, settings, fields]);
+  }, [fromLeague, settings, fields]);
 
   // Price of the field (or the club's standard) for the format, and the quota for that number of players
   useEffect(() => {
-    if (editing || !settings) return;
+    if (!fromLeague || !settings) return;
     // Same price as the match: the field's for that format, otherwise the club standard (scaled to the players)
     const total = fieldFormatCost(fields.find((f) => f.id === fieldId), format) ?? standardCostFor(settings, format);
     // eslint-disable-next-line react-hooks/set-state-in-effect -- recomputed when field or format change
     setTotalCost(money(total));
     setPerHead(money(total / FORMAT_INFO[format].players));
-  }, [editing, settings, fields, fieldId, format]);
+  }, [fromLeague, settings, fields, fieldId, format]);
 
   const pickField = (id: string) => {
     setFieldId(id);
@@ -149,7 +154,7 @@ export function NoticeFormSheet({ notice, onClose }: { notice?: MatchNotice; onC
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label htmlFor="notice-date" className={label}>{t('date')}</label>
-            <input id="notice-date" type="date" value={date} disabled={editing} onChange={(e) => setDate(e.target.value)} className={`${input} disabled:opacity-60`} />
+            <input id="notice-date" type="date" value={date} disabled={!fromLeague} onChange={(e) => setDate(e.target.value)} className={`${input} disabled:opacity-60`} />
           </div>
           <div>
             <label htmlFor="notice-time" className={label}>{t('time')}</label>
@@ -158,7 +163,7 @@ export function NoticeFormSheet({ notice, onClose }: { notice?: MatchNotice; onC
         </div>
         {err(errors.when)}
 
-        {!editing && fields.length > 0 && (
+        {fromLeague && fields.length > 0 && (
           <div>
             <label htmlFor="notice-field" className={label}>{t('field')}</label>
             <select id="notice-field" value={fieldId} onChange={(e) => pickField(e.target.value)} className={`${input} min-w-0 focus:border-line-strong`}>
