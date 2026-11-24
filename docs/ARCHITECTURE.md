@@ -48,6 +48,8 @@ leagues/{leagueId}/...          TUTTI i dati del club, isolati per lega
 | `leagues/{id}/admin_requests` | Centro richieste dei gestori | **Solo il server** |
 | `league_invites/{code}` | Link di invito della lega | **Solo il server** |
 | `field_catalog/{id}` | **Catalogo globale dei campi** (§3.3): dati del campo, prezzi di partenza, stato, leghe collegate | **Solo il server** |
+| `match_notices/{id}` | **Bacheca "Cerco giocatore"** (§3.5): avviso di una lega per una sua partita, posti, stato | **Solo il server** |
+| `match_notices/{id}/applicants/{profileId}` | Chi ha preso un posto (nome, `userId`, ora) | **Solo il server** |
 | `push_tokens/{token}` | Dispositivi per le notifiche | Ognuno solo i propri |
 | `profiles/{id}/notifications` | Campanella personale | Il server; il titolare legge e segna come letto |
 
@@ -211,6 +213,9 @@ La colonna **Staff** vale per `SUPER_ADMIN` e `GLOBAL_ADMIN`, salvo dove è indi
 | Creare una lega | ✅ | ✅ | ✅ | ✅ (max 5 create) | — |
 | Console piattaforma (elenco leghe) | ✅ | ❌ | ❌ | ❌ | — |
 | Sospendere o riattivare una lega | ✅ | ❌ | ❌ | ❌ | — |
+| Bacheca "Cerco giocatore": creare, modificare, chiudere, annullare un avviso | ✅ | ✅ | ✅ | ❌ | solo staff |
+| Bacheca: leggere gli avvisi, prendere un posto | ✅ | ✅ | ✅ | ✅ (qualsiasi utente con email verificata, anche di altre leghe) | si legge, posti fermi |
+| Bacheca: vedere chi ha preso i posti | ✅ | ✅ | ✅ | ❌ (solo il proprio posto) | — |
 | Disattivare, eliminare o riattivare un account globale di altri | ✅ (mai un SA) | ❌ | ❌ | ❌ | — |
 | Chiudere il proprio account | ✅ (SA no) | ✅ | ✅ | ✅ | — |
 | Nominare o revocare gli admin piattaforma | solo SA | ❌ | ❌ | ❌ | — |
@@ -237,6 +242,7 @@ La colonna **Staff** vale per `SUPER_ADMIN` e `GLOBAL_ADMIN`, salvo dove è indi
 - Serve l'email verificata. Ogni account può creare al massimo 5 leghe (`MAX_LEAGUES_PER_USER`).
 - Il creatore diventa `PRESIDENT`. Sceglie se gioca anche lui (`isActivePlayer`).
 - La lega nasce con i parametri predefiniti e, se indicato, con il campo abituale.
+- I parametri dei giocatori sono numeri interi da **1 a 10**: anche il valore iniziale di un nuovo parametro viene riportato in quella scala (`clampStatValue`), con il clic e con Invio nel campo.
 - `visibility` (`private`/`public`) oggi è solo un'etichetta: non apre la lega a nessuno.
 
 **Ingresso con il link della lega** (`/join/{code}`, `league_invites`, [leagueMembers.ts](../src/lib/server/leagueMembers.ts))
@@ -398,7 +404,7 @@ Va bene fino a qualche centinaio di campi; oltre, servirà un filtro per città 
 |---|---|---|
 | **Togli dalla lega** (`/api/league-admin` `remove`) | Gestori della lega, staff | La scheda viene marcata `removed_at` e la voce sparisce da `memberships`. Le iscrizioni future vengono tolte (sale chi è in attesa). Account e altre leghe restano intatti |
 | **Esci dalla lega** (`/api/league-admin` `leave`, Impostazioni → Lega) | Il membro stesso, anche in una lega sospesa | Subito, senza approvazione: stessi effetti di "Togli dalla lega". Presidente e collaboratori ricevono un avviso (campanella e push). L'**ultimo presidente** non può uscire: nomina un altro presidente, oppure elimina la lega dalla Zona pericolosa ("I Calcettari" non si elimina: lì deve nominarne un altro). L'app passa a un'altra lega, o al benvenuto se non ne restano |
-| **Chiudi il mio account** (`/api/account/delete`) | Il titolare (non il super admin) | Disattiva (dati conservati) oppure elimina. I gestori ricevono la richiesta `account_closed`, che è solo un avviso |
+| **Chiudi il mio account** (`/api/account/delete`) | Il titolare (non il super admin) | Disattiva (dati conservati) oppure elimina. I gestori ricevono la richiesta `account_closed`, che è solo un avviso. Con **elimina** spariscono anche le notifiche personali (`profiles/{id}/notifications`), le richieste aperte di quella persona nella campanella dei gestori si chiudono (`account_deleted`) e l'email esce da tutte; l'avviso `account_closed` conserva solo nome e motivo. Restano, per coerenza dello storico, i voti MVP e i pagamenti già registrati |
 | **Disattiva o elimina l'account di altri** | Solo lo staff, mai su un super admin | Agisce sull'account globale e su tutte le sue schede. Dalla scheda del giocatore c'è **Disattiva account**; **Elimina** si usa dopo, dall'elenco degli account disattivati (Impostazioni → Account e piattaforma) |
 | **Rientro** (`/api/account/return-request`, pubblica) | Chi ha l'account chiuso chiede; **lo staff** decide | **Ripristina** (con conferma: profilo e storico tornano) oppure **riparti da zero** (vecchio storico archiviato come ospite). In entrambi i casi l'avviso `account_closed` di quella persona esce da "Da gestire". All'utente il login dice che "gli amministratori della piattaforma" stanno configurando il rientro. Per privacy la risposta è sempre la stessa (C10) |
 
@@ -421,6 +427,43 @@ bianca e nessun ciclo di errori di permesso:
 | Lega sospesa (staff) | Resta e continua a gestire |
 
 Gli avvisi sopravvivono al rimontaggio perché `FeedbackHost` sta fuori da `AuthProvider` ([layout.tsx](../src/app/layout.tsx)).
+
+### 3.5 Bacheca Avvisi / "Cerco giocatore"
+
+Una lega cerca giocatori per una sua partita; chiunque sulla piattaforma può prendere un posto.
+Codice: [matchNotices.ts](../src/lib/server/matchNotices.ts) (server), [matchNotice.ts](../src/lib/utils/matchNotice.ts)
+(validazione e stato), [matchNotice.ts](../src/types/matchNotice.ts) (tipi), `/api/match-notices`,
+[matchNoticeService.ts](../src/lib/services/matchNoticeService.ts) (app). L'interfaccia della bacheca non c'è ancora.
+
+**Dati** (`match_notices/{id}`):
+- `leagueId`, `leagueName`, `matchId` (il **giorno** della partita, `YYYY-MM-DD`, come `matches/{data}`), `dateTime` (ISO);
+- `locationName`, `address`, `format` (`5v5` / `7v7` / `8v8` / `11v11`);
+- `totalFieldCost`, `costPerPlayer` (la quota non supera il costo del campo; zero va bene);
+- `spotsNeeded` (1–22), `spotsFilled`;
+- `roleNeeded`: `ANY` / `GOALKEEPER` / `ROTATION_GOALKEEPER` / `OUTFIELD`; `shirtColor`: `DARK` / `LIGHT`; `notes` (max 300);
+- `status`: `OPEN` (in bacheca) / `CLOSED` (posti coperti o chiuso a mano, `closedReason` `full` / `manual`) / `CANCELLED`;
+- `createdBy`, `created_at`, `updated_at`.
+- Chi ha preso un posto sta nella sottocollezione `applicants/{profileId}` (`userId`, `displayName`, `joinedAt`), **non**
+  nell'avviso: la bacheca la legge tutta la piattaforma, l'elenco delle persone solo i gestori di quella lega e lo staff.
+
+**Flussi** (tutte le scritture passano da `POST /api/match-notices`)
+
+| Azione | Chi | Cosa succede |
+|---|---|---|
+| `create` | Presidente, collaboratore della lega attiva; staff | Avviso `OPEN` per una partita futura. Lega sospesa: solo lo staff (423 per gli altri) |
+| `update` | Gestori della lega dell'avviso; staff | Cambiano i dettagli e i posti, **mai** la lega o la partita. I posti non scendono sotto quelli presi (`below_filled`). Un avviso chiuso perché pieno **riapre** se si aggiungono posti |
+| `close` | Gestori; staff | `CLOSED` a mano: non riapre da solo |
+| `cancel` | Gestori; staff | `CANCELLED`: definitivo, niente più modifiche né posti |
+| `take` ("Prendi il posto") | Chiunque con email verificata | **Transazione**: legge l'avviso e il proprio posto, rifiuta se pieno, chiuso, annullato, passato o già preso, poi scrive il posto e `spotsFilled + 1`. All'ultimo posto lo stato diventa `CLOSED` (`full`) e l'avviso esce dalla bacheca. I gestori della lega ricevono una notifica (campanella + push, secondo la modalità della lega) |
+
+- **Già convocato:** chi ha già un'iscrizione a quella partita con la sua scheda in quella lega non prende il posto
+  (`already_in_match`); chi ha già un posto non ne prende un altro (`already_joined`).
+- **Isolamento:** prendere un posto **non** crea `memberships` né una scheda; chi risponde non legge giocatori, cassa,
+  impostazioni né altri dati della lega.
+- **Lega sospesa:** la bacheca si legge, ma nessuno prende posti (423); lo staff può ancora chiudere o annullare.
+
+**Regole:** `match_notices` si legge con email verificata; `applicants/{profileId}` lo legge la persona stessa, i
+gestori della lega dell'avviso e lo staff; nessuna scrittura dal browser.
 
 ---
 
@@ -481,7 +524,7 @@ Gli avvisi sopravvivono al rimontaggio perché `FeedbackHost` sta fuori da `Auth
 |---|---|---|
 | Unitari | `npm run test:unit` | Permessi puri (`leaguePermissions`), formati, cassa, Home |
 | Regole | `npm run test:rules` | Ogni regola di §2 sulle regole Firestore (emulatore) |
-| Integrazione | `npm run test:integration` | API reali su emulatori: ruoli, staff, eliminazione, inviti e reclami, rientro, "non gioca", catalogo campi |
+| Integrazione | `npm run test:integration` | API reali su emulatori: ruoli, staff, eliminazione, inviti e reclami, rientro, "non gioca", catalogo campi, bacheca "Cerco giocatore" (anche 10 click insieme su 2 posti) |
 | End-to-end | `npm run test:e2e` | Flussi nel browser (Pixel 7): leghe, fallback, console, presenze, giocatori |
 
 Prima di un commit si eseguono tutti i controlli (skill `pre-commit-testing-gate`).

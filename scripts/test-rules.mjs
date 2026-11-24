@@ -609,6 +609,34 @@ await expectAllowed('president C creates a private field', () => setDoc(LC(admin
 await expectDenied('player B sets the price of a linked field', () => setDoc(LC(playerB, 'sport_fields', 'linked'), { cost: 1 }, { merge: true }));
 await expectAllowed('president C deletes a linked field of the league', () => deleteDoc(LC(adminC, 'sport_fields', 'linked')));
 
+console.log('\n"Cerco giocatore" board (match_notices): everyone verified reads, only the server writes');
+{
+  const outsider = await client({ google: { sub: 'outsider', email: 'outsider@example.com' } });
+  const notice = { id: 'n1', leagueId: 'calcettari', leagueName: 'I Calcettari', matchId: NEXT_SUNDAY, status: 'OPEN', spotsNeeded: 2, spotsFilled: 1 };
+  await ownerSet('match_notices/n1', notice);
+  await ownerSet(`match_notices/n1/applicants/${outsider.uid}`, { profileId: outsider.uid, userId: outsider.uid, displayName: 'Outsider', joinedAt: 'x' });
+  await ownerSet('match_notices/n1/applicants/someone', { profileId: 'someone', userId: 'someone', displayName: 'Someone', joinedAt: 'x' });
+  const N = (c, ...p) => doc(c.db, 'match_notices', 'n1', ...p);
+  await expectAllowed('a user of another league reads a notice', () => getDoc(N(outsider)));
+  await expectAllowed('a user of another league lists the open notices', () =>
+    getDocs(query(collection(outsider.db, 'match_notices'), where('status', '==', 'OPEN'))));
+  await expectDenied('anonymous reads the board', () => getDoc(N(anon)));
+  await expectDenied('an unverified account reads the board', () => getDoc(N(impostor)));
+  await expectDenied('a user creates a notice from the app', () => setDoc(doc(outsider.db, 'match_notices', 'n2'), { ...notice, id: 'n2' }));
+  await expectDenied('a user takes a spot by writing the counter', () => updateDoc(N(outsider), { spotsFilled: 2 }));
+  await expectDenied('president C edits the notice from the app (server only)', () => updateDoc(N(adminC), { status: 'CANCELLED' }));
+  await expectDenied('a user adds themselves to the applicants from the app', () =>
+    setDoc(doc(outsider.db, 'match_notices', 'n1', 'applicants', 'fake'), { profileId: 'fake', userId: outsider.uid }));
+  await expectAllowed('the applicant reads their own spot', () => getDoc(N(outsider, 'applicants', outsider.uid)));
+  await expectDenied('the applicant reads someone else’s spot', () => getDoc(N(outsider, 'applicants', 'someone')));
+  await expectDenied('the applicant lists who else took a spot', () => getDocs(collection(outsider.db, 'match_notices', 'n1', 'applicants')));
+  await expectDenied('player B (member, not a manager) lists the applicants', () => getDocs(collection(playerB.db, 'match_notices', 'n1', 'applicants')));
+  await expectAllowed('president C (manager of the league) lists the applicants', () => getDocs(collection(adminC.db, 'match_notices', 'n1', 'applicants')));
+  await expectAllowed('super admin (staff) lists the applicants', () => getDocs(collection(superAdmin.db, 'match_notices', 'n1', 'applicants')));
+  await expectDenied('the applicant does not get into the league (players)', () => getDocs(collection(outsider.db, ...LG, 'players')));
+  await expectDenied('the applicant does not get into the league (cash)', () => getDocs(collection(outsider.db, ...LG, 'match_payments')));
+}
+
 console.log('\nSuspended league (step 4): read-only for members, platform staff still write');
 await ownerSet('leagues/calcettari', { id: 'calcettari', name: 'I Calcettari', status: 'suspended', visibility: 'private' });
 await expectAllowed('member B still reads the matches', () => getDocs(collection(playerB.db, ...LG, 'matches')));

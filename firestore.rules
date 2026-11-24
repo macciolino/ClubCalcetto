@@ -418,6 +418,23 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ---------- "Bacheca Avvisi / Cerco Giocatore" (docs/ARCHITECTURE.md §3.5) ----------
+    // Written only by the server (/api/match-notices: managers of the league create, edit, close, cancel; anyone
+    // verified takes a spot in a transaction). The board is read by every signed-in user with a verified email.
+    // Who took a spot: the person, the managers of that league, platform staff. Taking a spot gives NO access to the
+    // league (no membership, no card).
+    match /match_notices/{noticeId} {
+      allow read: if signedIn() && request.auth.token.email_verified == true;
+      allow write: if false;
+
+      match /applicants/{applicantId} {
+        allow read: if signedIn() && request.auth.token.email_verified == true
+          && (isOwnProfile(applicantId)
+              || isLeagueManager(get(/databases/$(database)/documents/match_notices/$(noticeId)).data.leagueId));
+        allow write: if false;
+      }
+    }
+
     // ---------- single-group collections (before multi-league): read-only backup ----------
     // The app now uses leagues/{leagueId}/…; nobody writes here any more (the migration copied them).
     // Only the super admin reads them (they hold data of every old member).
