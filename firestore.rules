@@ -292,6 +292,8 @@ service cloud.firestore {
         && data.player_id is string
         && data.player_id.size() > 0
         && data.updated_at == request.time
+        // Whoever does not play here (organiser: isActivePlayer false) does not vote either
+        && myCard(leagueId).get('isActivePlayer', true) != false
         && (isLeagueManager(leagueId)
             || isMvpTestForAll(leagueId, data.date)
             || (request.time >= dateToTimestamp(data.date)

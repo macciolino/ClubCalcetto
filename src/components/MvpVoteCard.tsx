@@ -21,6 +21,8 @@ interface MvpVoteCardProps {
   isAdmin?: boolean;
   /** Test mode saved on the teams of that day: 'admins' = only admins, 'all' = everyone can vote now */
   testMode?: 'admins' | 'all' | false;
+  /** Organiser (does not play here): sees the vote but does not take part */
+  observer?: boolean;
 }
 
 const timeLabel = (d: Date, locale: string) => d.toLocaleTimeString(locale === 'en' ? 'en-GB' : 'it-IT', { hour: '2-digit', minute: '2-digit' });
@@ -28,7 +30,7 @@ const toYmd = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 /** MVP of the day voted by everyone. Opens 45 minutes after the end of the match (start time + 1h45). */
-export function MvpVoteCard({ date, matchTime, white, black, voterUid, isAdmin = false, testMode = false }: MvpVoteCardProps) {
+export function MvpVoteCard({ date, matchTime, white, black, voterUid, isAdmin = false, testMode = false, observer = false }: MvpVoteCardProps) {
   const [votes, setVotes] = useState<MvpVote[]>([]);
   const [now, setNow] = useState(() => new Date());
   const [saving, setSaving] = useState<string | null>(null);
@@ -185,7 +187,9 @@ export function MvpVoteCard({ date, matchTime, white, black, voterUid, isAdmin =
               ? myVote
                 ? t('voted')
                 : t('tapToVote')
-              : t('signIn')}{' '}
+              : observer
+                ? t('observerOnly')
+                : t('signIn')}{' '}
             {t('closesAt', { when: when(closesAt) })}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

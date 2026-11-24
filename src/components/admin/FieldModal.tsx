@@ -16,9 +16,11 @@ interface FieldModalProps {
   propose?: boolean;
   /** Prices of a linked field back to the catalog's starting prices */
   onResetPrice?: () => void;
+  /** Text of the main button when it must differ from the default (e.g. the staff's "Fix and approve") */
+  submitLabel?: string;
 }
 
-export function FieldModal({ isOpen, onClose, fieldToEdit, onSave, propose = false, onResetPrice }: FieldModalProps) {
+export function FieldModal({ isOpen, onClose, fieldToEdit, onSave, propose = false, onResetPrice, submitLabel }: FieldModalProps) {
   // Linked to the global catalog: name, address, phone and surface come from there (only prices and notes here)
   const linked = Boolean(fieldToEdit?.catalog_id);
   const t = useTranslations('fieldModal');
@@ -118,7 +120,7 @@ export function FieldModal({ isOpen, onClose, fieldToEdit, onSave, propose = fal
           </button>
           <button type="submit" form="field-form" className={sheetBtn.primary}>
             <Save className="h-4 w-4" />
-            {fieldToEdit ? t('update') : t('save')}
+            {submitLabel ?? (fieldToEdit ? t('update') : t('save'))}
           </button>
         </>
       }

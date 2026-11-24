@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { collection, doc, onSnapshot, query, where } from 'firebase/firestore';
 import { Copy, Link2, Loader2, LogOut, RefreshCw, Save, Search, Share2, Trash2, UserCheck, Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { db, isFirebaseConfigured } from '@/lib/firebase/config';
@@ -26,6 +26,20 @@ function useLeagueDoc(leagueId: string | null): League | null {
     return onSnapshot(doc(db, 'leagues', leagueId), (s) => setLeague(s.exists() ? ({ ...(s.data() as League), id: s.id }) : null), () => setLeague(null));
   }, [leagueId]);
   return league;
+}
+
+/** Account ids of the platform super admins (profiles are readable by every signed-in user): nobody else touches their role or card. */
+function useSuperAdminIds(): Set<string> {
+  const [ids, setIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (!isFirebaseConfigured) return;
+    return onSnapshot(
+      query(collection(db, 'profiles'), where('platformRole', '==', 'SUPER_ADMIN')),
+      (snap) => setIds(new Set(snap.docs.map((d) => d.id))),
+      () => setIds(new Set())
+    );
+  }, []);
+  return ids;
 }
 
 /** Multi-league step 3 — Impostazioni → Lega: invite link, league details, members and roles, "I play too". */
@@ -244,7 +258,8 @@ function LeagueDetailsCard({ league, editable }: { league: League | null; editab
 function MembersCard({ editable }: { editable: boolean }) {
   const t = useTranslations('league.members');
   const tr = useTranslations('league.roles');
-  const { member } = useActiveLeague();
+  const { member, isSuperAdmin } = useActiveLeague();
+  const superIds = useSuperAdminIds();
   const [cards, setCards] = useState<LeagueMemberPlayer[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -307,7 +322,10 @@ function MembersCard({ editable }: { editable: boolean }) {
       )}
       {shown.length === 0 && <p className="text-xs text-muted">{t('noResults')}</p>}
       <ul className="divide-y divide-line">
-        {shown.map((p) => (
+        {shown.map((p) => {
+          // A super admin's role and card are changed only by a super admin: everyone else sees a plain badge
+          const canEditRow = editable && (isSuperAdmin || !superIds.has(p.userId || ''));
+          return (
           <li key={p.id} className="flex items-center gap-3 py-2.5">
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-primary truncate">
@@ -316,7 +334,7 @@ function MembersCard({ editable }: { editable: boolean }) {
               </p>
               {p.isActivePlayer === false && <p className="text-xs text-muted">{t('organiser')}</p>}
             </div>
-            {editable && (
+            {canEditRow && (
               <input
                 type="checkbox"
                 checked={p.isActivePlayer !== false}
@@ -327,7 +345,7 @@ function MembersCard({ editable }: { editable: boolean }) {
                 className="h-4 w-4 accent-[rgb(var(--accent-primary))]"
               />
             )}
-            {editable ? (
+            {canEditRow ? (
               <select
                 value={p.leagueRole}
                 onChange={(e) => changeRole(p, e.target.value as LeagueRole)}
@@ -346,7 +364,8 @@ function MembersCard({ editable }: { editable: boolean }) {
             )}
             {busyId === p.id && <Loader2 className="h-4 w-4 animate-spin text-secondary" aria-hidden="true" />}
           </li>
-        ))}
+          );
+        })}
       </ul>
     </section>
   );
@@ -363,9 +382,11 @@ const normalizeName = (v: string) =>
 /** "Gioco anch'io": the member's own playing status in the active league (any role). */
 function PlayingCard() {
   const t = useTranslations('league.members');
-  const { member } = useActiveLeague();
+  const { member, isSuspended, isPlatformStaff } = useActiveLeague();
   const [saving, setSaving] = useState(false);
   if (!member) return null;
+  // Suspended league: members only look (the server answers 423 anyway)
+  const frozen = isSuspended && !isPlatformStaff;
   const toggle = async (active: boolean) => {
     if (saving) return;
     setSaving(true);
@@ -379,7 +400,7 @@ function PlayingCard() {
         <input
           type="checkbox"
           checked={member.isActivePlayer !== false}
-          disabled={saving}
+          disabled={saving || frozen}
           onChange={(e) => toggle(e.target.checked)}
           className="mt-0.5 h-4 w-4 accent-[rgb(var(--accent-primary))]"
         />

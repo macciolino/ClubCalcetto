@@ -512,6 +512,7 @@ console.log('\nPlatform roles come from profiles.platformRole, never from the em
 console.log('\nOrganiser ("Gioco anch\'io" off): never signs up for the pitch');
 await ownerSet(`leagues/calcettari/players/${playerA.uid}`, card(playerA.uid, playerA.uid, 'PLAYER', { isActivePlayer: false }));
 await expectDenied('organiser A signs up', () => join(playerA, TODAY, playerA.uid));
+await expectDenied('organiser A votes MVP (does not play here)', () => vote(playerA, TODAY, playerA.uid, playerB.uid));
 await expectDenied('president C signs up organiser A', () => join(adminC, plusDays(2), playerA.uid));
 await expectDenied('super admin (staff) signs up organiser A', () => join(superAdmin, plusDays(2), playerA.uid));
 await ownerSet(`leagues/calcettari/players/${adminC.uid}`, card(adminC.uid, adminC.uid, 'PRESIDENT', { isActivePlayer: false }));
@@ -522,6 +523,7 @@ await expectDenied('president C signs up a card that is not in the league', () =
 await ownerSet(`leagues/calcettari/players/${adminC.uid}`, card(adminC.uid, adminC.uid, 'PRESIDENT'));
 await ownerSet(`leagues/calcettari/players/${playerA.uid}`, card(playerA.uid, playerA.uid, 'PLAYER'));
 await expectAllowed('playing again: A signs up', () => join(playerA, NEXT_SUNDAY, playerA.uid));
+await expectAllowed('playing again: A votes MVP', () => vote(playerA, TODAY, playerA.uid, playerB.uid));
 
 console.log('\nPlayer cards');
 await expectAllowed('player B renames own card', () => updateDoc(LC(playerB, 'players', playerB.uid), { full_name: 'B nuovo', updated_at: 'y' }));

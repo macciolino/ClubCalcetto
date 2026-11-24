@@ -11,8 +11,16 @@ import { CreateLeagueSheet } from '@/components/league/CreateLeagueSheet';
 import type { LeagueRole } from '@/types/league';
 
 /** Role badge in the active league: semantic tokens, readable on light and dark cards. */
-export function LeagueRoleBadge({ role }: { role: LeagueRole | null }) {
+export function LeagueRoleBadge({ role, platform }: { role: LeagueRole | null; platform?: 'SUPER_ADMIN' | 'GLOBAL_ADMIN' | null }) {
   const t = useTranslations('league.roles');
+  const ts = useTranslations('superAdmin.staff');
+  // Platform staff without a card here: the platform role is the one that counts (they act as president)
+  if (!role && platform)
+    return (
+      <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide whitespace-nowrap bg-amber-500/15 text-warning border-amber-500/30">
+        {platform === 'SUPER_ADMIN' ? ts('roleSuper') : ts('roleGlobal')}
+      </span>
+    );
   if (!role) return null;
   const tone =
     role === 'PRESIDENT'
@@ -29,7 +37,8 @@ export function LeagueRoleBadge({ role }: { role: LeagueRole | null }) {
  */
 export function LeagueSwitcher() {
   const t = useTranslations('league');
-  const { leagues, activeLeagueId, setActiveLeague, leagueRole } = useActiveLeague();
+  const { leagues, activeLeagueId, setActiveLeague, leagueRole, isSuperAdmin, isPlatformStaff } = useActiveLeague();
+  const staffRole = isSuperAdmin ? 'SUPER_ADMIN' : isPlatformStaff ? 'GLOBAL_ADMIN' : null;
   const [open, setOpen] = useState<'popover' | 'sheet' | null>(null);
   const [creating, setCreating] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -95,14 +104,14 @@ export function LeagueSwitcher() {
       >
         <span className="truncate text-sm font-semibold text-primary">{active.name}</span>
         <span className="hidden sm:inline-flex">
-          <LeagueRoleBadge role={leagueRole} />
+          <LeagueRoleBadge role={leagueRole} platform={staffRole} />
         </span>
         <ChevronDown className={`h-4 w-4 shrink-0 text-secondary transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
       </button>
 
       {open === 'popover' && <div className={`${menu.panel} absolute left-0 mt-2 w-72 z-50`}>{list}</div>}
       {open === 'sheet' && (
-        <Sheet onClose={() => setOpen(null)} title={t('yourLeagues')} subtitle={<LeagueRoleBadge role={leagueRole} />}>
+        <Sheet onClose={() => setOpen(null)} title={t('yourLeagues')} subtitle={<LeagueRoleBadge role={leagueRole} platform={staffRole} />}>
           {list}
         </Sheet>
       )}

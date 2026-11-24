@@ -36,7 +36,7 @@ export function generateWhatsAppMessage(data: WhatsAppShareData): string {
 
 📅 *Data:* ${formattedDate}
 ⏰ *Orario:* ${data.time || '20:30'}
-📍 *Luogo:* ${data.location || 'Centro Sportivo Calcetto'}
+📍 *Luogo:* ${data.location || 'Da definire'}
 🏟️ *Formato:* ${data.formatLabel || `${players / 2}vs${players / 2}`}
 💰 *Costo a testa:* €${costPerPerson} (€${Number(data.totalCost || 80).toFixed(2)} totale / ${players} giocatori)
 

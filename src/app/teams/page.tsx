@@ -38,7 +38,7 @@ import { getStoredPlayers } from '@/lib/services/playerService';
 import { getOfficialMatchDate, getStoredOfficialMatchDate } from '@/lib/services/presenceService';
 import { balanceTeams, BalancedTeamsResult, summarizeTeams } from '@/lib/algorithm/teamBalancer';
 import { VirtualPitch } from '@/components/VirtualPitch';
-import { formatLongDate, shortDayParts, getCalendarDays } from '@/lib/utils/dateUtils';
+import { formatLongDate, shortDayParts, getCalendarDays, toDateString } from '@/lib/utils/dateUtils';
 import { useTranslations } from 'next-intl';
 import { useLocaleSetting } from '@/i18n/I18nProvider';
 import { usePlayerLabels } from '@/i18n/usePlayerLabels';
@@ -85,9 +85,12 @@ function SquadreContent() {
 
   const [fields, setFields] = useState<SportField[]>(() => getStoredFields());
   const [defaultFieldId, setDefaultFieldId] = useState<string | undefined>(undefined);
-  const [selectedDate, setSelectedDate] = useState<string>(
-    dateParam || getOfficialMatchDate()
-  );
+  // First render = today (same on server and client: the official day lives in localStorage, so reading it here
+  // made the server and the browser draw different days and React reported a hydration mismatch)
+  const [selectedDate, setSelectedDate] = useState<string>(dateParam || toDateString(new Date()));
+  useEffect(() => {
+    if (!dateParam) setSelectedDate(getOfficialMatchDate());
+  }, [dateParam]);
   const [matchTime, setMatchTime] = useState('20:30');
   const [matchLocation, setMatchLocation] = useState('');
   const [totalCost, setTotalCost] = useState(80.0);
@@ -1060,7 +1063,8 @@ function SquadreContent() {
               matchTime={matchTime}
               white={teams.white}
               black={teams.black}
-              voterUid={member ? user?.uid || null : null}
+              voterUid={member && member.isActivePlayer !== false ? user?.uid || null : null}
+              observer={Boolean(member) && member?.isActivePlayer === false}
               isAdmin={isClientAdmin}
               testMode={teamRecord?.mvp_vote_test === 'all' ? 'all' : teamRecord?.mvp_vote_test ? 'admins' : false}
             />

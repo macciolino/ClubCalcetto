@@ -151,7 +151,8 @@ Il ruolo è copiato dal server in `memberships/{uid}.leagues.{id}.league_role`, 
   - server: `adminCaller`, `/api/league-admin`, `/api/notify`, `/api/league-emails`;
   - UI: `ActiveLeagueContext` calcola i permessi effettivi.
 
-Lo staff **non** agisce come giocatore dove non ha una scheda: non si iscrive e non vota l'MVP.
+Lo staff **non** agisce come giocatore dove non ha una scheda: non si iscrive e non vota l'MVP. Senza scheda la barra
+e il selettore lega mostrano il ruolo di piattaforma ("Super admin" / "Admin piattaforma"), non "Giocatore".
 
 **Limite per i gestori normali** (`USER` con ruolo `PRESIDENT` o `COLLABORATOR`):
 - tolgono un membro **solo dalla propria lega** con `/api/league-admin` `remove`, che marca `removed_at` sulla scheda e
@@ -165,7 +166,7 @@ Lo staff **non** agisce come giocatore dove non ha una scheda: non si iscrive e 
 | Stato | Campi | Effetto |
 |---|---|---|
 | **Ospite** | `is_guest: true`, `userId: null` | Giocatore senza account, creato da un gestore. Non accede. Le sue partite si passano a un account (§3.1). Si elimina, non si "toglie" |
-| **Non gioca** (organizzatore) | `isActivePlayer: false` | Resta nella lega ma **non scende in campo**: è fuori dagli elenchi (Giocatori, Presenze, Squadre, Home) e le regole **rifiutano le sue iscrizioni**, anche se a iscriverlo è un gestore o lo staff (`playsOnPitch`). Un gestore che non gioca continua comunque a iscrivere chi gioca. Quando lo si spegne, le iscrizioni future vengono tolte e sale chi è in lista d'attesa. Lo cambia l'interessato oppure il presidente o lo staff (`/api/league-admin` `playing`) |
+| **Non gioca** (organizzatore) | `isActivePlayer: false` | Resta nella lega ma **non scende in campo**: è fuori dagli elenchi (Giocatori, Presenze, Squadre, Home) e le regole **rifiutano le sue iscrizioni**, anche se a iscriverlo è un gestore o lo staff (`playsOnPitch`). Non vota nemmeno l'MVP. Un gestore che non gioca continua comunque a iscrivere chi gioca. Quando lo si spegne, le iscrizioni future vengono tolte e sale chi è in lista d'attesa. Lo cambia l'interessato oppure il presidente o lo staff (`/api/league-admin` `playing`) |
 | **Tolto dalla lega / uscito** | `removed_at`, `removed_by` | Nessun accesso, nascosto dagli elenchi, la scheda resta per lo storico. Rientra con un link di invito e riprende la stessa scheda |
 | **Parametri da un'altra lega** | `stats_from`, `needs_stat_review` | Entrando in una lega nuova, la scheda parte dai parametri (Velocità, Fisico…) dell'ultima scheda dell'account in un'altra lega, anche lasciata, al posto dell'autovalutazione. Il **presidente o un collaboratore** della nuova lega li riapprova dal centro richieste, subito (senza aspettare la prima partita) |
 | **Account disattivato** | `deactivated_at` (profilo e schede) | Accesso bloccato (Auth disabilitato), dati conservati, può chiedere di rientrare |
@@ -248,7 +249,7 @@ La colonna **Staff** vale per `SUPER_ADMIN` e `GLOBAL_ADMIN`, salvo dove è indi
    `guest_claim` nel centro richieste.
 2. Un presidente o un collaboratore (o lo staff) sceglie:
    - **Approva**: `claimGuest` passa all'account partite, statistiche, OVR, V/P/S e iscrizioni dell'ospite;
-   - **Rifiuta**: resta un giocatore nuovo.
+   - **Rifiuta** (con conferma, come Approva): resta un giocatore nuovo e l'ospite resta nell'elenco.
 
    In entrambi i casi la persona riceve una notifica.
 3. Se due persone reclamano lo stesso ospite, l'approvazione vale una volta sola; la seconda risponde `guest_gone`.
@@ -292,7 +293,8 @@ Calendario → Iscrizioni (titolari / attesa) → Formato → Squadre → Partit
    - Le genera un algoritmo locale bilanciato sull'OVR ([teamUtils.ts](../src/lib/utils/teamUtils.ts)), senza AI esterna.
    - Le sostituzioni dopo un ritiro vengono ricalcolate dal server (`/api/notify` `reconcile`).
 5. **Chiusura della partita** (`saveMatchResult`, [firestoreService.ts](../src/lib/firebase/firestoreService.ts))
-   - Il gestore registra risultato, marcatori ed MVP.
+   - Il gestore registra risultato, marcatori ed MVP. Archiviare una partita **non ancora giocata** (data futura)
+     chiede una conferma in più.
    - V/P/S delle schede si aggiornano in **una transazione idempotente** (`profile_effects` + `increment`): salvare
      di nuovo applica solo la differenza.
    - Gli assist non esistono.
@@ -300,7 +302,8 @@ Calendario → Iscrizioni (titolari / attesa) → Formato → Squadre → Partit
    - Si apre a fine partita: inizio + 60 min + 45 min.
    - Resta aperto 24 h nell'app (`mvpVotingWindow`).
    - Le regole accettano voti dal giorno della partita fino a 3 giorni dopo. I gestori votano sempre; con il "test
-     con tutti" votano tutti.
+     con tutti" votano tutti. **Vota solo chi gioca nella lega**: l'organizzatore (`isActivePlayer: false`) vede il voto
+     ma non può votare (interfaccia e regole, `myCard(...).isActivePlayer`).
    - All'apertura, un cron di GitHub Actions (`/api/cron/mvp-vote`, `CRON_SECRET`) manda una notifica.
    - Il gestore sceglie l'MVP finale vedendo i voti.
 7. **Storico**: le partite archiviate formano la cronologia per anno e la classifica. Le squadre archiviate sono una
@@ -436,7 +439,7 @@ Gli avvisi sopravvivono al rimontaggio perché `FeedbackHost` sta fuori da `Auth
 - **Dati non falsificabili:**
   - ordine delle iscrizioni = `request.time`;
   - un'iscrizione per giocatore per giorno;
-  - voti MVP solo per sé (`voter_id == uid`);
+  - voti MVP solo per sé (`voter_id == uid`) e solo da chi gioca nella lega;
   - foto profilo solo come JPEG piccolo o URL https;
   - parametri iniziali limitati.
 - **Il server ricontrolla sempre.** Ogni API che usa l'Admin SDK, che ignora le regole, rifà il controllo del ruolo

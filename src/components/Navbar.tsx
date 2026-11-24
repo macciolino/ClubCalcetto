@@ -28,7 +28,7 @@ import { LeagueSwitcher } from '@/components/league/LeagueSwitcher';
 export function Navbar() {
   const pathname = usePathname();
   const t = useTranslations('nav');
-  const { user, profile, isAdmin, isPlatformStaff, signOut } = useAuth();
+  const { user, profile, isAdmin, isPlatformStaff, isSuperAdmin, signOut } = useAuth();
   const { isSuspended, leagueRole } = useActiveLeague();
   const tRole = useTranslations('league.roles');
   const ts = useTranslations('superAdmin');
@@ -83,7 +83,9 @@ export function Navbar() {
 
   const displayName = mounted && profile?.full_name ? profile.full_name : t('guest');
   // Il ruolo nella lega attiva (Presidente / Collaboratore / Giocatore): mai "Admin", che è solo della piattaforma
-  const roleLabel = mounted && leagueRole ? tRole(leagueRole) : t('player');
+  // Platform staff without a card in the active league: their platform role, not a made-up "Player"
+  const roleLabel =
+    mounted && leagueRole ? tRole(leagueRole) : mounted && isPlatformStaff ? ts(isSuperAdmin ? 'staff.roleSuper' : 'staff.roleGlobal') : t('player');
   const showAdminBadge = isStrictAdmin;
   const avatarChar = mounted && profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : 'U';
   const avatarUrl = mounted ? profile?.avatar_url : null;

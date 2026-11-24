@@ -505,7 +505,10 @@ export function RequestsBell() {
           <button
             type="button"
             disabled={busy !== null}
-            onClick={() => run(`${r.id}:reject`, () => resolve(msg, r.id, 'reject'), tr('claimRejected', { name: r.name }))}
+            onClick={async () => {
+              if (!(await askConfirm(tr('confirmReject', { name: r.name, guest: r.guest_name || '' })))) return;
+              run(`${r.id}:reject`, () => resolve(msg, r.id, 'reject'), tr('claimRejected', { name: r.name }));
+            }}
             className={btn.secondary}
           >
             {busy === `${r.id}:reject` ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserX className="h-4 w-4" />}

@@ -175,7 +175,7 @@
       </div>
       <div class="grid md:grid-cols-2 xl:grid-cols-4 gap-3 text-sm">
         <div class="card rounded-xl p-4"><p class="font-semibold">Ospite</p><p class="text-xs muted mt-1"><span class="font-mono">is_guest: true</span>, <span class="font-mono">userId: null</span>. Lo crea un gestore e non accede all'app. Il suo storico può passare a un account (reclamo approvato o invito personale).</p></div>
-        <div class="card rounded-xl p-4"><p class="font-semibold">Non gioca (organizzatore)</p><p class="text-xs muted mt-1"><span class="font-mono">isActivePlayer: false</span> (nei documenti anche "isParticipating"). È fuori dagli elenchi e le regole rifiutano le sue iscrizioni, anche se a iscriverlo è un gestore; quelle future vengono tolte. Lo cambia lui stesso o il presidente.</p></div>
+        <div class="card rounded-xl p-4"><p class="font-semibold">Non gioca (organizzatore)</p><p class="text-xs muted mt-1"><span class="font-mono">isActivePlayer: false</span> (nei documenti anche "isParticipating"). È fuori dagli elenchi e le regole rifiutano le sue iscrizioni, anche se a iscriverlo è un gestore; quelle future vengono tolte. Non vota nemmeno l'MVP. Lo cambia lui stesso o il presidente.</p></div>
         <div class="card rounded-xl p-4"><p class="font-semibold">Tolto dalla lega o uscito</p><p class="text-xs muted mt-1"><span class="font-mono">removed_at</span>: perde l'accesso e la scheda resta per lo storico. Rientra con un link di invito. In una nuova lega i parametri lo seguono (<span class="font-mono">stats_from</span>) e un presidente o un collaboratore li riapprova.</p></div>
         <div class="card rounded-xl p-4"><p class="font-semibold">Account disattivato</p><p class="text-xs muted mt-1"><span class="font-mono">deactivated_at</span>: accesso bloccato, dati conservati. Il rientro lo decide solo lo staff di piattaforma.</p></div>
       </div>
@@ -208,11 +208,12 @@
             <div class="text-center space-y-1"><p class="text-xs muted">Sei stato invitato in</p><p class="text-lg font-bold">Lega del giovedì</p></div>
             <p class="text-xs font-semibold muted">Sei uno di loro? (ospiti senza account)</p>
             <div class="space-y-2">
-              <div class="flex items-center justify-between rounded-xl border line px-3 py-2.5"><span class="text-sm">Ospite Luca <span class="muted text-xs">· 7 partite</span></span><span class="rounded-lg bg-accent/15 text-accent text-xs font-semibold px-2.5 py-1">Sono io</span></div>
-              <div class="flex items-center justify-between rounded-xl border line px-3 py-2.5"><span class="text-sm">Ospite Paolo <span class="muted text-xs">· 2 partite</span></span><span class="rounded-lg border line text-xs px-2.5 py-1 muted">Sono io</span></div>
+              <div class="flex items-center justify-between rounded-xl border line px-3 py-2.5"><span class="text-sm">Ospite Luca</span><span class="rounded-lg bg-accent/15 text-accent text-xs font-semibold px-2.5 py-1">Scelto</span></div>
+              <div class="flex items-center justify-between rounded-xl border line px-3 py-2.5"><span class="text-sm">Ospite Paolo</span><span class="rounded-lg border line text-xs px-2.5 py-1 muted">Scegli</span></div>
             </div>
-            <div class="rounded-xl bg-accent text-[#04130a] text-sm font-semibold py-2.5 text-center">Entra come nuovo giocatore</div>
-            <p class="text-[11px] muted">Con "Sono io" entri subito come giocatore nuovo: lo storico dell'ospite passa a te solo dopo l'approvazione di un gestore.</p>
+            <div class="rounded-xl border line text-sm py-2.5 text-center muted">Sono nuovo: crea la mia scheda</div>
+            <div class="rounded-xl bg-accent text-[#04130a] text-sm font-semibold py-2.5 text-center">Entra nella lega</div>
+            <p class="text-[11px] muted">Scegli il tuo nome e premi "Entra nella lega": entri subito come giocatore nuovo, lo storico dell'ospite passa a te solo dopo l'approvazione di un gestore (le partite dell'ospite le vede il gestore nella richiesta).</p>
           </div>
         </div>
         <div class="space-y-2">
@@ -500,7 +501,7 @@ var FLOWS = {
 
 var REMOVALS = [
   { t: 'Togli dalla lega / Esci', who: 'Gestori della lega · staff · il membro stesso (Esci)', ic: 'log-out', tone: 'border-sky-500/40', head: 'text-sky-500',
-    pts: ['Scheda marcata removed_at, voce tolta da memberships', 'Iscrizioni future tolte (sale chi è in attesa)', 'Esci: subito, i gestori sono avvisati; mai l\'ultimo presidente', 'In un\'altra lega i parametri lo seguono e un presidente o un collaboratore li riapprova', 'Rientra con un link di invito'] },
+    pts: ['Scheda marcata removed_at, voce tolta da memberships', 'Iscrizioni future tolte (sale chi è in attesa)', 'Esci: subito, i gestori sono avvisati; mai l\'ultimo presidente (prima ne nomina un altro, oppure elimina la lega; I Calcettari non si eliminano)', 'In un\'altra lega i parametri lo seguono e un presidente o un collaboratore li riapprova', 'Rientra con un link di invito'] },
   { t: 'Elimina la lega', who: 'Presidente · staff (nome esatto)', ic: 'trash', tone: 'border-amber-500/40', head: 'text-amber-500',
     pts: ['Lega e tutte le sottocollezioni cancellate', 'Inviti e voci in memberships di ogni membro tolti', 'Gli account restano', '"I Calcettari" protetta; lega sospesa: solo lo staff'] },
   { t: 'Elimina l\'account globale', who: 'Il titolare (sé) · staff (altri, mai un super admin)', ic: 'ban', tone: 'border-rose-500/40', head: 'text-rose-500',

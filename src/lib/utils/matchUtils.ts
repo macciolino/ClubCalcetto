@@ -84,7 +84,7 @@ export function effectiveMatchLocation(
 ): string {
   if (match?.location) return match.location;
   const def = fields.find((f) => f.id === defaultFieldId) || fields[0];
-  return def ? fieldLabel(def) : 'Centro Sportivo Calcetto';
+  return def ? fieldLabel(def) : '';
 }
 
 /** A match lasts 1 hour; the MVP vote opens 45 minutes after the end (e.g. start 20:00 → vote at 21:45). */
@@ -124,11 +124,12 @@ export function fieldMapsUrl(field: Pick<SportField, 'name' | 'address' | 'maps_
   return mapsSearch(field.address?.trim() || field.name);
 }
 
-export function matchPlace(match: Match | null | undefined, fields: SportField[], defaultFieldId?: string): MatchPlace {
+/** Where the match is played; null when no field was ever chosen (a new league has none: no invented name). */
+export function matchPlace(match: Match | null | undefined, fields: SportField[], defaultFieldId?: string): MatchPlace | null {
   const field = matchField(match, fields, defaultFieldId);
   if (!field) {
     const name = effectiveMatchLocation(match, fields, defaultFieldId);
-    return { name, mapsUrl: mapsSearch(name) };
+    return name ? { name, mapsUrl: mapsSearch(name) } : null;
   }
   const address = field.address?.trim() || undefined;
   return {

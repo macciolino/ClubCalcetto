@@ -199,6 +199,8 @@ export default function HomePage() {
     time: closesAt.toTimeString().slice(0, 5),
   });
   type Head = { title: string; detail: string; action?: { href: string; label: string } };
+  // Whoever does not play here (organiser, staff without a card) is never invited to sign up: just the headcount
+  const countOnly = t('hCountOnly', { count: starters.length, max: fmt.players });
   const head: Head = (() => {
     const squadre = `/teams?date=${date}`;
     if (isArchived)
@@ -227,7 +229,7 @@ export default function HomePage() {
           }
         : {
             title: t('hConfirmedFor', { day }),
-            detail: mine ? t('waitPos', { n: myWaitIdx + 1 }) : t('fullCanWait'),
+            detail: mine ? t('waitPos', { n: myWaitIdx + 1 }) : canPlay ? t('fullCanWait') : countOnly,
           };
     if (teamRecord)
       return {
@@ -244,7 +246,7 @@ export default function HomePage() {
           }
         : {
             title: t('hSoldOut', { day }),
-            detail: mine ? t('waitPos', { n: myWaitIdx + 1 }) : t('canWait'),
+            detail: mine ? t('waitPos', { n: myWaitIdx + 1 }) : canPlay ? t('canWait') : countOnly,
             action: admin ? { href: squadre, label: t('generateTeams') } : undefined,
           };
     if (closedForPlayers)
@@ -256,7 +258,7 @@ export default function HomePage() {
     const missing = fmt.players - starters.length;
     return mine
       ? { title: t('hSignedUp', { day }), detail: t('hSignedUpDetail', { count: starters.length, max: fmt.players, missing }) }
-      : { title: t('hOpen', { day }), detail: t('hOpenDetail', { count: starters.length, max: fmt.players }) };
+      : { title: t('hOpen', { day }), detail: canPlay ? t('hOpenDetail', { count: starters.length, max: fmt.players }) : countOnly };
   })();
 
   return (
@@ -294,9 +296,11 @@ export default function HomePage() {
                   {t('perHead', { format: fmt.label, amount: perHead(cost, fmt.players) })}
                 </span>
               </div>
-              <div className="pt-1">
-                <MatchPlaceInfo place={place} />
-              </div>
+              {place && (
+                <div className="pt-1">
+                  <MatchPlaceInfo place={place} />
+                </div>
+              )}
             </div>
             {teamRecord?.confirmed && (
               <span className="self-start bg-accent/15 text-accent-text text-xs font-medium px-2.5 py-1 rounded-full">

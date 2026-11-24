@@ -2,7 +2,7 @@
 
 import { SportField } from '@/types/database';
 import { reportWriteError } from '@/lib/utils/writeErrors';
-import { isFirebaseConfigured } from '@/lib/firebase/config';
+import { auth, isFirebaseConfigured } from '@/lib/firebase/config';
 import {
   setDoc,
   deleteDoc,
@@ -181,6 +181,8 @@ export function subscribeSportFields(
         // NOTE: no automatic seeding of demo fields into the real database
       },
       (err) => {
+        // A listener that outlives the sign-out is denied for a moment: expected, not worth a warning
+        if (err?.code === 'permission-denied' && !auth.currentUser) return;
         console.warn('[Firestore] subscribeSportFields error:', err);
       }
     );

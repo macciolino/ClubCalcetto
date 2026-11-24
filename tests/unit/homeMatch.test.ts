@@ -17,14 +17,19 @@ describe('Home: dati del campo', () => {
 
   it('la partita sul campo salvato come "Nome (indirizzo)" usa il link Maps del campo', () => {
     const p = matchPlace({ location: 'Campo Luini (Via Luini 5, Milano)' } as Match, [{ ...luini, maps_url: 'https://maps.app/x' }], undefined);
-    expect(p.name).toBe('Campo Luini');
-    expect(p.mapsUrl).toBe('https://maps.app/x');
+    expect(p?.name).toBe('Campo Luini');
+    expect(p?.mapsUrl).toBe('https://maps.app/x');
   });
 
   it('il vecchio link generato in automatico non conta: si cerca l’indirizzo attuale', () => {
     const moved = { ...luini, address: 'Via Nuova 9, Monza', maps_url: 'https://maps.google.com/?q=Campo%20Luini%20Via%20Luini%205%2C%20Milano' };
-    expect(matchPlace(null, [moved], 'f1').mapsUrl).toBe('https://www.google.com/maps/search/?api=1&query=Via%20Nuova%209%2C%20Monza');
+    expect(matchPlace(null, [moved], 'f1')?.mapsUrl).toBe('https://www.google.com/maps/search/?api=1&query=Via%20Nuova%209%2C%20Monza');
     expect(fieldMapsUrl({ name: 'Campo', address: '', maps_url: '' })).toBe('https://www.google.com/maps/search/?api=1&query=Campo');
+  });
+
+  it('senza nessun campo (lega nuova) non si inventa un luogo', () => {
+    expect(matchPlace(null, [], undefined)).toBeNull();
+    expect(matchPlace({} as Match, [], 'f1')).toBeNull();
   });
 
   it('luogo libero scritto a mano: solo il nome e una ricerca su Maps', () => {

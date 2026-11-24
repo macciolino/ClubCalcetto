@@ -19,13 +19,22 @@ import {
   deleteField,
 } from 'firebase/firestore';
 import { lcol, ldoc } from '@/lib/league/leagueRefs';
-import { db, isFirebaseConfigured } from './config';
+import { auth as firebaseAuth, db, isFirebaseConfigured } from './config';
 import { reportWriteError } from '@/lib/utils/writeErrors';
 import { Profile, Presence, StatCategory, Match, GeneratedTeamRecord, AppSettings, CalendarSettings, MatchOutcome, MatchScorer, MatchTeamPlayer, TeamSubstitution, MvpVote, MatchPenaltySave } from '@/types/database';
 import { rankDayPresences, rankPresencesByDate } from '@/lib/services/presenceService';
 import { cardCanPlay } from '@/lib/utils/presenceRanking';
 import { DayFormats, MatchFormat, maxPlayersFor } from '@/lib/utils/matchFormat';
 import { requestTeamsCheck, requestFirstMatchCheck } from '@/lib/services/notificationService';
+
+/**
+ * Subscription error: a listener that outlives the sign-out gets "permission-denied" for a moment (rules need the user).
+ * That is expected and silent; anything else (or a denial while signed in) is still logged.
+ */
+function warnSub(label: string, err: { code?: string; message?: string }) {
+  if (err?.code === 'permission-denied' && !firebaseAuth.currentUser) return;
+  console.warn(`[Firestore] ${label} warning:`, err?.message);
+}
 
 // ==========================================
 // 1. GIOCATORI DELLA LEGA (leagues/{active}/players; account in 'profiles')
@@ -58,7 +67,7 @@ export function subscribeProfiles(
         }
       },
       (err) => {
-        console.warn('[Firestore] subscribeProfiles warning:', err.message);
+        warnSub('subscribeProfiles', err);
       }
     );
   } catch (err) {
@@ -184,7 +193,7 @@ export function subscribeMatchFormats(callback: (days: DayFormats) => void): Uns
       ldoc('settings', 'match_formats'),
       (snap) => callback(((snap.data()?.days as DayFormats) || {}) as DayFormats),
       (err) => {
-        console.warn('[Firestore] subscribeMatchFormats warning:', err.message);
+        warnSub('subscribeMatchFormats', err);
         callback({});
       }
     );
@@ -242,7 +251,7 @@ function subscribeRanked(
       );
       emit();
     },
-    (err) => console.warn(`[Firestore] ${label} players warning:`, err.message)
+    (err) => warnSub(`${label} players`, err)
   );
   const unsubP = onSnapshot(
     q,
@@ -250,7 +259,7 @@ function subscribeRanked(
       docs = snapshot.docs.map((d) => toPresence(d as QueryDocumentSnapshot<DocumentData>));
       emit();
     },
-    (err) => console.warn(`[Firestore] ${label} warning:`, err.message)
+    (err) => warnSub(label, err)
   );
   const unsubF = subscribeMatchFormats((f) => {
     formats = f;
@@ -390,7 +399,7 @@ export function subscribeStatCategories(
         callback(list);
       },
       (err) => {
-        console.warn('[Firestore] subscribeStatCategories warning:', err.message);
+        warnSub('subscribeStatCategories', err);
       }
     );
   } catch (err) {
@@ -474,7 +483,7 @@ export function subscribeOfficialMatchDate(
         if (snap.exists()) callback(String(snap.data()?.date || ''));
       },
       (err) => {
-        console.warn('[Firestore] subscribeOfficialMatchDate warning:', err.message);
+        warnSub('subscribeOfficialMatchDate', err);
       }
     );
   } catch (err) {
@@ -504,7 +513,7 @@ export function subscribeCalendarSettings(
     return onSnapshot(
       ldoc('settings', 'calendar'),
       (snap) => callback(snap.exists() ? (snap.data() as CalendarSettings) : {}),
-      (err) => console.warn('[Firestore] subscribeCalendarSettings warning:', err.message)
+      (err) => warnSub('subscribeCalendarSettings', err)
     );
   } catch (err) {
     console.warn('[Firestore] subscribeCalendarSettings exception:', err);
@@ -546,7 +555,7 @@ export function subscribeMatch(
         }
       },
       (err) => {
-        console.warn('[Firestore] subscribeMatch warning:', err.message);
+        warnSub('subscribeMatch', err);
       }
     );
   } catch (err) {
@@ -592,7 +601,7 @@ export function subscribeMatches(callback: (matches: Match[]) => void): Unsubscr
         list.sort((a, b) => (b.match_date || b.id).localeCompare(a.match_date || a.id));
         callback(list);
       },
-      (err) => console.warn('[Firestore] subscribeMatches warning:', err.message)
+      (err) => warnSub('subscribeMatches', err)
     );
   } catch (err) {
     console.warn('[Firestore] subscribeMatches exception:', err);
@@ -755,7 +764,7 @@ export function subscribeGeneratedTeams(
         }
       },
       (err) => {
-        console.warn('[Firestore] subscribeGeneratedTeams warning:', err.message);
+        warnSub('subscribeGeneratedTeams', err);
       }
     );
   } catch (err) {
@@ -778,7 +787,7 @@ export function subscribeTeamDatesSince(fromDate: string, callback: (dates: stri
     return onSnapshot(
       query(lcol('generated_teams'), where('date', '>=', fromDate)),
       (snap) => callback(snap.docs.map((d) => (d.data() as GeneratedTeamRecord).date).filter(Boolean)),
-      (err) => console.warn('[Firestore] subscribeTeamDatesSince warning:', err.message)
+      (err) => warnSub('subscribeTeamDatesSince', err)
     );
   } catch (err) {
     console.warn('[Firestore] subscribeTeamDatesSince exception:', err);
@@ -870,7 +879,7 @@ export function subscribeMvpVotes(date: string, callback: (votes: MvpVote[]) => 
     return onSnapshot(
       query(lcol('mvp_votes'), where('date', '==', date)),
       (snap) => callback(snap.docs.map((d) => d.data() as MvpVote)),
-      (err) => console.warn('[Firestore] subscribeMvpVotes warning:', err.message)
+      (err) => warnSub('subscribeMvpVotes', err)
     );
   } catch (err) {
     console.warn('[Firestore] subscribeMvpVotes exception:', err);
@@ -934,7 +943,7 @@ export function subscribeAppSettings(
         }
       },
       (err) => {
-        console.warn('[Firestore] subscribeAppSettings warning:', err.message);
+        warnSub('subscribeAppSettings', err);
       }
     );
   } catch (err) {

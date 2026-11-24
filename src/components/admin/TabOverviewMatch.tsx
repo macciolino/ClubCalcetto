@@ -306,6 +306,8 @@ export function TabOverviewMatch({
       !(await askConfirm(t('confirmUpdate')))
     )
       return;
+    // A match that has not been played yet can still be archived (to fix a mistake), but never by accident
+    if (!isArchived && date > today && !(await askConfirm(t('confirmFuture', { date: fmtDate(date) })))) return;
     if (archivingRef.current) return;
     archivingRef.current = true;
     setIsArchiving(true);

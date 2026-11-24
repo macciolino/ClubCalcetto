@@ -217,7 +217,7 @@ export function PlatformFieldsCard() {
         )}
       </div>
 
-      <FieldModal isOpen={editing !== null} onClose={() => setEditing(null)} fieldToEdit={editing ? asField(editing.entry) : null} onSave={saveEdit} />
+      <FieldModal isOpen={editing !== null} onClose={() => setEditing(null)} fieldToEdit={editing ? asField(editing.entry) : null} onSave={saveEdit} submitLabel={t('editApprove')} />
     </section>
   );
 }
