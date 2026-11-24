@@ -32,6 +32,20 @@ function remember(locale: Locale) {
   }
 }
 
+/** Sign-out: the language chosen by that person is not left to the next one on this device (browser language again). */
+export function forgetDeviceLocale() {
+  try {
+    localStorage.removeItem(LOCALE_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+  try {
+    document.cookie = `${LOCALE_COOKIE}=; path=/; max-age=0; SameSite=Lax`;
+  } catch {
+    /* ignore */
+  }
+}
+
 /**
  * Language of the app WITHOUT i18n routing (clean URLs, pages stay static): it is chosen in the browser —
  * saved choice → navigator.languages → Italian. The first render is always Italian (same as the server),
@@ -53,6 +67,16 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     document.documentElement.lang = locale;
+    // Titolo della scheda del browser nella lingua scelta (quello statico del layout è in italiano e Next lo
+    // riscrive a ogni cambio di pagina: lo si rimette finché la lingua resta questa)
+    const title = MESSAGES[locale].common.pageTitle;
+    const apply = () => {
+      if (document.title !== title) document.title = title;
+    };
+    apply();
+    const observer = new MutationObserver(apply);
+    observer.observe(document.head, { childList: true, characterData: true, subtree: true });
+    return () => observer.disconnect();
   }, [locale]);
 
   const setLocale = useCallback((next: Locale) => {

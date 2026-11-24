@@ -1,6 +1,7 @@
 {
   "common": {
     "appName": "Club Soccer",
+    "pageTitle": "Club Soccer - Gestione Partite & Squadre Bilanciate",
     "loading": "Caricamento…",
     "save": "Salva",
     "cancel": "Annulla",
@@ -920,11 +921,11 @@
     "inviteBanner": "Stai collegando il tuo account al profilo di <b>{name}</b>: le tue partite e statistiche verranno mantenute.",
     "loading": "Caricamento…",
     "noClosedAccount": "Non troviamo un account chiuso con questa email. Controllala o contatta il presidente della tua lega.",
-    "returnHint": "Scrivi l'email con cui accedevi: avvisiamo il presidente della lega, che configura il tuo rientro.",
+    "returnHint": "Scrivi l'email con cui accedevi: avvisiamo gli amministratori della piattaforma, che configurano il tuo rientro.",
     "returnEmailAria": "Email dell'account",
     "askReturn": "Chiedi il rientro",
     "cancel": "Annulla",
-    "adminConfiguring": "Il presidente della lega sta configurando il tuo rientro.",
+    "adminConfiguring": "Gli amministratori della piattaforma stanno configurando il tuo rientro.",
     "nothingToDo": "Non devi fare altro: appena conferma, entri con il tuo solito account (Google o email e password).",
     "backToLogin": "Torna all'accesso",
     "verifySent": "Ti abbiamo inviato un link a <b>{email}</b>. Aprilo per attivare l'account, poi torna qui.",
@@ -963,7 +964,7 @@
     "verifyNote": "Ti invieremo un'email per confermare l'indirizzo.",
     "noAccount": "Non hai un account? ",
     "haveAccount": "Hai già un account? ",
-    "returnRequestSent": "Se questa email appartiene a un account chiuso, presidenti e collaboratori hanno ricevuto la tua richiesta di rientro.",
+    "returnRequestSent": "Se questa email appartiene a un account chiuso, gli amministratori della piattaforma hanno ricevuto la tua richiesta di rientro.",
     "returnFailed": "Richiesta non inviata: controlla l’email e la connessione, poi riprova."
   },
   "settings": {
@@ -1357,6 +1358,7 @@
     "restoreHint": "Aveva chiuso l'account e ha provato a rientrare. Ora vede \"Bentornato\" e aspetta la tua scelta.",
     "restored": "Profilo di {name} ripristinato",
     "restore": "Ripristina profilo e storico",
+    "confirmRestore": "Ripristinare il profilo di {name}?\nL'account torna attivo con lo storico di prima e può accedere di nuovo.",
     "confirmReset": "Far ripartire {name} da zero?\nLe partite giocate restano nello storico con il suo nome, ma non contano più per il nuovo account: 0 partite e parametri di base.",
     "resetDone": "{name} riparte da zero",
     "reset": "Riparti da zero",
@@ -1368,7 +1370,7 @@
     "stay": "Resta {label}",
     "closeNotice": "Chiudi avviso",
     "deletedInfo": "Account eliminato: i dati sono stati cancellati, le partite archiviate restano con il suo nome.",
-    "deactivatedInfo": "Account disattivato: dati e storico sono conservati. Se torna, ti arriva una richiesta di rientro.",
+    "deactivatedInfo": "Account disattivato: dati e storico sono conservati. Se torna, la richiesta di rientro la gestisce lo staff della piattaforma.",
     "reason": "Motivo: {reason}",
     "markedRead": "Segnato come letto",
     "markRead": "Segna come letto",

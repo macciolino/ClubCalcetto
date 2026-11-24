@@ -11,6 +11,13 @@ import { FORMAT_INFO, isMatchFormat } from '@/lib/utils/matchFormat';
 
 export const runtime = 'nodejs';
 
+/** The "account closed" notice of someone who comes back is obsolete: it leaves the "to handle" list. */
+async function closeClosedNotice(profileId: string, by: string) {
+  const noticeId = `closed_${profileId}`;
+  const notice = (await leagueDb().doc(`admin_requests/${noticeId}`).get()).data();
+  if (notice?.status === 'open') await closeRequest(noticeId, by, 'returned');
+}
+
 /**
  * POST { id, action, guestId? } (admins): resolves a request of the admins' notification centre.
  *  new_signup:     'link' (with guestId: the guest's history goes to the new account) | 'new' (new player, nothing to link)
@@ -71,11 +78,13 @@ async function handlePost(request: Request) {
       await db.doc(`profiles/${profileId}`).update({ restore_requested_at: FieldValue.delete() });
       await mirrorOnCards(profileId, { restore_requested_at: FieldValue.delete() });
       await closeRequest(id, by, 'restored');
+      await closeClosedNotice(profileId, by);
       return NextResponse.json({ ok: true });
     }
     if (req.type === 'restore' && action === 'reset') {
       await archiveAndReset(profileId);
       await closeRequest(id, by, 'reset');
+      await closeClosedNotice(profileId, by);
       return NextResponse.json({ ok: true });
     }
     if (req.type === 'format_proposal' && action === 'apply_format' && isMatchFormat(req.format) && req.date) {

@@ -1,6 +1,7 @@
 {
   "common": {
     "appName": "Club Soccer",
+    "pageTitle": "Club Soccer - Match Management & Balanced Teams",
     "loading": "Loading…",
     "save": "Save",
     "cancel": "Cancel",
@@ -920,11 +921,11 @@
     "inviteBanner": "You're linking your account to the profile of <b>{name}</b>: your matches and stats will be kept.",
     "loading": "Loading…",
     "noClosedAccount": "We can't find a closed account with this email. Check it or contact your league president.",
-    "returnHint": "Write the email you used to sign in: we'll let the league president know, who will set up your return.",
+    "returnHint": "Write the email you used to sign in: we'll let the platform administrators know, who will set up your return.",
     "returnEmailAria": "Account email",
     "askReturn": "Ask to come back",
     "cancel": "Cancel",
-    "adminConfiguring": "The league president is setting up your return.",
+    "adminConfiguring": "The platform administrators are setting up your return.",
     "nothingToDo": "Nothing else to do: as soon as they confirm, you sign in with your usual account (Google or email and password).",
     "backToLogin": "Back to sign in",
     "verifySent": "We sent a link to <b>{email}</b>. Open it to activate the account, then come back here.",
@@ -963,7 +964,7 @@
     "verifyNote": "We'll send you an email to confirm the address.",
     "noAccount": "Don't have an account? ",
     "haveAccount": "Already have an account? ",
-    "returnRequestSent": "If this email belongs to a closed account, presidents and collaborators have received your request to come back.",
+    "returnRequestSent": "If this email belongs to a closed account, the platform administrators have received your request to come back.",
     "returnFailed": "Request not sent: check the email and your connection, then try again."
   },
   "settings": {
@@ -1357,6 +1358,7 @@
     "restoreHint": "They had closed their account and tried to come back. Now they see \"Welcome back\" and wait for your choice.",
     "restored": "Profile of {name} restored",
     "restore": "Restore profile and history",
+    "confirmRestore": "Restore the profile of {name}?\nThe account becomes active again with its previous history and they can sign in again.",
     "confirmReset": "Restart {name} from scratch?\nThe matches played stay in the history with their name, but no longer count for the new account: 0 matches and base ratings.",
     "resetDone": "{name} starts from scratch",
     "reset": "Start from scratch",
@@ -1368,7 +1370,7 @@
     "stay": "Stay {label}",
     "closeNotice": "Close notice",
     "deletedInfo": "Account deleted: the data was erased, archived matches keep their name.",
-    "deactivatedInfo": "Account deactivated: data and history are kept. If they come back, you'll get a return request.",
+    "deactivatedInfo": "Account deactivated: data and history are kept. If they come back, the platform staff handles the return request.",
     "reason": "Reason: {reason}",
     "markedRead": "Marked as read",
     "markRead": "Mark as read",

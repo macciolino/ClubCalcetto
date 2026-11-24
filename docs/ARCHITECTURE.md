@@ -56,7 +56,7 @@ leagues/{leagueId}/...          TUTTI i dati del club, isolati per lega
 - **Un account** (`profiles/{uid}`) può avere **una scheda per ogni lega** (`leagues/{id}/players/{uid}`, stesso id).
 - Le statistiche, l'OVR e il V/P/S stanno sulla **scheda**: ogni lega ha i suoi numeri.
 - `useAuth().profile` = account globale **fuso** con la scheda della lega attiva. Restano dell'account `id`, `user_id`,
-  `locale` e `theme`.
+  `locale` e `theme`. La lingua scelta sul dispositivo non passa a chi accede dopo: all'uscita dall'account la scelta salvata sul dispositivo viene dimenticata (si torna alla lingua del browser), e al nuovo accesso si applica quella salvata sul profilo ([PreferencesSync](../src/components/settings/PreferencesSync.tsx)). Il titolo della scheda del browser segue la lingua.
 - **Eccezione storica:** il fondatore ha il profilo `p-1`, creato prima di Firebase Auth. Viene riconosciuto da
   `profiles/p-1.user_id == uid`; l'email del fondatore serve solo a trovarlo e il server ripara `user_id`
   ([platformAccount.ts](../src/lib/server/platformAccount.ts)). Le regole e gli e2e lo trattano come caso noto.
@@ -254,7 +254,7 @@ La colonna **Staff** vale per `SUPER_ADMIN` e `GLOBAL_ADMIN`, salvo dove è indi
    In entrambi i casi la persona riceve una notifica.
 3. Se due persone reclamano lo stesso ospite, l'approvazione vale una volta sola; la seconda risponde `guest_gone`.
 4. **Invito personale su WhatsApp** (`/api/invite`, `/login?invite=…`): lo genera un gestore per uno specifico ospite,
-   quindi il collegamento è **immediato**.
+   quindi il collegamento è **immediato**. Il codice, dopo il controllo, resta solo in `sessionStorage` e sparisce dall'indirizzo: un ricaricamento dopo la registrazione non ricontrolla un link già usato.
 5. **Iscrizione spontanea simile a un ospite:** la richiesta `new_signup` propone ai gestori di collegarla all'ospite
    (`link`) oppure di lasciarla come giocatore nuovo (`new`).
 
@@ -399,8 +399,8 @@ Va bene fino a qualche centinaio di campi; oltre, servirà un filtro per città 
 | **Togli dalla lega** (`/api/league-admin` `remove`) | Gestori della lega, staff | La scheda viene marcata `removed_at` e la voce sparisce da `memberships`. Le iscrizioni future vengono tolte (sale chi è in attesa). Account e altre leghe restano intatti |
 | **Esci dalla lega** (`/api/league-admin` `leave`, Impostazioni → Lega) | Il membro stesso, anche in una lega sospesa | Subito, senza approvazione: stessi effetti di "Togli dalla lega". Presidente e collaboratori ricevono un avviso (campanella e push). L'**ultimo presidente** non può uscire: nomina un altro presidente, oppure elimina la lega dalla Zona pericolosa ("I Calcettari" non si elimina: lì deve nominarne un altro). L'app passa a un'altra lega, o al benvenuto se non ne restano |
 | **Chiudi il mio account** (`/api/account/delete`) | Il titolare (non il super admin) | Disattiva (dati conservati) oppure elimina. I gestori ricevono la richiesta `account_closed`, che è solo un avviso |
-| **Disattiva o elimina l'account di altri** | Solo lo staff, mai su un super admin | Agisce sull'account globale e su tutte le sue schede |
-| **Rientro** (`/api/account/return-request`, pubblica) | Chi ha l'account chiuso chiede; **lo staff** decide | **Ripristina** (profilo e storico tornano) oppure **riparti da zero** (vecchio storico archiviato come ospite). Per privacy la risposta è sempre la stessa (C10) |
+| **Disattiva o elimina l'account di altri** | Solo lo staff, mai su un super admin | Agisce sull'account globale e su tutte le sue schede. Dalla scheda del giocatore c'è **Disattiva account**; **Elimina** si usa dopo, dall'elenco degli account disattivati (Impostazioni → Account e piattaforma) |
+| **Rientro** (`/api/account/return-request`, pubblica) | Chi ha l'account chiuso chiede; **lo staff** decide | **Ripristina** (con conferma: profilo e storico tornano) oppure **riparti da zero** (vecchio storico archiviato come ospite). In entrambi i casi l'avviso `account_closed` di quella persona esce da "Da gestire". All'utente il login dice che "gli amministratori della piattaforma" stanno configurando il rientro. Per privacy la risposta è sempre la stessa (C10) |
 
 **Eliminazione di una lega** ([leagueDeletion.ts](../src/lib/server/leagueDeletion.ts))
 - **Chi:** il presidente (Impostazioni → Lega → Zona pericolosa) oppure lo staff (Console piattaforma).

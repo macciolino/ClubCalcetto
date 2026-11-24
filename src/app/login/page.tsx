@@ -106,6 +106,9 @@ export default function LoginPage() {
             setInviteName(String(d.name || ''));
             savePendingInvite(invite);
             setAuthMode('signup');
+            // Il codice è salvato: via dall'indirizzo, così se la pagina si ricarica dopo la registrazione
+            // non si ricontrolla un link già usato ("non più valido")
+            window.history.replaceState(null, '', window.location.pathname);
           } else {
             setErrorMessage(t('inviteInvalid'));
           }

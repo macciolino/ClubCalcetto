@@ -24,6 +24,7 @@ import { ldoc } from '@/lib/league/leagueRefs';
 import { ActiveLeagueProvider, useActiveLeague } from '@/lib/context/ActiveLeagueContext';
 import { LeagueWelcome } from '@/components/league/LeagueWelcome';
 import { takeReturnPath } from '@/lib/utils/returnPath';
+import { forgetDeviceLocale } from '@/i18n/I18nProvider';
 import { ensurePrivateEmail } from '@/lib/firebase/firestoreService';
 
 /**
@@ -470,6 +471,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     setProfile(null);
     setRoutingCookies(null);
+    forgetDeviceLocale();
     window.location.href = '/login?signedout=1';
   };
 
@@ -496,7 +498,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
         setProfile(null);
         setRoutingCookies(null);
-        if (!window.location.pathname.startsWith('/login')) window.location.href = '/login?signedout=1';
+        if (!window.location.pathname.startsWith('/login')) {
+          forgetDeviceLocale();
+          window.location.href = '/login?signedout=1';
+        }
       },
       () => undefined
     );

@@ -396,7 +396,10 @@ export function RequestsBell() {
         <button
           type="button"
           disabled={busy !== null}
-          onClick={() => run(`${r.id}:restore`, () => resolve(msg, r.id, 'restore'), tr('restored', { name: r.name }))}
+          onClick={async () => {
+            if (!(await askConfirm(tr('confirmRestore', { name: r.name })))) return;
+            run(`${r.id}:restore`, () => resolve(msg, r.id, 'restore'), tr('restored', { name: r.name }));
+          }}
           className={btn.primary}
         >
           {busy === `${r.id}:restore` ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}

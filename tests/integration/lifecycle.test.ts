@@ -164,6 +164,8 @@ describe('Account chiuso (soft delete) e rientro', () => {
     expect(p.restore_requested_at).toBeUndefined();
     expect(p.matches_won).toBe(4);
     expect((await adminAuth().getUser('m2')).disabled).toBe(false);
+    // L'avviso "account chiuso" di chi è rientrato non resta tra le cose da gestire
+    expect((await ldb().doc('admin_requests/closed_m2').get()).data()?.status).toBe('done');
   });
 
   it('decide lo staff di piattaforma: riparti da zero → storico archiviato con il vecchio nome, account pulito', async () => {
