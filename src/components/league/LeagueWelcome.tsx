@@ -76,9 +76,11 @@ export function LeagueWelcome() {
           </form>
         )}
         {/* "Cerco giocatore": partite di altre leghe da giocare anche senza farne parte */}
-        <Link href="/board" className={`${textLink} justify-center`}>
-          {t('board')} <ArrowRight className="h-4 w-4" aria-hidden="true" />
-        </Link>
+        <div>
+          <Link href="/board" className={textLink}>
+            {t('board')} <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
+        </div>
         <button type="button" onClick={() => signOut()} className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-secondary">
           <LogOut className="h-3.5 w-3.5" aria-hidden="true" /> {t('logout')}
         </button>

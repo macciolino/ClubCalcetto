@@ -6,7 +6,7 @@ import { ChevronRight, Megaphone, Plus } from 'lucide-react';
 import { btnInline } from '@/components/ui/buttons';
 import { askConfirm, notify } from '@/components/ui/Feedback';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { NoticeCard, noticeWhen } from '@/components/board/NoticeCard';
+import { NoticeCard, noticeStatusKey, noticeWhen } from '@/components/board/NoticeCard';
 import { NoticeFormSheet } from '@/components/board/NoticeFormSheet';
 import { NoticeManageSheet } from '@/components/board/NoticeManageSheet';
 import { useAuth } from '@/lib/context/AuthContext';
@@ -78,11 +78,11 @@ export default function BoardPage() {
                     className="w-full flex items-center gap-3 rounded-xl bg-card hover:bg-card-hover px-4 py-3 text-left"
                   >
                     <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-medium text-primary first-letter:uppercase truncate">
+                      <span className="block text-sm font-medium text-primary truncate">
                         {noticeWhen(n.dateTime, locale)} · {n.locationName}
                       </span>
                       <span className="block text-xs text-secondary">
-                        {t(`status.${n.status}`)} · {t('spotsOf', { filled: n.spotsFilled, total: n.spotsNeeded })}
+                        {t(`status.${noticeStatusKey(n)}`)}{' · '}{t('spotsOf', { filled: n.spotsFilled, total: n.spotsNeeded })}
                       </span>
                     </span>
                     <ChevronRight className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />

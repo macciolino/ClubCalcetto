@@ -15,8 +15,12 @@ export function noticeWhen(iso: string, locale: string) {
   const d = new Date(iso);
   const day = d.toLocaleDateString(locale, { timeZone: 'Europe/Rome', weekday: 'short', day: 'numeric', month: 'short' });
   const time = d.toLocaleTimeString(locale, { timeZone: 'Europe/Rome', hour: '2-digit', minute: '2-digit' });
-  return `${day} · ${time}`;
+  const text = `${day} · ${time}`;
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
+
+/** Status shown to managers: a notice closed because every spot was taken reads "Completo". */
+export const noticeStatusKey = (n: MatchNotice) => (n.status === 'CLOSED' && n.closedReason === 'full' ? 'FULL' : n.status);
 
 const euro = (n: number, locale: string) =>
   n.toLocaleString(locale, { style: 'currency', currency: 'EUR', maximumFractionDigits: Number.isInteger(n) ? 0 : 2 });
@@ -56,7 +60,7 @@ export function NoticeCard({ notice, profileId, onTake }: { notice: MatchNotice;
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs text-secondary truncate">{notice.leagueName}</p>
-          <h2 id={`notice-${notice.id}`} className="text-base font-semibold text-primary first-letter:uppercase">
+          <h2 id={`notice-${notice.id}`} className="text-base font-semibold text-primary">
             {noticeWhen(notice.dateTime, locale)}
           </h2>
         </div>

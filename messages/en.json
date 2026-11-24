@@ -1763,7 +1763,8 @@
     "status": {
       "OPEN": "On the board",
       "CLOSED": "Closed",
-      "CANCELLED": "Cancelled"
+      "CANCELLED": "Cancelled",
+      "FULL": "Full"
     },
     "form": {
       "newTitle": "New notice",

@@ -57,6 +57,7 @@ test.describe('Bacheca "Cerco giocatore"', () => {
     const sheet = page.getByRole('dialog');
     await expect(sheet.getByText('Chi ha preso il posto (1/1)')).toBeVisible({ timeout: 15_000 });
     await expect(sheet.getByText('Nuovo Arrivato')).toBeVisible();
-    await expect(sheet.getByText(/Chiuso/)).toBeVisible();
+    // chiuso perché pieno: "Completo"
+    await expect(sheet.getByText('Campo Test · Completo')).toBeVisible();
   });
 });

@@ -1763,7 +1763,8 @@
     "status": {
       "OPEN": "In bacheca",
       "CLOSED": "Chiuso",
-      "CANCELLED": "Annullato"
+      "CANCELLED": "Annullato",
+      "FULL": "Completo"
     },
     "form": {
       "newTitle": "Nuovo avviso",

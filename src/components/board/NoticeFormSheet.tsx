@@ -8,8 +8,8 @@ import { notify } from '@/components/ui/Feedback';
 import { subscribeAppSettings, subscribeOfficialMatchDate } from '@/lib/firebase/firestoreService';
 import { subscribeSportFields } from '@/lib/services/fieldService';
 import { createMatchNotice, updateMatchNotice } from '@/lib/services/matchNoticeService';
-import { FORMAT_INFO, MATCH_FORMATS, fieldFormatCost, standardFormatCost } from '@/lib/utils/matchFormat';
-import { DEFAULT_MATCH_TIME } from '@/lib/utils/matchUtils';
+import { FORMAT_INFO, MATCH_FORMATS, fieldFormatCost } from '@/lib/utils/matchFormat';
+import { DEFAULT_MATCH_TIME, standardCostFor } from '@/lib/utils/matchUtils';
 import { MAX_SPOTS, romeTime, romeToIso } from '@/lib/utils/matchNotice';
 import type { AppSettings, MatchFormat, SportField } from '@/types/database';
 import { NOTICE_ROLES, SHIRT_COLORS, type MatchNotice, type NoticeRole, type ShirtColor } from '@/types/matchNotice';
@@ -72,8 +72,8 @@ export function NoticeFormSheet({ notice, onClose }: { notice?: MatchNotice; onC
   // Price of the field (or the club's standard) for the format, and the quota for that number of players
   useEffect(() => {
     if (editing || !settings) return;
-    const total = fieldFormatCost(fields.find((f) => f.id === fieldId), format) ?? standardFormatCost(settings, format);
-    if (!total) return;
+    // Same price as the match: the field's for that format, otherwise the club standard (scaled to the players)
+    const total = fieldFormatCost(fields.find((f) => f.id === fieldId), format) ?? standardCostFor(settings, format);
     // eslint-disable-next-line react-hooks/set-state-in-effect -- recomputed when field or format change
     setTotalCost(money(total));
     setPerHead(money(total / FORMAT_INFO[format].players));

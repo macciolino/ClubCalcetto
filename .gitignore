@@ -48,3 +48,6 @@ ui-debug.log*
 # test reports (Playwright)
 /playwright-report/
 /test-results/
+
+# Playwright MCP (screenshot e log delle prove manuali)
+/.playwright-mcp/

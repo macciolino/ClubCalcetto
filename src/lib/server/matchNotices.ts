@@ -145,7 +145,7 @@ export async function takeSpot(caller: Caller, id: string): Promise<Result<{ spo
         body: `${displayName} ha preso un posto per ${italianDate(notice.matchId)} (${notice.locationName}). ${
           left === 0 ? 'Tutti i posti sono coperti.' : left === 1 ? 'Manca 1 posto.' : `Mancano ${left} posti.`
         }`,
-        url: '/',
+        url: '/board',
       })
     ).catch(() => undefined);
   }

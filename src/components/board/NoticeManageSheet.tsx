@@ -8,7 +8,7 @@ import { askConfirm, notify } from '@/components/ui/Feedback';
 import { useLocaleSetting } from '@/i18n/I18nProvider';
 import { cancelMatchNotice, closeMatchNotice, subscribeApplicants } from '@/lib/services/matchNoticeService';
 import type { MatchNotice, NoticeApplicant } from '@/types/matchNotice';
-import { NoticeFacts, noticeWhen } from './NoticeCard';
+import { NoticeFacts, noticeStatusKey, noticeWhen } from './NoticeCard';
 
 /** A notice of the league seen by its managers: details, who took a spot, edit / close / cancel. */
 export function NoticeManageSheet({ notice, onEdit, onClose }: { notice: MatchNotice; onEdit: () => void; onClose: () => void }) {
@@ -29,8 +29,8 @@ export function NoticeManageSheet({ notice, onEdit, onClose }: { notice: MatchNo
   return (
     <Sheet
       onClose={onClose}
-      title={<span className="first-letter:uppercase">{noticeWhen(notice.dateTime, locale)}</span>}
-      subtitle={`${notice.locationName} · ${t(`status.${notice.status}`)}`}
+      title={noticeWhen(notice.dateTime, locale)}
+      subtitle={`${notice.locationName} · ${t(`status.${noticeStatusKey(notice)}`)}`}
       footer={
         cancelled ? undefined : (
           <>
