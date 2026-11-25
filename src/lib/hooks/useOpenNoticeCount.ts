@@ -19,7 +19,10 @@ export function useOpenNotices(enabled: boolean): MatchNotice[] {
   return enabled ? list : [];
 }
 
-/** How many matches on the board are looking for players right now (badge in the navigation). */
-export function useOpenNoticeCount(enabled: boolean): number {
-  return useOpenNotices(enabled).length;
+/**
+ * How many matches of OTHER leagues are looking for players right now (badge in the navigation, like the Home card:
+ * the notices of your own league are managed from the board, they are not spots you can take).
+ */
+export function useOpenNoticeCount(enabled: boolean, ownLeagueId?: string | null): number {
+  return useOpenNotices(enabled).filter((n) => n.leagueId !== ownLeagueId).length;
 }

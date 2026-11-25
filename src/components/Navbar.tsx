@@ -31,8 +31,8 @@ export function Navbar() {
   const pathname = usePathname();
   const t = useTranslations('nav');
   const { user, profile, isAdmin, isPlatformStaff, isSuperAdmin, signOut } = useAuth();
-  const openNoticeCount = useOpenNoticeCount(Boolean(user));
-  const { isSuspended, leagueRole } = useActiveLeague();
+  const { isSuspended, leagueRole, activeLeagueId } = useActiveLeague();
+  const openNoticeCount = useOpenNoticeCount(Boolean(user), activeLeagueId);
   const tRole = useTranslations('league.roles');
   const ts = useTranslations('superAdmin');
 

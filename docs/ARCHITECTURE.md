@@ -452,7 +452,8 @@ Codice: [matchNotices.ts](../src/lib/server/matchNotices.ts) (server), [matchNot
 [matchNoticeService.ts](../src/lib/services/matchNoticeService.ts) (app).
 
 **Interfaccia** (componenti in `src/components/board/`)
-- **Navigazione:** voce "Bacheca" nella barra, con un **badge numerico solo quando ci sono avvisi aperti**
+- **Navigazione:** voce "Bacheca" nella barra, con un **badge numerico solo quando ci sono avvisi aperti di altre leghe** (come la card in Home: quelli della
+  tua lega li gestisci dalla Bacheca, non sono posti che puoi prendere)
   ([useOpenNoticeCount.ts](../src/lib/hooks/useOpenNoticeCount.ts)). In **Home** una card compatta
   ([BoardHomeCard.tsx](../src/components/board/BoardHomeCard.tsx)) compare **solo quando altre leghe** cercano
   giocatori (gli avvisi della lega attiva sono per gli esterni: i membri si iscrivono normalmente): quante partite, la
@@ -473,7 +474,7 @@ Codice: [matchNotices.ts](../src/lib/server/matchNotices.ts) (server), [matchNot
   - **nella partita** (Impostazioni → Partita della settimana → Organizzazione, [MatchNoticePanel.tsx](../src/components/board/MatchNoticePanel.tsx)):
     "Giocatori esterni" con "**Cerca giocatori esterni**", che apre il modulo **già compilato** con i dati di quella
     partita (giorno bloccato, ora, campo, indirizzo, formato, costo, quota, posti = giocatori mancanti) e lascia al
-    gestore posti, ruolo, maglia e note. Poi lo stato dell'avviso (In bacheca / Completo / Chiuso / Annullato con N/M),
+    gestore posti, ruolo, maglia e note. Poi lo stato dell'avviso (In bacheca / Completo / Chiuso / Annullato / **Scaduto** se la partita è già iniziata e l'avviso non è stato chiuso, con N/M),
     chi ha preso il posto, Modifica / Chiudi / Annulla avviso;
   - dopo la partita, accanto a ogni persona: "**Invita nella lega**" (manda il link di invito; entra solo se vuole).
 - **Profilo** ([CareerCard.tsx](../src/components/profile/CareerCard.tsx), [career.ts](../src/lib/utils/career.ts)):

@@ -60,8 +60,8 @@ export function MatchDetailSheet({
             const sv = savesOf(p.id);
             const mvp = match.mvp_player_id === p.id;
             return (
-              <li key={p.id} className="flex items-center gap-1.5 min-w-0">
-                <span className={`truncate ${mvp ? 'text-warning font-semibold' : 'text-primary'}`}>{nameOf(p.id, p.name)}</span>
+              <li key={p.id} className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 min-w-0">
+                <span className={`break-words ${mvp ? 'text-warning font-semibold' : 'text-primary'}`}>{nameOf(p.id, p.name)}</span>
                 <GuestBadge id={p.id} />
                 {mvp && <span title="MVP">⭐</span>}
                 {g > 0 && (

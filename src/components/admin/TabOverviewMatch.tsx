@@ -153,9 +153,11 @@ export function TabOverviewMatch({
   // ---------- giorno scelto: tutta la pagina parla solo di lui ----------
   const [date, setDate] = useState(activeDate || today);
   const lastActive = useRef(activeDate);
+  const picked = useRef(false);
   useEffect(() => {
-    // Se cambia il giorno ufficiale da fuori e stavi guardando il vecchio, segui il nuovo (tolto: resti dove sei)
-    setDate((cur) => (activeDate && (cur === lastActive.current || !cur) ? activeDate : cur || today));
+    // Il giorno ufficiale può arrivare dopo il primo disegno: finché non scegli un giorno tu lo segui; se cambia da
+    // fuori e stavi guardando il vecchio, segui il nuovo (tolto: resti dove sei)
+    setDate((cur) => (activeDate && (!picked.current || cur === lastActive.current || !cur) ? activeDate : cur || today));
     lastActive.current = activeDate;
   }, [activeDate, today]);
 
@@ -164,6 +166,7 @@ export function TabOverviewMatch({
   const status = statusOf(date);
   const [tab, setTab] = useState<TabId>('org');
   const chooseDay = (d: string) => {
+    picked.current = true;
     setDate(d);
     const st = statusOf(d);
     setTab(st === 'Da chiudere' || st === 'Archiviata' ? 'result' : 'org');

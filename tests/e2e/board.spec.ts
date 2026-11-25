@@ -92,6 +92,28 @@ test.describe('Bacheca "Cerco giocatore"', () => {
     await expect(page.getByRole('button', { name: 'Annulla avviso' })).toBeVisible();
   });
 
+  test('lista dei gestori: avviso già iniziato "Scaduto"; il badge della Bacheca conta solo le altre leghe', async ({ page }) => {
+    const past = new Date(Date.now() - 3_600_000).toISOString();
+    const notice = (id: string, leagueId: string, leagueName: string, dateTime: string) =>
+      db.doc(`match_notices/${id}`).set({
+        id, leagueId, leagueName, matchId: dateTime.slice(0, 10), dateTime, locationName: `Campo ${id}`, address: 'Via Test 1', format: '5v5',
+        totalFieldCost: 80, costPerPlayer: 8, spotsNeeded: 2, spotsFilled: 0, roleNeeded: 'ANY', shirtColor: 'DARK', status: 'OPEN',
+        createdBy: { profileId: 'x', name: 'x' }, created_at: 'x', updated_at: 'x',
+      });
+    await notice('scaduto', 'calcettari', 'I Calcettari', past);
+    await loginAsAdmin(page);
+    await page.goto('/board');
+    await expect(page.getByRole('button', { name: /Campo scaduto/ })).toContainText('Scaduto', { timeout: 15_000 });
+    const link = page.getByRole('navigation', { name: 'Navigazione principale' }).getByRole('link', { name: /Bacheca/ });
+    // un avviso futuro della propria lega non fa comparire il badge...
+    await notice('mio', 'calcettari', 'I Calcettari', `${romeDay(2)}T19:30:00.000Z`);
+    await expect(page.getByRole('button', { name: /Campo mio/ })).toBeVisible({ timeout: 15_000 });
+    await expect(link).not.toContainText(/\d/);
+    // ...uno di un'altra lega sì
+    await notice('altro', 'amici', 'Lega Amici', `${romeDay(3)}T19:30:00.000Z`);
+    await expect(link).toContainText('1', { timeout: 15_000 });
+  });
+
   test('profilo: carriera di tutte le leghe con le partite da esterno', async ({ page }) => {
     await db.doc('leagues/calcettari/players/p-1').update({ matches_won: 3, matches_drawn: 1, matches_lost: 2 });
     await db.doc('profiles/p-1/spots/x1').set({

@@ -1794,7 +1794,8 @@
       "OPEN": "In bacheca",
       "CLOSED": "Chiuso",
       "CANCELLED": "Annullato",
-      "FULL": "Completo"
+      "FULL": "Completo",
+      "EXPIRED": "Scaduto"
     },
     "form": {
       "newTitle": "Nuovo avviso",

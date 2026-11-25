@@ -17,8 +17,12 @@ export function noticeWhen(iso: string, locale: string) {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-/** Status shown to managers: a notice closed because every spot was taken reads "Completo". */
-export const noticeStatusKey = (n: MatchNotice) => (n.status === 'CLOSED' && n.closedReason === 'full' ? 'FULL' : n.status);
+/**
+ * Status shown to managers: a notice closed because every spot was taken reads "Completo"; one still open whose
+ * match has already started reads "Scaduto" (the board hides it by itself, nobody can take the spot any more).
+ */
+export const noticeStatusKey = (n: MatchNotice) =>
+  n.status === 'CLOSED' && n.closedReason === 'full' ? 'FULL' : n.status === 'OPEN' && Date.parse(n.dateTime) <= Date.now() ? 'EXPIRED' : n.status;
 
 export const euro = (n: number, locale: string) =>
   n.toLocaleString(locale, { style: 'currency', currency: 'EUR', maximumFractionDigits: Number.isInteger(n) ? 0 : 2 });

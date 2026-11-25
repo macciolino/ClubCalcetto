@@ -1794,7 +1794,8 @@
       "OPEN": "On the board",
       "CLOSED": "Closed",
       "CANCELLED": "Cancelled",
-      "FULL": "Full"
+      "FULL": "Full",
+      "EXPIRED": "Expired"
     },
     "form": {
       "newTitle": "New notice",
