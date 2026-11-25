@@ -31,6 +31,9 @@ test('due leghe: aprendo la lega senza campi non compare un campo dell’altra l
   await page.goto('/teams');
   await page.waitForTimeout(4000);
   await expect(page.getByText('Campo Test')).toHaveCount(0);
+  // la lega non ha campi: dopo aver aperto le pagine la copia resta vuota, non si riempie di campi dimostrativi
+  const after = await page.evaluate(() => localStorage.getItem('clubcalcetto_sport_fields') || '[]');
+  expect(JSON.parse(after)).toEqual([]);
 });
 
 /** Chi non è di I Calcettari non produce letture negate verso quella lega mentre l'app capisce qual è la sua lega attiva. */

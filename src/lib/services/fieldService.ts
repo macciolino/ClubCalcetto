@@ -47,19 +47,24 @@ export const DEFAULT_SPORT_FIELDS: SportField[] = [
 
 const FIELDS_STORAGE_KEY = 'clubcalcetto_sport_fields';
 
+/**
+ * The copy of the league's fields kept on this device. With Firebase it is only a mirror of the league's own fields: a
+ * league with none has an empty copy (never the demo fields, which belong to local development without Firebase).
+ */
 export function getStoredFields(): SportField[] {
-  if (typeof window === 'undefined') return DEFAULT_SPORT_FIELDS;
+  if (typeof window === 'undefined') return isFirebaseConfigured ? [] : DEFAULT_SPORT_FIELDS;
   try {
     const raw = localStorage.getItem(FIELDS_STORAGE_KEY);
     if (raw) {
       const parsed: SportField[] = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed) && (parsed.length > 0 || isFirebaseConfigured)) {
         return parsed;
       }
     }
   } catch (err) {
     console.warn('Errore lettura campi da calcetto:', err);
   }
+  if (isFirebaseConfigured) return [];
   saveStoredFields(DEFAULT_SPORT_FIELDS);
   return DEFAULT_SPORT_FIELDS;
 }
@@ -179,8 +184,9 @@ export function subscribeSportFields(
           saveStoredFields(list);
         } else {
           // A league with no fields of its own: say so, so no page keeps showing the copy kept on this device
-          // (it can belong to another league) and prices come only from this league's data
+          // (it can belong to another league) and prices come only from this league's data; the copy is emptied too
           callback([]);
+          saveStoredFields([]);
         }
         // NOTE: no automatic seeding of demo fields into the real database
       },
