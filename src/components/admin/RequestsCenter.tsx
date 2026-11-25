@@ -184,6 +184,13 @@ function ago(iso: string, tb: (key: string, values?: Record<string, number>) => 
  * number of unread ones. Admins also see "Da gestire" on top: requests (new sign-up, coming back, account closed,
  * format proposal) and parameters to review. A request's push opens the app with ?richieste=1 → opens the sheet.
  */
+/**
+ * "?richieste=1" (a request's push, the e2e) asks to open the sheet. The header is remounted once the active league is
+ * known (pages and header live under a keyed fragment), so the request is kept HERE, outside the component, until the
+ * person closes the sheet: otherwise the first mount would read and strip the link and the second would forget it.
+ */
+let openFromLink = false;
+
 export function RequestsBell() {
   const { profile, isAdmin, isPlatformStaff } = useAuth();
   const router = useRouter();
@@ -271,14 +278,21 @@ export function RequestsBell() {
     try {
       const url = new URL(window.location.href);
       if (url.searchParams.get('richieste') === '1') {
-        setOpen(true);
+        openFromLink = true;
         url.searchParams.delete('richieste');
         window.history.replaceState(null, '', url.pathname + url.search);
       }
     } catch {
       /* ignore */
     }
+    if (openFromLink) setOpen(true);
   }, [admin]);
+  // Closed by the person: the link has done its job (a later remount does not reopen it)
+  const wasOpen = React.useRef(false);
+  useEffect(() => {
+    if (open) wasOpen.current = true;
+    else if (wasOpen.current) openFromLink = false;
+  }, [open]);
 
   const guests = useMemo(() => players.filter((p) => p.is_guest && !p.archived_at), [players]);
   // Nuovi giocatori che hanno giocato la prima partita: i parametri li rivede un admin
