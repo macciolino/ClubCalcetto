@@ -16,6 +16,12 @@ import type { MatchNotice, MySpot, NoticeApplicant } from '@/types/matchNotice';
 export const signupRef = (leagueId: string, date: string, profileId: string) =>
   leagueDb(leagueId).doc(`presences/${date}_${externalPlayerId(profileId)}`);
 
+/** The external players signed up for a day of the current league, as player ids (`ext-<profileId>`). */
+export async function externalIdsOfDay(date: string): Promise<string[]> {
+  const snap = await leagueDb().collection('presences').where('date', '==', date).get();
+  return snap.docs.filter((d) => d.data().external).map((d) => String(d.data().player_id));
+}
+
 /** Inside the "take a spot" transaction: the person becomes a sign-up of that day (server time = queue order). */
 export function addSignup(tx: Transaction, notice: MatchNotice, who: Omit<ExternalSignup, 'noticeId'>) {
   const id = `${notice.matchId}_${externalPlayerId(who.profileId)}`;

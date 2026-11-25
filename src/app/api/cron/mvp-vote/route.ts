@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { adminDb, isAdminConfigured } from '@/lib/firebase/admin';
 import { inLeague, leagueDb } from '@/lib/server/leagueScope';
 import { checkPromotions } from '@/lib/server/presenceWatch';
+import { externalIdsOfDay } from '@/lib/server/externalPlayers';
 import { deliver, italianDate, registeredProfileIds, romeDateTime, romeTimeLabel } from '@/lib/server/push';
 import { MATCH_DURATION_MIN, MVP_VOTE_DELAY_MIN, MVP_VOTE_OPEN_HOURS } from '@/lib/utils/matchUtils';
 import { GeneratedTeamRecord, Match } from '@/types/database';
@@ -77,7 +78,8 @@ async function run(request: Request) {
         report[`${leagueDb().id}:${date}`] = 'già avvisati';
         continue;
       }
-      const result = await deliver(await registeredProfileIds(), {
+      // The members of the league + the external players of that match (they vote from the Bacheca)
+      const result = await deliver([...(await registeredProfileIds()), ...(await externalIdsOfDay(date))], {
         title: '⭐ Vota l’MVP',
         body: `La partita di ${italianDate(date)} è finita: vota il migliore in campo entro le ${romeTimeLabel(closesAt)} di domani.`,
         url: `/teams?date=${date}`,

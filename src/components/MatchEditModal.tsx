@@ -12,6 +12,7 @@ import { toTeamPlayer } from '@/lib/utils/teamUtils';
 import { TeamSwapEditor } from '@/components/TeamSwapEditor';
 import { MatchResultFields, MatchResultValue, validateScorers } from '@/components/MatchResultFields';
 import { Loader2, Check, AlertCircle } from 'lucide-react';
+import { FORMAT_INFO } from '@/lib/utils/matchFormat';
 
 interface MatchEditModalProps {
   match: Match;
@@ -87,6 +88,8 @@ export function MatchEditModal({ match, profiles, closedBy, onClose }: MatchEdit
         scorers: result.scorers,
         penaltySaves: result.penaltySaves || [],
         totalCost: Number(match.total_cost) || 80,
+        // A match entered by hand keeps its quota by format (its line-ups may be partial)
+        ...(match.format ? { players: FORMAT_INFO[match.format].players } : {}),
         closedBy,
       });
       onClose();

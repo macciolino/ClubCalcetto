@@ -8,6 +8,7 @@ import { useLocaleSetting } from '@/i18n/I18nProvider';
 import { Sheet, sheetBtn } from '@/components/ui/Sheet';
 import { Pencil, Trash2 } from 'lucide-react';
 import { GuestBadge } from '@/components/GuestBadge';
+import { FORMAT_INFO } from '@/lib/utils/matchFormat';
 
 /**
  * Archived match detail (Storico; reusable elsewhere): big score, the two line-ups side by side with
@@ -32,8 +33,10 @@ export function MatchDetailSheet({
 }) {
   const t = useTranslations('matchDetail');
   const { locale } = useLocaleSetting();
-  // Giocatori della partita (10 in un 5vs5, 14 in un 7vs7…): per la quota a testa
-  const headCount = (match.team_white?.length || 0) + (match.team_black?.length || 0) || 10;
+  // Giocatori della partita (10 in un 5vs5, 14 in un 7vs7…): per la quota a testa. Una partita inserita a mano ha il
+  // formato scelto (le formazioni segnate su carta possono essere incomplete); le altre si ricavano dalle squadre
+  const formatInfo = match.format ? FORMAT_INFO[match.format] : null;
+  const headCount = formatInfo?.players ?? ((match.team_white?.length || 0) + (match.team_black?.length || 0) || 10);
   const w = match.score_white ?? 0;
   const b = match.score_black ?? 0;
   const goalsOf = (id: string) => (match.scorers || []).filter((s) => s.player_id === id).reduce((n, s) => n + (s.goals || 0), 0);
@@ -88,7 +91,7 @@ export function MatchDetailSheet({
       subtitle={
         match.total_cost
           ? t('subtitle', {
-              format: `${headCount / 2}vs${headCount / 2}`,
+              format: formatInfo?.label ?? `${headCount / 2}vs${headCount / 2}`,
               cost: Number(match.total_cost).toFixed(0),
               perHead: (Number(match.total_cost) / headCount).toFixed(2).replace('.', locale === 'en' ? '.' : ','),
             })

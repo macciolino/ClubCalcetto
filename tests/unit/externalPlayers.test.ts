@@ -65,3 +65,19 @@ describe('nome dalle formazioni della partita', () => {
     expect(nameInMatch(match, 'nessuno')).toBeUndefined();
   });
 });
+
+describe('livello dell’esterno nella pagina Squadre', () => {
+  it('con il suo profilo di giornata (OVR della sua lega) pesa come in generazione, non 6', async () => {
+    const { profileForTeamPlayer } = await import('@/lib/utils/teamUtils');
+    const { summarizeTeams } = await import('@/lib/algorithm/teamBalancer');
+    const luca = externalProfile({ player_id: 'ext-luca', external: { profileId: 'luca', userId: 'u', name: 'Luca', noticeId: 'n', overall_rating: 8, stats: { Difesa: 9 } } })!;
+    const other = (id: string) => ({ ...luca, id, full_name: id, is_external: false, overall_rating: 6, stats: {} });
+    // con il profilo dell'esterno nell'elenco: 8; senza (come prima del fix): 6 di riserva
+    expect(profileForTeamPlayer({ id: 'ext-luca', name: 'Luca' }, [luca]).overall_rating).toBe(8);
+    expect(profileForTeamPlayer({ id: 'ext-luca', name: 'Luca' }, []).overall_rating).toBe(6);
+    const white = [profileForTeamPlayer({ id: 'ext-luca', name: 'Luca' }, [luca]), other('a'), other('b')];
+    const black = [other('c'), other('d'), other('e')];
+    const sum = summarizeTeams(white, black);
+    expect(sum.whiteStats.overallAvg).toBeGreaterThan(sum.blackStats.overallAvg);
+  });
+});

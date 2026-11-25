@@ -122,9 +122,10 @@ export function AddMatchSheet({ profiles, archivedDates, closedBy, onClose }: Pr
         scorers: result.scorers,
         penaltySaves: result.penaltySaves || [],
         totalCost: Math.max(0, Number(cost.replace(',', '.')) || 0),
-        players: white.length + black.length,
+        // The cost is for the whole pitch: the quota a testa follows the format, also when the paper line-up is partial
+        players: FORMAT_INFO[format].players,
         closedBy,
-        details: { location: place.trim(), match_time: time, entered_by_hand: true },
+        details: { location: place.trim(), match_time: time, entered_by_hand: true, format },
       });
       notify(t('saved'), 'success');
       onClose();

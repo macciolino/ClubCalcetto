@@ -114,6 +114,12 @@ function SquadreContent() {
     () => profiles.map((p) => withForm(p, forms.get(p.id))),
     [profiles, forms]
   );
+  // External players (board "Spot") have no card here: their level comes with their sign-up of that day, so pitch,
+  // "Equilibrio" and manual edits use the same level the teams were generated with
+  const lookupProfiles = React.useMemo(
+    () => [...formProfiles, ...presences.flatMap((p) => (p.external && p.profile ? [p.profile] : []))],
+    [formProfiles, presences]
+  );
   const { member } = useActiveLeague();
   const [teamRecord, setTeamRecord] = useState<GeneratedTeamRecord | null>(null);
   // Data already read from Firestore for the selected day (needed before generating teams on its own)
@@ -281,8 +287,8 @@ function SquadreContent() {
       : null;
   const balancedResult: BalancedTeamsResult | null = teams
     ? summarizeTeams(
-        teams.white.map((p) => profileForTeamPlayer(p, formProfiles)),
-        teams.black.map((p) => profileForTeamPlayer(p, formProfiles))
+        teams.white.map((p) => profileForTeamPlayer(p, lookupProfiles)),
+        teams.black.map((p) => profileForTeamPlayer(p, lookupProfiles))
       )
     : null;
   const isConfirmed = Boolean(teamRecord?.confirmed);
@@ -446,8 +452,8 @@ function SquadreContent() {
     setIsSavingManual(true);
     try {
       const sum = summarizeTeams(
-        manualDraft.white.map((p) => profileForTeamPlayer(p, formProfiles)),
-        manualDraft.black.map((p) => profileForTeamPlayer(p, formProfiles))
+        manualDraft.white.map((p) => profileForTeamPlayer(p, lookupProfiles)),
+        manualDraft.black.map((p) => profileForTeamPlayer(p, lookupProfiles))
       );
       await saveTeams(selectedDate, manualDraft.white, manualDraft.black, {
         manual: true,

@@ -17,6 +17,7 @@ test.describe('Storico: partita passata inserita a mano', () => {
 
     await sheet.locator('#add-date').fill(day);
     await sheet.locator('#add-place').fill('Campo di carta');
+    await sheet.locator('#add-cost').fill('60');
     // Bianchi: Uno + un nuovo ospite; Neri: Due
     await sheet.getByLabel('Aggiungi ai Bianchi').selectOption({ label: PLAYERS[0].name });
     await sheet.getByLabel('Nuovo ospite nei Bianchi').fill('Zio Pino');
@@ -30,7 +31,8 @@ test.describe('Storico: partita passata inserita a mano', () => {
     await expect(page.getByText('Partita aggiunta allo Storico.')).toBeVisible({ timeout: 15_000 });
 
     const match = (await lg(`matches/${day}`).get()).data()!;
-    expect(match).toMatchObject({ status: 'completed', entered_by_hand: true, location: 'Campo di carta' });
+    // formazione incompleta (3 su 10): formato e quota seguono il 5vs5 scelto, non i giocatori inseriti
+    expect(match).toMatchObject({ status: 'completed', entered_by_hand: true, location: 'Campo di carta', format: '5v5', total_cost: 60, cost_per_player: 6 });
     const ids = [...match.team_white, ...match.team_black].map((p: { id: string }) => p.id);
     expect(ids).toHaveLength(3);
     const guestId = match.team_white.find((p: { name: string }) => p.name === 'Zio Pino').id as string;
@@ -40,6 +42,13 @@ test.describe('Storico: partita passata inserita a mano', () => {
     const outcome = match.score_white > match.score_black ? 'matches_won' : match.score_white === match.score_black ? 'matches_drawn' : 'matches_lost';
     expect(guest[outcome]).toBe(1);
     expect((await lg(`players/${PLAYERS[0].id}`).get()).data()?.[outcome]).toBe(1);
+
+    // nel dettaglio: "5vs5" e €6 a testa (non "2vs1")
+    await page.getByRole('radio', { name: 'Partite' }).click();
+    await page.getByRole('button', { name: /–/ }).first().click();
+    await expect(page.getByRole('dialog').getByText(/5vs5 · Campo €60 · €6,00 a testa/)).toBeVisible({ timeout: 15_000 });
+    await page.keyboard.press('Escape');
+    await page.getByRole('radio', { name: 'Classifica' }).click();
 
     // nello Storico, e la stessa data non si può inserire due volte
     await expect(page.getByText('Zio Pino').first()).toBeVisible({ timeout: 15_000 });

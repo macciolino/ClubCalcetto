@@ -1,5 +1,6 @@
 import { adminDb, adminMessaging } from '@/lib/firebase/admin';
 import { leagueDb } from '@/lib/server/leagueScope';
+import { EXTERNAL_PREFIX, isExternalId } from '@/lib/utils/externalPlayers';
 
 /** Server-only helpers to send push notifications (used by /api/notify and /api/cron/mvp-vote). */
 
@@ -93,11 +94,20 @@ export async function sendToTokens(tokens: string[], msg: Message): Promise<numb
   return sent;
 }
 
-/** Applies the mode: 'all' → the players concerned; 'admins' → all admins, marked as a test. */
+/**
+ * Applies the mode: 'all' → the players concerned; 'admins' → all admins, marked as a test.
+ * External players (board "Spot", ids `ext-<profileId>`) are reached through their own account, and the notification
+ * opens the Bacheca: they cannot open the pages of a league they do not belong to.
+ */
 export async function deliver(playerIds: string[], msg: Message): Promise<{ sent: number; mode: NotifyMode }> {
   const mode = await getMode();
   if (mode === 'off') return { sent: 0, mode };
-  if (mode === 'all') return { sent: await sendToProfiles(playerIds, msg), mode };
+  if (mode === 'all') {
+    const externals = playerIds.filter((id) => isExternalId(id)).map((id) => id.slice(EXTERNAL_PREFIX.length));
+    const members = playerIds.filter((id) => !isExternalId(id));
+    const sent = (await sendToProfiles(members, msg)) + (externals.length ? await sendToProfiles(externals, { ...msg, url: '/board' }) : 0);
+    return { sent, mode };
+  }
   const sent = await sendToProfiles(await adminProfileIds(), {
     ...msg,
     title: `[PROVA] ${msg.title}`,

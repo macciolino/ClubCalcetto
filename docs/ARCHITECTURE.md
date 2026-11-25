@@ -321,7 +321,9 @@ Calendario → Iscrizioni (titolari / attesa) → Formato → Squadre → Partit
      regole in [manualMatch.ts](../src/lib/utils/manualMatch.ts)): per una partita dimenticata o segnata su carta prima
      di usare l'app. La inseriscono presidente, collaboratori e staff (lega non sospesa):
      - giorno passato (fino a oggi), una sola partita per giorno (se c'è già, la si modifica dal dettaglio);
-     - ora, campo e costo facoltativi; formato per il numero massimo di giocatori per squadra;
+     - ora, campo e costo facoltativi; il formato fissa il numero massimo di giocatori per squadra, si salva sulla
+       partita (`format`) e la **quota a testa segue il formato** (costo / giocatori del formato), anche se la
+       formazione segnata su carta è incompleta (dettaglio "5vs5 · €6 a testa", non "2vs1");
      - squadre: giocatori della lega oppure **nuovi ospiti** creati al volo con il loro nome (diventano schede
        ospite normali, prima del salvataggio della partita);
      - risultato, marcatori ed MVP con lo stesso modulo dell'archiviazione.
@@ -530,6 +532,12 @@ Codice: [externalPlayers.ts](../src/lib/server/externalPlayers.ts) (server), [ex
 - **Voto MVP dell'esterno.** Non può leggere la lega, quindi vota da Bacheca → "I miei posti" → "Vota l'MVP": il
   server (`match_view`, `mvp_vote`) mostra le squadre di quella partita e scrive il voto in `mvp_votes/{data}_{uid}`
   come per i membri. Finestra: da inizio + 1 h 45 per 24 ore; solo chi ha il posto; solo chi era in squadra.
+- **Livello nelle squadre.** La pagina Squadre (figurine, "Equilibrio", modifica manuale) pesa l'esterno con lo
+  stesso livello usato per generare le squadre, preso dalla sua iscrizione del giorno (`external.overall_rating`).
+- **Notifiche.** "Partita confermata", squadre cambiate, sostituzione e "sei titolare" arrivano anche all'esterno:
+  `deliver` ([push.ts](../src/lib/server/push.ts)) traduce `ext-<id>` nel suo account e la notifica **apre la
+  Bacheca**, perché non può aprire le pagine di una lega che non è sua. L'avviso "Vota l'MVP" del cron include gli
+  esterni di quella partita. Valgono le modalità della lega: in "prova" (predefinita) arrivano solo agli admin.
 - **Tolto o annullato prima della partita.** "Togli" (nel pannello della partita o "Rimuovi" in Presenze, sempre
   via server: le regole vietano di cancellare dall'app un'iscrizione esterna) libera il posto, riapre l'avviso se era
   chiuso perché pieno, toglie l'iscrizione (sale chi è in attesa) e avvisa la persona (posto "Tolto"). Annullare

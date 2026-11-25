@@ -631,7 +631,7 @@ export interface MatchResultInput {
   players?: number;
   closedBy: string;
   /** A past match entered by hand in the Storico: where and when it was played, and the "entered by hand" mark */
-  details?: { location?: string; match_time?: string; entered_by_hand?: boolean };
+  details?: { location?: string; match_time?: string; entered_by_hand?: boolean; format?: MatchFormat };
 }
 
 const OUTCOME_FIELD: Record<MatchOutcome, 'matches_won' | 'matches_drawn' | 'matches_lost'> = {
@@ -715,6 +715,7 @@ export async function saveMatchResult(input: MatchResultInput): Promise<void> {
         ...(input.details?.location ? { location: input.details.location } : {}),
         ...(input.details?.match_time ? { match_time: input.details.match_time } : {}),
         ...(input.details?.entered_by_hand ? { entered_by_hand: true } : {}),
+        ...(input.details?.format ? { format: input.details.format } : {}),
         closed_at: existing?.closed_at || now,
         closed_by: input.closedBy,
         created_at: existing?.created_at || now,

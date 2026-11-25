@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { adminAuth } from '@/lib/firebase/admin';
 import { POST as notices } from '@/app/api/match-notices/route';
 import { POST as notify } from '@/app/api/notify/route';
+import { GET as cron } from '@/app/api/cron/mvp-vote/route';
 import { inLeague } from '@/lib/server/leagueScope';
 import { loadRankedPresences } from '@/lib/server/presenceWatch';
 import { assertEmulators, call, db, futureDate, idToken, ldb, makeUser, profileDoc, resetEmulators } from './helpers';
@@ -294,5 +295,52 @@ describe('L’esterno nella singola partita', () => {
 
     const stranger = await outsider('estraneo');
     expect((await vote(stranger.token, 'pres')).status).toBe(403);
+  });
+});
+
+describe('Notifiche all’esterno', () => {
+  const bellOf = async (uid: string) => (await db().collection(`profiles/${uid}/notifications`).get()).docs.map((d) => d.data());
+
+  it('"partita confermata" e sostituzioni arrivano all’esterno (modalità "tutti") e aprono la Bacheca', async () => {
+    const id = String((await create(pres.token)).data.id);
+    const out = await outsider('out');
+    await take(id, out.token);
+    await ldb().doc('settings/notifications').set({ mode: 'all' });
+    const res = await call(notify, { type: 'match_confirmed', date: DAY, playerIds: ['ext-out', 'pres'] }, pres.token);
+    expect(res.data.ok).toBe(true);
+    const mine = await bellOf('out');
+    expect(mine.map((n) => String(n.title))).toContain('⚽ Partita confermata');
+    expect(mine.find((n) => String(n.title).includes('Partita confermata'))?.url).toBe('/board');
+    // nessun "profilo" fantasma con l'id ext-…
+    expect((await db().collection('profiles/ext-out/notifications').get()).size).toBe(0);
+    // un membro vede il suo link normale
+    expect((await bellOf('pres')).find((n) => String(n.title).includes('Partita confermata'))?.url).not.toBe('/board');
+  });
+
+  it('modalità prova (predefinita): niente all’esterno, solo agli admin', async () => {
+    const id = String((await create(pres.token)).data.id);
+    await take(id, (await outsider('out')).token);
+    await call(notify, { type: 'match_confirmed', date: DAY, playerIds: ['ext-out'] }, pres.token);
+    expect((await bellOf('out')).filter((n) => String(n.title).includes('Partita confermata'))).toHaveLength(0);
+  });
+
+  it('avviso "Vota l’MVP" (cron): anche gli esterni di quella partita', async () => {
+    process.env.CRON_SECRET = 'segreto-di-prova';
+    const start = new Date(Date.now() - 2 * 3_600_000);
+    const day = start.toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' });
+    const time = start.toLocaleTimeString('en-GB', { timeZone: 'Europe/Rome', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+    await ldb().doc('settings/app_config').set({ standard_match_time: time });
+    await ldb().doc('settings/notifications').set({ mode: 'all' });
+    await ldb().doc(`generated_teams/${day}`).set({ id: day, date: day, confirmed: true, team_white: [{ id: 'pres', name: 'Presidente' }], team_black: [] });
+    await ldb().doc(`presences/${day}_ext-out`).set({
+      id: `${day}_ext-out`, date: day, player_id: 'ext-out', status: 'confirmed', order_index: 0,
+      external: { profileId: 'out', userId: 'out', name: 'Esterno out', noticeId: 'n' },
+    });
+    await outsider('out');
+    const res = await call(cron, undefined, undefined, 'http://localhost/api/cron/mvp-vote', { authorization: 'Bearer segreto-di-prova' });
+    expect(res.status).toBe(200);
+    const vote = (await bellOf('out')).find((n) => String(n.title).includes('Vota l’MVP'));
+    expect(vote?.url).toBe('/board');
+    expect((await bellOf('pres')).find((n) => String(n.title).includes('Vota l’MVP'))?.url).toBe(`/teams?date=${day}`);
   });
 });

@@ -122,7 +122,7 @@ test.describe('Esterno nella partita', () => {
     );
     await db.doc(`leagues/calcettari/presences/${day}_ext-luca`).set({
       id: `${day}_ext-luca`, date: day, player_id: 'ext-luca', status: 'confirmed', order_index: 9, created_at: 'x', joined_at: new Date(),
-      external: { profileId: 'luca', userId: 'luca', name: 'Luca Esterno', noticeId: 'n1' },
+      external: { profileId: 'luca', userId: 'luca', name: 'Luca Esterno', noticeId: 'n1', overall_rating: 10, stats: { Difesa: 10, Tiro: 10 } },
     });
     await loginAsAdmin(page);
     await page.goto(`/teams?date=${day}`);
@@ -133,6 +133,9 @@ test.describe('Esterno nella partita', () => {
     expect(ids).toHaveLength(10);
     expect(ids).toContain('ext-luca');
     await expect(page.getByText(/Luca/).first()).toBeVisible({ timeout: 15_000 });
+    // la pagina pesa l'esterno con il suo livello (10), come la generazione: le medie delle squadre non sono uguali
+    await expect(page.getByRole('heading', { name: 'Equilibrio' })).toBeVisible();
+    await expect(page.getByText('100%', { exact: true })).toHaveCount(0);
     // nella rosa della lega non c'è
     await page.goto('/players');
     await expect(page.getByText(PLAYERS[0].name).first()).toBeVisible({ timeout: 15_000 });

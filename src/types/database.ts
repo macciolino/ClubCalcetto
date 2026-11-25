@@ -249,6 +249,8 @@ export interface Match {
   match_time: string; // HH:mm
   /** Past match entered by hand in the Storico (forgotten, or from a paper record) */
   entered_by_hand?: boolean;
+  /** Format chosen when the match was entered by hand: the quota a testa follows it, not the (maybe partial) line-ups */
+  format?: MatchFormat;
   location: string;
   field_id?: string;
   total_cost: number;
