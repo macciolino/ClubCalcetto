@@ -24,6 +24,7 @@ export type NoticeError =
   | 'full'
   | 'already_joined'
   | 'already_in_match'
+  | 'is_member'
   | 'below_filled'
   | 'too_early'
   | 'already_member'

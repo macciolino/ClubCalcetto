@@ -68,6 +68,18 @@ test.describe('Bacheca "Cerco giocatore"', () => {
     await expect(sheet.getByText('Campo Test · Completo')).toBeVisible();
   });
 
+  test('lega nuova senza impostazioni salvate: il modulo parte comunque da ora e campo della lega', async ({ page }) => {
+    await db.doc('leagues/calcettari/settings/app_config').delete();
+    await loginAsAdmin(page);
+    await page.goto('/board');
+    await page.getByRole('button', { name: 'Nuovo avviso' }).click();
+    const form = page.getByRole('dialog');
+    await expect(form.locator('#notice-time')).toHaveValue('20:30', { timeout: 15_000 });
+    await expect(form.locator('#notice-place')).toHaveValue('Campo Test');
+    await expect(form.locator('#notice-address')).toHaveValue('Via dei Test 1');
+    await expect(form.locator('#notice-total')).toHaveValue('80');
+  });
+
   test('dalla partita: "Cerca giocatori esterni" già compilato, stato nella partita', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/settings?sezione=partita');
@@ -109,6 +121,8 @@ test.describe('Bacheca "Cerco giocatore"', () => {
     await notice('mio', 'calcettari', 'I Calcettari', `${romeDay(2)}T19:30:00.000Z`);
     await expect(page.getByRole('button', { name: /Campo mio/ })).toBeVisible({ timeout: 15_000 });
     await expect(link).not.toContainText(/\d/);
+    await expect(page.getByText('È la tua lega: iscriviti dalle Presenze.').first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Partecipa alla partita' })).toHaveCount(0);
     // ...uno di un'altra lega sì
     await notice('altro', 'amici', 'Lega Amici', `${romeDay(3)}T19:30:00.000Z`);
     await expect(link).toContainText('1', { timeout: 15_000 });

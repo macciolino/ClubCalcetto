@@ -196,10 +196,13 @@ export async function takeSpot(caller: Caller, id: string): Promise<Result<{ spo
   if (!(await isLeagueActive(notice.leagueId))) return fail('suspended');
 
   // Already convened: signed up for that day with their card in that league
-  const playerId = (await adminDb().doc(`memberships/${caller.uid}`).get()).data()?.leagues?.[notice.leagueId]?.player_id;
+  const membership = (await adminDb().doc(`memberships/${caller.uid}`).get()).data()?.leagues?.[notice.leagueId];
+  const playerId = membership?.player_id;
   if (playerId && (await leagueDb(notice.leagueId).doc(`presences/${notice.matchId}_${playerId}`).get()).exists) {
     return fail('already_in_match');
   }
+  // A member of that league signs up from Presenze with their card: the board's spots are for people from outside
+  if (membership) return fail('is_member');
   const account = (await adminDb().doc(`profiles/${caller.profileId}`).get()).data() || {};
   const displayName = String(account.full_name || 'Un giocatore');
   // Their level in THEIR own league (most recently reviewed card), so the host league balances the teams fairly

@@ -1779,6 +1779,7 @@
     "perHead": "{amount} each",
     "free": "Free",
     "taken": "You took the spot",
+    "ownLeague": "This is your league: sign up from Attendance.",
     "tookIt": "Spot taken: the league managers have been told.",
     "roles": {
       "ANY": "Any role",
@@ -1856,6 +1857,7 @@
       "full": "No spots left: someone was quicker.",
       "already_joined": "You already took a spot in this match.",
       "already_in_match": "You are already signed up for this match in the league.",
+      "is_member": "You are already a member of this league: sign up from Attendance.",
       "below_filled": "You cannot go below the spots already taken.",
       "failed": "Something went wrong: check your connection and try again.",
       "not_configured": "Service not available right now.",

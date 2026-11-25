@@ -249,7 +249,7 @@ export default function BoardPage() {
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
             {shown.map((n) => (
-              <NoticeCard key={n.id} notice={n} taken={takenIds.has(n.id)} onJoin={setJoining} />
+              <NoticeCard key={n.id} notice={n} taken={takenIds.has(n.id)} own={leagues.some((l) => l.id === n.leagueId && Boolean(l.playerId))} onJoin={setJoining} />
             ))}
           </div>
         )}

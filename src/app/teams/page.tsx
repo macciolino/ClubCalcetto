@@ -31,7 +31,8 @@ import {
   applyTeamSubstitutions,
   subscribePresences, 
   subscribePresencesRange,
-  subscribeProfiles 
+  subscribeProfiles,
+  subscribeOfficialMatchDate
 } from '@/lib/firebase/firestoreService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { getStoredPlayers } from '@/lib/services/playerService';
@@ -90,6 +91,21 @@ function SquadreContent() {
   const [selectedDate, setSelectedDate] = useState<string>(dateParam || toDateString(new Date()));
   useEffect(() => {
     if (!dateParam) setSelectedDate(getOfficialMatchDate());
+  }, [dateParam]);
+  // Il giorno ufficiale vero sta su Firestore: la copia sul dispositivo può mancare (primo accesso, cambio lega) e
+  // allora si parte da oggi. Finché non scegli tu un giorno, la pagina segue quello ufficiale appena arriva.
+  const pickedDay = useRef(false);
+  const [remoteOfficial, setRemoteOfficial] = useState<string | null>(null);
+  const chooseDay = (d: string) => {
+    pickedDay.current = true;
+    setSelectedDate(d);
+  };
+  useEffect(() => {
+    if (dateParam) return;
+    return subscribeOfficialMatchDate((d) => {
+      setRemoteOfficial(d);
+      if (!pickedDay.current) setSelectedDate(d || toDateString(new Date()));
+    });
   }, [dateParam]);
   const [matchTime, setMatchTime] = useState('20:30');
   const [matchLocation, setMatchLocation] = useState('');
@@ -205,9 +221,7 @@ function SquadreContent() {
       if (st.standard_match_time) setStandardTime(st.standard_match_time);
       setDefaultFieldId(st.default_field_id);
     });
-    const unsubFields = subscribeSportFields((list) => {
-      if (list && list.length > 0) setFields(list);
-    });
+    const unsubFields = subscribeSportFields((list) => setFields(list || []));
     return () => {
       unsubSettings();
       unsubFields();
@@ -560,7 +574,7 @@ function SquadreContent() {
     });
     return () => unsub();
   }, [calendarDays]);
-  const officialDate = mounted ? getStoredOfficialMatchDate() : '';
+  const officialDate = remoteOfficial ?? (mounted ? getStoredOfficialMatchDate() : '');
   const pillDays = Array.from(new Set([...calendarDays.map((d) => d.dateString), ...(selectedDate ? [selectedDate] : [])])).sort();
 
   const costPerPerson = (Number(totalCost || 80) / fmt.players).toFixed(2);
@@ -695,7 +709,7 @@ function SquadreContent() {
               <button
                 key={d}
                 type="button"
-                onClick={() => setSelectedDate(d)}
+                onClick={() => chooseDay(d)}
                 aria-pressed={selected}
                 className={`relative flex-shrink-0 flex flex-col items-center w-[4.5rem] py-2.5 rounded-2xl transition-colors ${
                   selected ? 'bg-accent text-on-accent' : 'bg-card text-secondary hover:bg-card-hover'
@@ -732,7 +746,7 @@ function SquadreContent() {
             <input
               type="date"
               value={selectedDate}
-              onChange={(e) => e.target.value && setSelectedDate(e.target.value)}
+              onChange={(e) => e.target.value && chooseDay(e.target.value)}
               className="px-2 py-1 bg-app border border-line rounded-lg text-primary focus:outline-none focus:border-accent"
             />
           </label>

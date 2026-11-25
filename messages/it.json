@@ -1779,6 +1779,7 @@
     "perHead": "{amount} a testa",
     "free": "Gratis",
     "taken": "Hai preso il posto",
+    "ownLeague": "È la tua lega: iscriviti dalle Presenze.",
     "tookIt": "Posto preso: i gestori della lega sono stati avvisati.",
     "roles": {
       "ANY": "Qualsiasi ruolo",
@@ -1856,6 +1857,7 @@
       "full": "Posti esauriti: qualcuno è stato più veloce.",
       "already_joined": "Hai già preso un posto in questa partita.",
       "already_in_match": "Sei già iscritto a questa partita nella lega.",
+      "is_member": "Sei già membro di questa lega: iscriviti dalle Presenze.",
       "below_filled": "Non puoi scendere sotto i posti già presi.",
       "failed": "Non sono riuscito: controlla la connessione e riprova.",
       "not_configured": "Servizio non disponibile in questo momento.",

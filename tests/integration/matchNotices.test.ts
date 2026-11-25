@@ -118,6 +118,18 @@ describe('Prendi il posto', () => {
     expect((await take(id, player.token)).data.error).toBe('already_in_match');
   });
 
+  it('un membro della lega non prende un posto da esterno nella propria lega: iscriversi dalle Presenze', async () => {
+    const id = String((await create(pres.token)).data.id);
+    const player = await makeUser('player', {});
+    const res = await take(id, player.token);
+    expect(res.status).toBe(409);
+    expect(res.data.error).toBe('is_member');
+    expect((await read(id)).spotsFilled).toBe(0);
+    expect((await ldb().doc(`presences/${DAY}_ext-player`).get()).exists).toBe(false);
+    // un esterno vero (senza scheda in quella lega) sì
+    expect((await take(id, (await outsider('out')).token)).data.ok).toBe(true);
+  });
+
   it('dieci click insieme su due posti: due posti presi, avviso chiuso, nessun overbooking', async () => {
     const id = String((await create(pres.token)).data.id);
     const people = await Promise.all(Array.from({ length: 10 }, (_, i) => outsider(`p${i}`)));

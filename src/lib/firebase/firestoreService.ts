@@ -942,7 +942,9 @@ export function countMvpVotes(votes: MvpVote[]): { playerId: string; count: numb
 // ==========================================
 
 export function subscribeAppSettings(
-  callback: (settings: AppSettings) => void
+  callback: (settings: AppSettings) => void,
+  /** A league that never saved its settings has no document: with this, `{}` is delivered so the defaults apply */
+  options?: { emptyIfMissing?: boolean }
 ): Unsubscribe | (() => void) {
   if (!isFirebaseConfigured || typeof window === 'undefined') {
     return () => {};
@@ -955,6 +957,8 @@ export function subscribeAppSettings(
       (snap) => {
         if (snap.exists()) {
           callback(snap.data() as AppSettings);
+        } else if (options?.emptyIfMissing) {
+          callback({});
         }
       },
       (err) => {

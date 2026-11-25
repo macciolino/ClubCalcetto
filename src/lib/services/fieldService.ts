@@ -177,6 +177,10 @@ export function subscribeSportFields(
           snapshot.forEach((d) => list.push(d.data() as SportField));
           callback(list);
           saveStoredFields(list);
+        } else {
+          // A league with no fields of its own: say so, so no page keeps showing the copy kept on this device
+          // (it can belong to another league) and prices come only from this league's data
+          callback([]);
         }
         // NOTE: no automatic seeding of demo fields into the real database
       },

@@ -513,6 +513,8 @@ Codice: [matchNotices.ts](../src/lib/server/matchNotices.ts) (server), [matchNot
 
 - **Già convocato:** chi ha già un'iscrizione a quella partita con la sua scheda in quella lega non prende il posto
   (`already_in_match`); chi ha già un posto non ne prende un altro (`already_joined`).
+- **Posti per chi è fuori:** un **membro** di quella lega non prende un posto nel suo stesso avviso (`is_member`): si
+  iscrive dalle Presenze con la sua scheda. Nella Bacheca la card della propria lega non offre "Partecipa".
 - **Isolamento:** prendere un posto **non** crea `memberships` né una scheda; chi risponde non legge giocatori, cassa,
   impostazioni né altri dati della lega.
 - **Lega sospesa:** la bacheca si legge, ma nessuno prende posti (423); lo staff può ancora chiudere o annullare.

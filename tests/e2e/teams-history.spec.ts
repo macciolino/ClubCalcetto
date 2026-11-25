@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { LEAGUE, PLAYERS, db, loginAsAdmin, seedMatchDay } from './seed';
+import { LEAGUE, PLAYERS, db, loginAsAdmin, romeDay, seedMatchDay } from './seed';
 
 /** Squadre and Storico: Italian stays as it was, English translates labels, pitch places and dates. */
 test.describe('Squadre e Storico in italiano e in inglese', () => {
@@ -71,4 +71,41 @@ test.describe('Squadre e Storico in italiano e in inglese', () => {
     await expect(sheet.getByText(/Pitch €80 · €8\.00 each/)).toBeVisible();
     await expect(sheet.getByRole('button', { name: 'Edit' })).toBeVisible();
   });
+});
+
+/** Primo accesso su un dispositivo (nessuna copia del giorno ufficiale): Squadre parte dal giorno ufficiale, non da oggi. */
+test('Squadre: senza copia locale si apre sul giorno ufficiale e lo segue finché non scegli un giorno', async ({ page }) => {
+  await seedMatchDay();
+  await loginAsAdmin(page);
+  await page.evaluate(() => localStorage.removeItem('clubcalcetto_official_match_date'));
+  await page.goto('/teams');
+  const tile = (iso: string) => {
+    const wd = new Date(iso + 'T12:00:00Z').toLocaleDateString('it-IT', { weekday: 'short', timeZone: 'Europe/Rome' });
+    return new RegExp('^(Giorno ufficiale )?' + wd + ' ' + Number(iso.slice(8)) + ' ', 'i');
+  };
+  // il giorno ufficiale (domani) è quello scelto e porta l'etichetta; oggi no
+  const official = page.getByRole('button', { name: tile(romeDay(1)), pressed: true });
+  await expect(official).toBeVisible({ timeout: 15_000 });
+  await expect(official).toHaveAccessibleName(/^Giorno ufficiale/);
+  // se scegli un altro giorno, resti lì
+  await page.getByRole('button', { name: tile(romeDay(3)), pressed: false }).click();
+  await expect(page.getByRole('button', { name: tile(romeDay(3)), pressed: true })).toBeVisible();
+});
+
+/** Lega senza campi propri: nessuna pagina usa un campo rimasto sul dispositivo (anche di altre leghe), il prezzo è lo stesso ovunque. */
+test('Home e Squadre: lega senza campi, stesso prezzo e nessun campo di altre leghe', async ({ page }) => {
+  await seedMatchDay();
+  await db.doc('leagues/calcettari/settings/app_config').delete();
+  await db.doc('leagues/calcettari/sport_fields/f1').delete();
+  await loginAsAdmin(page);
+  await page.evaluate(() => {
+    localStorage.setItem('clubcalcetto_sport_fields', JSON.stringify([{ id: 'zz', name: 'Campo Altrove', address: 'Via Altrove 9', cost: 60 }]));
+  });
+  await page.goto('/');
+  await expect(page.getByText('5vs5 · €8 a testa')).toBeVisible({ timeout: 15_000 });
+  await page.goto('/teams');
+  await expect(page.getByRole('heading', { name: 'Squadre', level: 1 })).toBeVisible({ timeout: 15_000 });
+  await page.waitForTimeout(3000); // i dati della lega arrivano dopo il primo disegno
+  await expect(page.getByText('€8,00 a testa')).toBeVisible();
+  await expect(page.getByText('Campo Altrove')).toHaveCount(0);
 });

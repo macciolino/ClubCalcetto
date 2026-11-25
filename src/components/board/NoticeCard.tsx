@@ -80,7 +80,7 @@ export function NoticePrice({ notice }: { notice: Pick<MatchNotice, 'costPerPlay
 }
 
 /** One notice on the board: scannable at a glance, with "Partecipa alla partita" (or "Hai preso il posto"). */
-export function NoticeCard({ notice, taken, onJoin }: { notice: MatchNotice; taken: boolean; onJoin: (n: MatchNotice) => void }) {
+export function NoticeCard({ notice, taken, own = false, onJoin }: { notice: MatchNotice; taken: boolean; own?: boolean; onJoin: (n: MatchNotice) => void }) {
   const t = useTranslations('board');
   const { locale } = useLocaleSetting();
   const left = Math.max(0, notice.spotsNeeded - notice.spotsFilled);
@@ -127,6 +127,8 @@ export function NoticeCard({ notice, taken, onJoin }: { notice: MatchNotice; tak
           <p className="flex items-center gap-2 text-sm font-semibold text-accent-text">
             <Check className="h-4 w-4" aria-hidden="true" /> {t('taken')}
           </p>
+        ) : own ? (
+          <p className="text-sm text-secondary">{t('ownLeague')}</p>
         ) : (
           <button type="button" onClick={() => onJoin(notice)} className={btn.primary}>
             <UserPlus className="h-4 w-4" aria-hidden="true" /> {t('join')}

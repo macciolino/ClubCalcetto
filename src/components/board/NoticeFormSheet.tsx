@@ -55,7 +55,7 @@ export function NoticeFormSheet({ notice, prefill, onClose }: { notice?: MatchNo
     if (!fromLeague) return;
     const offs = [
       subscribeSportFields(setFields),
-      subscribeAppSettings(setSettings),
+      subscribeAppSettings(setSettings, { emptyIfMissing: true }),
       subscribeOfficialMatchDate((d) => setDate((cur) => cur || d)),
     ];
     return () => offs.forEach((off) => off());

@@ -42,6 +42,7 @@ const STATUS: Record<NoticeError, number> = {
   full: 409,
   already_joined: 409,
   already_in_match: 409,
+  is_member: 409,
   below_filled: 400,
   too_early: 409,
   already_member: 409,
