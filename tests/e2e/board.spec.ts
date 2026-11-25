@@ -139,3 +139,35 @@ test.describe('Esterno nella partita', () => {
     await expect(page.getByText('Luca Esterno')).toHaveCount(0);
   });
 });
+
+test.describe('Ospiti nello Storico e card in Home', () => {
+  test('Storico della lega ospitante: l’ospite col suo nome e il badge; Home: card della Bacheca per le altre leghe', async ({ page }) => {
+    const { date } = await seedMatchDay();
+    // partita archiviata dei Calcettari con un ospite MVP
+    await db.doc(`leagues/calcettari/matches/${date}`).set({
+      id: date, match_date: date, status: 'completed', score_white: 4, score_black: 2,
+      team_white: [...PLAYERS.slice(0, 4).map((p) => ({ id: p.id, name: p.name })), { id: 'ext-luca', name: 'Luca Ospite' }],
+      team_black: PLAYERS.slice(5).map((p) => ({ id: p.id, name: p.name })),
+      scorers: [{ player_id: 'ext-luca', player_name: 'Luca Ospite', goals: 2 }], mvp_player_id: 'ext-luca',
+    });
+    // un'altra lega cerca giocatori
+    const day = romeDay(3);
+    await db.doc('match_notices/other1').set({
+      id: 'other1', leagueId: 'amici', leagueName: 'Lega Amici', matchId: day, dateTime: `${day}T19:30:00.000Z`, locationName: 'Campo Amici',
+      address: 'Via Amici 1', format: '7v7', totalFieldCost: 112, costPerPlayer: 8, spotsNeeded: 2, spotsFilled: 0, roleNeeded: 'ANY',
+      shirtColor: 'DARK', status: 'OPEN', createdBy: { profileId: 'x', name: 'x' }, created_at: 'x', updated_at: 'x',
+    });
+
+    await loginAsAdmin(page);
+    const home = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Cerco giocatore' }) });
+    await expect(home.getByText('Lega Amici', { exact: false })).toBeVisible({ timeout: 15_000 });
+    await expect(home.getByRole('link', { name: 'Vai alla Bacheca' })).toBeVisible();
+
+    await page.goto('/history');
+    await expect(page.getByText('Luca Ospite').first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('Ospite', { exact: true }).first()).toBeVisible();
+    // la riga della partita mostra l'MVP ospite col suo nome
+    await page.getByRole('radio', { name: 'Partite' }).click();
+    await expect(page.getByText(/⭐ Luca/).first()).toBeVisible();
+  });
+});

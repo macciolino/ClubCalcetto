@@ -439,8 +439,11 @@ Codice: [matchNotices.ts](../src/lib/server/matchNotices.ts) (server), [matchNot
 
 **Interfaccia** (componenti in `src/components/board/`)
 - **Navigazione:** voce "Bacheca" nella barra, con un **badge numerico solo quando ci sono avvisi aperti**
-  ([useOpenNoticeCount.ts](../src/lib/hooks/useOpenNoticeCount.ts)). La pagina `/board` funziona **anche senza lega**
-  (dal benvenuto: "Cerca una partita da giocare").
+  ([useOpenNoticeCount.ts](../src/lib/hooks/useOpenNoticeCount.ts)). In **Home** una card compatta
+  ([BoardHomeCard.tsx](../src/components/board/BoardHomeCard.tsx)) compare **solo quando altre leghe** cercano
+  giocatori (gli avvisi della lega attiva sono per gli esterni: i membri si iscrivono normalmente): quante partite, la
+  più vicina, "Vai alla Bacheca". La pagina `/board` funziona **anche senza lega** (dal benvenuto: "Cerca una partita
+  da giocare").
 - **Bacheca** ([page.tsx](../src/app/board/page.tsx)):
   - card scansionabili ([NoticeCard.tsx](../src/components/board/NoticeCard.tsx)): lega, giorno e ora in evidenza,
     badge "N posti liberi", formato, badge del ruolo (portieri in azzurro), pallino del colore della maglia, campo con
@@ -521,9 +524,12 @@ Codice: [externalPlayers.ts](../src/lib/server/externalPlayers.ts) (server), [ex
   l'avviso prima della partita fa lo stesso per tutti. Dopo l'inizio non si toglie più (`too_late`).
   "Azzera presenze del giorno" lascia gli esterni.
 - **Statistiche separate.**
-  - **Lega:** classifiche, presenze, gol, MVP e forma ignorano ogni id `ext-` (`computeMatchStats`,
-    `computeRecentResults`), e l'archiviazione non tocca nessuna scheda (gli `ext-` non ne hanno). La lega di
-    appartenenza dell'esterno non vede niente.
+  - **Lega ospitante:** l'archiviazione non tocca nessuna scheda (gli `ext-` non ne hanno) e le statistiche dei
+    membri (Home "Il tuo rendimento", Giocatori, forma: `computeMatchStats`, `computeRecentResults`) ignorano ogni
+    id `ext-`. Lo **Storico** della lega invece racconta la partita com'è stata giocata: l'ospite compare con il
+    **nome salvato nelle formazioni** (`nameInMatch`) e il badge "**Ospite**" in classifica, nelle formazioni del
+    dettaglio, tra i marcatori e come MVP. Non si apre la sua scheda (non ne ha).
+  - **Lega di appartenenza dell'ospite:** non vede niente; le sue classifiche non cambiano.
   - **Carriera:** dopo l'archiviazione (e a ogni correzione o cancellazione della partita) il server copia esito,
     gol e MVP sulla copia del posto (`result`, `goals`, `mvp`). Il profilo somma tutte le leghe più le partite da
     ospite; "Le mie partite" elenca tutte le partite giocate, con il badge "**Ospite · Lega**" e il filtro per lega.

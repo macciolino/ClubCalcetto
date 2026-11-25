@@ -7,7 +7,8 @@
     "cancel": "Annulla",
     "confirm": "Conferma",
     "close": "Chiudi",
-    "back": "Indietro"
+    "back": "Indietro",
+    "guestPlayer": "Ospite"
   },
   "nav": {
     "home": "Home",
@@ -1910,6 +1911,12 @@
       "score": "Risultato: Bianchi {white} – {black} Neri",
       "white": "Bianchi",
       "black": "Neri"
+    },
+    "home": {
+      "title": "Cerco giocatore",
+      "count": "{count, plural, one {# partita} other {# partite}}",
+      "spotsFree": "{count, plural, one {# posto libero} other {# posti liberi}}",
+      "cta": "Vai alla Bacheca"
     }
   }
 }

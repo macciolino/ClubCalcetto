@@ -39,6 +39,8 @@ import { PageSkeleton } from '@/components/ui/Skeleton';
 import { notify, askConfirm } from '@/components/ui/Feedback';
 import { ArrowRight, Check, Clock, Loader2, Lock, LogOut } from 'lucide-react';
 import { btn, presenceBtn, textLink } from '@/components/ui/buttons';
+import { nameInMatch } from '@/lib/utils/matchUtils';
+import { BoardHomeCard } from '@/components/board/BoardHomeCard';
 
 const tag = (locale: string) => (locale === 'en' ? 'en-GB' : 'it-IT');
 
@@ -65,7 +67,7 @@ function shortDate(date: string, locale: string): string {
 export default function HomePage() {
   const { user, profile, isAdmin, isLoading } = useAuth();
   // Organisers ("Gioco anch'io" off) and platform staff without a card here never sign up for the pitch
-  const { member, isSuspended: suspendedLeague, isPlatformStaff } = useActiveLeague();
+  const { member, isSuspended: suspendedLeague, isPlatformStaff, activeLeagueId } = useActiveLeague();
   // Suspended league: read-only for members (platform staff still work there)
   const isSuspended = suspendedLeague && !isPlatformStaff;
   const canPlay = Boolean(member && member.isActivePlayer !== false);
@@ -445,8 +447,17 @@ export default function HomePage() {
         </section>
 
         {lastMatch && (
-          <LastMatchCard match={lastMatch} playerId={profile.id} dateLabel={sd(lastMatch.match_date || lastMatch.id)} nameOf={nameOf} />
+          <LastMatchCard
+            match={lastMatch}
+            playerId={profile.id}
+            dateLabel={sd(lastMatch.match_date || lastMatch.id)}
+            // A guest from the board has no card here: the name saved in the line-ups
+            nameOf={(id) => profiles.find((p) => p.id === id)?.full_name || nameInMatch(lastMatch, id) || nameOf(id)}
+          />
         )}
+
+        {/* Bacheca "Cerco giocatore": solo quando altre leghe cercano giocatori */}
+        <BoardHomeCard leagueId={activeLeagueId} />
       </aside>
       </div>
     </div>

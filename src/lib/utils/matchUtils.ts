@@ -160,3 +160,13 @@ export function lastMatchOutcome(
   const mine = !side ? null : winner === null ? 'drawn' : winner === side ? 'won' : 'lost';
   return { winner, mine };
 }
+
+/**
+ * Name of a player as saved in the match's line-ups (and scorers): it stays even when the player has no card here,
+ * e.g. a guest from the "Cerco giocatore" board, or a card deleted later.
+ */
+export function nameInMatch(match: Pick<Match, 'team_white' | 'team_black' | 'scorers'> | null | undefined, id: string): string | undefined {
+  if (!match) return undefined;
+  const p = [...(match.team_white || []), ...(match.team_black || [])].find((x) => x.id === id);
+  return p?.name || (match.scorers || []).find((s) => s.player_id === id)?.player_name || undefined;
+}

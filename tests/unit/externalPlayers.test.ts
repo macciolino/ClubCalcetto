@@ -56,3 +56,12 @@ describe('giocatori esterni', () => {
     expect(w.closesAt - w.opensAt).toBe(24 * 3_600_000);
   });
 });
+
+describe('nome dalle formazioni della partita', () => {
+  it('l’ospite non ha scheda: il nome resta nella partita (formazioni o marcatori)', async () => {
+    const { nameInMatch } = await import('@/lib/utils/matchUtils');
+    expect(nameInMatch(match, 'ext-luca')).toBe('Luca');
+    expect(nameInMatch({ team_white: [], team_black: [], scorers: [{ player_id: 'x', player_name: 'Xavi', goals: 1 }] }, 'x')).toBe('Xavi');
+    expect(nameInMatch(match, 'nessuno')).toBeUndefined();
+  });
+});

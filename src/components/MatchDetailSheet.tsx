@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { useLocaleSetting } from '@/i18n/I18nProvider';
 import { Sheet, sheetBtn } from '@/components/ui/Sheet';
 import { Pencil, Trash2 } from 'lucide-react';
+import { GuestBadge } from '@/components/GuestBadge';
 
 /**
  * Archived match detail (Storico; reusable elsewhere): big score, the two line-ups side by side with
@@ -58,6 +59,7 @@ export function MatchDetailSheet({
             return (
               <li key={p.id} className="flex items-center gap-1.5 min-w-0">
                 <span className={`truncate ${mvp ? 'text-warning font-semibold' : 'text-primary'}`}>{nameOf(p.id, p.name)}</span>
+                <GuestBadge id={p.id} />
                 {mvp && <span title="MVP">⭐</span>}
                 {g > 0 && (
                   <span className="flex-shrink-0 text-xs text-secondary" title={t('goals', { count: g })}>

@@ -21,6 +21,8 @@ import { computeMatchStats } from '@/lib/utils/statUtils';
 import { MatchEditModal } from '@/components/MatchEditModal';
 import { HistoryCalendar } from '@/components/HistoryCalendar';
 import { menu } from '@/components/ui/buttons';
+import { GuestBadge } from '@/components/GuestBadge';
+import { nameInMatch } from '@/lib/utils/matchUtils';
 
 interface PlayerLine {
   id: string;
@@ -73,7 +75,7 @@ function buildLeaderboard(matches: Match[], nameOf: (id: string, fallback?: stri
     apply('white');
     apply('black');
     (m.scorers || []).forEach((s) => (line(s.player_id, s.player_name).goals += s.goals || 0));
-    if (m.mvp_player_id) line(m.mvp_player_id).mvp += 1;
+    if (m.mvp_player_id) line(m.mvp_player_id, nameInMatch(m, m.mvp_player_id)).mvp += 1;
   }
 
   return Array.from(lines.values());
@@ -357,7 +359,10 @@ export default function HistoryPage() {
                   >
                     <span className={`w-6 flex-shrink-0 text-center text-sm tabular-nums ${idx < 3 ? 'font-bold text-primary' : 'text-muted'}`}>{idx + 1}</span>
                     <span className="flex-1 min-w-0">
-                      <span className="block truncate text-sm font-semibold text-primary">{l.name}</span>
+                      <span className="block truncate text-sm font-semibold text-primary">
+                        {l.name}
+                        <GuestBadge id={l.id} />
+                      </span>
                       <span className="block text-xs text-secondary tabular-nums">
                         {t('playedCount', { count: l.played })} ·{' '}
                         <span className={zeroTone(l.won, 'text-accent-text')}>{t('wShort', { n: l.won })}</span>{' '}
@@ -416,6 +421,7 @@ export default function HistoryPage() {
                         className="font-semibold text-primary hover:text-accent-text text-left"
                       >
                         {l.name}
+                        <GuestBadge id={l.id} />
                       </button>
                     </td>
                     {SORT_COLUMNS.map((c) => (
@@ -463,7 +469,7 @@ export default function HistoryPage() {
                         <span className="hidden sm:inline text-secondary">{t('black')}</span>
                       </span>
                       <span className="truncate text-right text-xs text-warning">
-                        {m.mvp_player_id ? `⭐ ${shortName(nameOf(m.mvp_player_id))}` : ''}
+                        {m.mvp_player_id ? `⭐ ${shortName(nameOf(m.mvp_player_id, nameInMatch(m, m.mvp_player_id)))}` : ''}
                       </span>
                     </button>
                   </li>

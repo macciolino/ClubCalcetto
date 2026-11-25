@@ -7,7 +7,8 @@
     "cancel": "Cancel",
     "confirm": "Confirm",
     "close": "Close",
-    "back": "Back"
+    "back": "Back",
+    "guestPlayer": "Guest"
   },
   "nav": {
     "home": "Home",
@@ -1910,6 +1911,12 @@
       "score": "Result: Whites {white} – {black} Blacks",
       "white": "Whites",
       "black": "Blacks"
+    },
+    "home": {
+      "title": "Player wanted",
+      "count": "{count, plural, one {# match} other {# matches}}",
+      "spotsFree": "{count, plural, one {# spot free} other {# spots free}}",
+      "cta": "Go to the Board"
     }
   }
 }
