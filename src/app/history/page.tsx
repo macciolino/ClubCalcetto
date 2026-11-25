@@ -11,7 +11,7 @@ import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { formatLongDate, getVisibleHistoryYear } from '@/lib/utils/dateUtils';
 import { useTranslations } from 'next-intl';
 import { useLocaleSetting } from '@/i18n/I18nProvider';
-import { Trophy, ListOrdered, CalendarDays, Trash2, Loader2, MoreHorizontal } from 'lucide-react';
+import { Trophy, ListOrdered, CalendarDays, Trash2, Loader2, MoreHorizontal, Plus } from 'lucide-react';
 import { MatchDetailSheet } from '@/components/MatchDetailSheet';
 import { PlayerDetailSheet } from '@/components/PlayerCardFifa';
 import { lastCompletedMatches } from '@/components/FormDots';
@@ -20,9 +20,11 @@ import { useForms } from '@/lib/hooks/useForms';
 import { computeMatchStats } from '@/lib/utils/statUtils';
 import { MatchEditModal } from '@/components/MatchEditModal';
 import { HistoryCalendar } from '@/components/HistoryCalendar';
-import { menu } from '@/components/ui/buttons';
+import { btnInline, menu } from '@/components/ui/buttons';
 import { GuestBadge } from '@/components/GuestBadge';
 import { nameInMatch } from '@/lib/utils/matchUtils';
+import { AddMatchSheet } from '@/components/history/AddMatchSheet';
+import { useActiveLeague } from '@/lib/context/ActiveLeagueContext';
 
 interface PlayerLine {
   id: string;
@@ -108,6 +110,8 @@ export default function HistoryPage() {
     return () => clearInterval(t);
   }, []);
   const [editing, setEditing] = useState<Match | null>(null);
+  const [adding, setAdding] = useState(false);
+  const { canManageMatchesAndCash: canAddMatch } = useActiveLeague();
   const [pickedDate, setPickedDate] = useState<string | null>(null);
   const [season, setSeason] = useState<string>('all');
   const [menuOpen, setMenuOpen] = useState(false);
@@ -224,6 +228,13 @@ export default function HistoryPage() {
       <header className="flex items-center justify-between gap-3 min-h-[2.5rem]">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-primary">{t('title')}</h1>
         <div className="flex items-center gap-2">
+          {/* Partita passata mai archiviata (dimenticata o segnata su carta): gestori e staff, lega non sospesa */}
+          {canAddMatch && (
+            <button type="button" onClick={() => setAdding(true)} className={`${btnInline.secondary} !px-3 !py-2`} aria-label={t('addMatch')}>
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              <span className="hidden sm:inline">{t('addMatch')}</span>
+            </button>
+          )}
           {seasons.length > 0 && (
             <select
               value={season}
@@ -509,6 +520,14 @@ export default function HistoryPage() {
         />
       )}
 
+      {adding && (
+        <AddMatchSheet
+          profiles={profiles}
+          archivedDates={new Set(matches.map((m) => m.match_date || m.id))}
+          closedBy={profile?.id || ''}
+          onClose={() => setAdding(false)}
+        />
+      )}
       {editing && (
         <MatchEditModal
           match={editing}

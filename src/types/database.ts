@@ -247,6 +247,8 @@ export interface Match {
   id: string;
   match_date: string; // YYYY-MM-DD
   match_time: string; // HH:mm
+  /** Past match entered by hand in the Storico (forgotten, or from a paper record) */
+  entered_by_hand?: boolean;
   location: string;
   field_id?: string;
   total_cost: number;

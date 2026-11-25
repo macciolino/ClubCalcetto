@@ -445,6 +445,7 @@ var MATRIX = [
   { g: 'Partite', a: 'Iscriversi a una partita', v: ['c:se ha una scheda', 'c:se ha una scheda', 's', 's', 's:se gioca e il giorno è aperto', 'n'], sus: 'nessuno' },
   { g: 'Partite', a: 'Iscrivere o ritirare altri, sbloccare il calendario', v: ['y', 'y', 'y', 'y', 'n', 'n'], sus: 'solo staff' },
   { g: 'Partite', a: 'Formati, squadre, risultati, MVP finale', v: ['y', 'y', 'y', 'y', 'n', 'n'], sus: 'solo staff' },
+  { g: 'Partite', a: 'Aggiungere una partita passata nello Storico (anche nuovi ospiti)', v: ['y', 'y', 'y', 'y', 'n', 'n'], sus: 'solo staff' },
   { g: 'Partite', a: 'Votare l\'MVP', v: ['c:se ha una scheda', 'c:se ha una scheda', 'y:sempre', 'y:sempre', 's:finestra del voto', 'n'], sus: 'nessuno' },
   { g: 'Gestione', a: 'Statistiche, OVR, storici, parametri', v: ['y', 'y', 'y', 'y', 'n', 'n'], sus: 'solo staff' },
   { g: 'Gestione', a: 'Cassa, campi, costo e quota della partita', v: ['y', 'y', 'y', 'y', 'n', 'n'], sus: 'solo staff' },
@@ -503,7 +504,7 @@ var FLOWS = {
     { t: '4 · Squadre', d: 'Algoritmo locale bilanciato sull\'OVR (nessuna AI esterna). Dopo un ritiro le sostituzioni si ricalcolano sul server; se resta un posto che nessuno in attesa può prendere, i gestori ricevono "Manca un giocatore". Squadre di un altro formato si rigenerano da sole quando un gestore apre Squadre.', who: ['PRES', 'COLL', 'SA', 'GA'], ic: 'shuffle' },
     { t: '5 · Risultato', d: 'Il gestore registra risultato, marcatori ed MVP. V/P/S si aggiornano in una transazione idempotente: salvare di nuovo applica solo la differenza. Niente assist.', who: ['PRES', 'COLL', 'SA', 'GA'], ic: 'trophy' },
     { t: '6 · Voto MVP', d: 'Si apre a inizio + 1 h 45 min e resta aperto 24 h nell\'app (le regole accettano voti fino a 3 giorni dopo). Notifica dal cron. I gestori votano sempre; ognuno vota solo per sé.', who: ['PLAYER', 'COLL', 'PRES'], ic: 'star' },
-    { t: '7 · Storico', d: 'Partite archiviate per anno, classifica, card "Ultima partita" in Home con tabellone, vincitori e badge MVP ed esito.', who: ['PLAYER', 'COLL', 'PRES', 'SA', 'GA'], ic: 'history' },
+    { t: '7 · Storico', d: 'Partite archiviate per anno, classifica, card "Ultima partita" in Home con tabellone, vincitori e badge MVP ed esito. I gestori aggiungono anche partite passate dimenticate o segnate su carta (Aggiungi partita): giocatori della lega o nuovi ospiti, contano come le altre, senza cassa.', who: ['PLAYER', 'COLL', 'PRES', 'SA', 'GA'], ic: 'history' },
   ],
   fields: [
     { t: 'Cerca o proponi', d: 'Impostazioni → Campi → "Campo": cerca nel catalogo e aggiungi (collegato). Non c\'è? Prima vengono mostrati i campi simili, poi la proposta parte: pending, ma subito usabile nella lega.', who: ['PRES', 'COLL', 'SA', 'GA'], ic: 'map-pin' },

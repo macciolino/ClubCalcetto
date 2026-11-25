@@ -119,6 +119,8 @@ export function MatchDetailSheet({
           <span className={`text-5xl font-bold tabular-nums ${b > w ? 'text-accent-text' : 'text-primary'}`}>{b}</span>
         </div>
         <p className="text-sm text-secondary">{outcome}</p>
+        {/* Partita passata inserita a mano nello Storico (dimenticata o segnata su carta) */}
+        {match.entered_by_hand && <p className="text-xs text-muted">{t('enteredByHand')}</p>}
       </div>
 
       {/* Formazioni */}

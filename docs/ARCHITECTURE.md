@@ -195,6 +195,7 @@ La colonna **Staff** vale per `SUPER_ADMIN` e `GLOBAL_ADMIN`, salvo dove è indi
 | Iscriversi a una partita | ⚙️ | sé | sé | sé (se gioca e il giorno è aperto) | ❌ |
 | Iscrivere o ritirare altri, sbloccare il calendario | ✅ | ✅ | ✅ | ❌ | solo staff |
 | Formati, squadre, risultati, MVP finale | ✅ | ✅ | ✅ | ❌ | solo staff |
+| Aggiungere una partita passata nello Storico (anche con nuovi ospiti) | ✅ | ✅ | ✅ | ❌ | solo staff |
 | Votare l'MVP | ⚙️ | sempre | sempre | finestra del voto | ❌ |
 | Statistiche, OVR, storici, parametri | ✅ | ✅ | ✅ | ❌ | solo staff |
 | Cassa, campi, costo e quota della partita | ✅ | ✅ | ✅ | ❌ | solo staff |
@@ -316,6 +317,17 @@ Calendario → Iscrizioni (titolari / attesa) → Formato → Squadre → Partit
    - Il gestore sceglie l'MVP finale vedendo i voti.
 7. **Storico**: le partite archiviate formano la cronologia per anno e la classifica. Le squadre archiviate sono una
    lista congelata.
+   - **Partita passata inserita a mano** (Storico → "Aggiungi partita", [AddMatchSheet.tsx](../src/components/history/AddMatchSheet.tsx),
+     regole in [manualMatch.ts](../src/lib/utils/manualMatch.ts)): per una partita dimenticata o segnata su carta prima
+     di usare l'app. La inseriscono presidente, collaboratori e staff (lega non sospesa):
+     - giorno passato (fino a oggi), una sola partita per giorno (se c'è già, la si modifica dal dettaglio);
+     - ora, campo e costo facoltativi; formato per il numero massimo di giocatori per squadra;
+     - squadre: giocatori della lega oppure **nuovi ospiti** creati al volo con il loro nome (diventano schede
+       ospite normali, prima del salvataggio della partita);
+     - risultato, marcatori ed MVP con lo stesso modulo dell'archiviazione.
+     Si salva con `saveMatchResult` come ogni partita archiviata: aggiorna V/P/S delle schede, la classifica e la
+     forma; **nessuna cassa** (solo costo e quota a testa). Sulla partita restano `location`, `match_time` e
+     `entered_by_hand: true` ("Inserita a mano nello Storico" nel dettaglio).
 
 ### 3.3 Campi, catalogo globale e cassa
 

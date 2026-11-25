@@ -618,7 +618,8 @@
     "colMvpTitle": "MVP awards",
     "white": "Whites",
     "black": "Blacks",
-    "playerFallback": "Player"
+    "playerFallback": "Player",
+    "addMatch": "Add match"
   },
   "calendar": {
     "weekdays": "Mon,Tue,Wed,Thu,Fri,Sat,Sun",
@@ -641,7 +642,8 @@
     "delete": "Delete",
     "edit": "Edit",
     "noLineups": "Line-ups not saved.",
-    "noScorers": "No scorers or MVP entered."
+    "noScorers": "No scorers or MVP entered.",
+    "enteredByHand": "Entered by hand in the history"
   },
   "matchEdit": {
     "title": "Edit match on {date}",
@@ -1917,6 +1919,38 @@
       "count": "{count, plural, one {# match} other {# matches}}",
       "spotsFree": "{count, plural, one {# spot free} other {# spots free}}",
       "cta": "Go to the Board"
+    }
+  },
+  "addMatch": {
+    "title": "Add a past match",
+    "subtitle": "For a match that was forgotten or written on paper: it counts like the others (wins, standings, form), no cash.",
+    "date": "Day",
+    "time": "Time (optional)",
+    "place": "Field (optional)",
+    "placePh": "E.g. Campo Test",
+    "cost": "Cost (€, optional)",
+    "format": "Format",
+    "teams": "Teams",
+    "result": "Result",
+    "white": "Whites",
+    "black": "Blacks",
+    "addPlayer": "Add a league player…",
+    "addTo": "Add to the {team}",
+    "newGuest": "Guest",
+    "guestPh": "Name of a new guest",
+    "guestLabel": "New guest in the {team}",
+    "removePlayer": "Remove {name}",
+    "resultAfterTeams": "Put at least one player per team to enter score, scorers and MVP.",
+    "save": "Save to history",
+    "saved": "Match added to the history.",
+    "saveFailed": "Could not save the match: check your connection and try again.",
+    "errors": {
+      "date_required": "Choose the day of the match.",
+      "future": "Only matches already played can be added (up to today).",
+      "exists": "There is already a match on that day in the history: open it and edit it.",
+      "teams_empty": "Put at least one player in each team.",
+      "too_many": "At most {max} players per team with this format.",
+      "duplicate": "The same player is in both teams."
     }
   }
 }

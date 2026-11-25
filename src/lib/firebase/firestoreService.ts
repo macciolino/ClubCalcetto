@@ -630,6 +630,8 @@ export interface MatchResultInput {
   /** Players of the match (10 for 5vs5, 14 for 7vs7…): quota a testa = totalCost / players */
   players?: number;
   closedBy: string;
+  /** A past match entered by hand in the Storico: where and when it was played, and the "entered by hand" mark */
+  details?: { location?: string; match_time?: string; entered_by_hand?: boolean };
 }
 
 const OUTCOME_FIELD: Record<MatchOutcome, 'matches_won' | 'matches_drawn' | 'matches_lost'> = {
@@ -710,6 +712,9 @@ export async function saveMatchResult(input: MatchResultInput): Promise<void> {
         total_cost: input.totalCost,
         cost_per_player: Number((input.totalCost / (input.players || teamWhite.length + teamBlack.length || 10)).toFixed(2)),
         profile_effects: appliedEffects,
+        ...(input.details?.location ? { location: input.details.location } : {}),
+        ...(input.details?.match_time ? { match_time: input.details.match_time } : {}),
+        ...(input.details?.entered_by_hand ? { entered_by_hand: true } : {}),
         closed_at: existing?.closed_at || now,
         closed_by: input.closedBy,
         created_at: existing?.created_at || now,
