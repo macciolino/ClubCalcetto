@@ -277,6 +277,9 @@ Calendario → Iscrizioni (titolari / attesa) → Formato → Squadre → Partit
    - La settimana corrente è sempre aperta.
    - Dalla settimana successiva i giorni restano chiusi finché un gestore non li apre (`settings/calendar.open_until`).
      Le regole lo verificano in `isDateOpenForPlayers`, con l'ora italiana.
+   - Il **giorno ufficiale** (`settings/official_match`, uguale per tutti) lo cambia solo il comando esplicito dei gestori in
+     Impostazioni > Partita della settimana. Scegliere un giorno nelle Presenze lo mostra e lo gestisce soltanto a chi lo
+     sceglie: non cambia il giorno ufficiale e, finché non lo scegli, la pagina segue quello ufficiale.
 2. **Iscrizioni** (`presences`)
    - L'ordine segue `joined_at` (ora del server, non falsificabile).
    - Titolari e lista d'attesa sono **calcolati** in base ai posti del formato ([presenceRanking.ts](../src/lib/utils/presenceRanking.ts)).

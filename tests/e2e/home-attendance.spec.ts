@@ -78,3 +78,24 @@ test.describe('Home e Presenze in italiano e in inglese', () => {
     await expect(card.getByRole('heading', { level: 3 })).toHaveText(/Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday/);
   });
 });
+
+/** Un presidente che sfoglia i giorni nelle Presenze guarda quel giorno, ma non cambia il giorno ufficiale di tutti. */
+test('Presenze: scegliere un giorno non cambia il giorno ufficiale e la scelta non rimbalza', async ({ page }) => {
+  await seedMatchDay();
+  const official = romeDay(1);
+  const other = romeDay(3);
+  await loginAsAdmin(page);
+  await page.goto('/attendance');
+  const pressed = () => page.locator('button[aria-pressed="true"]').first();
+  const label = async (iso: string) => {
+    const wd = new Date(iso + 'T12:00:00Z').toLocaleDateString('it-IT', { weekday: 'long', timeZone: 'Europe/Rome' });
+    return new RegExp('^' + wd + ' ' + Number(iso.slice(8)) + ' ', 'i');
+  };
+  await expect(page.getByRole('button', { name: await label(official), pressed: true })).toBeVisible({ timeout: 15_000 });
+  await page.getByRole('button', { name: await label(other) }).click();
+  await expect(page.getByRole('button', { name: await label(other), pressed: true })).toBeVisible();
+  // resta lì anche quando i dati della lega si aggiornano, e il giorno ufficiale su Firestore non è cambiato
+  await page.waitForTimeout(3000);
+  await expect(pressed()).toHaveAccessibleName(await label(other));
+  expect((await db.doc('leagues/calcettari/settings/official_match').get()).data()?.date).toBe(official);
+});

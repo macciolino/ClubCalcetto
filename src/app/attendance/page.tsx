@@ -6,7 +6,7 @@ import { callNotifyApi } from '@/lib/services/pushService';
 import { firstToTenByWeek } from '@/lib/utils/presenceRanking';
 import { useMatchFormats } from '@/lib/hooks/useMatchFormats';
 import { FORMAT_INFO, dayFormat, maxPlayersFor } from '@/lib/utils/matchFormat';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/context/AuthContext';
 import { useActiveLeague } from '@/lib/context/ActiveLeagueContext';
@@ -21,7 +21,6 @@ import {
   leavePresence,
   setPresenceOverride,
   clearPresencesForDate,
-  saveOfficialMatchDateDoc,
 } from '@/lib/firebase/firestoreService';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { getOfficialMatchDate, setOfficialMatchDate } from '@/lib/services/presenceService';
@@ -64,6 +63,7 @@ export default function PresenzePage() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [openUntil, setOpenUntil] = useState<string>('');
   const [selectedDayString, setSelectedDayString] = useState<string>(days[0]?.dateString || '');
+  const pickedDay = useRef(false);
   const [busyDate, setBusyDate] = useState<string | null>(null);
   const [isSavingCalendar, setIsSavingCalendar] = useState(false);
   // Formato di ogni giorno (5vs5, 7vs7, 8vs8, 11vs11): decide quanti sono i titolari
@@ -94,7 +94,8 @@ export default function PresenzePage() {
     const unsubMatchDate = subscribeOfficialMatchDate((remoteDate) => {
       if (remoteDate) {
         setOfficialMatchDate(remoteDate);
-        if (remoteDate >= firstDay && remoteDate <= lastDay) setSelectedDayString(remoteDate);
+        // Si segue il giorno ufficiale solo finché non scegli tu un giorno: un dato che arriva dopo non te lo toglie
+        if (!pickedDay.current && remoteDate >= firstDay && remoteDate <= lastDay) setSelectedDayString(remoteDate);
       } else {
         setOfficialMatchDate(''); // nessun giorno ufficiale
       }
@@ -114,13 +115,11 @@ export default function PresenzePage() {
 
   const isDayLocked = (dateString: string) => !isStrictAdmin && !isDateOpenForPlayers(dateString, openUntil);
 
-  // Selezione giorno. Solo gli admin cambiano la data ufficiale della partita (per tutti)
+  // Selezione giorno: guarda e gestisce quel giorno, per tutti. Il giorno ufficiale (uguale per tutti) lo cambiano i
+  // gestori solo con il comando esplicito in Impostazioni > Partita della settimana
   const handleSelectDay = (dateString: string) => {
+    pickedDay.current = true;
     setSelectedDayString(dateString);
-    if (isStrictAdmin) {
-      setOfficialMatchDate(dateString);
-      saveOfficialMatchDateDoc(dateString);
-    }
   };
 
   // Iscrizione / ritiro dell'utente corrente
