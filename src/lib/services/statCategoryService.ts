@@ -3,6 +3,7 @@
 import { StatCategory } from '@/types/database';
 
 import { DEFAULT_BASE_CATEGORIES } from '@/lib/utils/defaultCategories';
+import { canCacheLeagueData } from '@/lib/league/leagueRefs';
 export { DEFAULT_BASE_CATEGORIES };
 
 const CATEGORIES_STORAGE_KEY = 'clubcalcetto_stat_categories';
@@ -27,7 +28,7 @@ export function getStoredCategories(): StatCategory[] {
 }
 
 export function saveStoredCategories(categories: StatCategory[]) {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined' || !canCacheLeagueData()) return;
   try {
     localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(categories));
     window.dispatchEvent(new Event('clubcalcetto_categories_changed'));

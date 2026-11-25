@@ -75,6 +75,13 @@ describe('ora italiana del modulo', () => {
   });
 });
 
+describe('statusFor: avviso scaduto', () => {
+  it('chiuso perché la partita è iniziata: non si riapre da solo', () => {
+    expect(statusFor(0, 2, { status: 'CLOSED', closedReason: 'expired' })).toEqual({ status: 'CLOSED', closedReason: 'expired' });
+    expect(statusFor(2, 2, { status: 'CLOSED', closedReason: 'expired' })).toEqual({ status: 'CLOSED', closedReason: 'expired' });
+  });
+});
+
 describe('statusFor', () => {
   it('si chiude da solo quando i posti sono coperti', () => {
     expect(statusFor(2, 2, { status: 'OPEN' })).toEqual({ status: 'CLOSED', closedReason: 'full' });

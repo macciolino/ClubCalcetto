@@ -3,6 +3,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { notify } from '@/components/ui/Feedback';
+import { PageSkeleton } from '@/components/ui/Skeleton';
 import { usePathname } from 'next/navigation';
 import { collection, doc, onSnapshot } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '@/lib/firebase/config';
@@ -72,6 +73,8 @@ interface ActiveLeagueValue {
   /** Step 4: the platform super admin suspended the active league (read-only) */
   isSuspended: boolean;
   isLoading: boolean;
+  /** Signed in, the account's leagues are still loading: the active league is not known yet */
+  isResolving: boolean;
 }
 
 const ActiveLeagueContext = createContext<ActiveLeagueValue | null>(null);
@@ -146,7 +149,7 @@ export function ActiveLeagueProvider({
   const cardKey = active ? `${active.id}/${active.playerId}` : '';
 
   // Services read the active league from here; set before the children render
-  setActiveLeagueForData(activeLeagueId ?? CALCETTARI_LEAGUE_ID);
+  setActiveLeagueForData(activeLeagueId ?? CALCETTARI_LEAGUE_ID, activeLeagueId !== null);
   if (activeLeagueId) claimLocalCaches(activeLeagueId);
 
   useEffect(() => {
@@ -244,8 +247,9 @@ export function ActiveLeagueProvider({
       isPlatformStaff,
       isSuspended,
       isLoading: !membershipsReady || !cardReady,
+      isResolving: Boolean(uid) && !membershipsReady,
     }),
-    [leagues, activeLeagueId, setActiveLeague, member, leagueRole, presides, manages, isSuperAdmin, isPlatformStaff, isSuspended, membershipsReady, cardReady]
+    [leagues, activeLeagueId, setActiveLeague, member, leagueRole, presides, manages, isSuperAdmin, isPlatformStaff, isSuspended, membershipsReady, cardReady, uid]
   );
 
   const showWelcome =
@@ -256,6 +260,18 @@ export function ActiveLeagueProvider({
       {showWelcome ? noLeague : <React.Fragment key={activeLeagueId ?? 'none'}>{children}</React.Fragment>}
     </ActiveLeagueContext.Provider>
   );
+}
+
+/**
+ * The pages of a league start only when the active league is known: until then they would listen to the placeholder
+ * league (and nothing from another league must reach this person's screen or the copies kept on the device). Pages that
+ * work without a league (sign-in, invites, the board) do not wait.
+ */
+export function LeagueGate({ children }: { children: React.ReactNode }) {
+  const ctx = useContext(ActiveLeagueContext);
+  const pathname = usePathname() || '/';
+  if (ctx?.isResolving && !NO_LEAGUE_PATHS.some((p) => pathname.startsWith(p))) return <PageSkeleton />;
+  return <>{children}</>;
 }
 
 export function useActiveLeague(): ActiveLeagueValue {

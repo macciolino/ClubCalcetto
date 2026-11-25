@@ -93,8 +93,9 @@ export function Navbar() {
   const displayName = mounted && profile?.full_name ? profile.full_name : t('guest');
   // Il ruolo nella lega attiva (Presidente / Collaboratore / Giocatore): mai "Admin", che è solo della piattaforma
   // Platform staff without a card in the active league: their platform role, not a made-up "Player"
-  const roleLabel =
-    mounted && leagueRole ? tRole(leagueRole) : mounted && isPlatformStaff ? ts(isSuperAdmin ? 'staff.roleSuper' : 'staff.roleGlobal') : t('player');
+  // Platform staff count as president everywhere: with a player / collaborator card the platform role still shows
+  const staffLabel = isPlatformStaff && leagueRole !== 'PRESIDENT' ? ts(isSuperAdmin ? 'staff.roleSuper' : 'staff.roleGlobal') : null;
+  const roleLabel = mounted && staffLabel ? staffLabel : mounted && leagueRole ? tRole(leagueRole) : t('player');
   const showAdminBadge = isStrictAdmin;
   const avatarChar = mounted && profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : 'U';
   const avatarUrl = mounted ? profile?.avatar_url : null;
@@ -151,7 +152,7 @@ export function Navbar() {
                   {showAdminBadge && (
                     <span
                       className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-black text-on-accent ring-2 ring-app"
-                      title={leagueRole ? tRole(leagueRole) : undefined}
+                      title={staffLabel ?? (leagueRole ? tRole(leagueRole) : undefined)}
                     >
                       ★
                     </span>

@@ -10,6 +10,7 @@ import { I18nProvider } from '@/i18n/I18nProvider';
 import { ThemeProvider } from '@/components/theme/ThemeProvider';
 import { PreferencesSync } from '@/components/settings/PreferencesSync';
 import { BoardPrefsSync } from '@/components/settings/BoardPrefsSync';
+import { LeagueGate } from '@/lib/context/ActiveLeagueContext';
 
 import { SplashScreen, SPLASH_GUARD } from '@/components/SplashScreen';
 export const metadata: Metadata = {
@@ -56,7 +57,7 @@ export default function RootLayout({
               <BoardPrefsSync />
               <Navbar />
               <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-6">
-                {children}
+                <LeagueGate>{children}</LeagueGate>
               </main>
             </AuthProvider>
             {/* Outside AuthProvider: changing league remounts the pages, a message shown at that moment must stay */}

@@ -14,8 +14,9 @@ import type { LeagueRole } from '@/types/league';
 export function LeagueRoleBadge({ role, platform }: { role: LeagueRole | null; platform?: 'SUPER_ADMIN' | 'GLOBAL_ADMIN' | null }) {
   const t = useTranslations('league.roles');
   const ts = useTranslations('superAdmin.staff');
-  // Platform staff without a card here: the platform role is the one that counts (they act as president)
-  if (!role && platform)
+  // Platform staff act as president everywhere: without a card here, or with a plain player / collaborator card,
+  // the platform role is the one that counts (the card's role is shown only when it is the president's)
+  if (platform && role !== 'PRESIDENT')
     return (
       <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide whitespace-nowrap bg-amber-500/15 text-warning border-amber-500/30">
         {platform === 'SUPER_ADMIN' ? ts('roleSuper') : ts('roleGlobal')}

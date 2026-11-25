@@ -288,7 +288,7 @@ export default function HomePage() {
           {/* Quando e dove */}
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
             <div className="space-y-2 min-w-0">
-              <p className="text-xs font-semibold text-accent-text">{t('nextMatch')}</p>
+              <p className="text-xs font-semibold text-accent-text">{isArchived ? t('matchArchived') : t('nextMatch')}</p>
               <h2 id="next-match" className="text-xl sm:text-2xl font-bold text-primary">
                 {formatLongDate(date, locale)}
               </h2>
@@ -313,8 +313,8 @@ export default function HomePage() {
             )}
           </div>
 
-          {/* Il tuo stato */}
-          {presences === null ? (
+          {/* Il tuo stato (a match already archived has no sign-up or withdrawal any more) */}
+          {isArchived ? null : presences === null ? (
             <div className="h-14 rounded-xl bg-card-hover/70 animate-pulse" aria-hidden="true" />
           ) : mine ? (
             <div

@@ -3,6 +3,7 @@ import { adminDb, isAdminConfigured } from '@/lib/firebase/admin';
 import { inLeague, leagueDb } from '@/lib/server/leagueScope';
 import { checkPromotions } from '@/lib/server/presenceWatch';
 import { externalIdsOfDay } from '@/lib/server/externalPlayers';
+import { closeExpiredNotices } from '@/lib/server/matchNotices';
 import { deliver, italianDate, registeredProfileIds, romeDateTime, romeTimeLabel } from '@/lib/server/push';
 import { MATCH_DURATION_MIN, MVP_VOTE_DELAY_MIN, MVP_VOTE_OPEN_HOURS } from '@/lib/utils/matchUtils';
 import { GeneratedTeamRecord, Match } from '@/types/database';
@@ -115,7 +116,9 @@ async function run(request: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, report, promotionsChecked, inboxCleaned });
+  // Board notices whose match has started: closed ("Scaduto")
+  const noticesClosed = await closeExpiredNotices().catch(() => 0);
+  return NextResponse.json({ ok: true, report, promotionsChecked, inboxCleaned, noticesClosed });
 }
 
 export const GET = run;

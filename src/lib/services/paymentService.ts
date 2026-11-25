@@ -3,7 +3,7 @@
 import { MatchPaymentRecord } from '@/types/database';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import { setDoc, onSnapshot, Unsubscribe } from 'firebase/firestore';
-import { ldoc } from '@/lib/league/leagueRefs';
+import { canCacheLeagueData, ldoc } from '@/lib/league/leagueRefs';
 
 /**
  * Cassa of a match (collection match_payments, doc id = date): `payments[playerId] = true` when paid.
@@ -41,6 +41,7 @@ export function getCachedMatchPayments(date: string): MatchPaymentRecord {
 }
 
 function cache(record: MatchPaymentRecord) {
+  if (!canCacheLeagueData()) return;
   try {
     localStorage.setItem(`${PAYMENTS_KEY_PREFIX}${record.date}`, JSON.stringify(record));
   } catch {

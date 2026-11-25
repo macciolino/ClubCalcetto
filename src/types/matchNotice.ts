@@ -60,7 +60,7 @@ export interface MatchNotice extends MatchNoticeInput {
   spotsFilled: number;
   status: NoticeStatus;
   /** Why it is CLOSED: 'full' (automatic, reopens if a manager adds spots) or 'manual' */
-  closedReason?: 'full' | 'manual';
+  closedReason?: 'full' | 'manual' | 'expired';
   createdBy: { profileId: string; name: string };
   created_at: string;
   updated_at: string;

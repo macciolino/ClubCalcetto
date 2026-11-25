@@ -129,14 +129,15 @@ export function romeTime(iso: string): string {
 
 /**
  * Status after the spots change: full → CLOSED ('full'); an automatic close reopens when a manager adds spots.
- * A manual close and a cancellation never change by themselves.
+ * A manual close, an expiry (the match has started) and a cancellation never change by themselves.
  */
 export function statusFor(
   spotsFilled: number,
   spotsNeeded: number,
-  current: { status: NoticeStatus; closedReason?: 'full' | 'manual' }
-): { status: NoticeStatus; closedReason?: 'full' | 'manual' } {
+  current: { status: NoticeStatus; closedReason?: 'full' | 'manual' | 'expired' }
+): { status: NoticeStatus; closedReason?: 'full' | 'manual' | 'expired' } {
   if (current.status === 'CANCELLED') return { status: 'CANCELLED' };
   if (current.status === 'CLOSED' && current.closedReason === 'manual') return { status: 'CLOSED', closedReason: 'manual' };
+  if (current.status === 'CLOSED' && current.closedReason === 'expired') return { status: 'CLOSED', closedReason: 'expired' };
   return spotsFilled >= spotsNeeded ? { status: 'CLOSED', closedReason: 'full' } : { status: 'OPEN' };
 }

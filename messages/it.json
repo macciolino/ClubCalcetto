@@ -719,6 +719,7 @@
     "hCountOnly": "Siamo {count} su {max}.",
     "hello": "Ciao {name}",
     "nextMatch": "Prossima partita",
+    "matchArchived": "Partita conclusa",
     "at": "Ore {time}",
     "perHead": "{format} · €{amount} a testa",
     "confirmed": "Partita confermata",

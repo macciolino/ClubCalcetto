@@ -719,6 +719,7 @@
     "hCountOnly": "{count} of {max} so far.",
     "hello": "Hi {name}",
     "nextMatch": "Next match",
+    "matchArchived": "Match finished",
     "at": "At {time}",
     "perHead": "{format} · €{amount} each",
     "confirmed": "Match confirmed",

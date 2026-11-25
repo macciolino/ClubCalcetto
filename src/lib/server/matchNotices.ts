@@ -293,6 +293,21 @@ export async function removeApplicant(caller: Caller, id: string, profileId: str
 }
 
 /**
+ * Closes the notices still open whose match has already started (nobody can take a spot any more): they stay in the
+ * managers' list as "Scaduto". Called by the periodic job (/api/cron/mvp-vote); no notification, nothing else changes.
+ */
+export async function closeExpiredNotices(nowMs = Date.now()): Promise<number> {
+  const open = await adminDb().collection(NOTICES).where('status', '==', 'OPEN').get();
+  const stale = open.docs.filter((d) => Date.parse(String(d.data().dateTime)) <= nowMs);
+  for (let i = 0; i < stale.length; i += 400) {
+    const batch = adminDb().batch();
+    stale.slice(i, i + 400).forEach((d) => batch.update(d.ref, { status: 'CLOSED', closedReason: 'expired', updated_at: new Date(nowMs).toISOString() }));
+    await batch.commit();
+  }
+  return stale.length;
+}
+
+/**
  * The person gives the spot back before the match: the spot is freed (the notice reopens, even if it had been closed by
  * hand), the sign-up goes and the managers are told. Their copy of the spot goes too: it disappears everywhere. The same
  * call clears a spot that was cancelled or removed by a manager from their list (nothing else to undo then).

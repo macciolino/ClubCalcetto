@@ -2,6 +2,7 @@
 
 import { Presence, AppSettings } from '@/types/database';
 import { toDateString } from '@/lib/utils/dateUtils';
+import { canCacheLeagueData } from '@/lib/league/leagueRefs';
 
 const MATCH_DATE_STORAGE_KEY = 'clubcalcetto_official_match_date';
 const SETTINGS_STORAGE_KEY = 'clubcalcetto_app_settings';
@@ -73,7 +74,7 @@ export function getStoredOfficialMatchDate(): string {
 
 /** '' = no official day (removed by an admin). */
 export function setOfficialMatchDate(date: string) {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined' || !canCacheLeagueData()) return;
   try {
     localStorage.setItem(MATCH_DATE_STORAGE_KEY, date || NO_OFFICIAL);
     window.dispatchEvent(
@@ -112,7 +113,7 @@ export function getAppSettings(): AppSettings {
 export function saveAppSettings(settings: Partial<AppSettings>): AppSettings {
   const current = getAppSettings();
   const updated = { ...current, ...settings };
-  if (typeof window !== 'undefined') {
+  if (typeof window !== 'undefined' && canCacheLeagueData()) {
     try {
       localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(updated));
       window.dispatchEvent(

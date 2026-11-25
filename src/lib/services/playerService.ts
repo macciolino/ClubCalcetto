@@ -2,6 +2,7 @@
 
 import { Profile } from '@/types/database';
 import { isSuperAdminEmail, isSuperAdminProfile } from '@/lib/superAdmin';
+import { canCacheLeagueData } from '@/lib/league/leagueRefs';
 
 export interface PlayerMatchRecord {
   won: number;
@@ -109,7 +110,7 @@ export function findPlayerByAuth(authId?: string | null, authEmail?: string | nu
 }
 
 export function saveStoredPlayers(players: Profile[]) {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined' || !canCacheLeagueData()) return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(players));
     window.dispatchEvent(new Event('clubcalcetto_players_changed'));

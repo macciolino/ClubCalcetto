@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { PLAYERS, db, loginAs, loginAsAdmin, romeDay, seedAccountWithoutLeague, seedMatchDay } from './seed';
+import { PLAYERS, db, lg, loginAs, loginAsAdmin, romeDay, seedAccountWithoutLeague, seedMatchDay } from './seed';
 
 /**
  * "Bacheca Avvisi / Cerco giocatore" (docs/ARCHITECTURE.md §3.5): the president publishes a notice from the
@@ -292,4 +292,117 @@ test.describe('Bacheca: rinunciare al posto e nascondere', () => {
     await page.getByRole('button', { name: 'Mostra la Bacheca' }).click();
     await expect(nav.getByRole('link', { name: /Bacheca/ })).toBeVisible();
   });
+});
+
+/** Squadre già fatte con un esterno: se rinuncia al posto, chi era in lista d'attesa prende il suo posto in squadra. */
+test('Esterno in squadra che rinuncia al posto: subentra il primo in lista d\u2019attesa', async ({ page, browser }) => {
+  await seedMatchDay();
+  const day = romeDay(2);
+  await db.doc('match_notices/n9').set({
+    id: 'n9', leagueId: 'calcettari', leagueName: 'I Calcettari', matchId: day, dateTime: `${day}T19:30:00.000Z`, locationName: 'Campo Test',
+    address: 'Via dei Test 1', format: '5v5', totalFieldCost: 80, costPerPlayer: 8, spotsNeeded: 1, spotsFilled: 0, roleNeeded: 'ANY',
+    shirtColor: 'DARK', status: 'OPEN', createdBy: { profileId: 'p-1', name: 'Marco Test' }, created_at: 'x', updated_at: 'x',
+  });
+  // 9 della lega iscritti; il decimo è l'esterno (iscrizione più tarda); un altro della lega dopo di lui, in lista d'attesa
+  await Promise.all(
+    PLAYERS.slice(0, 9).map((p, i) =>
+      lg(`presences/${day}_${p.id}`).set({ id: `${day}_${p.id}`, date: day, player_id: p.id, status: 'confirmed', order_index: i, created_at: 'x', joined_at: new Date(Date.now() - (30 - i) * 60_000) })
+    )
+  );
+  await lg(`presences/${day}_${PLAYERS[9].id}`).set({ id: `${day}_${PLAYERS[9].id}`, date: day, player_id: PLAYERS[9].id, status: 'confirmed', order_index: 10, created_at: 'x', joined_at: new Date(Date.now() + 10 * 60_000) });
+
+  // L'esterno prende il posto dalla sua Bacheca
+  const acc = await seedAccountWithoutLeague();
+  const outsider = await (await browser.newContext()).newPage();
+  await loginAs(outsider, acc.email, acc.password);
+  await outsider.getByRole('link', { name: 'Cerca una partita da giocare' }).click();
+  await outsider.waitForURL('**/board');
+  await outsider.locator('article').filter({ hasText: 'I Calcettari' }).getByRole('button', { name: 'Partecipa alla partita' }).click();
+  await outsider.getByRole('dialog').getByRole('button', { name: 'Conferma partecipazione' }).click();
+  await expect(outsider.getByText('Posto preso: i gestori della lega sono stati avvisati.')).toBeVisible({ timeout: 15_000 });
+
+  // Il presidente fa le squadre: l'esterno è titolare, il decimo della lega no
+  await loginAsAdmin(page);
+  await page.goto(`/teams?date=${day}`);
+  await page.getByRole('button', { name: /Genera squadre/ }).first().click({ timeout: 20_000 });
+  const ids = async () => {
+    const t = (await lg(`generated_teams/${day}`).get()).data();
+    return t ? [...t.team_white, ...t.team_black].map((p: { id: string }) => p.id) : [];
+  };
+  await expect.poll(async () => (await ids()).length, { timeout: 20_000 }).toBe(10);
+  expect(await ids()).toContain('ext-e2e-nolega');
+  expect(await ids()).not.toContain(PLAYERS[9].id);
+
+  // L'esterno rinuncia: il presidente riapre le squadre e al suo posto c'è il primo della lista d'attesa
+  await outsider.getByRole('region', { name: 'I miei posti' }).getByRole('button', { name: 'Rinuncia al posto' }).click();
+  await outsider.getByRole('alertdialog').getByRole('button', { name: 'Conferma', exact: true }).click();
+  await expect(outsider.getByText('Hai rinunciato al posto: sei fuori dalla partita.')).toBeVisible({ timeout: 15_000 });
+  await page.goto(`/teams?date=${day}`);
+  await expect.poll(async () => (await ids()).includes(PLAYERS[9].id), { timeout: 25_000 }).toBe(true);
+  expect(await ids()).not.toContain('ext-e2e-nolega');
+  expect(await ids()).toHaveLength(10);
+});
+
+/** Un presidente che ha nascosto la Bacheca pubblica comunque dalla partita e ritrova i suoi avvisi aprendo l'indirizzo. */
+test('Presidente con la Bacheca nascosta: pubblica dalla partita e vede la sua lista da /board', async ({ page }) => {
+  await seedMatchDay();
+  await db.doc('profiles/p-1').update({ board_off: true });
+  await loginAsAdmin(page);
+  await expect(page.getByRole('navigation', { name: 'Navigazione principale' }).getByRole('link', { name: /Bacheca/ })).toHaveCount(0);
+  await page.goto('/settings?sezione=partita');
+  await page.getByRole('radio', { name: /Ufficiale/ }).click({ timeout: 15_000 });
+  await page.getByRole('tab', { name: /Organizzazione/ }).click();
+  await page.getByRole('button', { name: 'Cerca giocatori esterni' }).click();
+  const form = page.getByRole('dialog');
+  await form.locator('#notice-spots').fill('2');
+  await form.getByRole('button', { name: 'Pubblica' }).click();
+  await expect(page.getByText('Avviso pubblicato.')).toBeVisible({ timeout: 15_000 });
+  await page.goto('/board');
+  await expect(page.getByText('Hai nascosto la Bacheca', { exact: false })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole('button', { name: /Campo Test/ })).toBeVisible();
+  // il pulsante per pubblicare dalla Bacheca c'è comunque, e basta un tocco per rimostrarla
+  await expect(page.getByRole('button', { name: 'Nuovo avviso' })).toBeVisible();
+  await page.getByRole('button', { name: 'Mostra la Bacheca' }).click();
+  await expect(page.getByRole('navigation', { name: 'Navigazione principale' }).getByRole('link', { name: /Bacheca/ })).toBeVisible();
+});
+
+/** Chi non ha una lega ma ha giocato da esterno ritrova la sua Carriera nella schermata di benvenuto (non ha un Profilo). */
+test('Senza lega: la Carriera da ospite compare nel benvenuto solo a chi ha partite da esterno', async ({ page }) => {
+  await seedMatchDay();
+  const acc = await seedAccountWithoutLeague();
+  await loginAs(page, acc.email, acc.password);
+  await expect(page.getByRole('heading', { name: 'Benvenuto in Club Soccer' })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole('heading', { name: 'Carriera' })).toHaveCount(0);
+  await db.doc('profiles/e2e-nolega/spots/x1').set({
+    noticeId: 'x1', leagueId: 'calcettari', leagueName: 'I Calcettari', matchId: romeDay(-3), dateTime: new Date(Date.now() - 3 * 86_400_000).toISOString(),
+    locationName: 'Campo Test', address: 'Via dei Test 1', format: '5v5', costPerPlayer: 8, roleNeeded: 'ANY', shirtColor: 'DARK', status: 'ACTIVE', joinedAt: 'x',
+    result: 'won', goals: 2, mvp: true,
+  });
+  const career = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Carriera' }) });
+  await expect(career.getByText('1 partita')).toBeVisible({ timeout: 15_000 });
+  await expect(career.getByText('Ospite · I Calcettari')).toBeVisible();
+});
+
+/** Lo staff della piattaforma agisce come presidente: con una scheda da giocatore l'intestazione dice il suo ruolo vero. */
+test('Staff con una scheda da giocatore: l\u2019intestazione non dice "Giocatore"', async ({ page }) => {
+  await seedMatchDay();
+  await db.doc('leagues/calcettari/players/p-1').update({ leagueRole: 'PLAYER' });
+  await loginAsAdmin(page);
+  const header = page.locator('header').first();
+  await expect(header).toContainText(/Super admin/i, { timeout: 15_000 });
+  await expect(header).not.toContainText(/Giocatore/i);
+});
+
+/** Una partita già archiviata non è più "Prossima partita" e non offre iscrizione né ritiro. */
+test('Home: partita archiviata, niente "Prossima partita" né iscrizione', async ({ page }) => {
+  await seedMatchDay();
+  const day = romeDay(1);
+  await lg(`matches/${day}`).set({ id: day, match_date: day, status: 'completed', score_white: 3, score_black: 1, team_white: PLAYERS.slice(0, 5), team_black: PLAYERS.slice(5) });
+  await lg(`presences/${day}_p-1`).set({ id: `${day}_p-1`, date: day, player_id: 'p-1', status: 'confirmed', order_index: 1, created_at: 'x', joined_at: new Date() });
+  await loginAsAdmin(page);
+  await expect(page.getByRole('heading', { name: 'Ciao Marco', level: 1 })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText('Partita conclusa', { exact: true })).toBeVisible();
+  await expect(page.getByText('Prossima partita', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Ritirati' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /^Ci sono/ })).toHaveCount(0);
 });

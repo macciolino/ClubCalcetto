@@ -10,7 +10,7 @@ import {
   onSnapshot,
   Unsubscribe,
 } from 'firebase/firestore';
-import { lcol, ldoc } from '@/lib/league/leagueRefs';
+import { canCacheLeagueData, lcol, ldoc } from '@/lib/league/leagueRefs';
 
 export const DEFAULT_SPORT_FIELDS: SportField[] = [
   {
@@ -65,7 +65,7 @@ export function getStoredFields(): SportField[] {
 }
 
 export function saveStoredFields(fields: SportField[]) {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined' || !canCacheLeagueData()) return;
   try {
     localStorage.setItem(FIELDS_STORAGE_KEY, JSON.stringify(fields));
     window.dispatchEvent(new Event('clubcalcetto_fields_changed'));

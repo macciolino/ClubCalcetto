@@ -68,6 +68,11 @@ leagues/{leagueId}/...          TUTTI i dati del club, isolati per lega
 
 - La lega attiva si sceglie dal selettore accanto al logo ([LeagueSwitcher.tsx](../src/components/league/LeagueSwitcher.tsx)).
   È salvata sul dispositivo (`localStorage.cc_league`).
+- **Le pagine partono solo quando la lega attiva è nota** ([LeagueGate](../src/lib/context/ActiveLeagueContext.tsx), `isResolving`;
+  fanno eccezione login, inviti e Bacheca, che non hanno bisogno di una lega). Finché le leghe dell'account si caricano, il
+  livello dati punta a una lega provvisoria: nessuna copia locale (campi, giocatori, categorie, cassa, giorno ufficiale,
+  impostazioni) viene scritta ([canCacheLeagueData](../src/lib/league/leagueRefs.ts)), così chi è di più leghe non trova nelle
+  copie i dati di un'altra. Le copie locali sono solo per mostrare qualcosa subito: i dati veri sono quelli di Firestore.
 - Il browser la manda al server nell'header **`x-league-id`**. Le API la leggono con `scoped()` / `currentLeague()`
   ([leagueScope.ts](../src/lib/server/leagueScope.ts)); se manca, usano la lega di base `calcettari`.
 - Al cambio di lega le pagine vengono rimontate e le cache locali della lega vengono svuotate
@@ -239,7 +244,8 @@ La colonna **Staff** vale per `SUPER_ADMIN` e `GLOBAL_ADMIN`, salvo dove è indi
    un voto ai propri parametri una volta sola (`/api/account/self-rating`); dopo la prima partita un gestore li rivede
    (`needs_stat_review`).
 4. Senza leghe, l'utente vede la **schermata di benvenuto** ([LeagueWelcome.tsx](../src/components/league/LeagueWelcome.tsx)):
-   può creare una lega o entrare con un invito.
+   può creare una lega, entrare con un invito o cercare una partita in Bacheca. Chi ha giocato partite da esterno ritrova qui
+   la sua **Carriera** (non ha un Profilo, che è di chi ha una lega).
 
 **Creazione di una lega** (`POST /api/leagues` → [leagueCreation.ts](../src/lib/server/leagueCreation.ts))
 - Serve l'email verificata. Ogni account può creare al massimo 5 leghe (`MAX_LEAGUES_PER_USER`).
@@ -477,7 +483,7 @@ Codice: [matchNotices.ts](../src/lib/server/matchNotices.ts) (server), [matchNot
   - **nella partita** (Impostazioni → Partita della settimana → Organizzazione, [MatchNoticePanel.tsx](../src/components/board/MatchNoticePanel.tsx)):
     "Giocatori esterni" con "**Cerca giocatori esterni**", che apre il modulo **già compilato** con i dati di quella
     partita (giorno bloccato, ora, campo, indirizzo, formato, costo, quota, posti = giocatori mancanti) e lascia al
-    gestore posti, ruolo, maglia e note. Poi lo stato dell'avviso (In bacheca / Completo / Chiuso / Annullato / **Scaduto** se la partita è già iniziata e l'avviso non è stato chiuso, con N/M),
+    gestore posti, ruolo, maglia e note. Poi lo stato dell'avviso (In bacheca / Completo / Chiuso / Annullato / **Scaduto**: la partita è già iniziata; il lavoro periodico ogni 10 minuti, `closeExpiredNotices`, chiude gli avvisi ancora aperti e li segna `CLOSED` con `closedReason: 'expired'`, con N/M),
     chi ha preso il posto, Modifica / Chiudi / Annulla avviso;
   - dopo la partita, accanto a ogni persona: "**Invita nella lega**" (manda il link di invito; entra solo se vuole).
 - **Profilo** ([CareerCard.tsx](../src/components/profile/CareerCard.tsx), [career.ts](../src/lib/utils/career.ts)):

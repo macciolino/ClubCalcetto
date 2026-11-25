@@ -69,8 +69,9 @@ function useSummary(
   const form = useFormSettings();
   const t = useTranslations('settings');
   const { locale } = useLocaleSetting();
-  const { leagues, activeLeagueId, leagueRole } = useActiveLeague();
+  const { leagues, activeLeagueId, leagueRole, isPlatformStaff, isSuperAdmin: isSuper } = useActiveLeague();
   const tRole = useTranslations('league.roles');
+  const tStaff = useTranslations('superAdmin.staff');
 
   useEffect(() => {
     try {
@@ -108,7 +109,12 @@ function useSummary(
   const values: Partial<Record<SectionId, string>> = {
     notifiche: permission === 'granted' ? t('notifOn') : permission === 'denied' ? t('notifBlocked') : permission === 'unsupported' ? '' : t('notifOff'),
     account: email || '',
-    lega: [leagues.find((l) => l.id === activeLeagueId)?.name, leagueRole ? tRole(leagueRole) : ''].filter(Boolean).join(' · '),
+    lega: [
+      leagues.find((l) => l.id === activeLeagueId)?.name,
+      isPlatformStaff && leagueRole !== 'PRESIDENT' ? tStaff(isSuper ? 'roleSuper' : 'roleGlobal') : leagueRole ? tRole(leagueRole) : '',
+    ]
+      .filter(Boolean)
+      .join(' · '),
     partita: officialDate ? short(officialDate) : t('noOfficial'),
     campi: def ? `${def.name} · €${Number(def.cost || settings.standard_total_cost || 80)}` : '',
     regole: `${settings.timelock_enabled ? t('timelockOn', { hours: settings.timelock_hours_before || 4 }) : t('timelockOff')} · ${t('keeper', {

@@ -434,3 +434,21 @@ describe('Avvisi: chi ha preso il posto lo restituisce', () => {
     expect(await titles('ga')).toContain('↩️ Posto liberato');
   });
 });
+
+describe('Avvisi scaduti', () => {
+  it('il lavoro periodico chiude gli avvisi con la partita già iniziata, senza toccare gli altri né chi ha preso il posto', async () => {
+    const past = String((await create(pres.token)).data.id);
+    const future = String((await create(pres.token)).data.id);
+    await take(past, (await outsider('out')).token);
+    await db().doc(`match_notices/${past}`).update({ dateTime: new Date(Date.now() - 3_600_000).toISOString() });
+    const res = await call(cron, undefined, undefined, 'http://localhost/api/cron/mvp-vote', { authorization: 'Bearer segreto-di-prova' });
+    expect(res.status).toBe(200);
+    expect(res.data.noticesClosed).toBe(1);
+    expect(await read(past)).toMatchObject({ status: 'CLOSED', closedReason: 'expired', spotsFilled: 1 });
+    expect((await db().doc(`match_notices/${past}/applicants/out`).get()).exists).toBe(true);
+    expect(await read(future)).toMatchObject({ status: 'OPEN' });
+    // un secondo passaggio non fa altro
+    const again = await call(cron, undefined, undefined, 'http://localhost/api/cron/mvp-vote', { authorization: 'Bearer segreto-di-prova' });
+    expect(again.data.noticesClosed).toBe(0);
+  });
+});

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowRight, LinkIcon, LogOut, Plus } from 'lucide-react';
@@ -10,12 +10,22 @@ import { btn, textLink } from '@/components/ui/buttons';
 import { useAuth } from '@/lib/context/AuthContext';
 import { inviteCodeFrom } from '@/lib/services/leagueService';
 import { CreateLeagueSheet } from '@/components/league/CreateLeagueSheet';
+import { CareerCard } from '@/components/profile/CareerCard';
+import { isFirebaseConfigured } from '@/lib/firebase/config';
+import { subscribeMySpots } from '@/lib/services/matchNoticeService';
 
 /** Multi-league step 2: a signed-in account that belongs to no league. Create one, or join with an invite. */
 export function LeagueWelcome() {
   const t = useTranslations('league.welcome');
   const router = useRouter();
-  const { signOut } = useAuth();
+  const { signOut, profile } = useAuth();
+  // Who played matches as an external (board "Cerco giocatore") finds that career here: they have no league, so no Profile
+  const [hasSpots, setHasSpots] = useState(false);
+  const profileId = profile?.id;
+  useEffect(() => {
+    if (!isFirebaseConfigured || !profileId) return;
+    return subscribeMySpots(profileId, (spots) => setHasSpots(spots.length > 0));
+  }, [profileId]);
   const [creating, setCreating] = useState(false);
   const [joining, setJoining] = useState(false);
   const [code, setCode] = useState('');
@@ -30,7 +40,8 @@ export function LeagueWelcome() {
 
   return (
     <div className="min-h-[70vh] flex items-center justify-center py-8">
-      <section aria-labelledby="welcome-title" className="w-full max-w-md bg-card rounded-2xl p-6 sm:p-8 space-y-6 text-center">
+      <div className="w-full max-w-md space-y-6">
+      <section aria-labelledby="welcome-title" className="w-full bg-card rounded-2xl p-6 sm:p-8 space-y-6 text-center">
         <div className="flex justify-center">
           <BrandLogo />
         </div>
@@ -85,6 +96,8 @@ export function LeagueWelcome() {
           <LogOut className="h-3.5 w-3.5" aria-hidden="true" /> {t('logout')}
         </button>
       </section>
+      {hasSpots && profileId && <CareerCard profileId={profileId} />}
+      </div>
       {creating && <CreateLeagueSheet onClose={() => setCreating(false)} />}
     </div>
   );
