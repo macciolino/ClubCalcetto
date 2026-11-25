@@ -151,8 +151,9 @@ export function romeTimeLabel(d: Date): string {
  * Alerts meant for the admins themselves (e.g. a match reached 10 players): sent to all admins
  * in both 'admins' and 'all' modes (no [PROVA] mark), nothing when notifications are off.
  */
-export async function deliverToAdmins(msg: Message): Promise<{ sent: number; mode: NotifyMode }> {
+export async function deliverToAdmins(msg: Message, alsoProfileIds: string[] = []): Promise<{ sent: number; mode: NotifyMode }> {
   const mode = await getMode();
   if (mode === 'off') return { sent: 0, mode };
-  return { sent: await sendToProfiles(await adminProfileIds(), msg), mode };
+  // `alsoProfileIds`: people who must know even if the league has no president or collaborator card (e.g. who published a notice)
+  return { sent: await sendToProfiles([...(await adminProfileIds()), ...alsoProfileIds], msg), mode };
 }

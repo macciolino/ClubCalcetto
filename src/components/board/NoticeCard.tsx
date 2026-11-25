@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { Check, MapPin, Navigation, UserPlus } from 'lucide-react';
+import { Check, EyeOff, MapPin, Navigation, UserPlus } from 'lucide-react';
 import { btn } from '@/components/ui/buttons';
 import { useLocaleSetting } from '@/i18n/I18nProvider';
 import { FORMAT_INFO } from '@/lib/utils/matchFormat';
@@ -80,7 +80,23 @@ export function NoticePrice({ notice }: { notice: Pick<MatchNotice, 'costPerPlay
 }
 
 /** One notice on the board: scannable at a glance, with "Partecipa alla partita" (or "Hai preso il posto"). */
-export function NoticeCard({ notice, taken, own = false, onJoin }: { notice: MatchNotice; taken: boolean; own?: boolean; onJoin: (n: MatchNotice) => void }) {
+export function NoticeCard({
+  notice,
+  taken,
+  own = false,
+  onJoin,
+  onLeave,
+  onHide,
+}: {
+  notice: MatchNotice;
+  taken: boolean;
+  own?: boolean;
+  onJoin: (n: MatchNotice) => void;
+  /** Gives back the spot this person took */
+  onLeave?: (n: MatchNotice) => void;
+  /** "Non mi interessa": hides the notice for this person only */
+  onHide?: (n: MatchNotice) => void;
+}) {
   const t = useTranslations('board');
   const { locale } = useLocaleSetting();
   const left = Math.max(0, notice.spotsNeeded - notice.spotsFilled);
@@ -122,16 +138,28 @@ export function NoticeCard({ notice, taken, own = false, onJoin }: { notice: Mat
       <NoticePrice notice={notice} />
       {notice.notes && <p className="text-sm text-secondary whitespace-pre-line">{notice.notes}</p>}
 
-      <div className="mt-auto pt-1">
+      <div className="mt-auto pt-1 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         {taken ? (
-          <p className="flex items-center gap-2 text-sm font-semibold text-accent-text">
-            <Check className="h-4 w-4" aria-hidden="true" /> {t('taken')}
-          </p>
+          <>
+            <p className="flex items-center gap-2 text-sm font-semibold text-accent-text">
+              <Check className="h-4 w-4" aria-hidden="true" /> {t('taken')}
+            </p>
+            {onLeave && (
+              <button type="button" onClick={() => onLeave(notice)} className="text-xs font-semibold text-danger hover:underline">
+                {t('leave')}
+              </button>
+            )}
+          </>
         ) : own ? (
           <p className="text-sm text-secondary">{t('ownLeague')}</p>
         ) : (
           <button type="button" onClick={() => onJoin(notice)} className={btn.primary}>
             <UserPlus className="h-4 w-4" aria-hidden="true" /> {t('join')}
+          </button>
+        )}
+        {!taken && onHide && (
+          <button type="button" onClick={() => onHide(notice)} className="inline-flex items-center gap-1.5 text-xs font-semibold text-secondary hover:text-primary">
+            <EyeOff className="h-3.5 w-3.5" aria-hidden="true" /> {t('hide')}
           </button>
         )}
       </div>

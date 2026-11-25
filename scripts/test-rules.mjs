@@ -363,6 +363,11 @@ await expectAllowed('player A saves own language', () => updateDoc(doc(playerA.d
 await expectAllowed('player A saves own theme', () => updateDoc(doc(playerA.db, 'profiles', playerA.uid), { theme: 'dark', updated_at: 'x' }));
 await expectDenied('player A saves an unknown language', () => updateDoc(doc(playerA.db, 'profiles', playerA.uid), { locale: 'fr' }));
 await expectDenied('player A saves an unknown theme', () => updateDoc(doc(playerA.db, 'profiles', playerA.uid), { theme: 'blue' }));
+await expectAllowed('player A hides the board and some notices', () => updateDoc(doc(playerA.db, 'profiles', playerA.uid), { board_off: true, board_hidden: ['n1', 'n2'], updated_at: 'x' }));
+await expectDenied('player A saves a board flag that is not a boolean', () => updateDoc(doc(playerA.db, 'profiles', playerA.uid), { board_off: 'yes' }));
+await expectDenied('player A saves hidden notices that are not a list', () => updateDoc(doc(playerA.db, 'profiles', playerA.uid), { board_hidden: 'n1' }));
+await expectDenied('player A saves more than 100 hidden notices', () => updateDoc(doc(playerA.db, 'profiles', playerA.uid), { board_hidden: Array.from({ length: 101 }, (_, i) => 'n' + i) }));
+await expectDenied('player A changes the board preferences of player B', () => updateDoc(doc(playerA.db, 'profiles', playerB.uid), { board_off: true }));
 await expectDenied('player A changes player B language', () => updateDoc(doc(playerA.db, 'profiles', playerB.uid), { locale: 'en' }));
 await expectDenied('player A sneaks a role change with the language', () =>
   updateDoc(doc(playerA.db, 'profiles', playerA.uid), { locale: 'it', role: 'admin' }));

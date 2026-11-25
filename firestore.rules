@@ -126,11 +126,14 @@ service cloud.firestore {
       allow update: if profileEmailUntouched() && platformRoleUntouched() && (isSuperAdmin()
         || (signedIn()
             && profileId == request.auth.uid
-            && onlyChanges(['full_name', 'avatar_url', 'position', 'locale', 'theme', 'updated_at'])
+            && onlyChanges(['full_name', 'avatar_url', 'position', 'locale', 'theme', 'board_off', 'board_hidden', 'updated_at'])
             && (!('avatar_url' in changedKeys()) || isValidAvatar(request.resource.data.avatar_url))
-            // Preferenze personali: lingua dell'app e tema
+            // Preferenze personali: lingua dell'app, tema e Bacheca "Cerco giocatore" (nascosta, avvisi nascosti)
             && (!('locale' in changedKeys()) || request.resource.data.locale in ['it', 'en'])
-            && (!('theme' in changedKeys()) || request.resource.data.theme in ['system', 'light', 'dark'])));
+            && (!('theme' in changedKeys()) || request.resource.data.theme in ['system', 'light', 'dark'])
+            && (!('board_off' in changedKeys()) || request.resource.data.board_off is bool)
+            && (!('board_hidden' in changedKeys())
+                || (request.resource.data.board_hidden is list && request.resource.data.board_hidden.size() <= 100))));
 
       // The super admin profile can never be deleted. Accounts are deleted by the server (owner or super admin).
       allow delete: if profileId != 'p-1' && isSuperAdmin();

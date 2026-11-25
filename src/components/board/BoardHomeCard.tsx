@@ -5,18 +5,19 @@ import { useTranslations } from 'next-intl';
 import { ArrowRight, Megaphone } from 'lucide-react';
 import { textLink } from '@/components/ui/buttons';
 import { useLocaleSetting } from '@/i18n/I18nProvider';
-import { useOpenNotices } from '@/lib/hooks/useOpenNoticeCount';
+import { useInterestingNotices } from '@/lib/hooks/useOpenNoticeCount';
 import { FORMAT_INFO } from '@/lib/utils/matchFormat';
 import { noticeWhen } from './NoticeCard';
 
 /**
  * Home: a compact way into the "Cerco giocatore" board. Shown only when OTHER leagues are looking for players
- * (the active league's own notices are for outsiders: its members simply sign up). The soonest one + how many.
+ * (the active league's own notices are for outsiders: its members simply sign up), skipping the notices this person
+ * hid or already took, and never when they hid the whole board. The soonest one + how many.
  */
 export function BoardHomeCard({ leagueId }: { leagueId: string | null }) {
   const t = useTranslations('board.home');
   const { locale } = useLocaleSetting();
-  const others = useOpenNotices(true).filter((n) => n.leagueId !== leagueId);
+  const others = useInterestingNotices(true, leagueId);
   if (others.length === 0) return null;
   const next = others[0];
   const left = Math.max(0, next.spotsNeeded - next.spotsFilled);

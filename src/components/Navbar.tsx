@@ -26,6 +26,7 @@ import { RequestsBell } from '@/components/admin/RequestsCenter';
 import { SelfRatingPrompt } from '@/components/SelfRatingPrompt';
 import { LeagueSwitcher } from '@/components/league/LeagueSwitcher';
 import { useOpenNoticeCount } from '@/lib/hooks/useOpenNoticeCount';
+import { useBoardPrefs } from '@/lib/hooks/useBoardPrefs';
 
 export function Navbar() {
   const pathname = usePathname();
@@ -33,6 +34,7 @@ export function Navbar() {
   const { user, profile, isAdmin, isPlatformStaff, isSuperAdmin, signOut } = useAuth();
   const { isSuspended, leagueRole, activeLeagueId } = useActiveLeague();
   const openNoticeCount = useOpenNoticeCount(Boolean(user), activeLeagueId);
+  const { off: boardOff } = useBoardPrefs();
   const tRole = useTranslations('league.roles');
   const ts = useTranslations('superAdmin');
 
@@ -82,8 +84,8 @@ export function Navbar() {
     { href: '/players', label: t('players'), icon: Users },
     { href: '/teams', label: t('teams'), icon: Trophy },
     { href: '/history', label: t('history'), icon: History },
-    // "Cerco giocatore": avvisi di tutte le leghe della piattaforma
-    { href: '/board', label: t('board'), icon: Megaphone, badge: openNotices },
+    // "Cerco giocatore": avvisi di tutte le leghe della piattaforma (sparisce per chi l'ha nascosta in Impostazioni)
+    ...(boardOff ? [] : [{ href: '/board', label: t('board'), icon: Megaphone, badge: openNotices }]),
     // Profilo: si apre dal menu dell'utente (icona in alto a destra), non serve nella barra
     // Admin: non è più nella barra. Si entra da Impostazioni (menu dell'icona), che per gli admin apre la partita della settimana
   ];

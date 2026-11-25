@@ -24,7 +24,8 @@ export function ApplicantsList({ notice }: { notice: MatchNotice }) {
   const t = useTranslations('board.manage');
   const tb = useTranslations('board');
   const { locale } = useLocaleSetting();
-  const [applicants, setApplicants] = useState<NoticeApplicant[]>([]);
+  // null = names still loading (the count on the notice can already say someone took a spot)
+  const [applicants, setApplicants] = useState<NoticeApplicant[] | null>(null);
   // The clock is read once (not while rendering): enough to know whether the match has been played
   const [now] = useState(() => Date.now());
   const [busy, setBusy] = useState('');
@@ -48,6 +49,7 @@ export function ApplicantsList({ notice }: { notice: MatchNotice }) {
     notify(res === 'ok' ? t('invited', { name: a.displayName }) : tb(`errors.${res}`), res === 'ok' ? 'success' : 'error');
   };
 
+  if (applicants === null) return <p className="text-xs text-muted">{notice.spotsFilled > 0 ? t('loadingApplicants') : t('noApplicants')}</p>;
   if (applicants.length === 0) return <p className="text-xs text-muted">{t('noApplicants')}</p>;
   return (
     <div className="space-y-2">

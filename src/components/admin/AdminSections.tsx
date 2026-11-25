@@ -114,7 +114,8 @@ export function AdminSections({ section }: { section: AdminSection }) {
         saveStoredCategories(remote);
       });
       unsubFields = subscribeSportFields((remote) => {
-        if (remote && remote.length > 0) setFields(remote);
+        // The league's own fields, also none: a copy kept on this device (maybe of another league) never stays on screen
+        setFields(remote || []);
       });
       unsubSettings = subscribeAppSettings((remote) => {
         if (remote) {

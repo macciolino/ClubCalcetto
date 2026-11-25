@@ -51,6 +51,20 @@
     "changed": "Theme: {name}",
     "notSaved": "Saved on this device only: try again later to save it on your profile."
   },
+  "boardPref": {
+    "label": "“Looking for players” board",
+    "title": "“Looking for players” board",
+    "subtitle": "Matches of every league that need players",
+    "on": "Visible",
+    "off": "Hidden",
+    "onHint": "Shown in the navigation, on Home and in the count when a league needs players",
+    "offHint": "Not in the navigation, on Home or in the count. You can show it again from here",
+    "active": "Active",
+    "savedOnDevice": "Your choice is saved on your profile and applies on all your devices.",
+    "changedOn": "Board visible.",
+    "changedOff": "Board hidden.",
+    "notSaved": "Saved on this device only: try again later to save it on your profile."
+  },
   "bell": {
     "label": "Notifications",
     "labelWithCount": "Notifications: {count} new or to handle",
@@ -1780,6 +1794,17 @@
     "free": "Free",
     "taken": "You took the spot",
     "ownLeague": "This is your league: sign up from Attendance.",
+    "leave": "Give up my spot",
+    "confirmLeave": "Give up your spot? It becomes free for others and the league's managers are told.",
+    "left": "You gave up the spot: you are out of the match.",
+    "clearSpot": "Remove from the list",
+    "cleared": "Removed from the list.",
+    "hide": "Not interested",
+    "hidden": "Notice hidden: you won't see it again.",
+    "hiddenCount": "{count, plural, one {# hidden notice} other {# hidden notices}}",
+    "showHidden": "Show again",
+    "boardOff": "You hid the board: it is not in the navigation, on Home or in the count.",
+    "boardShow": "Show the board",
     "tookIt": "Spot taken: the league managers have been told.",
     "roles": {
       "ANY": "Any role",
@@ -1824,7 +1849,9 @@
       "errPast": "The match must be in the future.",
       "errPlace": "Enter the field name and address.",
       "errCost": "The cost each cannot exceed the field cost.",
-      "errSpots": "From 1 to {max} spots."
+      "errSpots": "From 1 to {max} spots.",
+      "fieldOther": "Other field (I type it)",
+      "noFields": "The league has no saved fields yet: type the name and address, or add them in Settings → Fields and costs to find them here."
     },
     "manage": {
       "edit": "Edit",
@@ -1836,6 +1863,7 @@
       "cancelled": "Notice cancelled.",
       "applicants": "Who took a spot ({filled}/{total})",
       "noApplicants": "Nobody yet.",
+      "loadingApplicants": "Loading names…",
       "applicantsHint": "They are not league members: they play only this match.",
       "confirmInvite": "Send {name} the invite to join \"{league}\"? They get a notification with the link and decide.",
       "invited": "Invite sent to {name}.",

@@ -80,6 +80,8 @@ export const cancelMatchNotice = async (id: string) => result(await post({ actio
 export const inviteNoticeApplicant = async (id: string, profileId: string) => result(await post({ action: 'invite', id, profileId }));
 /** Before the match: takes one person out (frees the spot; the notice reopens if it was full). */
 export const removeNoticeApplicant = async (id: string, profileId: string) => result(await post({ action: 'remove', id, profileId }));
+/** The person gives their spot back before the match (it disappears from everywhere); also clears a cancelled / removed one. */
+export const leaveNoticeSpot = async (id: string) => result(await post({ action: 'leave', id }));
 /** The match as an external player sees it: teams, own MVP vote, vote window, score. */
 export async function fetchExternalMatch(id: string): Promise<ExternalMatchView | null> {
   const data = await post({ action: 'match_view', id });

@@ -210,3 +210,86 @@ test.describe('Ospiti nello Storico e card in Home', () => {
     await expect(page.getByText(/⭐ Luca/).first()).toBeVisible();
   });
 });
+
+/** Chi prende un posto lo può restituire; ogni persona può nascondere un avviso o tutta la Bacheca (solo per sé). */
+test.describe('Bacheca: rinunciare al posto e nascondere', () => {
+  const day = romeDay(2);
+  const seedNotice = (id: string, extra: Record<string, unknown> = {}) =>
+    db.doc(`match_notices/${id}`).set({
+      id, leagueId: 'calcettari', leagueName: 'I Calcettari', matchId: day, dateTime: `${day}T19:30:00.000Z`, locationName: 'Campo Prova',
+      address: 'Via Prova 1', format: '5v5', totalFieldCost: 80, costPerPlayer: 8, spotsNeeded: 2, spotsFilled: 0, roleNeeded: 'ANY',
+      shirtColor: 'DARK', status: 'OPEN', createdBy: { profileId: 'p-1', name: 'Marco Test' }, created_at: 'x', updated_at: 'x', ...extra,
+    });
+  const otherLeague = (id: string) => seedNotice(id, { leagueId: 'amici', leagueName: 'Lega Amici', locationName: 'Campo Amici' });
+
+  test.beforeEach(async () => {
+    await seedMatchDay();
+  });
+
+  test('chi ha preso un posto lo restituisce: sparisce da I miei posti, dalle iscrizioni e il posto torna libero', async ({ page }) => {
+    await seedNotice('n1');
+    const acc = await seedAccountWithoutLeague();
+    await loginAs(page, acc.email, acc.password);
+    await page.getByRole('link', { name: 'Cerca una partita da giocare' }).click();
+    await page.waitForURL('**/board');
+    const card = page.locator('article').filter({ hasText: 'I Calcettari' });
+    await card.getByRole('button', { name: 'Partecipa alla partita' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Conferma partecipazione' }).click();
+    await expect(page.getByText('Posto preso: i gestori della lega sono stati avvisati.')).toBeVisible({ timeout: 15_000 });
+    const mine = page.getByRole('region', { name: 'I miei posti' });
+    await expect(mine.getByText('Confermato')).toBeVisible();
+    expect((await db.doc('match_notices/n1').get()).data()?.spotsFilled).toBe(1);
+
+    await mine.getByRole('button', { name: 'Rinuncia al posto' }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Conferma', exact: true }).click();
+    await expect(page.getByText('Hai rinunciato al posto: sei fuori dalla partita.')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('region', { name: 'I miei posti' })).toHaveCount(0);
+    // di nuovo libero per tutti, e nessuna traccia della persona
+    await expect(card.getByRole('button', { name: 'Partecipa alla partita' })).toBeVisible({ timeout: 15_000 });
+    expect((await db.doc('match_notices/n1').get()).data()).toMatchObject({ spotsFilled: 0, status: 'OPEN' });
+    expect((await db.collection('match_notices/n1/applicants').get()).size).toBe(0);
+    expect((await db.collection('profiles/e2e-nolega/spots').get()).size).toBe(0);
+    expect((await db.collection(`leagues/calcettari/presences`).where('date', '==', day).get()).docs.some((d) => d.id.includes('ext-'))).toBe(false);
+  });
+
+  test('"Non mi interessa": l’avviso sparisce solo per me (Bacheca, Home e badge) e si può rimostrare', async ({ page }) => {
+    await otherLeague('o1');
+    await loginAsAdmin(page);
+    await page.goto('/board');
+    const card = page.locator('article').filter({ hasText: 'Lega Amici' });
+    await expect(card).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('navigation', { name: 'Navigazione principale' }).getByRole('link', { name: /Bacheca/ })).toContainText('1');
+    await card.getByRole('button', { name: 'Non mi interessa' }).click();
+    await expect(card).toHaveCount(0);
+    await expect(page.getByText('1 avviso nascosto')).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Navigazione principale' }).getByRole('link', { name: /Bacheca/ })).not.toContainText(/\d/);
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: 'Ciao Marco', level: 1 })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('heading', { name: 'Cerco giocatore' })).toHaveCount(0);
+    // resta nascosto anche dopo aver ricaricato (salvato sul profilo)
+    await page.goto('/board');
+    await expect(page.getByText('1 avviso nascosto')).toBeVisible({ timeout: 15_000 });
+    await page.getByRole('button', { name: 'Mostra di nuovo' }).click();
+    await expect(page.locator('article').filter({ hasText: 'Lega Amici' })).toBeVisible();
+  });
+
+  test('chi non è interessato nasconde tutta la Bacheca da Impostazioni: via dalla barra, da Home e dal conteggio', async ({ page }) => {
+    await otherLeague('o2');
+    await loginAsAdmin(page);
+    const nav = page.getByRole('navigation', { name: 'Navigazione principale' });
+    await expect(nav.getByRole('link', { name: /Bacheca/ })).toBeVisible({ timeout: 15_000 });
+    await page.goto('/settings');
+    await page.getByRole('button', { name: /Bacheca “Cerco giocatore”/ }).click();
+    await page.getByRole('radio', { name: /Nascosta/ }).click();
+    await expect(page.getByText('Bacheca nascosta.')).toBeVisible({ timeout: 15_000 });
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: 'Ciao Marco', level: 1 })).toBeVisible({ timeout: 15_000 });
+    await expect(nav.getByRole('link', { name: /Bacheca/ })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Cerco giocatore' })).toHaveCount(0);
+    // la pagina resta raggiungibile dall'indirizzo, con il modo di riattivarla
+    await page.goto('/board');
+    await expect(page.getByText('Hai nascosto la Bacheca', { exact: false })).toBeVisible({ timeout: 15_000 });
+    await page.getByRole('button', { name: 'Mostra la Bacheca' }).click();
+    await expect(nav.getByRole('link', { name: /Bacheca/ })).toBeVisible();
+  });
+});

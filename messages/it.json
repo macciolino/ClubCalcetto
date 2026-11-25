@@ -51,6 +51,20 @@
     "changed": "Tema: {name}",
     "notSaved": "Salvata solo su questo dispositivo: riprova più tardi per salvarla sul profilo."
   },
+  "boardPref": {
+    "label": "Bacheca “Cerco giocatore”",
+    "title": "Bacheca “Cerco giocatore”",
+    "subtitle": "Le partite di tutte le leghe che cercano giocatori",
+    "on": "Visibile",
+    "off": "Nascosta",
+    "onHint": "Compare nella barra, in Home e nel conteggio quando una lega cerca giocatori",
+    "offHint": "Non compare nella barra, in Home né nel conteggio. La puoi mostrare di nuovo da qui",
+    "active": "Attivo",
+    "savedOnDevice": "La scelta si salva sul tuo profilo e vale su tutti i tuoi dispositivi.",
+    "changedOn": "Bacheca visibile.",
+    "changedOff": "Bacheca nascosta.",
+    "notSaved": "Salvata solo su questo dispositivo: riprova più tardi per salvarla sul profilo."
+  },
   "bell": {
     "label": "Notifiche",
     "labelWithCount": "Notifiche: {count} nuove o da gestire",
@@ -1780,6 +1794,17 @@
     "free": "Gratis",
     "taken": "Hai preso il posto",
     "ownLeague": "È la tua lega: iscriviti dalle Presenze.",
+    "leave": "Rinuncia al posto",
+    "confirmLeave": "Rinunci al posto? Il posto torna libero per gli altri e i gestori della lega ne vengono avvisati.",
+    "left": "Hai rinunciato al posto: sei fuori dalla partita.",
+    "clearSpot": "Togli dall’elenco",
+    "cleared": "Tolto dall’elenco.",
+    "hide": "Non mi interessa",
+    "hidden": "Avviso nascosto: non lo vedrai più.",
+    "hiddenCount": "{count, plural, one {# avviso nascosto} other {# avvisi nascosti}}",
+    "showHidden": "Mostra di nuovo",
+    "boardOff": "Hai nascosto la Bacheca: non compare nella barra, in Home né nel conteggio.",
+    "boardShow": "Mostra la Bacheca",
     "tookIt": "Posto preso: i gestori della lega sono stati avvisati.",
     "roles": {
       "ANY": "Qualsiasi ruolo",
@@ -1824,7 +1849,9 @@
       "errPast": "La partita deve essere nel futuro.",
       "errPlace": "Inserisci nome e indirizzo del campo.",
       "errCost": "La quota a testa non può superare il costo del campo.",
-      "errSpots": "Da 1 a {max} posti."
+      "errSpots": "Da 1 a {max} posti.",
+      "fieldOther": "Altro campo (lo scrivo io)",
+      "noFields": "La lega non ha ancora campi salvati: scrivi nome e indirizzo, oppure aggiungili in Impostazioni → Campi e costi per ritrovarli qui."
     },
     "manage": {
       "edit": "Modifica",
@@ -1836,6 +1863,7 @@
       "cancelled": "Avviso annullato.",
       "applicants": "Chi ha preso il posto ({filled}/{total})",
       "noApplicants": "Ancora nessuno.",
+      "loadingApplicants": "Carico i nomi…",
       "applicantsHint": "Non sono membri della lega: giocano solo questa partita.",
       "confirmInvite": "Mandare a {name} l’invito per entrare in \"{league}\"? Riceve una notifica con il link e decide se entrare.",
       "invited": "Invito mandato a {name}.",

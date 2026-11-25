@@ -509,13 +509,23 @@ Codice: [matchNotices.ts](../src/lib/server/matchNotices.ts) (server), [matchNot
 | `update` | Gestori della lega dell'avviso; staff | Cambiano i dettagli e i posti, **mai** la lega o la partita. I posti non scendono sotto quelli presi (`below_filled`). Un avviso chiuso perché pieno **riapre** se si aggiungono posti |
 | `close` | Gestori; staff | `CLOSED` a mano: non riapre da solo |
 | `cancel` | Gestori; staff | `CANCELLED`: definitivo, niente più modifiche né posti. Chi aveva preso il posto riceve **subito una notifica** (campanella + push) e il posto risulta "Annullata" nella sua copia |
-| `take` ("Partecipa alla partita") | Chiunque con email verificata | **Transazione**: legge l'avviso e il proprio posto, rifiuta se pieno, chiuso, annullato, passato o già preso, poi scrive il posto, la copia della persona e `spotsFilled + 1`. All'ultimo posto lo stato diventa `CLOSED` (`full`) e l'avviso esce dalla bacheca. I gestori della lega ricevono una notifica (campanella + push, secondo la modalità della lega) |
+| `take` ("Partecipa alla partita") | Chiunque con email verificata | **Transazione**: legge l'avviso e il proprio posto, rifiuta se pieno, chiuso, annullato, passato o già preso, poi scrive il posto, la copia della persona e `spotsFilled + 1`. All'ultimo posto lo stato diventa `CLOSED` (`full`) e l'avviso esce dalla bacheca. I gestori della lega **e chi ha pubblicato l'avviso** ricevono una notifica (campanella + push, secondo la modalità della lega; chi ha pubblicato la riceve anche se la lega non ha presidenti o collaboratori) |
 | `remove` | Gestori; staff | Prima della partita: toglie la persona, libera il posto (l'avviso riapre se era pieno), toglie l'iscrizione esterna, avvisa la persona |
+| `leave` ("Rinuncia al posto") | Chi ha preso il posto | **Prima della partita** (`too_late` dopo): libera il posto (l'avviso **riapre sempre**, anche se era chiuso a mano; annullato resta annullato), toglie l'iscrizione esterna e **cancella ovunque** la traccia della persona (candidatura e copia in `profiles/{id}/spots`: non resta nemmeno in "I miei posti"). Gestori e chi ha pubblicato l'avviso ricevono "Posto liberato". Con un posto annullato o tolto dal gestore la stessa azione lo toglie solo dall'elenco della persona. `not_applicant` se non c'è nulla da restituire |
 | `match_view`, `mvp_vote` | Chi ha preso il posto (`match_view` anche i gestori) | Le squadre di quella partita, il proprio voto e la finestra; il voto MVP dell'esterno |
 | `invite` | Gestori; staff | **Solo dopo la partita** (`too_early` prima), mai a chi è già membro (`already_member`): la persona riceve una notifica con il link di invito della lega (`/join/{codice}`); entra solo se lo usa. `invitedAt` sul posto |
 
 - **Già convocato:** chi ha già un'iscrizione a quella partita con la sua scheda in quella lega non prende il posto
   (`already_in_match`); chi ha già un posto non ne prende un altro (`already_joined`).
+- **Preferenze personali sulla Bacheca** (profilo: `board_off`, `board_hidden`, modificabili solo dal titolare, vedi
+  `firestore.rules`; copia anche sul dispositivo per mostrarle subito, [useBoardPrefs.ts](../src/lib/hooks/useBoardPrefs.ts)):
+  **"Non mi interessa"** su una card nasconde quell'avviso solo a quella persona (massimo 100, "Mostra di nuovo" li riporta);
+  **Impostazioni > Tuo account > Bacheca "Cerco giocatore": Nascosta** toglie la voce dalla barra, la card dalla Home e il
+  badge (la pagina resta raggiungibile dall'indirizzo, con il pulsante per mostrarla di nuovo). Il badge e la card Home non
+  contano gli avvisi nascosti né quelli in cui la persona ha già un posto.
+- **Campi nel modulo:** "Nuovo avviso" propone il campo predefinito e il menu dei campi salvati della lega (con "Altro
+  campo"); se la lega non ne ha dice dove aggiungerli. Impostazioni > Campi mostra solo i campi veri della lega, mai una
+  copia rimasta sul dispositivo.
 - **Posti per chi è fuori:** un **membro** di quella lega non prende un posto nel suo stesso avviso (`is_member`): si
   iscrive dalle Presenze con la sua scheda. Nella Bacheca la card della propria lega non offre "Partecipa".
 - **Isolamento:** prendere un posto **non** crea `memberships` né una scheda; chi risponde non legge giocatori, cassa,

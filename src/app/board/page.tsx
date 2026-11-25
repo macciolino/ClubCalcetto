@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { ChevronRight, Megaphone, Plus, SlidersHorizontal, Star, X } from 'lucide-react';
+import { ChevronRight, EyeOff, Megaphone, Plus, SlidersHorizontal, Star, X } from 'lucide-react';
 import { btnInline } from '@/components/ui/buttons';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { askConfirm, notify } from '@/components/ui/Feedback';
 import { NoticeCard, mapsFor, noticeStatusKey, noticeWhen } from '@/components/board/NoticeCard';
 import { JoinNoticeSheet } from '@/components/board/JoinNoticeSheet';
 import { ExternalMvpSheet } from '@/components/board/ExternalMvpSheet';
@@ -15,7 +16,8 @@ import { useAuth } from '@/lib/context/AuthContext';
 import { useActiveLeague } from '@/lib/context/ActiveLeagueContext';
 import { useLocaleSetting } from '@/i18n/I18nProvider';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
-import { subscribeLeagueNotices, subscribeMySpots, subscribeOpenNotices } from '@/lib/services/matchNoticeService';
+import { leaveNoticeSpot, subscribeLeagueNotices, subscribeMySpots, subscribeOpenNotices } from '@/lib/services/matchNoticeService';
+import { useBoardPrefs } from '@/lib/hooks/useBoardPrefs';
 import { FORMAT_INFO, MATCH_FORMATS } from '@/lib/utils/matchFormat';
 import { NO_FILTERS, filterNotices, type NoticeFilters } from '@/lib/utils/matchNotice';
 import { NOTICE_ROLES, type MatchNotice, type MySpot } from '@/types/matchNotice';
@@ -46,6 +48,7 @@ export default function BoardPage() {
   const [managing, setManaging] = useState<string | null>(null);
   const [joining, setJoining] = useState<MatchNotice | null>(null);
   const [voting, setVoting] = useState<MySpot | null>(null);
+  const prefs = useBoardPrefs();
 
   const ready = Boolean(user && isFirebaseConfigured);
   useEffect(
@@ -83,8 +86,17 @@ export default function BoardPage() {
         .sort((a, b) => a.dateTime.localeCompare(b.dateTime)),
     [spots, now]
   );
-  const shown = useMemo(() => (open ? filterNotices(open, filters, now) : []), [open, filters, now]);
+  const hiddenIds = useMemo(() => new Set(prefs.hidden), [prefs.hidden]);
+  const shown = useMemo(() => (open ? filterNotices(open.filter((n) => !hiddenIds.has(n.id)), filters, now) : []), [open, hiddenIds, filters, now]);
+  const hiddenCount = open ? open.filter((n) => hiddenIds.has(n.id)).length : 0;
   const filtered = filters.when !== 'all' || filters.format !== 'all' || filters.role !== 'all';
+
+  // The person gives the spot back (it disappears everywhere), or clears a cancelled / removed one from their list
+  const leave = async (noticeId: string, status: MySpot['status']) => {
+    if (status === 'ACTIVE' && !(await askConfirm(t('confirmLeave')))) return;
+    const res = await leaveNoticeSpot(noticeId);
+    notify(res === 'ok' ? t(status === 'ACTIVE' ? 'left' : 'cleared') : t(`errors.${res}`), res === 'ok' ? 'success' : 'error');
+  };
 
   const voteOpen = (s: MySpot) => {
     const w = externalVoteWindow(s.dateTime);
@@ -106,6 +118,17 @@ export default function BoardPage() {
           </button>
         )}
       </header>
+
+      {prefs.off && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-card px-4 py-3 text-sm text-secondary">
+          <span className="flex items-center gap-2">
+            <EyeOff className="h-4 w-4 shrink-0" aria-hidden="true" /> {t('boardOff')}
+          </span>
+          <button type="button" onClick={() => prefs.setOff(false)} className={btnInline.secondary}>
+            {t('boardShow')}
+          </button>
+        </div>
+      )}
 
       {upcoming.length > 0 && (
         <section aria-labelledby="my-spots" className="space-y-2">
@@ -132,12 +155,24 @@ export default function BoardPage() {
                     <Star className="h-3.5 w-3.5" aria-hidden="true" /> {t('mvp.cta')}
                   </button>
                 ) : (
-                  <span
-                    className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                      s.status === 'ACTIVE' ? 'bg-accent/15 text-accent-text' : 'bg-rose-500/10 text-danger'
-                    }`}
-                  >
-                    {t(s.status === 'CANCELLED' ? 'spotCancelled' : s.status === 'REMOVED' ? 'spotRemoved' : 'spotConfirmed')}
+                  <span className="shrink-0 flex flex-col items-end gap-1.5">
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        s.status === 'ACTIVE' ? 'bg-accent/15 text-accent-text' : 'bg-rose-500/10 text-danger'
+                      }`}
+                    >
+                      {t(s.status === 'CANCELLED' ? 'spotCancelled' : s.status === 'REMOVED' ? 'spotRemoved' : 'spotConfirmed')}
+                    </span>
+                    {s.status === 'ACTIVE' && Date.parse(s.dateTime) > now && (
+                      <button type="button" onClick={() => leave(s.noticeId, s.status)} className="text-xs font-semibold text-danger hover:underline">
+                        {t('leave')}
+                      </button>
+                    )}
+                    {s.status !== 'ACTIVE' && (
+                      <button type="button" onClick={() => leave(s.noticeId, s.status)} className="text-xs font-semibold text-secondary hover:text-primary hover:underline">
+                        {t('clearSpot')}
+                      </button>
+                    )}
                   </span>
                 )}
               </li>
@@ -249,9 +284,28 @@ export default function BoardPage() {
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
             {shown.map((n) => (
-              <NoticeCard key={n.id} notice={n} taken={takenIds.has(n.id)} own={leagues.some((l) => l.id === n.leagueId && Boolean(l.playerId))} onJoin={setJoining} />
+              <NoticeCard
+                key={n.id}
+                notice={n}
+                taken={takenIds.has(n.id)}
+                own={leagues.some((l) => l.id === n.leagueId && Boolean(l.playerId))}
+                onJoin={setJoining}
+                onLeave={(x) => leave(x.id, 'ACTIVE')}
+                onHide={(x) => {
+                  prefs.hide(x.id);
+                  notify(t('hidden'), 'success');
+                }}
+              />
             ))}
           </div>
+        )}
+        {hiddenCount > 0 && (
+          <p className="flex flex-wrap items-center gap-x-2 text-xs text-secondary">
+            <EyeOff className="h-3.5 w-3.5" aria-hidden="true" /> {t('hiddenCount', { count: hiddenCount })}
+            <button type="button" onClick={prefs.showAll} className="font-semibold text-accent-text hover:underline">
+              {t('showHidden')}
+            </button>
+          </p>
         )}
       </section>
 

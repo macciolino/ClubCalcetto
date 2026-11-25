@@ -172,9 +172,11 @@ export function NoticeFormSheet({ notice, prefill, onClose }: { notice?: MatchNo
                   {f.name}
                 </option>
               ))}
+              <option value="">{t('fieldOther')}</option>
             </select>
           </div>
         )}
+        {fromLeague && settings && fields.length === 0 && <p className="text-xs text-muted">{t('noFields')}</p>}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label htmlFor="notice-place" className={label}>{t('place')}</label>

@@ -356,3 +356,81 @@ describe('Notifiche all’esterno', () => {
     expect((await bellOf('pres')).find((n) => String(n.title).includes('Vota l’MVP'))?.url).toBe(`/teams?date=${day}`);
   });
 });
+
+describe('Avvisi: chi ha preso il posto lo restituisce', () => {
+  const leave = (id: string, token: string) => call(notices, { action: 'leave', id }, token);
+  const ext = (uid: string) => ldb().doc(`presences/${DAY}_ext-${uid}`);
+  const titles = async (uid: string) => (await db().collection(`profiles/${uid}/notifications`).get()).docs.map((d) => String(d.data().title));
+
+  it('rinuncia al posto: sparisce da tutte le parti, il posto torna libero, i gestori lo sanno', async () => {
+    const id = String((await create(pres.token, { spotsNeeded: 1 })).data.id);
+    const out = await outsider('out');
+    await take(id, out.token);
+    expect(await read(id)).toMatchObject({ status: 'CLOSED', closedReason: 'full', spotsFilled: 1 });
+    expect((await ext('out').get()).exists).toBe(true);
+
+    expect((await leave(id, out.token)).data.ok).toBe(true);
+    expect(await read(id)).toMatchObject({ status: 'OPEN', spotsFilled: 0 });
+    expect((await db().doc(`match_notices/${id}/applicants/out`).get()).exists).toBe(false);
+    expect((await db().doc(`profiles/out/spots/${id}`).get()).exists).toBe(false);
+    expect((await ext('out').get()).exists).toBe(false);
+    // il presidente (e chi ha pubblicato l'avviso) riceve la notifica della rinuncia
+    expect(await titles('pres')).toContain('↩️ Posto liberato');
+    // una seconda volta non c'è più nulla da restituire
+    expect((await leave(id, out.token)).data.error).toBe('not_applicant');
+    // e può riprendere il posto
+    expect((await take(id, out.token)).data.ok).toBe(true);
+  });
+
+  it('avviso chiuso a mano: dopo la rinuncia si riapre (i posti sono liberi)', async () => {
+    const id = String((await create(pres.token)).data.id);
+    const out = await outsider('out');
+    await take(id, out.token);
+    await call(notices, { action: 'close', id }, pres.token);
+    expect(await read(id)).toMatchObject({ status: 'CLOSED', closedReason: 'manual' });
+    expect((await leave(id, out.token)).data.ok).toBe(true);
+    expect(await read(id)).toMatchObject({ status: 'OPEN', spotsFilled: 0 });
+  });
+
+  it('a partita iniziata non si rinuncia più; chi non ha preso il posto non può', async () => {
+    const id = String((await create(pres.token)).data.id);
+    const out = await outsider('out');
+    await take(id, out.token);
+    expect((await leave(id, (await outsider('altro')).token)).data.error).toBe('not_applicant');
+    await db().doc(`match_notices/${id}`).update({ dateTime: '2020-01-01T19:30:00.000Z' });
+    expect((await leave(id, out.token)).data.error).toBe('too_late');
+    expect((await db().doc(`profiles/out/spots/${id}`).get()).exists).toBe(true);
+  });
+
+  it('posto annullato o tolto dal gestore: la persona lo toglie dal suo elenco, senza toccare l\u2019avviso', async () => {
+    const id = String((await create(pres.token)).data.id);
+    const out = await outsider('out');
+    await take(id, out.token);
+    await call(notices, { action: 'remove', id, profileId: 'out' }, pres.token);
+    expect((await db().doc(`profiles/out/spots/${id}`).get()).data()?.status).toBe('REMOVED');
+    const before = await read(id);
+    expect((await leave(id, out.token)).data.ok).toBe(true);
+    expect((await db().doc(`profiles/out/spots/${id}`).get()).exists).toBe(false);
+    expect(await read(id)).toMatchObject({ spotsFilled: before.spotsFilled, status: before.status });
+    // avviso annullato: stesso discorso
+    const id2 = String((await create(pres.token)).data.id);
+    await take(id2, out.token);
+    await call(notices, { action: 'cancel', id: id2 }, pres.token);
+    expect((await leave(id2, out.token)).data.ok).toBe(true);
+    expect((await db().doc(`profiles/out/spots/${id2}`).get()).exists).toBe(false);
+  });
+
+  it('chi ha pubblicato l\u2019avviso riceve "posto preso" anche se la lega non ha presidenti né collaboratori', async () => {
+    // a platform admin (no card in the league) publishes; nobody in the league has a manager role
+    await ldb().doc('players/pres').update({ leagueRole: 'PLAYER' });
+    const ga = await outsider('ga', { platformRole: 'GLOBAL_ADMIN' });
+    const id = String((await create(ga.token)).data.id);
+    await take(id, (await outsider('out')).token);
+    expect(await titles('ga')).toContain('🙋 Posto preso');
+    expect(await titles('pres')).not.toContain('🙋 Posto preso');
+    const out2 = await outsider('out2');
+    await take(id, out2.token);
+    await leave(id, out2.token);
+    expect(await titles('ga')).toContain('↩️ Posto liberato');
+  });
+});

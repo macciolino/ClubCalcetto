@@ -14,6 +14,7 @@ import { LeaguePanel } from '@/components/league/LeaguePanel';
 import { useActiveLeague } from '@/lib/context/ActiveLeagueContext';
 import { ThemeSetting } from '@/components/settings/ThemeSetting';
 import { LanguageSetting } from '@/components/settings/LanguageSetting';
+import { BoardSetting } from '@/components/settings/BoardSetting';
 import { AdminSection, AdminSections } from '@/components/admin/AdminSections';
 import { AppSettings, Profile, SportField } from '@/types/database';
 import { subscribeAppSettings, subscribeOfficialMatchDate, subscribeProfiles } from '@/lib/firebase/firestoreService';
@@ -200,6 +201,7 @@ function SettingsContent() {
               <>
                 <LanguageSetting />
                 <ThemeSetting />
+                <BoardSetting />
               </>
             )}
           </div>

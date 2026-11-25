@@ -242,13 +242,16 @@ export async function takeSpot(caller: Caller, id: string): Promise<Result<{ spo
     // The league's managers are told (bell + push), in that league
     const left = notice.spotsNeeded - res.spotsFilled;
     await inLeague(notice.leagueId, () =>
-      deliverToAdmins({
-        title: left === 0 ? '✅ Avviso completo' : '🙋 Posto preso',
-        body: `${displayName} ha preso un posto per ${italianDate(notice.matchId)} (${notice.locationName}). ${
-          left === 0 ? 'Tutti i posti sono coperti.' : left === 1 ? 'Manca 1 posto.' : `Mancano ${left} posti.`
-        }`,
-        url: '/board',
-      })
+      deliverToAdmins(
+        {
+          title: left === 0 ? '✅ Avviso completo' : '🙋 Posto preso',
+          body: `${displayName} ha preso un posto per ${italianDate(notice.matchId)} (${notice.locationName}). ${
+            left === 0 ? 'Tutti i posti sono coperti.' : left === 1 ? 'Manca 1 posto.' : `Mancano ${left} posti.`
+          }`,
+          url: '/board',
+        },
+        [notice.createdBy?.profileId]
+      )
     ).catch(() => undefined);
   }
   return res;
@@ -286,6 +289,53 @@ export async function removeApplicant(caller: Caller, id: string, profileId: str
     body: `"${notice.leagueName}" ti ha tolto dalla partita di ${italianDate(notice.matchId)} (${notice.locationName}).`,
     url: '/board',
   }).catch(() => undefined);
+  return { ok: true };
+}
+
+/**
+ * The person gives the spot back before the match: the spot is freed (the notice reopens, even if it had been closed by
+ * hand), the sign-up goes and the managers are told. Their copy of the spot goes too: it disappears everywhere. The same
+ * call clears a spot that was cancelled or removed by a manager from their list (nothing else to undo then).
+ */
+export async function leaveSpot(caller: Caller, id: string): Promise<Result> {
+  const notice = await loadNotice(id);
+  if (!notice) return fail('not_found');
+  const upcoming = Date.parse(notice.dateTime) > Date.now();
+
+  const res = await adminDb().runTransaction(async (tx): Promise<Result<{ live: boolean; applicant?: NoticeApplicant }>> => {
+    const ref = adminDb().doc(`${NOTICES}/${id}`);
+    const mine = ref.collection('applicants').doc(caller.profileId);
+    const copy = spotRef(caller.profileId, id);
+    const [snap, who, own] = await Promise.all([tx.get(ref), tx.get(mine), tx.get(copy)]);
+    if (!who.exists && !own.exists) return fail('not_applicant');
+    const n = snap.data() as MatchNotice;
+    // A spot that still counts (taken, notice alive): only before the match, like a manager's removal
+    const live = who.exists && n.status !== 'CANCELLED';
+    if (live && !upcoming) return fail('too_late');
+    if (who.exists) tx.delete(mine);
+    tx.delete(copy);
+    if (live) {
+      const spotsFilled = Math.max(0, n.spotsFilled - 1);
+      const status = spotsFilled >= n.spotsNeeded ? { status: 'CLOSED' as const, closedReason: 'full' as const } : { status: 'OPEN' as const, closedReason: null };
+      tx.update(ref, { spotsFilled, ...status, updated_at: new Date().toISOString() });
+    }
+    return { ok: true, live, applicant: who.exists ? (who.data() as NoticeApplicant) : undefined };
+  });
+  if (!res.ok) return res;
+  if (!res.live) return { ok: true };
+
+  await removeSignups(notice, [caller.profileId]);
+  const name = res.applicant?.displayName || (await profileName(caller.profileId, 'Un giocatore'));
+  await inLeague(notice.leagueId, () =>
+    deliverToAdmins(
+      {
+        title: '↩️ Posto liberato',
+        body: `${name} ha rinunciato al posto per ${italianDate(notice.matchId)} (${notice.locationName}): il posto è di nuovo libero.`,
+        url: '/board',
+      },
+      [notice.createdBy?.profileId]
+    )
+  ).catch(() => undefined);
   return { ok: true };
 }
 

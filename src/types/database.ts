@@ -141,6 +141,10 @@ export interface Profile {
   /** Personal preferences saved from Impostazioni (with name, photo and role, the only fields a player can change) */
   locale?: 'it' | 'en';
   theme?: 'system' | 'light' | 'dark';
+  /** Personal preference: the "Cerco giocatore" board is hidden (navigation, Home card, badge) */
+  board_off?: boolean;
+  /** Notices of the board this person is not interested in (ids), hidden for them only; at most 100 */
+  board_hidden?: string[];
   deactivated_by?: 'self' | 'super_admin';
   /** Closed account that tried to come back: waiting for an admin (restore or start from zero). Server only. */
   restore_requested_at?: string;

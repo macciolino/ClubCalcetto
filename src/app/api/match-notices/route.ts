@@ -8,6 +8,7 @@ import {
   externalMvpVote,
   inviteApplicant,
   removeApplicant,
+  leaveSpot,
   setNoticeStatus,
   takeSpot,
   updateNotice,
@@ -28,6 +29,7 @@ export const dynamic = 'force-dynamic';
  *   { action: 'take', id }                any signed-in user with a verified email: takes one spot (transaction)
  *   { action: 'invite', id, profileId }   managers, staff, after the match: sends that person the league's invite
  *   { action: 'remove', id, profileId }   managers, staff, before the match: takes that person out, frees the spot
+ *   { action: 'leave', id }               who took a spot: gives it back before the match (frees it, notifies managers)
  *   { action: 'match_view', id }          who took a spot (or managers): teams, own MVP vote, vote window, score
  *   { action: 'mvp_vote', id, playerId }  who took a spot: votes the MVP of that match, in the vote window
  */
@@ -82,6 +84,9 @@ async function handlePost(request: Request) {
         break;
       case 'remove':
         res = await removeApplicant(caller, id, typeof body.profileId === 'string' ? body.profileId : '');
+        break;
+      case 'leave':
+        res = await leaveSpot(caller, id);
         break;
       case 'match_view':
         res = await externalMatchView(caller, id);
