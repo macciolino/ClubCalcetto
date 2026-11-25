@@ -12,8 +12,9 @@ export const externalPlayerId = (profileId: string) => `${EXTERNAL_PREFIX}${prof
 export const isExternalId = (id: string | null | undefined) => typeof id === 'string' && id.startsWith(EXTERNAL_PREFIX);
 
 /**
- * The player shown for an external sign-up in the league's views (Presenze, Squadre, Partita): a plain player at
- * the club's default level (their parameters belong to their own leagues), marked as external.
+ * The player shown for an external sign-up in the league's views (Presenze, Squadre, Partita), marked as external:
+ * with the level (OVR and parameters) of their card in their own league, so the teams stay balanced; without one,
+ * the club's default level.
  */
 export function externalProfile(presence: Pick<Presence, 'player_id'> & { external?: ExternalSignup }): Profile | undefined {
   const e = presence.external;
@@ -27,8 +28,8 @@ export function externalProfile(presence: Pick<Presence, 'player_id'> & { extern
     position: (e.position as Profile['position']) || 'Esterno',
     is_guest: false,
     is_external: true,
-    stats: {},
-    overall_rating: 6,
+    stats: e.stats || {},
+    overall_rating: e.overall_rating && e.overall_rating > 0 ? e.overall_rating : 6,
     matches_won: 0,
     matches_drawn: 0,
     matches_lost: 0,

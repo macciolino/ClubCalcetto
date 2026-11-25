@@ -316,6 +316,11 @@ export interface ExternalSignup {
   noticeId: string;
   avatar_url?: string | null;
   position?: string;
+  /** Level from the person's card in THEIR own league (most recently reviewed), used to balance the teams */
+  overall_rating?: number;
+  stats?: Record<string, number>;
+  /** The league those parameters come from */
+  ratedIn?: string;
 }
 
 export interface CalendarSettings {

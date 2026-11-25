@@ -220,6 +220,21 @@ describe('L’esterno nella singola partita', () => {
     expect(starterIds).toContain('ext-out');
   });
 
+  it('porta il livello della sua lega (OVR e parametri) per bilanciare le squadre; senza lega quello di partenza', async () => {
+    const id = String((await create(pres.token, { spotsNeeded: 2 })).data.id);
+    // "luca" gioca nella Lega Amici con OVR 8 e i suoi parametri
+    const luca = await outsider('luca');
+    await db().doc('leagues/amici').set({ id: 'amici', name: 'Lega Amici', status: 'active' });
+    await db().doc('leagues/amici/players/luca').set({ id: 'luca', userId: 'luca', overall_rating: 8, stats: { Difesa: 9, Tiro: 7 }, position: 'Difensore', stat_reviewed_at: '2026-11-01T10:00:00.000Z' });
+    await take(id, luca.token);
+    expect((await ext('luca').get()).data()?.external).toMatchObject({ overall_rating: 8, stats: { Difesa: 9, Tiro: 7 }, position: 'Difensore', ratedIn: 'Lega Amici' });
+
+    await take(id, (await outsider('nuovo')).token);
+    const nuovo = (await ext('nuovo').get()).data()?.external;
+    expect(nuovo?.overall_rating).toBeUndefined();
+    expect(nuovo?.stats).toBeUndefined();
+  });
+
   it('il gestore lo toglie prima della partita: posto libero, avviso riaperto, persona avvisata', async () => {
     const id = String((await create(pres.token, { spotsNeeded: 1 })).data.id);
     await take(id, (await outsider('out')).token);

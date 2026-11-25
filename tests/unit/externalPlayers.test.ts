@@ -28,6 +28,15 @@ describe('giocatori esterni', () => {
     expect(externalProfile({ player_id: 'x' })).toBeUndefined();
   });
 
+  it('con il livello della sua lega (OVR e parametri), altrimenti quello di partenza', () => {
+    const base = { profileId: 'luca', userId: 'u', name: 'Luca', noticeId: 'n' };
+    expect(externalProfile({ player_id: 'ext-luca', external: { ...base, overall_rating: 8.4, stats: { Difesa: 9, Tiro: 7 } } })).toMatchObject({
+      overall_rating: 8.4,
+      stats: { Difesa: 9, Tiro: 7 },
+    });
+    expect(externalProfile({ player_id: 'ext-luca', external: base })).toMatchObject({ overall_rating: 6, stats: {} });
+  });
+
   it('esito della partita per l’esterno: risultato, gol, MVP', () => {
     expect(outcomeFor(match, 'ext-luca')).toEqual({ result: 'won', goals: 2, mvp: true });
     expect(outcomeFor(match, 'b')).toEqual({ result: 'lost', goals: 2, mvp: false });

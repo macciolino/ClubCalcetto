@@ -1,6 +1,6 @@
 import { adminDb } from '@/lib/firebase/admin';
 import { inLeague, isLeagueActive, isLeagueManager, leagueDb } from '@/lib/server/leagueScope';
-import { leagueInviteCode } from '@/lib/server/leagueMembers';
+import { leagueInviteCode, previousLeagueStats } from '@/lib/server/leagueMembers';
 import { addSignup, matchViewFor, removeSignups, voteMvp } from '@/lib/server/externalPlayers';
 import { deliverToAdmins, italianDate, sendToProfiles } from '@/lib/server/push';
 import { cleanNoticeInput, patchNotice, statusFor } from '@/lib/utils/matchNotice';
@@ -202,6 +202,8 @@ export async function takeSpot(caller: Caller, id: string): Promise<Result<{ spo
   }
   const account = (await adminDb().doc(`profiles/${caller.profileId}`).get()).data() || {};
   const displayName = String(account.full_name || 'Un giocatore');
+  // Their level in THEIR own league (most recently reviewed card), so the host league balances the teams fairly
+  const own = await previousLeagueStats(caller.profileId, notice.leagueId).catch(() => null);
 
   const res = await adminDb().runTransaction(async (tx): Promise<Result<{ spotsFilled: number; status: string }>> => {
     const ref = adminDb().doc(`${NOTICES}/${id}`);
@@ -226,7 +228,8 @@ export async function takeSpot(caller: Caller, id: string): Promise<Result<{ spo
       userId: caller.uid,
       name: displayName,
       avatar_url: typeof account.avatar_url === 'string' && account.avatar_url.startsWith('data:image/') ? account.avatar_url : null,
-      position: typeof account.position === 'string' ? account.position : undefined,
+      position: own?.position || (typeof account.position === 'string' ? account.position : undefined),
+      ...(own ? { stats: own.stats, ...(own.overall_rating ? { overall_rating: own.overall_rating } : {}), ratedIn: own.leagueName } : {}),
     });
     tx.update(ref, { spotsFilled, ...next, closedReason: next.closedReason ?? null, updated_at: now });
     return { ok: true, spotsFilled, status: next.status };

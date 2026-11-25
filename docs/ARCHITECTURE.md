@@ -506,9 +506,11 @@ Codice: [externalPlayers.ts](../src/lib/server/externalPlayers.ts) (server), [ex
 
 - **Iscrizione alla sola partita.** Quando prende il posto, il server scrive anche un'iscrizione di quel giorno,
   `presences/{data}_ext-<profileId>`, con `player_id = ext-<profileId>` e `external = { profileId, userId, name,
-  noticeId, avatar_url, position }`, con l'ora del server come ordine. **Nessuna scheda** in `players`.
+  noticeId, avatar_url, position, overall_rating, stats, ratedIn }`, con l'ora del server come ordine. **Nessuna scheda** in `players`.
 - **Nella partita come gli altri.** App e server contano queste iscrizioni anche senza scheda: l'esterno è titolare
-  (o in attesa), entra nella generazione delle squadre (livello di partenza del club, maglia Bianchi / Neri),
+  (o in attesa), entra nella generazione delle squadre con il **livello della sua lega** (OVR e parametri della sua scheda più
+  di recente rivista, copiati nell'iscrizione con il nome della lega in `ratedIn`; senza nessuna lega, il livello di
+  partenza del club), maglia Bianchi / Neri,
   nel risultato, nei marcatori, ed è **votabile come MVP**. In Presenze ha l'etichetta "esterno".
 - **Voto MVP dell'esterno.** Non può leggere la lega, quindi vota da Bacheca → "I miei posti" → "Vota l'MVP": il
   server (`match_view`, `mvp_vote`) mostra le squadre di quella partita e scrive il voto in `mvp_votes/{data}_{uid}`

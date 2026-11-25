@@ -128,7 +128,7 @@ export async function ensureLeagueCard(leagueId: string, caller: { uid: string; 
 }
 
 /** Parameters of the account's most recent card in another league (reviewed ones first), or null. */
-async function previousLeagueStats(profileId: string, exceptLeague: string) {
+export async function previousLeagueStats(profileId: string, exceptLeague: string) {
   const ids = (await leaguesWithPlayer(profileId)).filter((id) => id !== exceptLeague);
   if (ids.length === 0) return null;
   const db = adminDb();
@@ -141,7 +141,13 @@ async function previousLeagueStats(profileId: string, exceptLeague: string) {
     .filter((c) => c.data.stats && Object.keys(c.data.stats).length > 0 && !c.data.is_guest)
     .sort((a, b) => String(b.data.stat_reviewed_at || b.data.updated_at || '').localeCompare(String(a.data.stat_reviewed_at || a.data.updated_at || '')))[0];
   return found
-    ? { stats: found.data.stats as Record<string, number>, position: found.data.position as string | undefined, leagueId: found.leagueId, leagueName: found.leagueName }
+    ? {
+        stats: found.data.stats as Record<string, number>,
+        overall_rating: Number(found.data.overall_rating) || undefined,
+        position: found.data.position as string | undefined,
+        leagueId: found.leagueId,
+        leagueName: found.leagueName,
+      }
     : null;
 }
 
