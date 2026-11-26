@@ -5,13 +5,15 @@ import { notify, askConfirm } from '@/components/ui/Feedback';
 
 import { manageAccountAsSuperAdmin } from '@/lib/services/accountService';
 import { useForms } from '@/lib/hooks/useForms';
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { PageSkeleton } from '@/components/ui/Skeleton';
 import { computeMatchStats } from '@/lib/utils/statUtils';
 import { lastCompletedMatches } from '@/components/FormDots';
 import { PlayerCompare } from '@/components/PlayerCompare';
 import { useAuth } from '@/lib/context/AuthContext';
 import { Profile, StatCategory, Match, STAT_CANONICAL_ORDER } from '@/types/database';
-import { subscribeProfiles, subscribeStatCategories, subscribeMatches, deleteProfileDoc } from '@/lib/firebase/firestoreService';
+import { subscribeProfiles, subscribeStatCategories, subscribeMatches, deleteProfileDoc, confirmPlayerValues } from '@/lib/firebase/firestoreService';
 import { leagueAdminRequest } from '@/lib/services/leagueService';
 import { useActiveLeague } from '@/lib/context/ActiveLeagueContext';
 import { canRemoveFromLeague } from '@/lib/utils/leaguePermissions';
@@ -22,6 +24,7 @@ import { getStoredPlayers, removeStoredPlayer, updateStoredPlayer, saveStoredPla
 import { getStoredCategories, saveStoredCategories, DEFAULT_BASE_CATEGORIES } from '@/lib/services/statCategoryService';
 import { PlayerModal } from '@/components/PlayerModal';
 import { PlayerCardFifa, PlayerDetailSheet } from '@/components/PlayerCardFifa';
+import { UnconfirmedBadge } from '@/components/UnconfirmedBadge';
 import { 
   Search, 
   UserPlus, 
@@ -41,7 +44,7 @@ import { currentLeagueId } from '@/lib/league/leagueRefs';
 
 const DEFAULT_CATEGORIES: StatCategory[] = DEFAULT_BASE_CATEGORIES;
 
-export default function GiocatoriPage() {
+function GiocatoriContent() {
   const { user, profile, isAdmin, isSuperAdmin, isPlatformStaff } = useAuth();
   const { leagueRole: cardRole, isPresident } = useActiveLeague();
   // Platform staff (SUPER_ADMIN / GLOBAL_ADMIN) act as PRESIDENT in every league
@@ -64,6 +67,8 @@ export default function GiocatoriPage() {
   const matchStats = useMemo(() => computeMatchStats(completedMatches), [completedMatches]);
   const recentMatches = useMemo(() => lastCompletedMatches(completedMatches), [completedMatches]);
   const [searchQuery, setSearchQuery] = useState('');
+  // Managers: only the players whose initial values wait for a review
+  const [reviewOnly, setReviewOnly] = useState(false);
   const [selectedPlayerToEdit, setSelectedPlayerToEdit] = useState<Profile | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
@@ -72,6 +77,10 @@ export default function GiocatoriPage() {
   const [compareOpen, setCompareOpen] = useState(false);
   // Giocatore aperto nel dettaglio (finestra), da card, elenco o tabella
   const [detailId, setDetailId] = useState<string | null>(null);
+  // Link dalla notifica "Valori da revisionare": /players?player=<id> apre la scheda di quel giocatore (una volta sola)
+  const searchParams = useSearchParams();
+  const linkedPlayer = searchParams.get('player');
+  const [openedFromLink, setOpenedFromLink] = useState<string | null>(null);
   // Vista tabella: si ordina cliccando le intestazioni (primo clic decrescente, secondo crescente; il nome parte da A-Z)
   const [tableSort, setTableSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: 'ovr', dir: 'desc' });
   // Chi comanda l'ordine: il menu "Ordina per" oppure (tabella su PC) l'ultima intestazione cliccata
@@ -130,6 +139,13 @@ export default function GiocatoriPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!linkedPlayer || openedFromLink === linkedPlayer) return;
+    if (!players.some((p) => p.id === linkedPlayer)) return;
+    setOpenedFromLink(linkedPlayer);
+    setDetailId(linkedPlayer);
+  }, [linkedPlayer, openedFromLink, players]);
+
   const handleOpenNewGuestModal = () => {
     setSelectedPlayerToEdit(null);
     setIsModalOpen(true);
@@ -142,6 +158,19 @@ export default function GiocatoriPage() {
 
   const handlePlayerSaved = () => {
     setPlayers(getStoredPlayers());
+  };
+
+  // Un gestore conferma i valori iniziali così come sono (se li modifica dal matita, il salvataggio li conferma comunque)
+  const handleConfirmValues = async (p: Profile) => {
+    if (!isClientAdmin || !profile) return;
+    try {
+      await confirmPlayerValues(p.id, profile.id);
+      updateStoredPlayer({ ...p, stat_status: 'CONFIRMED', needs_stat_review: false } as Profile);
+      setPlayers(getStoredPlayers());
+      notify(t('valuesConfirmedToast', { name: p.full_name }));
+    } catch {
+      notify(t('confirmFailed'));
+    }
   };
 
   // Tre azioni distinte (stessi controlli del server):
@@ -240,9 +269,12 @@ ${link}`;
     const cat = categories.find((c) => `stat:${c.name}` === key);
     return cat ? Number(p.stats?.[cat.name] ?? cat.default_value ?? 6) : 0;
   };
+  // Managers see how many players still wait for a review (the chip disappears when there are none)
+  const pendingReview = isClientAdmin ? players.filter((p) => p.stat_status === 'UNCONFIRMED').length : 0;
   const filteredPlayers = players
     .filter((p) => p.full_name.toLowerCase().includes(searchQuery.toLowerCase()))
     .filter((p) => roleFilter === 'all' || (p.position || 'Esterno') === roleFilter)
+    .filter((p) => !reviewOnly || p.stat_status === 'UNCONFIRMED')
     .sort((a, b) => {
       if (viewMode === 'table' && sortSource === 'table') {
         const va = tableValue(a, tableSort.key);
@@ -440,6 +472,22 @@ ${link}`;
         </div>
       </div>
 
+      {isClientAdmin && (pendingReview > 0 || reviewOnly) && (
+        <div className="flex">
+          <button
+            type="button"
+            aria-pressed={reviewOnly}
+            title={t('reviewFilterHint')}
+            onClick={() => setReviewOnly((v) => !v)}
+            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+              reviewOnly ? 'border-accent bg-accent/15 text-accent-text' : 'border-amber-500/40 bg-amber-500/10 text-warning hover:bg-amber-500/15'
+            }`}
+          >
+            {t('reviewFilter', { count: pendingReview })}
+          </button>
+        </div>
+      )}
+
       {compareOpen && (
         <PlayerCompare players={players} categories={sortedCategories} initialA={profile?.id} onClose={() => setCompareOpen(false)} />
       )}
@@ -506,6 +554,7 @@ ${link}`;
                             {player.full_name}
                           </span>
                           {player.is_guest && <span className="block text-[11px] text-muted">{t('guestLower')}</span>}
+                          <UnconfirmedBadge status={player.stat_status} className="mt-0.5" />
                         </span>
                       </span>
                       <span className="flex justify-center">
@@ -639,6 +688,7 @@ ${link}`;
                                     {t('guest')}
                                   </span>
                                 )}
+                                <UnconfirmedBadge status={player.stat_status} />
                                 {isCurrent && (
                                   <span className="text-[10px] bg-accent/20 text-accent-text px-1.5 py-0.2 rounded font-bold">
                                     {t('you')}
@@ -748,6 +798,8 @@ ${link}`;
             showEmail={isClientAdmin}
             onToggleRole={isPresident ? handleToggleRole : undefined}
             onInvite={isClientAdmin ? handleInviteGuest : undefined}
+            onConfirmValues={isClientAdmin ? (p) => (setDetailId(null), handleConfirmValues(p)) : undefined}
+            isSelf={dp.id === profile?.id}
             onClose={() => setDetailId(null)}
             onEdit={(p) => {
               setDetailId(null);
@@ -768,5 +820,13 @@ ${link}`;
         onSaved={handlePlayerSaved}
       />
     </div>
+  );
+}
+
+export default function GiocatoriPage() {
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <GiocatoriContent />
+    </Suspense>
   );
 }

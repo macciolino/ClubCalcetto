@@ -5,6 +5,7 @@ import { DEFAULT_BASE_CATEGORIES } from '@/lib/utils/defaultCategories';
 import { buildCardStats, cleanBaseRadar, radarOverall } from '@/lib/utils/baseRadar';
 import { canChangeLeagueRole, canRemoveFromLeague, leagueSlug } from '@/lib/utils/leaguePermissions';
 import { openRequest } from '@/lib/server/adminRequests';
+import { deliverToAdmins } from '@/lib/server/push';
 import { inLeague, leagueDb, leaguesWithPlayer } from '@/lib/server/leagueScope';
 import { SUPER_ADMIN_PROFILE_ID } from '@/lib/superAdmin';
 import { isSuperAdminProfile } from '@/lib/server/platformAccount';
@@ -156,6 +157,21 @@ export async function previousLeagueStats(profileId: string, exceptLeague: strin
     : null;
 }
 
+/**
+ * A new member joined with values nobody has reviewed yet (`stat_status: 'UNCONFIRMED'`): presidents and collaborators of
+ * THAT league get a bell notification (and push, per the league's notification mode) that opens the player's card.
+ * Platform staff are told only where they hold a president / collaborator card, like everyone else.
+ */
+export async function tellManagersOfNewMember(leagueId: string, profileId: string, name: string): Promise<void> {
+  await inLeague(leagueId, () =>
+    deliverToAdmins({
+      title: '🆕 Nuovo giocatore in lega',
+      body: `${name} si è unito alla lega · Valori da revisionare`,
+      url: `/players?player=${encodeURIComponent(profileId)}`,
+    })
+  ).catch(() => undefined);
+}
+
 export type JoinResult =
   | { ok: true; leagueId: string; already?: boolean; claimPending?: string }
   | { ok: false; error: 'invalid' | 'not_a_ghost' };
@@ -176,6 +192,7 @@ export async function joinWithInvite(code: string, caller: { uid: string; profil
     await ensureLeagueCard(league.id, caller, league.name);
     const profile = (await adminDb().doc(`profiles/${caller.profileId}`).get()).data() || {};
     const name = String(profile.full_name || 'Giocatore');
+    // "I am this guest": the managers get the request below (it carries the whole story), not a second alert
     await inLeague(league.id, () =>
       openRequest(
         `claim_${caller.profileId}`,
@@ -185,7 +202,11 @@ export async function joinWithInvite(code: string, caller: { uid: string; profil
     );
     return { ok: true, leagueId: league.id, claimPending: ghost.name };
   }
-  await ensureLeagueCard(league.id, caller, league.name);
+  const created = await ensureLeagueCard(league.id, caller, league.name);
+  if (created) {
+    const name = String((await adminDb().doc(`profiles/${caller.profileId}`).get()).data()?.full_name || 'Un giocatore');
+    await tellManagersOfNewMember(league.id, caller.profileId, name);
+  }
   return { ok: true, leagueId: league.id };
 }
 

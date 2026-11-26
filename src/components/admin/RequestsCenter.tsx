@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { collection, deleteDoc, deleteField, doc, getDocs, limit, onSnapshot, orderBy, query, updateDoc, where, writeBatch } from 'firebase/firestore';
-import { lcol, ldoc, currentLeagueId } from '@/lib/league/leagueRefs';
+import { collection, deleteDoc, doc, getDocs, limit, onSnapshot, orderBy, query, where, writeBatch } from 'firebase/firestore';
+import { lcol, currentLeagueId } from '@/lib/league/leagueRefs';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useLocaleSetting } from '@/i18n/I18nProvider';
 import { db, auth as firebaseAuth, isFirebaseConfigured } from '@/lib/firebase/config';
-import { subscribeProfiles } from '@/lib/firebase/firestoreService';
+import { confirmPlayerValues, subscribeProfiles } from '@/lib/firebase/firestoreService';
 import { useAuth } from '@/lib/context/AuthContext';
 import { AdminRequest, InboxNotification, Profile, StatCategory } from '@/types/database';
 import { Sheet } from '@/components/ui/Sheet';
@@ -110,17 +110,7 @@ function StatReviewCard({ player, categories, reviewerId }: { player: Profile; c
     try {
       const stats: Record<string, number> = { ...(player.stats || {}) };
       orderedCategories(categories).forEach((c) => (stats[c.name] = Number(values[c.name])));
-      const now = new Date().toISOString();
-      await updateDoc(ldoc('players', player.id), {
-        stats,
-        overall_rating: ovrOf(values),
-        needs_stat_review: false,
-        stat_status: 'CONFIRMED',
-        stats_from: deleteField(),
-        stat_reviewed_at: now,
-        stat_reviewed_by: reviewerId,
-        updated_at: now,
-      });
+      await confirmPlayerValues(player.id, reviewerId, { stats, overall_rating: ovrOf(values) });
       notify(tr('reviewSaved', { name: player.full_name }));
     } catch {
       notify(tr('saveFailed'));

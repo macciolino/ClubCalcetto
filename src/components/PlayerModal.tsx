@@ -5,7 +5,8 @@ import { getStatValue } from '@/lib/utils/statUtils';
 import React, { useState, useEffect } from 'react';
 import { Profile, StatCategory, FieldPosition, FIELD_POSITIONS, STAT_CANONICAL_ORDER } from '@/types/database';
 import { addStoredPlayer, updateStoredPlayer } from '@/lib/services/playerService';
-import { saveProfileDoc, updateProfileFields } from '@/lib/firebase/firestoreService';
+import { saveProfileDoc, updateProfileFields, confirmPlayerValues } from '@/lib/firebase/firestoreService';
+import { useAuth } from '@/lib/context/AuthContext';
 import { photoToAvatarDataUrl } from '@/lib/utils/imageUtils';
 import { profileChanges } from '@/lib/utils/profileChanges';
 import { Upload, Save, Loader2 } from 'lucide-react';
@@ -28,6 +29,7 @@ export function PlayerModal({
   statCategories,
   onSaved,
 }: PlayerModalProps) {
+  const { profile: reviewer } = useAuth();
   const [fullName, setFullName] = useState('');
   const [position, setPosition] = useState<FieldPosition>('Esterno');
   const [isGuest, setIsGuest] = useState(false);
@@ -153,6 +155,13 @@ export function PlayerModal({
         const { fields: changed, stats: changedStats } = profileChanges(playerToEdit, updated, stats, statCategories);
         if (Object.keys(changed).length > 0 || Object.keys(changedStats).length > 0) {
           await updateProfileFields(playerToEdit.id, { ...changed, updated_at: updated.updated_at }, changedStats);
+        }
+        // Initial values waiting for a review: correcting them here is the review (same as "Conferma valori")
+        if (playerToEdit.stat_status === 'UNCONFIRMED' && Object.keys(changedStats).length > 0 && reviewer) {
+          await confirmPlayerValues(playerToEdit.id, reviewer.id);
+          updated.stat_status = 'CONFIRMED';
+          updated.needs_stat_review = false;
+          delete updated.stats_from;
         }
         updateStoredPlayer(updated);
         onSaved(updated);

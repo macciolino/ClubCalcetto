@@ -324,6 +324,10 @@
     "playedUnit": "matches",
     "search": "Search player",
     "roleFilter": "Role filter",
+    "reviewFilter": "To review ({count})",
+    "valuesConfirmedToast": "{name}’s values confirmed.",
+    "confirmFailed": "Could not confirm the values: try again.",
+    "reviewFilterHint": "Show only players whose initial values are waiting to be confirmed",
     "allRoles": "All",
     "sortBy": "Sort by",
     "sortOvr": "By OVR",
@@ -374,6 +378,10 @@
   "playerCard": {
     "superAdmin": "Super Admin",
     "guestSuffix": " · guest",
+    "reviewBanner": "Initial values set by the player, waiting to be confirmed",
+    "reviewHelp": "Change the values and save, or confirm them as they are: either way the player counts as verified.",
+    "confirmValues": "Confirm values",
+    "ownNote": "Initial values · waiting for the manager’s review",
     "noRecent": "no recent matches",
     "withForm": "with current form",
     "parameters": "Ratings",
@@ -869,6 +877,7 @@
     "save": "Save changes",
     "skills": "My technical skills",
     "radarHint": "Radar shape built from your football attributes.",
+    "reviewNote": "Initial values · waiting for the manager’s review",
     "inForm": "<b>In form {value}</b>: over the last 3 matches (MVP, votes, goals or wins) all your values and your OVR went up by {delta}. It's temporary.",
     "outOfForm": "<b>Out of form {value}</b>: over the last 3 matches (losses) all your values and your OVR went down by {delta}. It's temporary: it goes back up with wins, MVP votes or goals.",
     "myStats": "My stats",
@@ -1402,8 +1411,10 @@
     "joinFailed": "Could not add you: the league may no longer be public."
   },
   "unconfirmed": {
-    "label": "To confirm",
-    "hint": "Values not approved yet: a president or collaborator confirms them after the first match."
+    "label": "To review",
+    "hint": "Initial values not reviewed yet: a president or collaborator confirms them after the first match.",
+    "verified": "Verified",
+    "verifiedHint": "Values reviewed and confirmed by a president or collaborator."
   },
   "selfRating": {
     "saved": "Self-assessment saved. After your first match the president or a collaborator confirms it.",

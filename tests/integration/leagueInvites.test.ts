@@ -73,9 +73,17 @@ describe('Entrare con il link', () => {
     expect(card).not.toHaveProperty('email');
     expect((await db().doc('memberships/o1').get()).data()?.leagues.calcettari).toMatchObject({ player_id: 'o1', league_role: 'PLAYER', name: 'I Calcettari' });
 
-    // di nuovo: già membro, niente cambia
+    // i gestori ricevono un avviso che apre la scheda del nuovo giocatore ("Valori da revisionare")
+    const alerts = (await db().collection('profiles/pres/notifications').get()).docs.map((d) => d.data());
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0]).toMatchObject({ title: '🆕 Nuovo giocatore in lega', url: '/players?player=o1' });
+    expect(String(alerts[0].body)).toBe('Nuovo o1 si è unito alla lega · Valori da revisionare');
+    expect((await db().collection('profiles/o1/notifications').get()).size).toBe(0); // non avvisa chi entra
+
+    // di nuovo: già membro, niente cambia (e nessun secondo avviso)
     expect((await info(c, u.token)).data).toMatchObject({ member: true });
     expect((await call(joinRoute, { code: c }, u.token)).data).toMatchObject({ ok: true, already: true });
+    expect((await db().collection('profiles/pres/notifications').get()).size).toBe(1);
   });
 
   it('"sono io": la scheda dell’ospite passa SOLO dopo l’approvazione di un gestore', async () => {
@@ -91,6 +99,9 @@ describe('Entrare con il link', () => {
     expect((await call(joinRoute, { code: c, claimPlayerId: 'pres' }, u.token)).status).toBe(400); // non è un ospite
     const res = await call(joinRoute, { code: c, claimPlayerId: 'guest-1' }, u.token);
     expect(res.data).toMatchObject({ ok: true, claimPending: 'Ospite Luca' });
+    // nessun avviso "Nuovo giocatore": ai gestori arriva la richiesta, che racconta già tutta la storia
+    const titles = (await db().collection('profiles/pres/notifications').get()).docs.map((d) => String(d.data().title));
+    expect(titles.some((x) => x.includes('Nuovo giocatore in lega'))).toBe(false);
     // entrato come giocatore nuovo; l'ospite e il suo storico NON sono ancora suoi
     expect((await ldb().doc('players/guest-1').get()).exists).toBe(true);
     expect((await ldb().doc('players/o2').get()).data()).toMatchObject({ matches_won: 0, is_guest: false });

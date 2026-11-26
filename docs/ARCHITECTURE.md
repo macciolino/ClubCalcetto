@@ -260,9 +260,28 @@ La colonna **Staff** vale per `SUPER_ADMIN` e `GLOBAL_ADMIN`, salvo dove è indi
    scheda nuova parte dai valori già **rivisti in un'altra lega** (più affidabili), altrimenti dal **Radar Base** (il parametro
    che la lega ha in più prende il suo default); `stat_status: 'UNCONFIRMED'`, `needs_stat_review: true` e il Radar copiato in
    `self_stats` (il revisore vede cosa ha scelto la persona). Un account vecchio senza Radar fa l'autovalutazione di sempre
-   (`self_rating_pending`). Diventa `CONFIRMED` quando un gestore salva la revisione ("Valutazioni da rivedere") o approva il
-   "sono io" su un ospite. L'etichetta **"Da confermare"** ([UnconfirmedBadge.tsx](../src/components/UnconfirmedBadge.tsx))
-   compare nelle schede dei giocatori, nel dettaglio e nel Profilo finché non è confermata.
+   (`self_rating_pending`). Diventa `CONFIRMED` quando un gestore conferma i valori (punto 7) o approva il "sono io" su un
+   ospite.
+7. **Revisione e conferma dei valori iniziali** (presidente, collaboratore, e lo staff di piattaforma che gestisce quella lega):
+   - **Avviso**: chi entra con valori `UNCONFIRMED` (link d'invito o lega pubblica; NON il "sono io", che ha già la sua
+     richiesta) genera `tellManagersOfNewMember` ([leagueMembers.ts](../src/lib/server/leagueMembers.ts)): campanello e push
+     (secondo la modalità notifiche della lega) a chi ha una scheda `PRESIDENT`/`COLLABORATOR`, "[Nome] si è unito alla lega ·
+     Valori da revisionare", con link `/players?player=<id>` che apre la scheda del giocatore. Lo staff di piattaforma la riceve solo
+     nelle leghe dove ha una scheda presidente/collaboratore (non in tutte le leghe: sarebbe rumore); negli altri casi la vede
+     comunque in Giocatori (badge e filtro). Chi entra non riceve nulla.
+   - **Segni**: in Giocatori il badge sobrio **"Da revisionare"** ([UnconfirmedBadge.tsx](../src/components/UnconfirmedBadge.tsx))
+     sulle schede `UNCONFIRMED` (card, elenco, tabella) e, per i gestori, un filtro rapido "Da revisionare (n)" visibile solo
+     se ce ne sono. Nella scheda del giocatore (vista gestore) un riquadro in cima: "Valori iniziali impostati dal giocatore in
+     attesa di conferma" con **"Conferma valori"**.
+   - **Conferma**: due vie, stesso risultato (`confirmPlayerValues` in [firestoreService.ts](../src/lib/firebase/firestoreService.ts)):
+     "Conferma valori" senza modifiche, oppure modificare **almeno un parametro** dalla matita e salvare (cambiare solo il nome
+     o il ruolo NON conferma). Imposta `stat_status: 'CONFIRMED'`, `needs_stat_review: false`, toglie `stats_from`, scrive
+     `stat_reviewed_at/by`. Il badge sparisce e compare un discreto "Verificato" (solo con `CONFIRMED` esplicito: le schede
+     vecchie, senza campo, non mostrano nulla). Anche la card "Valutazioni da rivedere" del campanello usa la stessa funzione.
+   - **Il giocatore**: vede sempre il suo radar completo; finché è `UNCONFIRMED`, sotto il grafico (Profilo e propria scheda)
+     la nota "Valori iniziali · in attesa di revisione del gestore". Nessun badge, nessun avviso, nessun blocco.
+   - **Generatore squadre**: i valori `UNCONFIRMED` contano come gli altri (OVR salvato, il 6 neutro o le modifiche iniziali):
+     mai zero, mai esclusi (`getPlayerOverallRating` ignora lo stato; test in `tests/unit/unconfirmedBalancer.test.ts`).
 
 **Creazione di una lega** (`POST /api/leagues` → [leagueCreation.ts](../src/lib/server/leagueCreation.ts))
 - Serve l'email verificata. Ogni account può creare al massimo 5 leghe (`MAX_LEAGUES_PER_USER`).
@@ -277,7 +296,7 @@ La colonna **Staff** vale per `SUPER_ADMIN` e `GLOBAL_ADMIN`, salvo dove è indi
   **formato prevalente** (il più frequente tra le partite archiviate, dal formato salvato o dai giocatori in campo; senza
   partite il `defaultFormat`), **OVR medio** dei giocatori che giocano (`null` sotto i 6 giocatori: "Nuova lega"), numero di
   giocatori e di partite giocate. Cache di 5 minuti sul server (costa una lettura per scheda e partita); massimo 30 leghe.
-- `POST { leagueId }`: entra con una scheda nuova (Radar Base, `UNCONFIRMED`) e avvisa i gestori ("Nuovo giocatore in lega").
+- `POST { leagueId }`: entra con una scheda nuova (Radar Base, `UNCONFIRMED`) e avvisa i gestori ("Nuovo giocatore in lega · Valori da revisionare", punto 7).
   Una lega privata, sospesa o inesistente risponde sempre 404 `not_public`. Il server legge le leghe, non le regole: un non
   membro continua a non poterle leggere dall'app.
 

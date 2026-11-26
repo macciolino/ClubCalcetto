@@ -178,8 +178,10 @@ describe('Unirsi a una lega pubblica', () => {
     expect(card.stats.Tiro).toBe(9);
     expect(card.stats.Fisico).toBe(6);
     expect((await db().doc('memberships/p1').get()).data()?.leagues.pub).toMatchObject({ player_id: 'p1', league_role: 'PLAYER', name: 'Lega pub' });
-    const bell = (await db().collection('profiles/pub-pres/notifications').get()).docs.map((d) => String(d.data().title));
-    expect(bell).toContain('🙋 Nuovo giocatore in lega');
+    const bell = (await db().collection('profiles/pub-pres/notifications').get()).docs.map((d) => d.data());
+    expect(bell).toHaveLength(1);
+    expect(bell[0]).toMatchObject({ title: '🆕 Nuovo giocatore in lega', url: '/players?player=p1' });
+    expect(String(bell[0].body)).toContain('si è unito alla lega · Valori da revisionare');
     // di nuovo: già dentro, nessuna seconda scheda né seconda notifica
     expect((await call(publicJoin, { leagueId: 'pub' }, u.token)).data).toEqual({ ok: true, leagueId: 'pub', already: true });
     expect((await db().collection('profiles/pub-pres/notifications').get()).size).toBe(1);

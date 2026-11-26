@@ -4,7 +4,7 @@ import { db, loginAs, loginAsAdmin, seedAccountWithoutLeague, seedMatchDay } fro
 /**
  * Onboarding of a new account (docs/ARCHITECTURE.md, "Registrazione e Radar Base"): first the Radar Base (every value at
  * 6), then the fork — with an invite link straight into that league, without one the public leagues — and the values
- * on the league card stay "Da confermare" until a president / collaborator approves them.
+ * on the league card stay "Da revisionare" until a president / collaborator approves them.
  */
 async function publicLeague(id: string, name: string, opts: { players: number; matchSize?: number[]; visibility?: string }) {
   await db.doc(`leagues/${id}`).set({ id, name, slug: id, status: 'active', visibility: opts.visibility || 'public', createdAt: new Date().toISOString(), createdBy: 'p-1' });
@@ -77,7 +77,7 @@ test.describe('Nuovo account: Radar Base e leghe pubbliche', () => {
     await expect(page.getByRole('button', { name: 'Crea una nuova lega' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Cerca una partita da giocare' })).toBeVisible();
 
-    // entra: la scheda parte dal Radar Base ed è "Da confermare"
+    // entra: la scheda parte dal Radar Base ed è "Da revisionare"
     await pubblica.click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Conferma', exact: true }).click();
     await expect(page.getByRole('button', { name: /Lega attiva: Lunedì sera/ })).toBeVisible({ timeout: 20_000 });
@@ -87,13 +87,13 @@ test.describe('Nuovo account: Radar Base e leghe pubbliche', () => {
     await page.goto('/players');
     const mine = page.getByRole('button', { name: /^Nuovo Arrivato, .*OVR/ });
     await expect(mine).toBeVisible({ timeout: 15_000 });
-    await expect(mine).toContainText('Da confermare');
+    await expect(mine).toContainText('Da revisionare');
 
     // conferma di un gestore: l'etichetta sparisce
     await db.doc('leagues/pubblica/players/e2e-nolega').update({ stat_status: 'CONFIRMED' });
     await page.reload();
     await expect(page.getByRole('button', { name: /^Nuovo Arrivato, .*OVR/ })).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText('Da confermare')).toHaveCount(0);
+    await expect(page.getByText('Da revisionare')).toHaveCount(0);
   });
 
   test('con un invito: dopo il Radar Base si arriva all’ingresso della lega e la scheda parte dal Radar, da confermare', async ({ page }) => {
@@ -122,9 +122,9 @@ test.describe('Nuovo account: Radar Base e leghe pubbliche', () => {
     await loginAsAdmin(page);
     await expect(page.getByRole('heading', { name: 'Il tuo Radar Base' })).toHaveCount(0);
     await expect(page.getByRole('heading', { name: 'Ciao Marco', level: 1 })).toBeVisible({ timeout: 15_000 });
-    // nessuna etichetta "Da confermare" sulle schede di una lega che esisteva già
+    // nessuna etichetta "Da revisionare" sulle schede di una lega che esisteva già
     await page.goto('/players');
     await expect(page.getByText('Test Uno').first()).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText('Da confermare')).toHaveCount(0);
+    await expect(page.getByText('Da revisionare')).toHaveCount(0);
   });
 });

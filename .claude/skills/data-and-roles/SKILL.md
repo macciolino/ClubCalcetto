@@ -98,7 +98,10 @@ Production data is REAL: never rewrite stats, no paid services, never print secr
   `profiles.baseRadar` once (1–10 each) and clears the flag; clients cannot write these fields (rules). Older accounts never get the flag.
 - `ensureLeagueCard` builds the card from stats reviewed in another league, else the Radar Base (`buildCardStats`), with
   `stat_status: 'UNCONFIRMED'` + `needs_stat_review: true` + `self_stats` = the Radar; `CONFIRMED` when a manager saves the
-  review or approves a guest claim. Badge "Da confermare" until then.
+  review (`confirmPlayerValues`: "Conferma valori" or editing at least one parameter, from the player sheet) or approves a guest
+  claim. Badge "Da revisionare" (+ manager filter, banner on the sheet, own-view note under the radar) until then; a joining
+  player triggers `tellManagersOfNewMember` (bell + push to PRESIDENT/COLLABORATOR cards, link `/players?player=<id>`);
+  the team balancer treats UNCONFIRMED values like any other.
 - Public leagues (`visibility: 'public'`, active): `GET /api/leagues/public` (name, prevailing format, average OVR or null,
   players, matches; 5-minute cache), `POST` joins directly (`joinPublicLeague`); shown on the welcome screen of an account with no league.
 

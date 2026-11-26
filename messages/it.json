@@ -324,6 +324,10 @@
     "playedUnit": "partite",
     "search": "Cerca giocatore",
     "roleFilter": "Filtro ruolo",
+    "reviewFilter": "Da revisionare ({count})",
+    "valuesConfirmedToast": "Valori di {name} confermati.",
+    "confirmFailed": "Non sono riuscito a confermare i valori: riprova.",
+    "reviewFilterHint": "Mostra solo i giocatori con valori iniziali da confermare",
     "allRoles": "Tutti",
     "sortBy": "Ordina per",
     "sortOvr": "Per OVR",
@@ -374,6 +378,10 @@
   "playerCard": {
     "superAdmin": "Super Admin",
     "guestSuffix": " · ospite",
+    "reviewBanner": "Valori iniziali impostati dal giocatore in attesa di conferma",
+    "reviewHelp": "Modifica i valori e salva, oppure conferma così come sono: in entrambi i casi il giocatore risulta verificato.",
+    "confirmValues": "Conferma valori",
+    "ownNote": "Valori iniziali · in attesa di revisione del gestore",
     "noRecent": "nessuna partita recente",
     "withForm": "con lo stato forma",
     "parameters": "Parametri",
@@ -869,6 +877,7 @@
     "save": "Salva modifiche",
     "skills": "Le Mie Abilità Tecniche",
     "radarHint": "Poligono radar ottagonale generato sui tuoi attributi calcistici.",
+    "reviewNote": "Valori iniziali · in attesa di revisione del gestore",
     "inForm": "<b>In forma {value}</b>: per le ultime 3 partite (MVP, voti, gol o vittorie) tutti i tuoi valori e l'OVR sono saliti di {delta}. È temporaneo.",
     "outOfForm": "<b>Fuori forma {value}</b>: per le ultime 3 partite (sconfitte) tutti i tuoi valori e l'OVR sono scesi di {delta}. È temporaneo: risale con vittorie, voti MVP o gol.",
     "myStats": "Le Mie Statistiche",
@@ -1402,8 +1411,10 @@
     "joinFailed": "Non sono riuscito a farti entrare: la lega potrebbe non essere più pubblica."
   },
   "unconfirmed": {
-    "label": "Da confermare",
-    "hint": "Valori non ancora approvati: un presidente o un collaboratore li conferma dopo la prima partita."
+    "label": "Da revisionare",
+    "hint": "Valori iniziali non ancora rivisti: un presidente o un collaboratore li conferma dopo la prima partita.",
+    "verified": "Verificato",
+    "verifiedHint": "Valori rivisti e confermati da un presidente o un collaboratore."
   },
   "selfRating": {
     "saved": "Autovalutazione salvata. Dopo la tua prima partita il presidente o un collaboratore la conferma.",

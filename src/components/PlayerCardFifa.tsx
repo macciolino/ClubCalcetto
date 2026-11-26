@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { UnconfirmedBadge } from '@/components/UnconfirmedBadge';
+import { UnconfirmedBadge, VerifiedMark } from '@/components/UnconfirmedBadge';
+import { btn } from '@/components/ui/buttons';
 import { initialsOf, uploadedPhoto, ovrDisplay, ovrTone } from '@/lib/utils/playerUtils';
 import { formatForm } from '@/lib/utils/formUtils';
 import { getStatValue, PlayerMatchStats, EMPTY_MATCH_STATS } from '@/lib/utils/statUtils';
@@ -111,6 +112,8 @@ export function PlayerDetailSheet({
   onInvite,
   onRemoveFromLeague,
   onDeactivateAccount,
+  onConfirmValues,
+  isSelf = false,
 }: {
   player: Profile;
   categories?: StatCategory[];
@@ -132,6 +135,10 @@ export function PlayerDetailSheet({
   onToggleRole?: (player: Profile) => void;
   /** Admins, guests only: invite link on WhatsApp (the guest registers and keeps matches and stats) */
   onInvite?: (player: Profile) => void;
+  /** Managers: confirm the player's initial values as they are (the pencil edits and confirms too) */
+  onConfirmValues?: (player: Profile) => void;
+  /** The sheet is the signed-in player's own card: unconfirmed values show a discreet note under the radar */
+  isSelf?: boolean;
 }) {
   const [tab, setTab] = useState<'radar' | 'stats'>('radar');
   const t = useTranslations('playerCard');
@@ -171,6 +178,8 @@ export function PlayerDetailSheet({
           <span className="inline-block w-4 border-t-2 border-dashed border-emerald-300" aria-hidden="true" /> {t('withForm')}
         </p>
       )}
+
+      {isSelf && player.stat_status === 'UNCONFIRMED' && <p className="mt-3 text-center text-xs text-muted">{t('ownNote')}</p>}
 
       {/* Valori dei parametri: piccole tessere con sigla, numero e barra sottile */}
       <ul className="mt-4 w-full grid grid-cols-4 gap-2" aria-label={t('parameters')}>
@@ -378,6 +387,7 @@ export function PlayerDetailSheet({
           <span className={`block text-4xl font-bold tabular-nums leading-none ${ovrTone(ovr)}`}>{ovr}</span>
           <span className="mt-1 flex items-center gap-2 text-xs text-secondary">
             OVR <UnconfirmedBadge status={player.stat_status} />
+            <VerifiedMark status={player.stat_status} />
           </span>
         </div>
         <div className="text-right">
@@ -385,6 +395,21 @@ export function PlayerDetailSheet({
           <FormDots playerId={player.id} matches={recentMatches} size="md" />
         </div>
       </div>
+
+      {/* Managers: the player's initial values wait for a review; confirm them as they are or edit and save */}
+      {isAdmin && player.stat_status === 'UNCONFIRMED' && (
+        <div role="note" className="space-y-2.5 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+          <div className="space-y-0.5">
+            <p className="text-sm font-semibold text-warning">{t('reviewBanner')}</p>
+            <p className="text-xs text-secondary leading-relaxed">{t('reviewHelp')}</p>
+          </div>
+          {onConfirmValues && (
+            <button type="button" onClick={() => onConfirmValues(player)} className={btn.secondary}>
+              {t('confirmValues')}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Telefono e tablet: schede Abilità / Statistiche. PC: le due cose affiancate */}
       <div className="lg:hidden space-y-4">

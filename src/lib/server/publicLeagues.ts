@@ -1,7 +1,6 @@
 import { adminDb } from '@/lib/firebase/admin';
-import { deliverToAdmins } from '@/lib/server/push';
-import { ensureLeagueCard, isMemberOf } from '@/lib/server/leagueMembers';
-import { inLeague, leagueDb } from '@/lib/server/leagueScope';
+import { ensureLeagueCard, isMemberOf, tellManagersOfNewMember } from '@/lib/server/leagueMembers';
+import { leagueDb } from '@/lib/server/leagueScope';
 import { MATCH_FORMATS } from '@/lib/utils/matchFormat';
 import { MIN_PLAYERS_FOR_AVERAGE, averageOverall, prevailingFormat, type PublicLeague } from '@/lib/utils/publicLeagues';
 import type { MatchFormat } from '@/types/database';
@@ -78,13 +77,7 @@ export async function joinPublicLeague(caller: { uid: string; profileId: string 
   const created = await ensureLeagueCard(leagueId, caller, String(league.name || ''));
   if (created) {
     const name = String((await adminDb().doc(`profiles/${caller.profileId}`).get()).data()?.full_name || 'Un giocatore');
-    await inLeague(leagueId, () =>
-      deliverToAdmins({
-        title: '🙋 Nuovo giocatore in lega',
-        body: `${name} è entrato nella lega pubblica. I suoi valori partono dal suo Radar Base: confermali dopo la prima partita.`,
-        url: '/players',
-      })
-    ).catch(() => undefined);
+    await tellManagersOfNewMember(leagueId, caller.profileId, name);
   }
   cache = null; // the number of players changed
   return { ok: true, leagueId };

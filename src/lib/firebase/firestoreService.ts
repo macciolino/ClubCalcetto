@@ -125,6 +125,35 @@ export async function ensurePrivateEmail(profileId: string, email: string | null
  * server flags (self-assessment, review, return request…) and parameters nobody touched stay as they are.
  * `stats` are written one parameter at a time. Throws after showing the error (the caller must not say "saved").
  */
+/**
+ * A president / collaborator confirms the values of a player's card (docs/ARCHITECTURE.md, "Registrazione e Radar Base"):
+ * `UNCONFIRMED` → `CONFIRMED`, with or without having changed them. Also clears the first-match review flag and the
+ * "values from another league" mark. `values` = the corrected parameters, when the reviewer changed them.
+ */
+export async function confirmPlayerValues(
+  profileId: string,
+  reviewerId: string,
+  values?: { stats: Record<string, number>; overall_rating: number }
+): Promise<void> {
+  if (!isFirebaseConfigured) return;
+  const now = new Date().toISOString();
+  try {
+    await updateDoc(ldoc('players', profileId), {
+      ...(values ? { stats: values.stats, overall_rating: values.overall_rating } : {}),
+      stat_status: 'CONFIRMED',
+      needs_stat_review: false,
+      stats_from: deleteField(),
+      stat_reviewed_at: now,
+      stat_reviewed_by: reviewerId,
+      updated_at: now,
+    });
+  } catch (err) {
+    console.warn('[Firestore] confirmPlayerValues error:', err);
+    reportWriteError(err);
+    throw err;
+  }
+}
+
 export async function updateProfileFields(
   profileId: string,
   fields: Partial<Omit<Profile, 'id' | 'stats' | 'email'>>,

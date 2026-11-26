@@ -1,7 +1,7 @@
 'use client';
 
 import { PageSkeleton } from '@/components/ui/Skeleton';
-import { UnconfirmedBadge } from '@/components/UnconfirmedBadge';
+import { VerifiedMark } from '@/components/UnconfirmedBadge';
 import { askConfirm } from '@/components/ui/Feedback';
 
 import { getStatValue, computeMatchStats, EMPTY_MATCH_STATS } from '@/lib/utils/statUtils';
@@ -298,7 +298,7 @@ export default function ProfiloPage() {
                 </h2>
               </div>
               <span className="flex items-center gap-2">
-                <UnconfirmedBadge status={profile.stat_status} />
+                <VerifiedMark status={profile.stat_status} />
                 <span className="text-xs font-mono font-bold text-warning bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md">
                   OVR {Math.round(Math.max(1, Math.min(10, (profile.overall_rating || 6.0) + myForm)) * 10)}
                 </span>
@@ -322,6 +322,7 @@ export default function ProfiloPage() {
           <div className="py-2 flex justify-center">
             <RadarChart stats={profileStats} size={220} color="emerald" showLabels={true} />
           </div>
+          {profile.stat_status === 'UNCONFIRMED' && <p className="text-center text-xs text-muted">{t('reviewNote')}</p>}
 
           {/* Dettaglio barre statistiche in ordine canonico fisso */}
           <div className="grid grid-cols-2 gap-2 pt-2 border-t border-line">
