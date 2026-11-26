@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     const db = adminDb();
     const profile = (await db.doc(`profiles/${caller.profileId}`).get()).data();
     if (!profile) return NextResponse.json({ ok: false, error: 'no_profile' }, { status: 404 });
-    const { invite } = (await request.json().catch(() => ({}))) as { invite?: string };
+    const { invite, isNew } = (await request.json().catch(() => ({}))) as { invite?: string; isNew?: boolean };
 
     if (invite && /^[A-Za-z0-9_-]{20,64}$/.test(invite)) {
       const ref = db.doc(`invites/${invite}`);
@@ -45,7 +45,13 @@ export async function POST(request: Request) {
         throw err;
       }
     }
-    return NextResponse.json({ ok: true, claimed: false });
+    // A new account (not a guest taken over by an invite) starts with the Radar Base step, before any league or the board
+    let baseRadarPending = false;
+    if (isNew === true && !profile.baseRadar && profile.base_radar_pending === undefined && !profile.is_guest) {
+      await db.doc(`profiles/${caller.profileId}`).update({ base_radar_pending: true, updated_at: new Date().toISOString() });
+      baseRadarPending = true;
+    }
+    return NextResponse.json({ ok: true, claimed: false, baseRadarPending });
   } catch (err) {
     console.error('[account/registered] errore:', err instanceof Error ? err.message : err);
     return NextResponse.json({ ok: false, error: 'server_error' }, { status: 500 });

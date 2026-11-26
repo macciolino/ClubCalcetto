@@ -24,9 +24,10 @@ export default defineConfig({
   webServer: {
     command: 'npx firebase emulators:exec --only auth,firestore --project demo-clubcalcetto "npx next dev -p 3100"',
     url: 'http://localhost:3100/login',
-    env: { NEXT_PUBLIC_USE_FIREBASE_EMULATORS: 'true' },
+    env: { NEXT_PUBLIC_USE_FIREBASE_EMULATORS: 'true', PUBLIC_LEAGUES_CACHE_MS: '0' },
     timeout: 300_000,
-    reuseExistingServer: false,
+    // `npm run test:e2e:server` keeps this same server running; `npm run test:e2e:fast` reuses it (E2E_REUSE_SERVER=1)
+    reuseExistingServer: process.env.E2E_REUSE_SERVER === '1',
     stdout: 'ignore',
     stderr: 'pipe',
   },

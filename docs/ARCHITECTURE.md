@@ -240,19 +240,46 @@ La colonna **Staff** vale per `SUPER_ADMIN` e `GLOBAL_ADMIN`, salvo dove è indi
    regole non danno niente.
 2. L'app crea `profiles/{uid}` come giocatore semplice. Le regole impongono valori di partenza bassi e nessuno storico
    (`isValidNewOwnProfile`).
-3. Poi chiama `POST /api/account/registered`, che prepara l'autovalutazione (`self_rating_pending`). Il giocatore dà
-   un voto ai propri parametri una volta sola (`/api/account/self-rating`); dopo la prima partita un gestore li rivede
-   (`needs_stat_review`).
-4. Senza leghe, l'utente vede la **schermata di benvenuto** ([LeagueWelcome.tsx](../src/components/league/LeagueWelcome.tsx)):
-   può creare una lega, entrare con un invito o cercare una partita in Bacheca. Chi ha giocato partite da esterno ritrova qui
-   la sua **Carriera** (non ha un Profilo, che è di chi ha una lega).
+3. Poi chiama `POST /api/account/registered { isNew: true }`: per un account **nuovo** (non un ospite preso con l'invito
+   vecchio) il server imposta `base_radar_pending` sul profilo.
+4. **Step Radar Base** ([OnboardingGate.tsx](../src/components/onboarding/OnboardingGate.tsx),
+   [BaseRadarStep.tsx](../src/components/onboarding/BaseRadarStep.tsx)): finché `base_radar_pending` è vero **nessuna pagina
+   si apre** (lega, invito `/join/…`, Bacheca) tranne il login. Gli attributi tecnici di base (Velocità, Fisico, Resistenza,
+   Tiro, Passaggio, Dribbling, Difesa, Visione) sono **tutti a 6**: si può cambiarli o premere subito "Salva e prosegui". Un
+   avviso dice che i valori **non sono confermati** finché un presidente o un collaboratore non li approva dopo la prima
+   partita. `POST /api/account/base-radar` valida un intero 1–10 per ogni parametro e salva `profiles/{id}.baseRadar` (+
+   `baseRadarAt`, `base_radar_pending: false`), **una sola volta**. Le regole non lasciano scrivere questi campi dall'app.
+   Gli account che esistevano prima non hanno il flag: non lo vedono mai.
+5. **Il bivio dopo il Radar:**
+   - **Con un link d'invito** (`/join/{code}`, tenuto in `cc_return_to` anche dopo la verifica dell'email): finito il Radar
+     si torna all'invito. Entra come giocatore nuovo, oppure dice "sono io" su un ospite (richiesta da approvare, come sempre).
+   - **Senza invito**: la **schermata di benvenuto** ([LeagueWelcome.tsx](../src/components/league/LeagueWelcome.tsx)) con le
+     **leghe pubbliche** come card cliccabili (vedi sotto), "Crea una nuova lega", "Unisciti con codice" e la Bacheca. Chi ha
+     giocato partite da esterno ritrova qui la sua **Carriera** (non ha un Profilo, che è di chi ha una lega).
+6. **Valori sulla scheda di lega** (`ensureLeagueCard`, [baseRadar.ts](../src/lib/utils/baseRadar.ts) `buildCardStats`): ogni
+   scheda nuova parte dai valori già **rivisti in un'altra lega** (più affidabili), altrimenti dal **Radar Base** (il parametro
+   che la lega ha in più prende il suo default); `stat_status: 'UNCONFIRMED'`, `needs_stat_review: true` e il Radar copiato in
+   `self_stats` (il revisore vede cosa ha scelto la persona). Un account vecchio senza Radar fa l'autovalutazione di sempre
+   (`self_rating_pending`). Diventa `CONFIRMED` quando un gestore salva la revisione ("Valutazioni da rivedere") o approva il
+   "sono io" su un ospite. L'etichetta **"Da confermare"** ([UnconfirmedBadge.tsx](../src/components/UnconfirmedBadge.tsx))
+   compare nelle schede dei giocatori, nel dettaglio e nel Profilo finché non è confermata.
 
 **Creazione di una lega** (`POST /api/leagues` → [leagueCreation.ts](../src/lib/server/leagueCreation.ts))
 - Serve l'email verificata. Ogni account può creare al massimo 5 leghe (`MAX_LEAGUES_PER_USER`).
 - Il creatore diventa `PRESIDENT`. Sceglie se gioca anche lui (`isActivePlayer`).
 - La lega nasce con i parametri predefiniti e, se indicato, con il campo abituale.
 - I parametri dei giocatori sono numeri interi da **1 a 10**: anche il valore iniziale di un nuovo parametro viene riportato in quella scala (`clampStatValue`), con il clic e con Invio nel campo.
-- `visibility` (`private`/`public`) oggi è solo un'etichetta: non apre la lega a nessuno.
+- `visibility` (`private`/`public`): una lega **pubblica** attiva compare nella schermata di benvenuto di chi non ha leghe e
+  ci si entra **direttamente**, senza invito né approvazione (l'ha scelto il presidente). Una privata si apre solo con l'invito.
+
+**Leghe pubbliche** ([publicLeagues.ts](../src/lib/server/publicLeagues.ts), `GET/POST /api/leagues/public`)
+- `GET`: le leghe `public` e `active` di cui l'account non fa già parte (accesso con email verificata). Per ogni lega: nome,
+  **formato prevalente** (il più frequente tra le partite archiviate, dal formato salvato o dai giocatori in campo; senza
+  partite il `defaultFormat`), **OVR medio** dei giocatori che giocano (`null` sotto i 6 giocatori: "Nuova lega"), numero di
+  giocatori e di partite giocate. Cache di 5 minuti sul server (costa una lettura per scheda e partita); massimo 30 leghe.
+- `POST { leagueId }`: entra con una scheda nuova (Radar Base, `UNCONFIRMED`) e avvisa i gestori ("Nuovo giocatore in lega").
+  Una lega privata, sospesa o inesistente risponde sempre 404 `not_public`. Il server legge le leghe, non le regole: un non
+  membro continua a non poterle leggere dall'app.
 
 **Ingresso con il link della lega** (`/join/{code}`, `league_invites`, [leagueMembers.ts](../src/lib/server/leagueMembers.ts))
 1. Un gestore crea il link (`POST /api/league-invite`).
@@ -640,6 +667,6 @@ browser. Un'iscrizione con `external` non si cancella dall'app (solo il server).
 | Unitari | `npm run test:unit` | Permessi puri (`leaguePermissions`), formati, cassa, Home |
 | Regole | `npm run test:rules` | Ogni regola di §2 sulle regole Firestore (emulatore) |
 | Integrazione | `npm run test:integration` | API reali su emulatori: ruoli, staff, eliminazione, inviti e reclami, rientro, "non gioca", catalogo campi, bacheca "Cerco giocatore" (anche 10 click insieme su 2 posti) |
-| End-to-end | `npm run test:e2e` | Flussi nel browser (Pixel 7): leghe, fallback, console, presenze, giocatori, bacheca |
+| End-to-end | `npm run test:e2e` | Flussi nel browser (Pixel 7): leghe, fallback, console, presenze, giocatori, bacheca, onboarding (Radar Base e leghe pubbliche). Per ripeterli senza riavviare tutto: `npm run test:e2e:server` (una volta, resta acceso) e `npm run test:e2e:fast` |
 
 Prima di un commit si eseguono tutti i controlli (skill `pre-commit-testing-gate`).

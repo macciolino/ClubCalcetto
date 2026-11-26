@@ -83,13 +83,14 @@ export function takePendingInvite(): string | null {
 /** Server: link the guest of the invite, or tell the admins about a new sign-up. */
 export async function afterRegistration(
   fbUser: FirebaseUser,
-  invite: string | null
-): Promise<{ ok: boolean; claimed?: boolean; guestName?: string } | null> {
+  invite: string | null,
+  isNew = false
+): Promise<{ ok: boolean; claimed?: boolean; guestName?: string; baseRadarPending?: boolean } | null> {
   try {
     const res = await fetch('/api/account/registered', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await fbUser.getIdToken()}` },
-      body: JSON.stringify(invite ? { invite } : {}),
+      body: JSON.stringify({ ...(invite ? { invite } : {}), ...(isNew ? { isNew: true } : {}) }),
     });
     return await res.json();
   } catch {
@@ -261,7 +262,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Nuovo account (o link di invito aperto): collega l'ospite o avvisa gli admin
       const invite = takePendingInvite();
       if (isNew || invite) {
-        const res = await afterRegistration(fbUser, invite);
+        const res = await afterRegistration(fbUser, invite, isNew);
         // Il server può aver cambiato il profilo (ospite collegato, autovalutazione da fare): si rilegge
         if (res?.claimed || isNew) {
           const fresh = await getDoc(docRef);

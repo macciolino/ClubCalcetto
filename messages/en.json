@@ -1373,6 +1373,38 @@
     "byYou": " by you",
     "reason": "Reason: {reason}"
   },
+  "onboarding": {
+    "radar": {
+      "title": "Your Base Radar",
+      "subtitle": "How good are you on the pitch? Rate each skill from 1 to 10: it is your starting point on Club Soccer.",
+      "hint": "Everything starts at 6: change the ratings or just continue.",
+      "startOvr": "Your starting OVR",
+      "noticeTitle": "Values to confirm",
+      "notice": "These values are not confirmed yet: when you join a league, a president or collaborator approves or changes them after your first match.",
+      "save": "Save and continue",
+      "failed": "Could not save: check your connection and try again."
+    }
+  },
+  "publicLeagues": {
+    "title": "Public leagues",
+    "subtitle": "Join a league open to everyone: your card starts from your Base Radar.",
+    "loading": "Looking for public leagues…",
+    "empty": "There are no public leagues for now. Create one or join with an invite.",
+    "failed": "Could not load the public leagues. Try again later.",
+    "newLeague": "New league",
+    "ovrAvg": "Average OVR {value}",
+    "players": "{count, plural, one {# player} other {# players}}",
+    "matches": "{count, plural, one {# match played} other {# matches played}}",
+    "join": "Join",
+    "cardLabel": "{name}: {format}, {ovr}, {players}, {matches}. Tap to join.",
+    "confirm": "Join \"{name}\"? Your card starts from your Base Radar and the values stay unconfirmed until a president approves them after your first match.",
+    "joined": "You joined {name}.",
+    "joinFailed": "Could not add you: the league may no longer be public."
+  },
+  "unconfirmed": {
+    "label": "To confirm",
+    "hint": "Values not approved yet: a president or collaborator confirms them after the first match."
+  },
   "selfRating": {
     "saved": "Self-assessment saved. After your first match the president or a collaborator confirms it.",
     "failed": "Saving failed, try again.",
@@ -1523,7 +1555,7 @@
     },
     "welcome": {
       "title": "Welcome to Club Soccer",
-      "subtitle": "You are not in a league yet. Create one for your group or join with a friend’s invite.",
+      "subtitle": "You are not in a league yet. Join a public league, create one for your group or use a friend’s invite.",
       "create": "Create a new league",
       "join": "Join with invite code or link",
       "codeLabel": "Invite code or link",

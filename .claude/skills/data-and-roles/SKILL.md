@@ -92,6 +92,16 @@ Production data is REAL: never rewrite stats, no paid services, never print secr
   anonymised + hidden, references moved there; fresh profile with default stats, Auth re-enabled). Hard-deleted accounts come back as new sign-ups.
 - Any admin can resolve requests (`POST /api/admin/requests`); deleting for good stays super admin only.
 
+## Radar Base, public leagues (2026-11-26)
+- NEW accounts (`/api/account/registered { isNew: true }`) get `profiles.base_radar_pending: true`; `OnboardingGate` shows
+  `BaseRadarStep` (8 base parameters, all at 6) before any page except /login. `POST /api/account/base-radar` saves
+  `profiles.baseRadar` once (1–10 each) and clears the flag; clients cannot write these fields (rules). Older accounts never get the flag.
+- `ensureLeagueCard` builds the card from stats reviewed in another league, else the Radar Base (`buildCardStats`), with
+  `stat_status: 'UNCONFIRMED'` + `needs_stat_review: true` + `self_stats` = the Radar; `CONFIRMED` when a manager saves the
+  review or approves a guest claim. Badge "Da confermare" until then.
+- Public leagues (`visibility: 'public'`, active): `GET /api/leagues/public` (name, prevailing format, average OVR or null,
+  players, matches; 5-minute cache), `POST` joins directly (`joinPublicLeague`); shown on the welcome screen of an account with no league.
+
 ## New player self-assessment and admin review (2026-11-12)
 - At sign-up (`/api/account/registered`, new profile, 0 matches, not a claimed guest) the server sets
   `self_rating_pending: true` and `needs_stat_review: true`. Older profiles have neither field → never asked.

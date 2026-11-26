@@ -115,6 +115,7 @@ function StatReviewCard({ player, categories, reviewerId }: { player: Profile; c
         stats,
         overall_rating: ovrOf(values),
         needs_stat_review: false,
+        stat_status: 'CONFIRMED',
         stats_from: deleteField(),
         stat_reviewed_at: now,
         stat_reviewed_by: reviewerId,

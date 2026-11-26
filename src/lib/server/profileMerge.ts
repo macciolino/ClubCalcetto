@@ -123,6 +123,7 @@ export async function claimGuest(guestId: string, toId: string): Promise<{ guest
       linked_guest_id: guestId,
       needs_stat_review: false,
       self_rating_pending: false,
+      stat_status: 'CONFIRMED',
     };
     if (gd.stats) patch.stats = gd.stats;
     if (typeof gd.overall_rating === 'number') patch.overall_rating = gd.overall_rating;

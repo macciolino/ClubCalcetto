@@ -2,6 +2,7 @@ import { randomBytes } from 'crypto';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminDb } from '@/lib/firebase/admin';
 import { DEFAULT_BASE_CATEGORIES } from '@/lib/utils/defaultCategories';
+import { buildCardStats, cleanBaseRadar, radarOverall } from '@/lib/utils/baseRadar';
 import { canChangeLeagueRole, canRemoveFromLeague, leagueSlug } from '@/lib/utils/leaguePermissions';
 import { openRequest } from '@/lib/server/adminRequests';
 import { inLeague, leagueDb, leaguesWithPlayer } from '@/lib/server/leagueScope';
@@ -80,13 +81,11 @@ export async function ensureLeagueCard(leagueId: string, caller: { uid: string; 
     const profile = profileSnap.data() || {};
     const categories = cats.empty ? DEFAULT_BASE_CATEGORIES : cats.docs.map((c) => c.data() as { name: string; default_value?: number });
     // Parameters (Velocità, Fisico…) of the last card the account had in another league, even one it left:
-    // they come along, and a president of THIS league approves them again (no self-assessment)
+    // they come along, and a president of THIS league approves them again (no self-assessment). Without one, the
+    // account's Radar Base (set at sign-up) is the starting point; either way the values are UNCONFIRMED until approved.
     const previous = await previousLeagueStats(caller.profileId, leagueId);
-    const stats: Record<string, number> = {};
-    categories.forEach((c) => {
-      const carried = Number(previous?.stats[String(c.name)]);
-      stats[String(c.name)] = carried >= 1 && carried <= 10 ? carried : Number(c.default_value ?? 6);
-    });
+    const radar = cleanBaseRadar(profile.baseRadar);
+    const { stats } = buildCardStats(categories, previous?.stats, radar);
     const values = Object.values(stats);
     batch.create(cardRef, {
       id: caller.profileId,
@@ -101,13 +100,19 @@ export async function ensureLeagueCard(leagueId: string, caller: { uid: string; 
       isActivePlayer: true,
       is_guest: false,
       stats,
-      overall_rating: values.length ? Number((values.reduce((a, b) => a + b, 0) / values.length).toFixed(1)) : 6,
+      overall_rating: values.length ? radarOverall(stats) : 6,
       matches_won: 0,
       matches_drawn: 0,
       matches_lost: 0,
-      // new in this league: rates themselves once, a manager reviews after the first match;
-      // with parameters from another league: no self-assessment, a president approves them again
-      ...(previous ? { stats_from: { leagueId: previous.leagueId, leagueName: previous.leagueName } } : { self_rating_pending: true }),
+      // with parameters from another league: no self-assessment, a president approves them again;
+      // with the Radar Base: it is their self-assessment (copied, so the reviewer sees what they chose);
+      // an older account with neither rates themselves once in this league
+      ...(previous
+        ? { stats_from: { leagueId: previous.leagueId, leagueName: previous.leagueName } }
+        : radar
+          ? { self_stats: radar }
+          : { self_rating_pending: true }),
+      stat_status: 'UNCONFIRMED',
       needs_stat_review: true,
       created_at: now,
       updated_at: now,

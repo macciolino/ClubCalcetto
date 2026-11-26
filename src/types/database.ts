@@ -152,6 +152,13 @@ export interface Profile {
   archived_at?: string;
   /** New player: rate yourself once after signing up (set by the server, cleared by /api/account/self-rating) */
   self_rating_pending?: boolean;
+  /** New account: the Radar Base step (docs/ARCHITECTURE.md) is still to do; set by the server at sign-up, cleared by /api/account/base-radar */
+  base_radar_pending?: boolean;
+  /** Radar Base (self-assessment): 1–10 for every base parameter, set once at sign-up; the starting point on every new league card. Server only. */
+  baseRadar?: Record<string, number>;
+  baseRadarAt?: string;
+  /** League card: the parameters are the person's own (Radar Base) or brought along, until a president / collaborator approves them */
+  stat_status?: 'UNCONFIRMED' | 'CONFIRMED';
   /** What the player gave themselves (kept so the admin can compare) */
   self_stats?: Record<string, number>;
   self_rated_at?: string;

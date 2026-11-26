@@ -18,6 +18,8 @@
     "check:server": "node --no-experimental-require-module scripts/check-server-modules.cjs",
     "test:integration": "firebase emulators:exec --config firebase.test.json --only auth,firestore --project demo-clubcalcetto \"node scripts/vitest.mjs run tests/integration\"",
     "test:e2e": "playwright test",
+    "test:e2e:server": "node scripts/e2e-server.mjs",
+    "test:e2e:fast": "node scripts/e2e-fast.mjs",
     "test:all": "npm run test:unit && npm run test:rules && npm run test:integration && npm run test:e2e"
   },
   "dependencies": {

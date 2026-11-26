@@ -1,6 +1,7 @@
 'use client';
 
 import { PageSkeleton } from '@/components/ui/Skeleton';
+import { UnconfirmedBadge } from '@/components/UnconfirmedBadge';
 import { askConfirm } from '@/components/ui/Feedback';
 
 import { getStatValue, computeMatchStats, EMPTY_MATCH_STATS } from '@/lib/utils/statUtils';
@@ -296,8 +297,11 @@ export default function ProfiloPage() {
                   {t('skills')}
                 </h2>
               </div>
-              <span className="text-xs font-mono font-bold text-warning bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md">
-                OVR {Math.round(Math.max(1, Math.min(10, (profile.overall_rating || 6.0) + myForm)) * 10)}
+              <span className="flex items-center gap-2">
+                <UnconfirmedBadge status={profile.stat_status} />
+                <span className="text-xs font-mono font-bold text-warning bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md">
+                  OVR {Math.round(Math.max(1, Math.min(10, (profile.overall_rating || 6.0) + myForm)) * 10)}
+                </span>
               </span>
             </div>
             <p className="text-xs text-secondary mt-2">

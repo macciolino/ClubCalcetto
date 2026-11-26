@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { UnconfirmedBadge } from '@/components/UnconfirmedBadge';
 import { initialsOf, uploadedPhoto, ovrDisplay, ovrTone } from '@/lib/utils/playerUtils';
 import { formatForm } from '@/lib/utils/formUtils';
 import { getStatValue, PlayerMatchStats, EMPTY_MATCH_STATS } from '@/lib/utils/statUtils';
@@ -78,6 +79,7 @@ export function PlayerCardFifa({
             {labels.position(player.position)}
             {player.is_guest ? t('guestSuffix') : ''}
           </span>
+          <UnconfirmedBadge status={player.stat_status} />
           {playedAny(player.id, recentMatches) ? (
             <FormDots playerId={player.id} matches={recentMatches} interactive={false} className="flex-shrink-0" />
           ) : (
@@ -374,7 +376,9 @@ export function PlayerDetailSheet({
       <div className="flex items-center justify-between gap-4 rounded-2xl bg-app/50 px-4 py-3">
         <div>
           <span className={`block text-4xl font-bold tabular-nums leading-none ${ovrTone(ovr)}`}>{ovr}</span>
-          <span className="block text-xs text-secondary mt-1">OVR</span>
+          <span className="mt-1 flex items-center gap-2 text-xs text-secondary">
+            OVR <UnconfirmedBadge status={player.stat_status} />
+          </span>
         </div>
         <div className="text-right">
           <span className="block text-xs text-secondary mb-1">{t('last5')}</span>

@@ -1373,6 +1373,38 @@
     "byYou": " da te",
     "reason": "Motivo: {reason}"
   },
+  "onboarding": {
+    "radar": {
+      "title": "Il tuo Radar Base",
+      "subtitle": "Come te la cavi in campo? Dai un voto da 1 a 10 a ogni abilità: è il tuo punto di partenza su Club Soccer.",
+      "hint": "Parti da 6 su tutto: puoi cambiare i voti oppure continuare subito.",
+      "startOvr": "Il tuo OVR di partenza",
+      "noticeTitle": "Valori da confermare",
+      "notice": "Questi valori non sono ancora confermati: quando entri in una lega, un presidente o un collaboratore li approva o li modifica dopo la tua prima partita.",
+      "save": "Salva e prosegui",
+      "failed": "Non sono riuscito a salvare: controlla la connessione e riprova."
+    }
+  },
+  "publicLeagues": {
+    "title": "Leghe pubbliche",
+    "subtitle": "Entra in una lega aperta a tutti: la tua scheda parte dal tuo Radar Base.",
+    "loading": "Cerco le leghe pubbliche…",
+    "empty": "Per ora non ci sono leghe pubbliche. Creane una o entra con un invito.",
+    "failed": "Non riesco a caricare le leghe pubbliche. Riprova più tardi.",
+    "newLeague": "Nuova lega",
+    "ovrAvg": "OVR medio {value}",
+    "players": "{count, plural, one {# giocatore} other {# giocatori}}",
+    "matches": "{count, plural, one {# partita giocata} other {# partite giocate}}",
+    "join": "Entra",
+    "cardLabel": "{name}: {format}, {ovr}, {players}, {matches}. Tocca per entrare.",
+    "confirm": "Entrare in \"{name}\"? La tua scheda parte dal tuo Radar Base e i valori restano da confermare finché un presidente non li approva dopo la tua prima partita.",
+    "joined": "Sei entrato in {name}.",
+    "joinFailed": "Non sono riuscito a farti entrare: la lega potrebbe non essere più pubblica."
+  },
+  "unconfirmed": {
+    "label": "Da confermare",
+    "hint": "Valori non ancora approvati: un presidente o un collaboratore li conferma dopo la prima partita."
+  },
   "selfRating": {
     "saved": "Autovalutazione salvata. Dopo la tua prima partita il presidente o un collaboratore la conferma.",
     "failed": "Salvataggio non riuscito, riprova.",
@@ -1523,7 +1555,7 @@
     },
     "welcome": {
       "title": "Benvenuto in Club Soccer",
-      "subtitle": "Non fai ancora parte di una lega. Creane una per il tuo gruppo o entra con l’invito di un amico.",
+      "subtitle": "Non fai ancora parte di una lega. Entra in una lega pubblica, creane una per il tuo gruppo o usa l’invito di un amico.",
       "create": "Crea una nuova lega",
       "join": "Unisciti con codice o link invito",
       "codeLabel": "Codice o link di invito",

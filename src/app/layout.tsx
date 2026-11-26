@@ -11,6 +11,7 @@ import { ThemeProvider } from '@/components/theme/ThemeProvider';
 import { PreferencesSync } from '@/components/settings/PreferencesSync';
 import { BoardPrefsSync } from '@/components/settings/BoardPrefsSync';
 import { LeagueGate } from '@/lib/context/ActiveLeagueContext';
+import { OnboardingGate } from '@/components/onboarding/OnboardingGate';
 
 import { SplashScreen, SPLASH_GUARD } from '@/components/SplashScreen';
 export const metadata: Metadata = {
@@ -57,7 +58,9 @@ export default function RootLayout({
               <BoardPrefsSync />
               <Navbar />
               <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-6">
-                <LeagueGate>{children}</LeagueGate>
+                <OnboardingGate>
+                  <LeagueGate>{children}</LeagueGate>
+                </OnboardingGate>
               </main>
             </AuthProvider>
             {/* Outside AuthProvider: changing league remounts the pages, a message shown at that moment must stay */}

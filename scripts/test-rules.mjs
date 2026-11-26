@@ -364,6 +364,9 @@ await expectAllowed('player A saves own theme', () => updateDoc(doc(playerA.db, 
 await expectDenied('player A saves an unknown language', () => updateDoc(doc(playerA.db, 'profiles', playerA.uid), { locale: 'fr' }));
 await expectDenied('player A saves an unknown theme', () => updateDoc(doc(playerA.db, 'profiles', playerA.uid), { theme: 'blue' }));
 await expectAllowed('player A hides the board and some notices', () => updateDoc(doc(playerA.db, 'profiles', playerA.uid), { board_off: true, board_hidden: ['n1', 'n2'], updated_at: 'x' }));
+await expectDenied('player A writes own Radar Base from the app', () => updateDoc(doc(playerA.db, 'profiles', playerA.uid), { baseRadar: { Tiro: 10 } }));
+await expectDenied('player A clears own Radar Base step from the app', () => updateDoc(doc(playerA.db, 'profiles', playerA.uid), { base_radar_pending: false }));
+await expectDenied('player A sets own Radar Base step from the app', () => updateDoc(doc(playerA.db, 'profiles', playerA.uid), { base_radar_pending: true }));
 await expectDenied('player A saves a board flag that is not a boolean', () => updateDoc(doc(playerA.db, 'profiles', playerA.uid), { board_off: 'yes' }));
 await expectDenied('player A saves hidden notices that are not a list', () => updateDoc(doc(playerA.db, 'profiles', playerA.uid), { board_hidden: 'n1' }));
 await expectDenied('player A saves more than 100 hidden notices', () => updateDoc(doc(playerA.db, 'profiles', playerA.uid), { board_hidden: Array.from({ length: 101 }, (_, i) => 'n' + i) }));
@@ -533,10 +536,12 @@ await expectAllowed('playing again: A votes MVP', () => vote(playerA, TODAY, pla
 console.log('\nPlayer cards');
 await expectAllowed('player B renames own card', () => updateDoc(LC(playerB, 'players', playerB.uid), { full_name: 'B nuovo', updated_at: 'y' }));
 await expectDenied('player B raises own parameters', () => updateDoc(LC(playerB, 'players', playerB.uid), { 'stats.Tiro': 10 }));
+await expectDenied('player B confirms own parameters', () => updateDoc(LC(playerB, 'players', playerB.uid), { stat_status: 'CONFIRMED' }));
 await expectDenied('player B becomes president', () => updateDoc(LC(playerB, 'players', playerB.uid), { leagueRole: 'PRESIDENT' }));
 await expectDenied('player B edits player A card', () => updateDoc(LC(playerB, 'players', playerA.uid), { full_name: 'x' }));
 await expectAllowed('president C edits B parameters and W/D/L', () =>
   updateDoc(LC(adminC, 'players', playerB.uid), { 'stats.Tiro': 8, matches_won: increment(1) }));
+await expectAllowed('president C confirms B parameters', () => updateDoc(LC(adminC, 'players', playerB.uid), { stat_status: 'CONFIRMED' }));
 await expectDenied('president C moves B card to another account', () => updateDoc(LC(adminC, 'players', playerB.uid), { userId: playerA.uid }));
 await expectDenied('president C demotes the super admin card', () => updateDoc(LC(adminC, 'players', 'p-1'), { leagueRole: 'PLAYER', role: 'player' }));
 await expectDenied('president C makes a guest president', () => updateDoc(LC(adminC, 'players', 'guest-1'), { leagueRole: 'PRESIDENT', role: 'admin' }));
