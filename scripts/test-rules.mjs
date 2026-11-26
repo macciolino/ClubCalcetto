@@ -481,6 +481,61 @@ await expectAllowed('super admin writes a league it is not in (PRESIDENT everywh
 await expectDenied('impostor (not verified) reads a league', () => getDoc(doc(impostor.db, 'leagues', 'calcettari')));
 await expectDenied('anyone creates a league from the app', () => setDoc(doc(adminC.db, 'leagues', 'new'), { name: 'x' }));
 
+console.log('\nRadar: every league keeps its own values; external ratings feed the global radar only');
+{
+  // One account in TWO leagues (a card in each, same id), a president of each league
+  const dual = await client({ google: { sub: 'dual', email: 'dual@example.com' } });
+  const presOther = await client({ google: { sub: 'pres-other', email: 'pres.other@example.com' } });
+  await ownerSet(`leagues/calcettari/players/${dual.uid}`, card(dual.uid, dual.uid, 'PLAYER', { stats: { Tiro: 7 }, stat_status: 'CONFIRMED' }));
+  await ownerSet(`leagues/other/players/${dual.uid}`, card(dual.uid, dual.uid, 'PLAYER', { stats: { Tiro: 4 }, stat_status: 'UNCONFIRMED' }));
+  await ownerSet(`memberships/${dual.uid}`, { leagues: { calcettari: { player_id: dual.uid, league_role: 'PLAYER', name: 'calcettari' }, other: { player_id: dual.uid, league_role: 'PLAYER', name: 'other' } } });
+  await ownerSet(`leagues/other/players/${presOther.uid}`, card(presOther.uid, presOther.uid, 'PRESIDENT'));
+  await ownerSet(`memberships/${presOther.uid}`, { leagues: { other: { player_id: presOther.uid, league_role: 'PRESIDENT', name: 'other' } } });
+  await ownerSet(`profiles/${dual.uid}`, baseProfile(dual.uid, { baseRadar: { Tiro: 6 } }));
+
+  await expectAllowed('president of "other" corrects the card of the shared player in "other"', () =>
+    updateDoc(doc(presOther.db, 'leagues', 'other', 'players', dual.uid), { stats: { Tiro: 5 }, stat_status: 'CONFIRMED' }));
+  await expectDenied('president of "other" cannot touch the same player\'s card in "calcettari"', () =>
+    updateDoc(doc(presOther.db, ...LG, 'players', dual.uid), { stats: { Tiro: 1 } }));
+  await expectDenied('president of "calcettari" cannot touch the same player\'s card in "other"', () =>
+    updateDoc(doc(adminC.db, 'leagues', 'other', 'players', dual.uid), { stats: { Tiro: 1 } }));
+  await expectDenied('president of "other" cannot confirm values in "calcettari"', () =>
+    updateDoc(doc(presOther.db, ...LG, 'players', dual.uid), { stat_status: 'CONFIRMED' }));
+  await expectDenied('president of "calcettari" cannot read the shared player\'s card in "other"', () =>
+    getDoc(doc(adminC.db, 'leagues', 'other', 'players', dual.uid)));
+  await expectDenied('a manager cannot write the global Radar Base of a player', () =>
+    updateDoc(doc(adminC.db, 'profiles', dual.uid), { baseRadar: { Tiro: 10 } }));
+  await expectDenied('the player cannot write their own Radar Base from the app (server only)', () =>
+    updateDoc(doc(dual.db, 'profiles', dual.uid), { baseRadar: { Tiro: 10 } }));
+  await expectDenied('the player cannot change the status of their own card', () =>
+    updateDoc(doc(dual.db, ...LG, 'players', dual.uid), { stat_status: 'UNCONFIRMED' }));
+  await expectDenied('the player cannot change the values of their own card', () =>
+    updateDoc(doc(dual.db, 'leagues', 'other', 'players', dual.uid), { stats: { Tiro: 10 } }));
+
+  // external ratings: only the server writes them (also not by the managers of the league)
+  await ownerSet('leagues/calcettari/matches/2027-03-01', { id: '2027-03-01', status: 'completed', score_white: 1, score_black: 0, external_ratings: { 'ext-x': { profileId: 'x', stats: { Tiro: 7 }, overall_rating: 7, rated_by: 'p-1', rated_at: 'z' } } });
+  await expectDenied('manager adds an external rating from the app', () =>
+    setDoc(doc(adminC.db, ...LG, 'matches', '2027-03-02'), { id: '2027-03-02', status: 'completed', external_ratings: { 'ext-y': { stats: { Tiro: 10 } } } }));
+  await expectDenied('manager changes an external rating from the app', () =>
+    updateDoc(doc(adminC.db, ...LG, 'matches', '2027-03-01'), { external_ratings: { 'ext-x': { profileId: 'x', stats: { Tiro: 10 }, overall_rating: 10 } } }));
+  await expectDenied('manager removes the external ratings from the app', () =>
+    updateDoc(doc(adminC.db, ...LG, 'matches', '2027-03-01'), { external_ratings: deleteField() }));
+  await expectAllowed('manager edits the rest of the report (the ratings stay as they are)', () =>
+    updateDoc(doc(adminC.db, ...LG, 'matches', '2027-03-01'), { score_white: 2, updated_at: 'k' }));
+  await expectAllowed('manager re-saves the report with a merge, ratings untouched', () =>
+    setDoc(doc(adminC.db, ...LG, 'matches', '2027-03-01'), { score_black: 1 }, { merge: true }));
+  await expectAllowed('manager creates a report without ratings', () =>
+    setDoc(doc(adminC.db, ...LG, 'matches', '2027-03-03'), { id: '2027-03-03', status: 'completed' }));
+  // the person's global radar copy: readable by them only, never written from the app
+  await ownerSet(`profiles/${dual.uid}/spots/n1`, { noticeId: 'n1', status: 'ACTIVE', rating: { stats: { Tiro: 8 }, overall_rating: 8, rated_at: 'z' } });
+  await expectAllowed('the person reads their own spot (with the rating)', () => getDoc(doc(dual.db, 'profiles', dual.uid, 'spots', 'n1')));
+  await expectDenied('a manager reads someone else\'s spots', () => getDoc(doc(adminC.db, 'profiles', dual.uid, 'spots', 'n1')));
+  await expectDenied('the person writes a rating on their own spot', () =>
+    updateDoc(doc(dual.db, 'profiles', dual.uid, 'spots', 'n1'), { rating: { stats: { Tiro: 10 }, overall_rating: 10 } }));
+  await expectDenied('a manager writes a rating on someone else\'s spot', () =>
+    updateDoc(doc(adminC.db, 'profiles', dual.uid, 'spots', 'n1'), { rating: { stats: { Tiro: 1 }, overall_rating: 1 } }));
+}
+
 console.log('\nPlatform roles come from profiles.platformRole, never from the email');
 {
   const helper = await client({ google: { sub: 'helper', email: 'helper@example.com' } });

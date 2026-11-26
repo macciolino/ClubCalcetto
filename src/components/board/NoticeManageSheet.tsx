@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Ban, Check, Lock, Mail, Pencil, UserMinus } from 'lucide-react';
+import { Ban, Check, Lock, Mail, Pencil, Star, UserMinus } from 'lucide-react';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '@/lib/firebase/config';
 import { Sheet, sheetBtn } from '@/components/ui/Sheet';
 import { askConfirm, notify } from '@/components/ui/Feedback';
 import { useLocaleSetting } from '@/i18n/I18nProvider';
@@ -14,6 +16,9 @@ import {
   subscribeApplicants,
 } from '@/lib/services/matchNoticeService';
 import type { MatchNotice, NoticeApplicant } from '@/types/matchNotice';
+import type { Match } from '@/types/database';
+import { externalPlayerId, outcomeFor } from '@/lib/utils/externalPlayers';
+import { ExternalRatingSheet } from './ExternalRatingSheet';
 import { NoticeFacts, NoticePrice, noticeStatusKey, noticeWhen } from './NoticeCard';
 
 /**
@@ -29,7 +34,20 @@ export function ApplicantsList({ notice }: { notice: MatchNotice }) {
   // The clock is read once (not while rendering): enough to know whether the match has been played
   const [now] = useState(() => Date.now());
   const [busy, setBusy] = useState('');
+  const tr = useTranslations('board.rating');
+  // The report of the match: once archived, the external players who played can get a quick, optional rating
+  const [report, setReport] = useState<Match | null>(null);
+  const [rating, setRating] = useState<NoticeApplicant | null>(null);
   useEffect(() => subscribeApplicants(notice.id, setApplicants), [notice.id]);
+  useEffect(
+    () =>
+      onSnapshot(
+        doc(db, 'leagues', notice.leagueId, 'matches', notice.matchId),
+        (snap) => setReport(snap.exists() ? (snap.data() as Match) : null),
+        () => setReport(null)
+      ),
+    [notice.leagueId, notice.matchId]
+  );
   const played = Date.parse(notice.dateTime) <= now && notice.status !== 'CANCELLED';
 
   // Before the match a manager can take someone out: the spot is freed (the notice reopens if it was full)
@@ -55,40 +73,67 @@ export function ApplicantsList({ notice }: { notice: MatchNotice }) {
     <div className="space-y-2">
       <ul className="space-y-1">
         {applicants.map((a) => (
-          <li key={a.profileId} className="flex items-center justify-between gap-3 rounded-xl bg-app px-3 py-2">
-            <span className="min-w-0">
-              <span className="block font-medium text-primary truncate">{a.displayName}</span>
-              <span className="block text-xs text-muted">{noticeWhen(a.joinedAt, locale)}</span>
-            </span>
-            {!played && notice.status !== 'CANCELLED' && (
-              <button
-                type="button"
-                onClick={() => remove(a)}
-                disabled={busy === a.profileId}
-                className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-rose-500/40 px-2.5 py-1.5 text-xs font-semibold text-danger hover:bg-rose-500/10 disabled:opacity-50"
-              >
-                <UserMinus className="h-3.5 w-3.5" aria-hidden="true" /> {t('remove')}
-              </button>
-            )}
-            {played &&
-              (a.invitedAt ? (
-                <span className="shrink-0 inline-flex items-center gap-1 text-xs text-accent-text">
-                  <Check className="h-3.5 w-3.5" aria-hidden="true" /> {t('inviteSent')}
-                </span>
-              ) : (
+          <li key={a.profileId} className="rounded-xl bg-app px-3 py-2 space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <span className="min-w-0">
+                <span className="block font-medium text-primary truncate">{a.displayName}</span>
+                <span className="block text-xs text-muted">{noticeWhen(a.joinedAt, locale)}</span>
+              </span>
+              {!played && notice.status !== 'CANCELLED' && (
                 <button
                   type="button"
-                  onClick={() => invite(a)}
+                  onClick={() => remove(a)}
                   disabled={busy === a.profileId}
-                  className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-line-strong px-2.5 py-1.5 text-xs font-semibold text-primary hover:bg-card-hover disabled:opacity-50"
+                  className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-rose-500/40 px-2.5 py-1.5 text-xs font-semibold text-danger hover:bg-rose-500/10 disabled:opacity-50"
                 >
-                  <Mail className="h-3.5 w-3.5" aria-hidden="true" /> {t('invite')}
+                  <UserMinus className="h-3.5 w-3.5" aria-hidden="true" /> {t('remove')}
                 </button>
-              ))}
+              )}
+              {played &&
+                (a.invitedAt ? (
+                  <span className="shrink-0 inline-flex items-center gap-1 text-xs text-accent-text">
+                    <Check className="h-3.5 w-3.5" aria-hidden="true" /> {t('inviteSent')}
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => invite(a)}
+                    disabled={busy === a.profileId}
+                    className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-line-strong px-2.5 py-1.5 text-xs font-semibold text-primary hover:bg-card-hover disabled:opacity-50"
+                  >
+                    <Mail className="h-3.5 w-3.5" aria-hidden="true" /> {t('invite')}
+                  </button>
+                ))}
+            </div>
+            {played && report?.status === 'completed' && outcomeFor(report, externalPlayerId(a.profileId)) && (
+              <div className="flex items-center justify-between gap-3 border-t border-line pt-2">
+                <span className="min-w-0 text-xs text-secondary flex items-center gap-1.5">
+                  <Star className="h-3.5 w-3.5 text-warning" aria-hidden="true" />
+                  {report.external_ratings?.[externalPlayerId(a.profileId)]
+                    ? tr('rated', { ovr: Math.round(report.external_ratings[externalPlayerId(a.profileId)].overall_rating * 10) })
+                    : tr('optional')}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setRating(a)}
+                  className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-line-strong px-2.5 py-1.5 text-xs font-semibold text-primary hover:bg-card-hover"
+                >
+                  {report.external_ratings?.[externalPlayerId(a.profileId)] ? tr('edit') : tr('action')}
+                </button>
+              </div>
+            )}
           </li>
         ))}
       </ul>
       <p className="text-xs text-muted">{played ? t('inviteHint') : t('applicantsHint')}</p>
+      {rating && (
+        <ExternalRatingSheet
+          notice={notice}
+          person={{ profileId: rating.profileId, name: rating.displayName }}
+          initial={report?.external_ratings?.[externalPlayerId(rating.profileId)]?.stats}
+          onClose={() => setRating(null)}
+        />
+      )}
     </div>
   );
 }

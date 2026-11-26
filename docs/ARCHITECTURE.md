@@ -282,6 +282,20 @@ La colonna **Staff** vale per `SUPER_ADMIN` e `GLOBAL_ADMIN`, salvo dove è indi
      la nota "Valori iniziali · in attesa di revisione del gestore". Nessun badge, nessun avviso, nessun blocco.
    - **Generatore squadre**: i valori `UNCONFIRMED` contano come gli altri (OVR salvato, il 6 neutro o le modifiche iniziali):
      mai zero, mai esclusi (`getPlayerOverallRating` ignora lo stato; test in `tests/unit/unconfirmedBalancer.test.ts`).
+8. **Ogni lega i suoi valori (Radar globale e radar locali).**
+   - **Radar globale** = dell'account, sul profilo: il **Radar Base** (`profiles.baseRadar`, scritto solo dal server, una
+     volta) e le **valutazioni da ospite** (`profiles/{id}/spots/*.rating`, scritte solo dal server, §3.5). È il punto di
+     partenza di ogni nuova scheda e il livello di chi gioca da esterno.
+   - **Radar locale** = di una lega, sulla scheda `leagues/{leagueId}/players/{playerId}` (`stats`, `overall_rating`,
+     `stat_status`): lo decidono **solo i gestori di quella lega** (e lo staff). Ogni lega ha i suoi valori indipendenti per
+     i suoi membri, anche se è la stessa persona.
+   - **Blindatura** (`firestore.rules`, testata in `scripts/test-rules.mjs`, blocco "Radar"): le regole risolvono la lega dal
+     percorso e controllano il ruolo **in quella lega**, quindi il presidente della Lega A non può leggere né scrivere la
+     scheda dello stesso giocatore nella Lega B (né confermarne i valori); il giocatore non cambia da solo parametri o stato
+     della propria scheda; nessuno, gestori compresi, scrive `baseRadar`, `spots` o `external_ratings` dall'app. Le API
+     usano la lega dell'avviso o quella attiva e ricontrollano il ruolo lì (`rateExternal` usa `notice.leagueId`).
+   - **Nel Profilo** le due cose sono in card distinte: "Radar globale" (con "Radar nelle tue leghe", una riga per lega) e
+     "Valori nella lega «…»" (il radar della lega attiva).
 
 **Creazione di una lega** (`POST /api/leagues` → [leagueCreation.ts](../src/lib/server/leagueCreation.ts))
 - Serve l'email verificata. Ogni account può creare al massimo 5 leghe (`MAX_LEAGUES_PER_USER`).
@@ -536,6 +550,10 @@ Codice: [matchNotices.ts](../src/lib/server/matchNotices.ts) (server), [matchNot
   le statistiche della **lega attiva** restano nella loro card (etichetta "Solo &lt;lega&gt;"); la card "**Carriera**"
   somma le schede di **tutte le leghe** dell'account più le **partite da esterno** (giocate, senza esito: il risultato
   resta della lega ospitante), con l'elenco delle partite da esterno e il badge discreto "**Da esterno**".
+  Sopra la Carriera c'è la card "**Radar globale**" ([GlobalRadarCard.tsx](../src/components/profile/GlobalRadarCard.tsx)),
+  **separata** dai valori delle leghe: il **Radar Base** (scelto all'iscrizione), la media delle **valutazioni da ospite** (se
+  ce ne sono) e, in fondo, "Radar nelle tue leghe" con l'OVR della scheda in ogni lega e il suo stato (Da revisionare /
+  Verificato, deciso da QUEI gestori). La card dei valori della lega attiva ha il suo titolo ("Valori nella lega «…»").
 
 **Dati** (`match_notices/{id}`):
 - `leagueId`, `leagueName`, `matchId` (il **giorno** della partita, `YYYY-MM-DD`, come `matches/{data}`), `dateTime` (ISO);
@@ -549,9 +567,10 @@ Codice: [matchNotices.ts](../src/lib/server/matchNotices.ts) (server), [matchNot
   `invitedAt`), **non** nell'avviso: la bacheca la legge tutta la piattaforma, l'elenco delle persone solo i gestori di
   quella lega e lo staff.
 - Ogni persona ha la **sua copia** dei posti presi in `profiles/{profileId}/spots/{noticeId}` (lega, giorno, campo,
-  formato, quota, ruolo, maglia, `status` `ACTIVE` / `CANCELLED`): la scrive solo il server, la legge solo lei. Serve
-  a "I miei posti" e alla carriera, e il server la tiene allineata a ogni modifica dell'avviso. Si cancella con
-  l'account.
+  formato, quota, ruolo, maglia, `status` `ACTIVE` / `CANCELLED`, e dopo la partita `result`, `goals`, `mvp` e l'eventuale
+  `rating`, la valutazione ricevuta): la scrive solo il server, la legge solo lei. Serve a "I miei posti", alla carriera e al
+  Radar globale, e il server la tiene allineata a ogni modifica dell'avviso (senza cancellare `result` né `rating`). Si
+  cancella con l'account.
 
 **Flussi** (tutte le scritture passano da `POST /api/match-notices`)
 
@@ -593,10 +612,19 @@ Codice: [externalPlayers.ts](../src/lib/server/externalPlayers.ts) (server), [ex
   `presences/{data}_ext-<profileId>`, con `player_id = ext-<profileId>` e `external = { profileId, userId, name,
   noticeId, avatar_url, position, overall_rating, stats, ratedIn }`, con l'ora del server come ordine. **Nessuna scheda** in `players`.
 - **Nella partita come gli altri.** App e server contano queste iscrizioni anche senza scheda: l'esterno è titolare
-  (o in attesa), entra nella generazione delle squadre con il **livello della sua lega** (OVR e parametri della sua scheda più
-  di recente rivista, copiati nell'iscrizione con il nome della lega in `ratedIn`; senza nessuna lega, il livello di
-  partenza del club), maglia Bianchi / Neri,
+  (o in attesa), entra nella generazione delle squadre con il suo **livello globale**, maglia Bianchi / Neri,
   nel risultato, nei marcatori, ed è **votabile come MVP**. In Presenze ha l'etichetta "esterno".
+- **Il livello dell'esterno** ([externalLevel.ts](../src/lib/utils/externalLevel.ts), `externalLevelFor` in
+  [externalPlayers.ts](../src/lib/server/externalPlayers.ts)). **Nessuna scheda** nella lega ospitante e **nessun flusso di
+  conferma** di lega: per bilanciare le squadre di quella sola partita il server usa, in quest'ordine,
+  1. la **media dei suoi radar confermati nelle sue leghe** (schede non `UNCONFIRMED`, quindi anche quelle nate prima del
+     flusso di revisione) **insieme alle valutazioni da ospite** che altre leghe gli hanno lasciato (vedi sotto);
+  2. altrimenti il **Radar Base** del profilo (`profiles.baseRadar`);
+  3. altrimenti il **6 neutro** del club.
+
+  Il risultato (OVR, parametri, `levelFrom` = `leagues` / `radar` / `default`) è copiato nell'iscrizione di quel giorno
+  (`external`) e non cambia più per quella partita. Le schede `UNCONFIRMED` non entrano nella media: un valore che nessuno
+  ha ancora rivisto non pesa più del Radar Base.
 - **Voto MVP dell'esterno.** Non può leggere la lega, quindi vota da Bacheca → "I miei posti" → "Vota l'MVP": il
   server (`match_view`, `mvp_vote`) mostra le squadre di quella partita e scrive il voto in `mvp_votes/{data}_{uid}`
   come per i membri. Finestra: da inizio + 1 h 45 per 24 ore; solo chi ha il posto; solo chi era in squadra.
@@ -611,6 +639,23 @@ Codice: [externalPlayers.ts](../src/lib/server/externalPlayers.ts) (server), [ex
   chiuso perché pieno, toglie l'iscrizione (sale chi è in attesa) e avvisa la persona (posto "Tolto"). Annullare
   l'avviso prima della partita fa lo stesso per tutti. Dopo l'inizio non si toglie più (`too_late`).
   "Azzera presenze del giorno" lascia gli esterni.
+- **Valutazione dell'ospite dopo la partita** (`rate_external`, `rateExternal` in [matchNotices.ts](../src/lib/server/matchNotices.ts),
+  [ExternalRatingSheet.tsx](../src/components/board/ExternalRatingSheet.tsx)). **Facoltativa e rapida**: un radar completo
+  (8 parametri, 1–10, partenza a 6). Appena la partita è archiviata, la campanella ricorda **una volta sola** ("⭐ Valuta gli
+  ospiti", `tellUnratedExternals`, `external_rating_notified_at` sul referto) a presidenti e collaboratori **e a chi ha chiuso
+  il referto** (`matches.closed_by`); poi si valuta da **Bacheca → l'avviso → chi ha preso il posto** o da Impostazioni →
+  Partita → Giocatori esterni ("Valuta" / "Modifica", "Valutato · OVR n").
+  - **Chi può:** presidente e collaboratore di quella lega, lo staff di piattaforma, e chi ha chiuso il referto di quella
+    partita (nell'app il referto lo chiudono i gestori, quindi coincidono quasi sempre; la regola copre il collaboratore o
+    chi ha firmato la chiusura se in seguito perde il ruolo). Mai l'ospite stesso, un giocatore comune, né i gestori di
+    un'altra lega (`forbidden`).
+  - **Quando e per chi:** solo a partita **archiviata** (`not_archived`) e solo per chi ha **giocato** quella partita
+    (`not_applicant`). Si può correggere: l'ultima sostituisce la precedente.
+  - **Dove finisce:** nel **referto di quella partita** (`matches/{data}.external_ratings.ext-<id>` = `{ profileId, stats,
+    overall_rating, rated_by, rated_at }`) e nel **Radar globale** della persona (`profiles/{id}/spots/{noticeId}.rating`). Da
+    lì entra nella media del punto 1 del livello dell'esterno e nella card "Radar globale" del suo Profilo.
+  - **Cosa non tocca mai:** nessuna scheda di lega (né quella ospitante, che non c'è, né quelle delle leghe a cui appartiene),
+    né il suo Radar Base. Il referto la conserva anche se lo si salva di nuovo (le regole vietano all'app di scriverla).
 - **Statistiche separate.**
   - **Lega ospitante:** l'archiviazione non tocca nessuna scheda (gli `ext-` non ne hanno) e le statistiche dei
     membri (Home "Il tuo rendimento", Giocatori, forma: `computeMatchStats`, `computeRecentResults`) ignorano ogni
@@ -624,7 +669,9 @@ Codice: [externalPlayers.ts](../src/lib/server/externalPlayers.ts) (server), [ex
 
 **Regole:** `match_notices` si legge con email verificata; `applicants/{profileId}` lo legge la persona stessa, i
 gestori della lega dell'avviso e lo staff; `profiles/{id}/spots` lo legge solo il titolare; nessuna scrittura dal
-browser. Un'iscrizione con `external` non si cancella dall'app (solo il server).
+browser. Un'iscrizione con `external` non si cancella dall'app (solo il server). `matches/{data}.external_ratings` lo scrive
+solo il server: i gestori possono modificare il resto del referto ma non aggiungere, cambiare o togliere le valutazioni
+(regola su `matches`, testata in `scripts/test-rules.mjs`).
 
 ---
 

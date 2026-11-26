@@ -379,7 +379,12 @@ service cloud.firestore {
       }
       match /matches/{id} {
         allow read: if canReadLeague(leagueId);
-        allow write: if isLeagueManager(leagueId);
+        // `external_ratings` (quick ratings of external players, they feed THEIR global radar) is written only by the
+        // server, which checks who rates; managers can edit the rest of the report but never add, change or remove it.
+        allow create: if isLeagueManager(leagueId) && !('external_ratings' in request.resource.data);
+        allow update: if isLeagueManager(leagueId)
+          && request.resource.data.get('external_ratings', null) == resource.data.get('external_ratings', null);
+        allow delete: if isLeagueManager(leagueId);
       }
       match /generated_teams/{id} {
         allow read: if canReadLeague(leagueId);

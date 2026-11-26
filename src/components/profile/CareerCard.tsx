@@ -9,6 +9,7 @@ import { useCareer } from '@/lib/hooks/useCareer';
 import { useLocaleSetting } from '@/i18n/I18nProvider';
 import { formatLongDate } from '@/lib/utils/dateUtils';
 import type { HistoryEntry } from '@/lib/utils/career';
+import { GlobalRadarCard } from './GlobalRadarCard';
 
 const pill = 'rounded-full bg-app px-3.5 py-1.5 text-xs text-secondary tabular-nums';
 const chip = (on: boolean) =>
@@ -22,7 +23,7 @@ const PAGE = 8;
  * kept apart from the active league's statistics. Below, the personal history across leagues with a league filter;
  * external matches carry a discreet "Ospite · Lega" badge.
  */
-export function CareerCard({ profileId }: { profileId: string }) {
+export function CareerCard({ profileId, showRadar = false, baseRadar }: { profileId: string; showRadar?: boolean; baseRadar?: unknown }) {
   const t = useTranslations('profile.career');
   const { locale } = useLocaleSetting();
   const { activeLeagueId } = useActiveLeague();
@@ -37,6 +38,9 @@ export function CareerCard({ profileId }: { profileId: string }) {
   const mvps = history.filter((e) => e.mvp).length;
 
   return (
+    <>
+    {/* Profile only: the global radar (Radar Base + ratings as a guest) apart from each league's own radar */}
+    {showRadar && career && <GlobalRadarCard baseRadar={baseRadar} summary={career.summary} />}
     <section aria-labelledby="career-title" className="bg-card border border-line rounded-2xl p-5 space-y-4">
       <div>
         <h2 id="career-title" className="text-base font-bold text-primary flex items-center gap-2">
@@ -110,6 +114,7 @@ export function CareerCard({ profileId }: { profileId: string }) {
         </>
       )}
     </section>
+    </>
   );
 }
 

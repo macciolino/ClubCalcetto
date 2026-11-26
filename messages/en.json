@@ -877,6 +877,7 @@
     "save": "Save changes",
     "skills": "My technical skills",
     "radarHint": "Radar shape built from your football attributes.",
+    "skillsOf": "Values in the league “{league}”",
     "reviewNote": "Initial values · waiting for the manager’s review",
     "inForm": "<b>In form {value}</b>: over the last 3 matches (MVP, votes, goals or wins) all your values and your OVR went up by {delta}. It's temporary.",
     "outOfForm": "<b>Out of form {value}</b>: over the last 3 matches (losses) all your values and your OVR went down by {delta}. It's temporary: it goes back up with wins, MVP votes or goals.",
@@ -893,6 +894,22 @@
     "account": "Account",
     "accountHint": "Sign out of all devices, deactivate or delete",
     "leagueOnly": "Only {league}",
+    "globalRadar": {
+      "title": "Global radar",
+      "subtitle": "Your Radar Base and the guest ratings, kept apart from the values each league holds for you.",
+      "base": "Radar Base",
+      "baseNone": "Not set yet.",
+      "baseHint": "What you chose at sign-up: the starting point of every new league, and the level used when you play as a guest.",
+      "guest": "Guest ratings",
+      "guestCount": "{count, plural, one {Average of # rating} other {Average of # ratings}} left by managers after matches played as a guest.",
+      "guestNone": "None yet.",
+      "guestHint": "It lives only here: it does not change the values of your leagues.",
+      "leagues": "Radar in your leagues",
+      "leaguesNone": "No league with values.",
+      "active": "active league",
+      "pending": "waiting for review",
+      "leaguesHint": "Each league has its own values: a league's manager never changes those of another one."
+    },
     "career": {
       "title": "Career",
       "subtitle": "All your leagues and the matches played as an external through the Board.",
@@ -1897,6 +1914,19 @@
       "fieldOther": "Other field (I type it)",
       "noFields": "The league has no saved fields yet: type the name and address, or add them in Settings → Fields and costs to find them here."
     },
+    "rating": {
+      "action": "Rate",
+      "edit": "Edit",
+      "optional": "Quick rating (optional)",
+      "rated": "Rated · OVR {ovr}",
+      "title": "Rate {name}",
+      "subtitle": "Optional: it stays in this match's report and in {name}'s global radar.",
+      "hint": "It does not change the values the person has in their leagues, nor their Radar Base: it only helps balance their next matches as a guest.",
+      "ovr": "Level in this match",
+      "save": "Save rating",
+      "later": "Not now",
+      "saved": "{name}'s rating saved."
+    },
     "manage": {
       "edit": "Edit",
       "close": "Close",
@@ -1939,7 +1969,8 @@
       "too_late": "The match has already started: nobody can be removed any more.",
       "not_applicant": "You have no spot in this match.",
       "vote_closed": "The MVP vote is not open: it opens 1 hour 45 after kick-off, for 24 hours.",
-      "not_candidate": "You can only vote for someone who was in the teams of that match."
+      "not_candidate": "You can only vote for someone who was in the teams of that match.",
+      "not_archived": "You can rate guests only after the match has been archived."
     },
     "spotsFree": "{count, plural, one {# spot free} other {# spots free}}",
     "fieldTotal": "field {amount}",

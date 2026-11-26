@@ -12,6 +12,9 @@ export interface LeagueRecord {
   won: number;
   drawn: number;
   lost: number;
+  /** The person's own values on THAT league's card (each league keeps its own; the profile shows them side by side) */
+  stats?: Record<string, number>;
+  stat_status?: 'UNCONFIRMED' | 'CONFIRMED';
 }
 
 export interface CareerSummary {

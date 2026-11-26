@@ -76,6 +76,9 @@ export async function createMatchNotice(notice: MatchNoticeInput): Promise<{ id:
 export const updateMatchNotice = async (id: string, notice: Partial<MatchNoticeInput>) => result(await post({ action: 'update', id, notice }));
 export const closeMatchNotice = async (id: string) => result(await post({ action: 'close', id }));
 export const cancelMatchNotice = async (id: string) => result(await post({ action: 'cancel', id }));
+/** After the archive: a quick, optional rating of an external player (report + their global radar, never a league card). */
+export const rateNoticeApplicant = async (id: string, profileId: string, stats: Record<string, number>) =>
+  result(await post({ action: 'rate_external', id, profileId, stats }));
 /** After the match: sends one person who took a spot the league's invite link. */
 export const inviteNoticeApplicant = async (id: string, profileId: string) => result(await post({ action: 'invite', id, profileId }));
 /** Before the match: takes one person out (frees the spot; the notice reopens if it was full). */

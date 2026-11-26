@@ -287,8 +287,19 @@ export interface Match {
   time_override?: boolean;
   closed_at?: string;
   closed_by?: string;
+  /** Quick, optional ratings of the external players of this match (key = `ext-<profileId>`); written only by the server */
+  external_ratings?: Record<string, ExternalRating>;
   created_at: string;
   updated_at: string;
+}
+
+/** A manager's rating of one external player for one match: it feeds THEIR global radar, never a league card. */
+export interface ExternalRating {
+  profileId: string;
+  stats: Record<string, number>;
+  overall_rating: number;
+  rated_by: string;
+  rated_at: string;
 }
 
 export type MatchOutcome = 'won' | 'drawn' | 'lost';
@@ -331,10 +342,12 @@ export interface ExternalSignup {
   noticeId: string;
   avatar_url?: string | null;
   position?: string;
-  /** Level from the person's card in THEIR own league (most recently reviewed), used to balance the teams */
+  /** Level used to balance the teams of THIS match (never a card): see lib/utils/externalLevel.ts */
   overall_rating?: number;
   stats?: Record<string, number>;
-  /** The league those parameters come from */
+  /** Where that level comes from: radars confirmed in their own leagues, their Radar Base, or the club's neutral 6 */
+  levelFrom?: 'leagues' | 'radar' | 'default';
+  /** @deprecated old sign-ups only: the league the parameters were copied from (now `levelFrom`) */
   ratedIn?: string;
 }
 

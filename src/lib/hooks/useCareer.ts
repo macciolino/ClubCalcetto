@@ -36,7 +36,7 @@ export function useCareer(profileId: string | null): { summary: CareerSummary; h
           getDocs(collection(db, 'leagues', l.id, 'matches')).catch(() => null),
         ]);
         const c = card?.data();
-        const record: LeagueRecord = { leagueId: l.id, leagueName: l.name, won: c?.matches_won, drawn: c?.matches_drawn, lost: c?.matches_lost };
+        const record: LeagueRecord = { leagueId: l.id, leagueName: l.name, won: c?.matches_won, drawn: c?.matches_drawn, lost: c?.matches_lost, stats: c?.stats, stat_status: c?.stat_status };
         const played: HistoryEntry[] = [];
         matches?.docs.forEach((d) => {
           const m = d.data() as Match;

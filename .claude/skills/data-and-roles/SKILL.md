@@ -102,6 +102,11 @@ Production data is REAL: never rewrite stats, no paid services, never print secr
   claim. Badge "Da revisionare" (+ manager filter, banner on the sheet, own-view note under the radar) until then; a joining
   player triggers `tellManagersOfNewMember` (bell + push to PRESIDENT/COLLABORATOR cards, link `/players?player=<id>`);
   the team balancer treats UNCONFIRMED values like any other.
+- External players (board "Spot", no card): their level for ONE match = average of their confirmed league radars + guest ratings,
+  else `profiles.baseRadar`, else 6 (`externalLevelFor`, `lib/utils/externalLevel.ts`; stored in the sign-up `external` with `levelFrom`).
+  After the archive a manager (or whoever closed the report) may rate them: `POST /api/match-notices { action: 'rate_external' }` →
+  `matches/{date}.external_ratings` (server only, rules forbid the app) + `profiles/{id}/spots/{noticeId}.rating`; NEVER a league card
+  or the Radar Base. Each league keeps its own card values (rules scope by league); the profile shows the global radar apart.
 - Public leagues (`visibility: 'public'`, active): `GET /api/leagues/public` (name, prevailing format, average OVR or null,
   players, matches; 5-minute cache), `POST` joins directly (`joinPublicLeague`); shown on the welcome screen of an account with no league.
 

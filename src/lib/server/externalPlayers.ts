@@ -1,8 +1,10 @@
 import { FieldValue, type Transaction } from 'firebase-admin/firestore';
 import { adminDb } from '@/lib/firebase/admin';
-import { inLeague, leagueDb } from '@/lib/server/leagueScope';
+import { inLeague, leagueDb, leaguesWithPlayer } from '@/lib/server/leagueScope';
 import { checkPromotions } from '@/lib/server/presenceWatch';
 import { externalPlayerId, externalVoteWindow, outcomeFor } from '@/lib/utils/externalPlayers';
+import { externalLevel, type ExternalLevel } from '@/lib/utils/externalLevel';
+import { adminProfileIds, sendToProfiles } from '@/lib/server/push';
 import type { ExternalSignup, Match } from '@/types/database';
 import type { MatchNotice, MySpot, NoticeApplicant } from '@/types/matchNotice';
 
@@ -20,6 +22,28 @@ export const signupRef = (leagueId: string, date: string, profileId: string) =>
 export async function externalIdsOfDay(date: string): Promise<string[]> {
   const snap = await leagueDb().collection('presences').where('date', '==', date).get();
   return snap.docs.filter((d) => d.data().external).map((d) => String(d.data().player_id));
+}
+
+/**
+ * The level an external player brings to ONE match of a league that is not theirs (docs/ARCHITECTURE.md §3.5):
+ * the average of the radars confirmed in THEIR leagues plus the quick ratings they got as a guest elsewhere; without any,
+ * their Radar Base; without that, the club's neutral 6. Only reads: no card is created, no value of any league changes.
+ */
+export async function externalLevelFor(profileId: string, hostLeagueId: string): Promise<ExternalLevel & { position?: string }> {
+  const db = adminDb();
+  const ids = (await leaguesWithPlayer(profileId)).filter((id) => id !== hostLeagueId);
+  const [profile, cards, spots] = await Promise.all([
+    db.doc(`profiles/${profileId}`).get(),
+    ids.length ? db.getAll(...ids.map((id) => leagueDb(id).doc(`players/${profileId}`))) : Promise.resolve([]),
+    db.collection(`profiles/${profileId}/spots`).get(),
+  ]);
+  // Confirmed = a manager reviewed them, or the card predates the review flow (no status): never the UNCONFIRMED ones
+  const confirmed = cards
+    .map((c) => c.data() || {})
+    .filter((c) => c.stats && Object.keys(c.stats).length > 0 && !c.is_guest && !c.removed_at && c.stat_status !== 'UNCONFIRMED');
+  const ratings = spots.docs.map((d) => (d.data() as { rating?: { stats?: Record<string, number> } }).rating?.stats).filter((s): s is Record<string, number> => Boolean(s));
+  const level = externalLevel({ radar: profile.data()?.baseRadar, confirmedCards: confirmed.map((c) => c.stats as Record<string, number>), ratings });
+  return { ...level, position: confirmed.find((c) => c.position)?.position as string | undefined };
 }
 
 /** Inside the "take a spot" transaction: the person becomes a sign-up of that day (server time = queue order). */
@@ -113,4 +137,34 @@ export async function voteMvp(notice: MatchNotice, uid: string, playerId: string
     .doc(`mvp_votes/${notice.matchId}_${uid}`)
     .set({ date: notice.matchId, voter_id: uid, player_id: playerId, updated_at: FieldValue.serverTimestamp() });
   return null;
+}
+
+/**
+ * Once a match is archived, the managers (and who closed the report) are told ONCE that external players took part and
+ * can be rated, quickly and optionally (bell + push; `external_rating_notified_at` on the report). The rating itself
+ * is `rateExternal` in matchNotices.ts: it goes in the report and in the person's global radar, never on a league card.
+ */
+export async function tellUnratedExternals(leagueId: string, date: string): Promise<number> {
+  const matchRef = leagueDb(leagueId).doc(`matches/${date}`);
+  const match = (await matchRef.get()).data() as (Match & { external_rating_notified_at?: string }) | undefined;
+  if (!match || match.status !== 'completed' || match.external_rating_notified_at) return 0;
+  const rated = new Set(Object.keys(match.external_ratings || {}));
+  const played = new Set([...(match.team_white || []), ...(match.team_black || [])].map((p) => p.id));
+  const names = (await externalNamesOfDay(leagueId, date)).filter((e) => played.has(e.id) && !rated.has(e.id)).map((e) => e.name);
+  if (names.length === 0) return 0;
+  await matchRef.set({ external_rating_notified_at: new Date().toISOString() }, { merge: true });
+  const to = Array.from(new Set([...(await inLeague(leagueId, () => adminProfileIds())), ...(match.closed_by ? [match.closed_by] : [])]));
+  return sendToProfiles(to, {
+    title: '⭐ Valuta gli ospiti',
+    body:
+      names.length === 1
+        ? `${names[0]} ha giocato come ospite: se vuoi, lascia una valutazione rapida (facoltativa).`
+        : `${names.join(', ')} hanno giocato come ospiti: se vuoi, lascia una valutazione rapida (facoltativa).`,
+    url: '/settings?sezione=partita',
+  }).catch(() => 0);
+}
+
+async function externalNamesOfDay(leagueId: string, date: string): Promise<{ id: string; name: string }[]> {
+  const snap = await leagueDb(leagueId).collection('presences').where('date', '==', date).get();
+  return snap.docs.filter((d) => d.data().external).map((d) => ({ id: String(d.data().player_id), name: String(d.data().external.name || 'Ospite') }));
 }

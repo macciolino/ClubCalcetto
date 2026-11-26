@@ -877,6 +877,7 @@
     "save": "Salva modifiche",
     "skills": "Le Mie Abilità Tecniche",
     "radarHint": "Poligono radar ottagonale generato sui tuoi attributi calcistici.",
+    "skillsOf": "Valori nella lega «{league}»",
     "reviewNote": "Valori iniziali · in attesa di revisione del gestore",
     "inForm": "<b>In forma {value}</b>: per le ultime 3 partite (MVP, voti, gol o vittorie) tutti i tuoi valori e l'OVR sono saliti di {delta}. È temporaneo.",
     "outOfForm": "<b>Fuori forma {value}</b>: per le ultime 3 partite (sconfitte) tutti i tuoi valori e l'OVR sono scesi di {delta}. È temporaneo: risale con vittorie, voti MVP o gol.",
@@ -893,6 +894,22 @@
     "account": "Account",
     "accountHint": "Esci da tutti i dispositivi, disattiva o elimina",
     "leagueOnly": "Solo {league}",
+    "globalRadar": {
+      "title": "Radar globale",
+      "subtitle": "Il tuo Radar Base e le valutazioni da ospite, separati dai valori che ogni lega tiene per te.",
+      "base": "Radar Base",
+      "baseNone": "Non ancora impostato.",
+      "baseHint": "Quello che hai scelto all’iscrizione: parte di ogni nuova lega e vale per le partite da ospite.",
+      "guest": "Valutazioni da ospite",
+      "guestCount": "{count, plural, one {Media di # valutazione} other {Media di # valutazioni}} lasciate dai gestori dopo le partite da ospite.",
+      "guestNone": "Nessuna ancora.",
+      "guestHint": "Vive solo qui: non cambia i valori delle tue leghe.",
+      "leagues": "Radar nelle tue leghe",
+      "leaguesNone": "Nessuna lega con valori.",
+      "active": "lega attiva",
+      "pending": "in attesa di revisione",
+      "leaguesHint": "Ogni lega ha i suoi valori: il gestore di una lega non cambia quelli delle altre."
+    },
     "career": {
       "title": "Carriera",
       "subtitle": "Tutte le tue leghe e le partite giocate da esterno con la Bacheca.",
@@ -1897,6 +1914,19 @@
       "fieldOther": "Altro campo (lo scrivo io)",
       "noFields": "La lega non ha ancora campi salvati: scrivi nome e indirizzo, oppure aggiungili in Impostazioni → Campi e costi per ritrovarli qui."
     },
+    "rating": {
+      "action": "Valuta",
+      "edit": "Modifica",
+      "optional": "Valutazione rapida (facoltativa)",
+      "rated": "Valutato · OVR {ovr}",
+      "title": "Valuta {name}",
+      "subtitle": "Facoltativa: resta nel referto di questa partita e nel Radar globale di {name}.",
+      "hint": "Non cambia i valori che la persona ha nelle sue leghe né il suo Radar Base: serve solo a bilanciare meglio le sue prossime partite da ospite.",
+      "ovr": "Livello in questa partita",
+      "save": "Salva valutazione",
+      "later": "Non ora",
+      "saved": "Valutazione di {name} salvata."
+    },
     "manage": {
       "edit": "Modifica",
       "close": "Chiudi",
@@ -1939,7 +1969,8 @@
       "too_late": "La partita è già iniziata: non si può più togliere.",
       "not_applicant": "Non hai un posto in questa partita.",
       "vote_closed": "Il voto MVP non è aperto: si vota da 1 ora e 45 dopo l’inizio, per 24 ore.",
-      "not_candidate": "Puoi votare solo chi era in squadra in quella partita."
+      "not_candidate": "Puoi votare solo chi era in squadra in quella partita.",
+      "not_archived": "Puoi valutare gli ospiti solo dopo aver archiviato la partita."
     },
     "spotsFree": "{count, plural, one {# posto libero} other {# posti liberi}}",
     "fieldTotal": "campo {amount}",

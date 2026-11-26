@@ -9,6 +9,7 @@ import {
   inviteApplicant,
   removeApplicant,
   leaveSpot,
+  rateExternal,
   setNoticeStatus,
   takeSpot,
   updateNotice,
@@ -32,6 +33,7 @@ export const dynamic = 'force-dynamic';
  *   { action: 'leave', id }               who took a spot: gives it back before the match (frees it, notifies managers)
  *   { action: 'match_view', id }          who took a spot (or managers): teams, own MVP vote, vote window, score
  *   { action: 'mvp_vote', id, playerId }  who took a spot: votes the MVP of that match, in the vote window
+ *   { action: 'rate_external', id, profileId, stats }  managers, staff, who closed the report: quick rating of an external player (archived match)
  */
 const STATUS: Record<NoticeError, number> = {
   bad_request: 400,
@@ -52,6 +54,7 @@ const STATUS: Record<NoticeError, number> = {
   not_applicant: 403,
   vote_closed: 409,
   not_candidate: 400,
+  not_archived: 409,
 };
 
 async function handlePost(request: Request) {
@@ -93,6 +96,9 @@ async function handlePost(request: Request) {
         break;
       case 'mvp_vote':
         res = await externalMvpVote(caller, id, typeof body.playerId === 'string' ? body.playerId : '');
+        break;
+      case 'rate_external':
+        res = await rateExternal(caller, id, typeof body.profileId === 'string' ? body.profileId : '', body.stats);
         break;
       default:
         return NextResponse.json({ ok: false, error: 'bad_request' }, { status: 400 });

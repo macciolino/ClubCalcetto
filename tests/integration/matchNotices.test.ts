@@ -8,6 +8,8 @@ import { POST as notices } from '@/app/api/match-notices/route';
 import { POST as notify } from '@/app/api/notify/route';
 import { GET as cron } from '@/app/api/cron/mvp-vote/route';
 import { inLeague } from '@/lib/server/leagueScope';
+import { externalLevelFor } from '@/lib/server/externalPlayers';
+import { defaultBaseRadar } from '@/lib/utils/baseRadar';
 import { loadRankedPresences } from '@/lib/server/presenceWatch';
 import { assertEmulators, call, db, futureDate, idToken, ldb, makeUser, profileDoc, resetEmulators } from './helpers';
 
@@ -233,19 +235,55 @@ describe('L’esterno nella singola partita', () => {
     expect(starterIds).toContain('ext-out');
   });
 
-  it('porta il livello della sua lega (OVR e parametri) per bilanciare le squadre; senza lega quello di partenza', async () => {
+  it('porta il suo livello globale: media dei radar confermati nelle sue leghe, altrimenti il Radar Base, altrimenti 6', async () => {
     const id = String((await create(pres.token, { spotsNeeded: 2 })).data.id);
     // "luca" gioca nella Lega Amici con OVR 8 e i suoi parametri
     const luca = await outsider('luca');
     await db().doc('leagues/amici').set({ id: 'amici', name: 'Lega Amici', status: 'active' });
     await db().doc('leagues/amici/players/luca').set({ id: 'luca', userId: 'luca', overall_rating: 8, stats: { Difesa: 9, Tiro: 7 }, position: 'Difensore', stat_reviewed_at: '2026-11-01T10:00:00.000Z' });
     await take(id, luca.token);
-    expect((await ext('luca').get()).data()?.external).toMatchObject({ overall_rating: 8, stats: { Difesa: 9, Tiro: 7 }, position: 'Difensore', ratedIn: 'Lega Amici' });
+    expect((await ext('luca').get()).data()?.external).toMatchObject({ overall_rating: 8, stats: { Difesa: 9, Tiro: 7 }, position: 'Difensore', levelFrom: 'leagues' });
 
+    // senza leghe e senza Radar Base: il 6 neutro del club, nessun parametro
     await take(id, (await outsider('nuovo')).token);
     const nuovo = (await ext('nuovo').get()).data()?.external;
-    expect(nuovo?.overall_rating).toBeUndefined();
+    expect(nuovo).toMatchObject({ overall_rating: 6, levelFrom: 'default' });
     expect(nuovo?.stats).toBeUndefined();
+    // e nessuna scheda è stata creata nella lega ospitante
+    expect((await ldb().doc('players/ext-luca').get()).exists).toBe(false);
+    expect((await ldb().doc('players/luca').get()).exists).toBe(false);
+  });
+
+  it('con il solo Radar Base usa quello; le schede ancora da revisionare non contano, la media di più leghe sì', async () => {
+    const id = String((await create(pres.token, { spotsNeeded: 3 })).data.id);
+    const radar = (o: Record<string, number>) => ({ ...defaultBaseRadar(), ...o });
+    // Radar Base e nient'altro
+    await take(id, (await outsider('base', { baseRadar: radar({ Tiro: 10 }) })).token);
+    expect((await ext('base').get()).data()?.external).toMatchObject({ levelFrom: 'radar', overall_rating: 6.5, stats: { Tiro: 10, Fisico: 6 } });
+
+    // una scheda UNCONFIRMED in un'altra lega non vale più del Radar Base
+    await db().doc('leagues/altra').set({ id: 'altra', name: 'Altra', status: 'active' });
+    await db().doc('leagues/altra/players/dubbio').set({ id: 'dubbio', userId: 'dubbio', stats: { Tiro: 1 }, stat_status: 'UNCONFIRMED' });
+    await take(id, (await outsider('dubbio', { baseRadar: radar({ Tiro: 7 }) })).token);
+    expect((await ext('dubbio').get()).data()?.external).toMatchObject({ levelFrom: 'radar', stats: { Tiro: 7 } });
+
+    // due leghe con valori confermati (uno esplicito, uno di prima del flusso): la media
+    await db().doc('leagues/amici').set({ id: 'amici', name: 'Amici', status: 'active' });
+    await db().doc('leagues/amici/players/doppio').set({ id: 'doppio', userId: 'doppio', stats: { Tiro: 8, Difesa: 4 }, stat_status: 'CONFIRMED' });
+    await db().doc('leagues/altra/players/doppio').set({ id: 'doppio', userId: 'doppio', stats: { Tiro: 6, Difesa: 6 } });
+    await take(id, (await outsider('doppio', { baseRadar: radar({ Tiro: 1 }) })).token);
+    expect((await ext('doppio').get()).data()?.external).toMatchObject({ levelFrom: 'leagues', stats: { Tiro: 7, Difesa: 5 } });
+  });
+
+  it('la valutazione lasciata da un\'altra lega entra nel suo livello globale', async () => {
+    const radar = (o: Record<string, number>) => ({ ...defaultBaseRadar(), ...o });
+    await outsider('luca', { baseRadar: radar({ Tiro: 6 }) });
+    await db().doc('profiles/luca/spots/n-vecchio').set({ noticeId: 'n-vecchio', status: 'ACTIVE', rating: { stats: radar({ Tiro: 10 }), overall_rating: 6.5, rated_at: 'x' } });
+    const level = await externalLevelFor('luca', 'calcettari');
+    expect(level).toMatchObject({ from: 'leagues', count: 1 });
+    expect(level.stats?.Tiro).toBe(10);
+    // il Radar Base sul profilo resta com'era
+    expect((await db().doc('profiles/luca').get()).data()?.baseRadar).toMatchObject({ Tiro: 6 });
   });
 
   it('il gestore lo toglie prima della partita: posto libero, avviso riaperto, persona avvisata', async () => {
@@ -450,5 +488,119 @@ describe('Avvisi scaduti', () => {
     // un secondo passaggio non fa altro
     const again = await call(cron, undefined, undefined, 'http://localhost/api/cron/mvp-vote', { authorization: 'Bearer segreto-di-prova' });
     expect(again.data.noticesClosed).toBe(0);
+  });
+});
+
+describe('Valutazione dell’esterno dopo la partita', () => {
+  const radar = (o: Record<string, number> = {}) => ({ ...defaultBaseRadar(), ...o });
+  const rate = (id: string, token: string, extra: Record<string, unknown> = {}) =>
+    call(notices, { action: 'rate_external', id, profileId: 'out', stats: radar({ Tiro: 9, Difesa: 3 }), ...extra }, token);
+  const titles = async (uid: string) => (await db().collection(`profiles/${uid}/notifications`).get()).docs.map((d) => String(d.data().title));
+  let id = '';
+
+  /** The external player took a spot and the match is archived with them in the white team. */
+  async function played(extra: Record<string, unknown> = {}) {
+    id = String((await create(pres.token)).data.id);
+    await take(id, (await outsider('out')).token);
+    await ldb().doc(`matches/${DAY}`).set({
+      id: DAY, match_date: DAY, status: 'completed', score_white: 2, score_black: 1,
+      team_white: [{ id: 'ext-out', name: 'Esterno out' }], team_black: [{ id: 'pres', name: 'Presidente' }],
+      closed_by: 'pres', ...extra,
+    });
+  }
+
+  it('i gestori valutano a partita archiviata: referto e Radar globale, mai una scheda di lega', async () => {
+    await played();
+    // la persona è membro fisso di un'altra lega, con i suoi valori confermati, e ha il suo Radar Base
+    await db().doc('leagues/amici').set({ id: 'amici', name: 'Lega Amici', status: 'active' });
+    await db().doc('leagues/amici/players/out').set({ id: 'out', userId: 'out', stats: { Tiro: 5, Difesa: 5 }, overall_rating: 5, stat_status: 'CONFIRMED' });
+    await db().doc('profiles/out').update({ baseRadar: radar({ Tiro: 4 }) });
+
+    const res = await rate(id, pres.token);
+    expect(res.data.ok).toBe(true);
+    const report = (await ldb().doc(`matches/${DAY}`).get()).data()!;
+    expect(report.external_ratings['ext-out']).toMatchObject({ profileId: 'out', rated_by: 'pres', overall_rating: 6, stats: { Tiro: 9, Difesa: 3, Fisico: 6 } });
+    expect((await db().doc(`profiles/out/spots/${id}`).get()).data()?.rating).toMatchObject({ overall_rating: 6, stats: { Tiro: 9, Difesa: 3 } });
+
+    // NON cambia nulla di quello che ha altrove: scheda dell'altra lega, Radar Base, nessuna scheda qui
+    expect((await db().doc('leagues/amici/players/out').get()).data()).toMatchObject({ stats: { Tiro: 5, Difesa: 5 }, overall_rating: 5, stat_status: 'CONFIRMED' });
+    expect((await db().doc('profiles/out').get()).data()?.baseRadar).toMatchObject({ Tiro: 4 });
+    expect((await ldb().doc('players/out').get()).exists).toBe(false);
+    expect((await ldb().doc('players/ext-out').get()).exists).toBe(false);
+
+    // si può correggere: la seconda sostituisce la prima
+    expect((await rate(id, pres.token, { stats: radar({ Tiro: 7 }) })).data.ok).toBe(true);
+    expect((await ldb().doc(`matches/${DAY}`).get()).data()?.external_ratings['ext-out'].stats.Tiro).toBe(7);
+
+    // il livello che porterà in una prossima partita: media tra la sua scheda confermata e la valutazione ricevuta
+    const level = await externalLevelFor('out', 'altra-lega');
+    expect(level.from).toBe('leagues');
+    expect(level.stats?.Tiro).toBe(6); // (5 + 7) / 2
+  });
+
+  it('prima dell’archiviazione non si valuta; incompleta o non valida: rifiutata', async () => {
+    id = String((await create(pres.token)).data.id);
+    await take(id, (await outsider('out')).token);
+    expect((await rate(id, pres.token)).data.error).toBe('not_archived');
+    await ldb().doc(`matches/${DAY}`).set({ id: DAY, status: 'completed', team_white: [{ id: 'ext-out', name: 'x' }], team_black: [], closed_by: 'pres' });
+    expect((await rate(id, pres.token, { stats: { Tiro: 9 } })).status).toBe(400);
+    expect((await rate(id, pres.token, { stats: radar({ Tiro: 11 }) })).status).toBe(400);
+    expect((await rate(id, pres.token, { stats: undefined })).status).toBe(400);
+    expect((await rate(id, pres.token)).data.ok).toBe(true);
+  });
+
+  it('chi può: presidente, collaboratore, staff e chi ha chiuso il referto; giocatori, esterni e altre leghe no', async () => {
+    await played({ closed_by: 'chiusore' });
+    const player = await makeUser('giocatore', {});
+    expect((await rate(id, player.token)).status).toBe(403);
+    expect((await rate(id, (await outsider('curioso')).token)).status).toBe(403);
+    // anche l'esterno non valuta se stesso
+    expect((await rate(id, await idToken('out@example.com'))).status).toBe(403);
+    // presidente di un'altra lega
+    await db().doc('leagues/altra').set({ id: 'altra', name: 'Altra lega', status: 'active' });
+    const other = await outsider('other');
+    await db().doc('leagues/altra/players/other').set({ id: 'other', userId: 'other', leagueRole: 'PRESIDENT' });
+    await db().doc('memberships/other').set({ leagues: { altra: { player_id: 'other', league_role: 'PRESIDENT', name: 'Altra' } } });
+    expect((await rate(id, other.token)).status).toBe(403);
+
+    // chi ha compilato e chiuso il referto (anche senza ruolo di gestore) può
+    const chiusore = await makeUser('chiusore', {});
+    expect((await rate(id, chiusore.token)).data.ok).toBe(true);
+    // collaboratore e staff
+    const coll = await makeUser('coll', {});
+    await ldb().doc('players/coll').update({ leagueRole: 'COLLABORATOR' });
+    expect((await rate(id, coll.token)).data.ok).toBe(true);
+    const ga = await outsider('ga', { platformRole: 'GLOBAL_ADMIN' });
+    expect((await rate(id, ga.token)).data.ok).toBe(true);
+    // e solo chi ha giocato quella partita come ospite
+    expect((await rate(id, pres.token, { profileId: 'pres' })).data.error).toBe('not_applicant');
+  });
+
+  it('la valutazione sopravvive a una modifica dell’avviso e a un nuovo salvataggio del referto', async () => {
+    await played();
+    expect((await rate(id, pres.token)).data.ok).toBe(true);
+    expect((await call(notices, { action: 'update', id, notice: { notes: 'Portate la maglia' } }, pres.token)).data.ok).toBe(true);
+    expect((await db().doc(`profiles/out/spots/${id}`).get()).data()).toMatchObject({ rating: { overall_rating: 6 }, status: 'ACTIVE' });
+    expect((await ldb().doc(`matches/${DAY}`).get()).data()?.external_ratings['ext-out']).toBeTruthy();
+  });
+
+  it('a partita archiviata la campanella ricorda UNA volta di valutare gli ospiti (gestori e chi ha chiuso il referto)', async () => {
+    await played({ closed_by: 'chiusore' });
+    await makeUser('chiusore', {});
+    const first = await call(notify, { type: 'first_match', date: DAY }, pres.token);
+    expect(first.data.ok).toBe(true);
+    for (const who of ['pres', 'chiusore']) expect(await titles(who)).toContain('⭐ Valuta gli ospiti');
+    const body = (await db().collection('profiles/pres/notifications').get()).docs.map((d) => d.data()).find((n) => n.title === '⭐ Valuta gli ospiti');
+    expect(String(body?.body)).toContain('Esterno out');
+    // risalvare il referto non ripete l'avviso
+    await call(notify, { type: 'first_match', date: DAY }, pres.token);
+    expect((await titles('pres')).filter((t) => t === '⭐ Valuta gli ospiti')).toHaveLength(1);
+  });
+
+  it('già valutato: nessun promemoria', async () => {
+    await played();
+    expect((await rate(id, pres.token)).data.ok).toBe(true);
+    await call(notify, { type: 'first_match', date: DAY }, pres.token);
+    expect(await titles('pres')).not.toContain('⭐ Valuta gli ospiti');
   });
 });

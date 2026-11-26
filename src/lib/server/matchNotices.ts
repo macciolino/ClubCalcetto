@@ -1,9 +1,12 @@
 import { adminDb } from '@/lib/firebase/admin';
 import { inLeague, isLeagueActive, isLeagueManager, leagueDb } from '@/lib/server/leagueScope';
-import { leagueInviteCode, previousLeagueStats } from '@/lib/server/leagueMembers';
-import { addSignup, matchViewFor, removeSignups, voteMvp } from '@/lib/server/externalPlayers';
+import { leagueInviteCode } from '@/lib/server/leagueMembers';
+import { addSignup, externalLevelFor, matchViewFor, removeSignups, voteMvp } from '@/lib/server/externalPlayers';
+import { cleanBaseRadar, radarOverall } from '@/lib/utils/baseRadar';
+import { externalPlayerId, outcomeFor } from '@/lib/utils/externalPlayers';
 import { deliverToAdmins, italianDate, sendToProfiles } from '@/lib/server/push';
 import { cleanNoticeInput, patchNotice, statusFor } from '@/lib/utils/matchNotice';
+import type { ExternalRating, Match } from '@/types/database';
 import type { MatchNotice, MySpot, NoticeApplicant, NoticeError } from '@/types/matchNotice';
 
 export type { NoticeError };
@@ -72,7 +75,7 @@ async function syncSpots(id: string, status: MySpot['status'] = 'ACTIVE') {
   const people = await applicantsOf(id);
   if (people.length) {
     const batch = adminDb().batch();
-    people.forEach((a) => batch.set(spotRef(a.profileId, id), spotFrom(notice, a.joinedAt, status)));
+    people.forEach((a) => batch.set(spotRef(a.profileId, id), spotFrom(notice, a.joinedAt, status), { merge: true }));
     await batch.commit();
   }
   return people;
@@ -205,8 +208,9 @@ export async function takeSpot(caller: Caller, id: string): Promise<Result<{ spo
   if (membership) return fail('is_member');
   const account = (await adminDb().doc(`profiles/${caller.profileId}`).get()).data() || {};
   const displayName = String(account.full_name || 'Un giocatore');
-  // Their level in THEIR own league (most recently reviewed card), so the host league balances the teams fairly
-  const own = await previousLeagueStats(caller.profileId, notice.leagueId).catch(() => null);
+  // Their level for THIS match (no card, no confirmation flow): the average of the radars confirmed in their own leagues,
+  // else their Radar Base, else the neutral 6 (lib/utils/externalLevel.ts)
+  const level = await externalLevelFor(caller.profileId, notice.leagueId).catch(() => null);
 
   const res = await adminDb().runTransaction(async (tx): Promise<Result<{ spotsFilled: number; status: string }>> => {
     const ref = adminDb().doc(`${NOTICES}/${id}`);
@@ -231,8 +235,8 @@ export async function takeSpot(caller: Caller, id: string): Promise<Result<{ spo
       userId: caller.uid,
       name: displayName,
       avatar_url: typeof account.avatar_url === 'string' && account.avatar_url.startsWith('data:image/') ? account.avatar_url : null,
-      position: own?.position || (typeof account.position === 'string' ? account.position : undefined),
-      ...(own ? { stats: own.stats, ...(own.overall_rating ? { overall_rating: own.overall_rating } : {}), ratedIn: own.leagueName } : {}),
+      position: level?.position || (typeof account.position === 'string' ? account.position : undefined),
+      ...(level ? { levelFrom: level.from, ...(level.stats ? { stats: level.stats } : {}), ...(level.overall_rating ? { overall_rating: level.overall_rating } : {}) } : {}),
     });
     tx.update(ref, { spotsFilled, ...next, closedReason: next.closedReason ?? null, updated_at: now });
     return { ok: true, spotsFilled, status: next.status };
@@ -361,6 +365,38 @@ export async function externalMatchView(caller: Caller, id: string) {
   const isApplicant = (await adminDb().doc(`${NOTICES}/${id}/applicants/${caller.profileId}`).get()).exists;
   if (!isApplicant && !(await canManage(caller, notice.leagueId))) return fail('not_applicant');
   return { ok: true as const, ...(await matchViewFor(notice, caller.uid)) };
+}
+
+/**
+ * A quick, OPTIONAL rating of an external player after the match (docs/ARCHITECTURE.md §3.5). Who: the league's
+ * presidents and collaborators, platform staff, or whoever closed that match's report. The match must be archived and the
+ * person must have played it. It is saved in the REPORT of that match (`matches/{date}.external_ratings`) and on the
+ * person's own spot (`profiles/{id}/spots/{noticeId}.rating`, their global radar): it never touches a league card,
+ * neither in this league nor in the ones they belong to, nor their Radar Base. `stats` = a complete radar (1–10 each).
+ */
+export async function rateExternal(caller: Caller, id: string, profileId: string, rawStats: unknown): Promise<Result> {
+  const notice = await loadNotice(id);
+  if (!notice) return fail('not_found');
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(profileId)) return fail('bad_request');
+  const stats = cleanBaseRadar(rawStats);
+  if (!stats) return fail('bad_request');
+  const applicant = (await adminDb().doc(`${NOTICES}/${id}/applicants/${profileId}`).get()).exists;
+  if (!applicant || notice.status === 'CANCELLED') return fail('not_applicant');
+
+  const matchRef = leagueDb(notice.leagueId).doc(`matches/${notice.matchId}`);
+  const match = (await matchRef.get()).data() as Match | undefined;
+  const closer = Boolean(match?.closed_by) && match?.closed_by === caller.profileId;
+  if (!(closer && caller.emailVerified) && !(await canManage(caller, notice.leagueId))) return fail('forbidden');
+  if (!match || match.status !== 'completed') return fail('not_archived');
+  const extId = externalPlayerId(profileId);
+  if (!outcomeFor(match, extId)) return fail('not_applicant');
+
+  const rating: ExternalRating = { profileId, stats, overall_rating: radarOverall(stats), rated_by: caller.profileId, rated_at: new Date().toISOString() };
+  const batch = adminDb().batch();
+  batch.set(matchRef, { external_ratings: { [extId]: rating } }, { merge: true });
+  batch.set(spotRef(profileId, id), { rating: { stats, overall_rating: rating.overall_rating, rated_at: rating.rated_at } }, { merge: true });
+  await batch.commit();
+  return { ok: true };
 }
 
 /** The external player votes the MVP of the match they played (one vote, changeable, in the usual window). */

@@ -295,6 +295,7 @@ export default function ProfiloPage() {
                 <Sparkles className="h-5 w-5 text-accent-text" />
                 <h2 className="text-base font-bold text-primary">
                   {t('skills')}
+                  {activeLeagueName && <span className="block text-xs font-normal text-secondary">{t('skillsOf', { league: activeLeagueName })}</span>}
                 </h2>
               </div>
               <span className="flex items-center gap-2">
@@ -394,7 +395,7 @@ export default function ProfiloPage() {
         </div>
       </div>
 
-      <CareerCard profileId={profile.id} />
+      <CareerCard profileId={profile.id} showRadar baseRadar={profile.baseRadar} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Link

@@ -31,7 +31,8 @@ export type NoticeError =
   | 'too_late'
   | 'not_applicant'
   | 'vote_closed'
-  | 'not_candidate';
+  | 'not_candidate'
+  | 'not_archived';
 
 export const NOTICE_ROLES: NoticeRole[] = ['ANY', 'GOALKEEPER', 'ROTATION_GOALKEEPER', 'OUTFIELD'];
 export const SHIRT_COLORS: ShirtColor[] = ['DARK', 'LIGHT'];
@@ -99,4 +100,6 @@ export interface MySpot {
   result?: 'won' | 'drawn' | 'lost' | null;
   goals?: number;
   mvp?: boolean;
+  /** A manager's quick rating of them for this match: part of THEIR global radar, never written on a league card */
+  rating?: { stats: Record<string, number>; overall_rating: number; rated_at: string };
 }
