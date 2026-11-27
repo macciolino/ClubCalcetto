@@ -1738,7 +1738,10 @@
       "playingHint": "Se lo spegni non compari tra i giocatori (presenze, squadre) e non puoi iscriverti alle partite: le tue iscrizioni future vengono tolte. Resti nella lega.",
       "search": "Cerca un membro",
       "searchPlaceholder": "Cerca per nome",
-      "noResults": "Nessun membro con questo nome."
+      "noResults": "Nessun membro con questo nome.",
+      "openList": "Membri e ruoli ({count})",
+      "openListHint": "Apri l’elenco per cercare un membro e cambiarne il ruolo",
+      "count": "{count, plural, one {# membro} other {# membri}}"
     },
     "fallback": {
       "goneSwitched": "Non fai più parte della lega \"{name}\" (sei stato tolto o la lega è stata eliminata). Ora sei in \"{other}\".",

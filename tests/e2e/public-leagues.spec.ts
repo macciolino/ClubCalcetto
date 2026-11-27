@@ -24,24 +24,26 @@ test.describe('Leghe pubbliche', () => {
 
     // dall'ingresso: le prime leghe in alto e il link alla pagina completa
     await expect(page.getByRole('heading', { name: 'Leghe pubbliche' })).toBeVisible({ timeout: 20_000 });
-    await page.getByRole('link', { name: /Cerca tra le leghe|Vedi tutte/ }).click();
-    await page.waitForURL('**/leagues');
-    await expect(page.getByRole('heading', { name: 'Leghe pubbliche', level: 1 })).toBeVisible();
-    await expect(page.getByText('2 leghe pubbliche')).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole('button', { name: /Lega riservata/ })).toHaveCount(0);
+    await page.getByRole('button', { name: /Cerca tra le leghe|Vedi tutte/ }).click();
+    // si apre una finestra sopra la pagina (come la scheda di un giocatore), non una pagina nuova
+    const win = page.getByRole('dialog');
+    await expect(win.getByRole('heading', { name: 'Leghe pubbliche' })).toBeVisible();
+    await expect(page).not.toHaveURL(/\/leagues/);
+    await expect(win.getByText('2 leghe pubbliche')).toBeVisible({ timeout: 15_000 });
+    await expect(win.getByRole('button', { name: /Lega riservata/ })).toHaveCount(0);
 
-    const search = page.getByRole('searchbox', { name: 'Cerca tra le leghe pubbliche' });
+    const search = win.getByRole('searchbox', { name: 'Cerca tra le leghe pubbliche' });
     await search.fill('lunedi');
-    await expect(page.getByText('1 lega trovata')).toBeVisible();
-    await expect(page.getByRole('button', { name: /^Giovedì Calcetto Milano/ })).toHaveCount(0);
+    await expect(win.getByText('1 lega trovata')).toBeVisible();
+    await expect(win.getByRole('button', { name: /^Giovedì Calcetto Milano/ })).toHaveCount(0);
     await search.fill('nessuna');
-    await expect(page.getByText('Nessuna lega pubblica con «nessuna».')).toBeVisible();
-    await page.getByRole('button', { name: 'Cancella la ricerca' }).click();
-    await expect(page.getByRole('button', { name: /^Giovedì Calcetto Milano/ })).toBeVisible();
+    await expect(win.getByText('Nessuna lega pubblica con «nessuna».')).toBeVisible();
+    await win.getByRole('button', { name: 'Cancella la ricerca' }).click();
+    await expect(win.getByRole('button', { name: /^Giovedì Calcetto Milano/ })).toBeVisible();
 
     // entra: conferma, scheda nella lega, si apre la sua Home
     await search.fill('giov');
-    await page.getByRole('button', { name: /^Giovedì Calcetto Milano/ }).click();
+    await win.getByRole('button', { name: /^Giovedì Calcetto Milano/ }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Conferma', exact: true }).click();
     await expect(page.getByRole('button', { name: /Lega attiva: Giovedì Calcetto Milano/ })).toBeVisible({ timeout: 20_000 });
     expect((await db.doc('leagues/giovedi/players/e2e-nolega').get()).data()).toMatchObject({ userId: 'e2e-nolega', stat_status: 'UNCONFIRMED' });
@@ -51,8 +53,9 @@ test.describe('Leghe pubbliche', () => {
     const acc = await seedAccountWithoutLeague();
     await loginAs(page, acc.email, acc.password);
     await expect(page.getByText('Non ci sono leghe pubbliche in questo momento.', { exact: false })).toBeVisible({ timeout: 20_000 });
+    // il vecchio indirizzo della pagina porta alla schermata di ingresso
     await page.goto('/leagues');
-    await expect(page.getByText('Non ci sono leghe pubbliche in questo momento.', { exact: true })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('heading', { name: 'Il tuo calcetto, senza chat infinite.', level: 1 })).toBeVisible({ timeout: 15_000 });
   });
 
   test('Home di chi è in una lega: card in fondo alla colonna laterale, mai sopra la partita; porta alla pagina', async ({ page }) => {
@@ -66,8 +69,12 @@ test.describe('Leghe pubbliche', () => {
     const mine = await card.boundingBox();
     expect(mine!.y).toBeGreaterThan(next!.y);
     expect(mine!.y).toBeGreaterThan(form!.y);
-    await card.getByRole('link', { name: 'Vedi le leghe pubbliche' }).click();
-    await page.waitForURL('**/leagues');
-    await expect(page.getByRole('button', { name: /^Lunedì sera/ })).toBeVisible({ timeout: 15_000 });
+    await card.getByRole('button', { name: 'Vedi le leghe pubbliche' }).click();
+    const win = page.getByRole('dialog');
+    await expect(win.getByRole('button', { name: /^Lunedì sera/ })).toBeVisible({ timeout: 15_000 });
+    // la Home resta sotto: si chiude e si è ancora lì
+    await page.keyboard.press('Escape');
+    await expect(win).toHaveCount(0);
+    await expect(page.locator('section[aria-labelledby="next-match"]')).toBeVisible();
   });
 });

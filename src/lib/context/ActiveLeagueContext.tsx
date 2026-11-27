@@ -49,7 +49,7 @@ function claimLocalCaches(leagueId: string) {
 /** Pages that work without a league (sign-in, invite links, the platform's "Cerco giocatore" board). */
 // Pages an account with no league can open: sign-in, invites, the board and its own Profilo / Impostazioni (reduced).
 // Every other page (the league's) shows the welcome screen in its place, with the header and the bars of a league-less account.
-const NO_LEAGUE_PATHS = ['/login', '/join', '/board', '/profile', '/settings', '/leagues'];
+const NO_LEAGUE_PATHS = ['/login', '/join', '/board', '/profile', '/settings'];
 
 export interface LeagueSummary {
   id: string;

@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { ArrowRight, Globe, Loader2, Users } from 'lucide-react';
+import { ArrowRight, Globe, Loader2, Search, Users, X } from 'lucide-react';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { Sheet } from '@/components/ui/Sheet';
 import { askConfirm, notify } from '@/components/ui/Feedback';
 import { surface } from '@/components/ui/surfaces';
 import { textLink } from '@/components/ui/buttons';
@@ -16,8 +16,9 @@ import type { PublicLeague } from '@/lib/utils/publicLeagues';
 /**
  * Public leagues (docs/ARCHITECTURE.md §3.1): the active public leagues the account is not in, as clickable cards (name,
  * usual format, average OVR or "Nuova lega", players and matches). Tapping one asks to confirm and joins it: the card
- * starts from the Radar Base with the values unconfirmed. Used by the entry screen (first few, "Vedi tutte"), by the
- * page /leagues (all, with search) and, in short, by the Home of a league member.
+ * starts from the Radar Base with the values unconfirmed. Used by the entry screen (first few, "Vedi tutte") and, in
+ * short, by the Home of a league member; the full list with the search opens in a window (PublicLeaguesSheet), like a
+ * player's card: bottom sheet on the phone, centred box on a blurred page on the PC.
  */
 export type PublicLeaguesState = PublicLeague[] | 'loading' | 'error';
 
@@ -127,10 +128,69 @@ export function PublicLeagueList({ leagues, busy, onJoin, emptyText }: { leagues
 
 const PREVIEW = 4;
 
-/** Entry screen (no league): the first public leagues and "Vedi tutte e cerca" to the full page. */
+/** Lower case, no accents: "Lunedì" is found with "lunedi". */
+const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
+/** Every public league with a search bar on top, in a window over the page; joining closes it (the league opens). */
+export function PublicLeaguesSheet({ onClose }: { onClose: () => void }) {
+  const t = useTranslations('publicLeagues');
+  const { leagues, busy, join } = usePublicLeagues();
+  const [query, setQuery] = useState('');
+  const filtered = useMemo(() => {
+    if (!Array.isArray(leagues)) return leagues;
+    const q = norm(query);
+    return q ? leagues.filter((l) => norm(l.name).includes(q)) : leagues;
+  }, [leagues, query]);
+  const searching = Boolean(query.trim());
+  const onJoin = async (l: PublicLeague) => {
+    if (await join(l)) onClose();
+  };
+
+  return (
+    <Sheet onClose={onClose} title={t('title')} subtitle={t('pageSubtitle')} size="lg">
+      <div className="space-y-4">
+        <div className="relative">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" aria-hidden="true" />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t('searchPlaceholder')}
+            aria-label={t('searchLabel')}
+            className={`w-full rounded-full ${surface.control} bg-app pl-10 pr-10 py-2.5 text-sm text-primary placeholder:text-muted focus:outline-none focus:border-accent`}
+          />
+          {searching && (
+            <button
+              type="button"
+              onClick={() => setQuery('')}
+              aria-label={t('clearSearch')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 grid h-7 w-7 place-items-center rounded-full text-muted hover:text-primary"
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+          )}
+        </div>
+        {Array.isArray(leagues) && leagues.length > 0 && (
+          <p className="text-xs text-secondary" aria-live="polite">
+            {searching ? t('found', { count: Array.isArray(filtered) ? filtered.length : 0 }) : t('total', { count: leagues.length })}
+          </p>
+        )}
+        <PublicLeagueList
+          leagues={filtered}
+          busy={busy}
+          onJoin={onJoin}
+          emptyText={Array.isArray(leagues) && leagues.length > 0 ? t('noMatch', { query: query.trim() }) : t('none')}
+        />
+      </div>
+    </Sheet>
+  );
+}
+
+/** Entry screen (no league): the first public leagues and "Vedi tutte e cerca", which opens the window. */
 export function PublicLeagues() {
   const t = useTranslations('publicLeagues');
   const { leagues, busy, join } = usePublicLeagues();
+  const [all, setAll] = useState(false);
   const shown = Array.isArray(leagues) ? leagues.slice(0, PREVIEW) : leagues;
 
   return (
@@ -143,12 +203,13 @@ export function PublicLeagues() {
           <p className="text-xs text-secondary">{t('subtitle')}</p>
         </div>
         {Array.isArray(leagues) && leagues.length > 0 && (
-          <Link href="/leagues" className={textLink}>
+          <button type="button" onClick={() => setAll(true)} aria-haspopup="dialog" className={textLink}>
             {leagues.length > PREVIEW ? t('seeAll', { count: leagues.length }) : t('search')} <ArrowRight className="h-4 w-4" aria-hidden="true" />
-          </Link>
+          </button>
         )}
       </div>
       <PublicLeagueList leagues={shown} busy={busy} onJoin={join} emptyText={t('empty')} />
+      {all && <PublicLeaguesSheet onClose={() => setAll(false)} />}
     </section>
   );
 }
@@ -160,6 +221,7 @@ export function PublicLeagues() {
 export function PublicLeaguesHomeCard() {
   const t = useTranslations('publicLeagues');
   const [count, setCount] = useState<number | null>(null);
+  const [open, setOpen] = useState(false);
   useEffect(() => {
     let alive = true;
     fetchPublicLeagues().then((list) => {
@@ -185,9 +247,10 @@ export function PublicLeaguesHomeCard() {
           </p>
         </div>
       </div>
-      <Link href="/leagues" className={textLink}>
+      <button type="button" onClick={() => setOpen(true)} aria-haspopup="dialog" className={textLink}>
         {t('open')} <ArrowRight className="h-4 w-4" aria-hidden="true" />
-      </Link>
+      </button>
+      {open && <PublicLeaguesSheet onClose={() => setOpen(false)} />}
     </section>
   );
 }

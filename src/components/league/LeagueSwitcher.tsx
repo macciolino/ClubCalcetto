@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db, isFirebaseConfigured } from '@/lib/firebase/config';
 import { Check, ChevronDown, Globe, Lock, Plus, Shield } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Sheet } from '@/components/ui/Sheet';
@@ -65,6 +67,24 @@ export function LeagueSwitcher() {
   const [creating, setCreating] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const active = leagues.find((l) => l.id === activeLeagueId);
+  // Public / private of every league in the list: read when the list opens (members read their leagues, staff all)
+  const [visibilities, setVisibilities] = useState<Record<string, 'public' | 'private'>>({});
+  useEffect(() => {
+    if (!open || !isFirebaseConfigured) return;
+    let alive = true;
+    Promise.all(
+      leagues.map((l) =>
+        getDoc(doc(db, 'leagues', l.id))
+          .then((snap) => [l.id, snap.data()?.visibility === 'public' ? 'public' : 'private'] as const)
+          .catch(() => null)
+      )
+    ).then((rows) => {
+      if (alive) setVisibilities(Object.fromEntries(rows.filter((r): r is NonNullable<typeof r> => Boolean(r))));
+    });
+    return () => {
+      alive = false;
+    };
+  }, [open, leagues]);
 
   useEffect(() => {
     if (open !== 'popover') return;
@@ -104,7 +124,8 @@ export function LeagueSwitcher() {
         <button key={l.id} type="button" role="menuitemradio" aria-checked={l.id === activeLeagueId} onClick={() => choose(l)} className={menu.item}>
           <Shield className="h-4 w-4 text-accent-text shrink-0" aria-hidden="true" />
           <span className="flex-1 text-left truncate">{l.name}</span>
-          {l.id === activeLeagueId && <Check className="h-4 w-4 text-accent-text" aria-label={t('current')} />}
+          <LeagueVisibilityBadge visibility={l.id === activeLeagueId ? activeVisibility : visibilities[l.id] ?? null} compact />
+          {l.id === activeLeagueId ? <Check className="h-4 w-4 shrink-0 text-accent-text" aria-label={t('current')} /> : <span className="w-4 shrink-0" aria-hidden="true" />}
         </button>
       ))}
       <div className={menu.divider} />
@@ -125,10 +146,8 @@ export function LeagueSwitcher() {
         className="flex items-center gap-1.5 min-w-0 max-w-[7.75rem] min-[360px]:max-w-[9.5rem] min-[400px]:max-w-[12.5rem] sm:max-w-[22rem] rounded-full border border-line-strong bg-card/60 pl-3 pr-2 py-1 hover:bg-card-hover transition-colors"
       >
         <span className="truncate text-sm font-semibold text-primary">{active.name}</span>
+        {/* The role is under the person's name, next to the photo: here only public / private */}
         <LeagueVisibilityBadge visibility={activeVisibility} />
-        <span className="hidden sm:inline-flex">
-          <LeagueRoleBadge role={leagueRole} platform={staffRole} />
-        </span>
         <ChevronDown className={`h-4 w-4 shrink-0 text-secondary transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
       </button>
 

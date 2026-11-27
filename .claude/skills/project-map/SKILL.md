@@ -6,7 +6,7 @@ description: Map of the ClubCalcetto project - folders, routes, where each page 
 # ClubCalcetto - project map
 
 Brand shown to users: **Club Soccer** (renamed 2026-11-10). Code, repo, Vercel domain and storage keys still say ClubCalcetto.
-Header (`Navbar.tsx`): logo + "Club Soccer" on the left, then the league switcher (name + Pubblica/Privata badge + role); on the right icon, name and role open a dropdown menu
+Header (`Navbar.tsx`): logo + "Club Soccer" on the left, then the league switcher (name + Pubblica/Privata badge; the role is under the user's name; each league in the list has the same badge). Public leagues open in `PublicLeaguesSheet` (entry screen "Vedi tutte", Home card at the end of the side column); Impostazioni → Lega → Membri e ruoli opens in a Sheet above 15 members; on the right icon, name and role open a dropdown menu
 (Profilo, Impostazioni, Logout; closes on outside tap, Esc, page change). Profilo is NOT in the page menu / bottom bar
 (Home, Presenze, Giocatori, Squadre, Storico). Admins reach the admin sections from the user menu → Impostazioni
 (no "Admin" item in the bar). `/settings` without `?sezione=` = overview: grouped borderless rows with the CURRENT
@@ -33,7 +33,6 @@ Checks: `npx tsc --noEmit -p .`, `npm run lint`, `npm run test:unit`, `npm run t
 | `/profile` | Own profile | photo, name, position, radar, global stats, two links: Notifiche and Account (both in Impostazioni) |
 | `/settings` | Settings (+ admin panel) | groups: Tuo account = notifiche (`NotificationGuide`), account (`AccountSettings`: logout everywhere + `DeleteAccountSection`) · Gestione partita = partita · Club = campi, regole, parametri, notifiche-club · Accessi (super admin) = accessi. Old `?sezione=rosa` → accessi (super) or /players (admin). Admin sections rendered by `components/admin/AdminSections.tsx` |
 | `/admin` | old admin panel | now only redirects to `/settings?sezione=partita` (old links keep working) |
-| `/leagues` | Leghe pubbliche | every active public league the account is not in, search bar on top, "Entra" (confirm → the league opens); open with or without a league; linked from the entry screen and from a Home card (end of the side column) |
 | (no league) | Entry screen + reduced pages | an account with no league sees `LeagueWelcome` (explains the app, public leagues, features, 3 steps, profile in short) instead of the league's pages; bars: Inizio + Bacheca; `/profile` = `NoLeagueProfile`, `/settings` = account group only; `/account` redirects to `/profile` |
 | `/login` | Google login | |
 

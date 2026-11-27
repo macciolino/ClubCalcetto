@@ -12,7 +12,8 @@ test.describe('Leghe', () => {
     await loginAsAdmin(page);
     const switcher = page.getByRole('button', { name: /Lega attiva: I Calcettari/ });
     await expect(switcher).toBeVisible();
-    await expect(switcher).toContainText('Presidente');
+    // il ruolo sta sotto il nome accanto alla foto: nel selettore solo la lega e se è pubblica o privata
+    await expect(switcher).not.toContainText('Presidente');
     // pubblica o privata, accanto al nome (sul telefono solo l'icona, con il nome per i lettori di schermo)
     await expect(page.getByRole('button', { name: /Lega attiva: I Calcettari.*\(Privata\)/ })).toBeVisible({ timeout: 15_000 });
     await expect(switcher.getByLabel('Privata')).toBeVisible();
@@ -21,6 +22,8 @@ test.describe('Leghe', () => {
     await switcher.click();
     const sheet = page.getByRole('dialog');
     await expect(sheet.getByRole('menuitemradio', { name: /I Calcettari/ })).toHaveAttribute('aria-checked', 'true');
+    // nell'elenco ogni lega ha il suo simbolo pubblica / privata
+    await expect(sheet.getByRole('menuitemradio', { name: /I Calcettari/ }).getByLabel('Pubblica')).toBeVisible();
     await expect(sheet.getByRole('menuitem', { name: 'Crea nuova lega' })).toBeVisible();
   });
 
@@ -36,7 +39,7 @@ test.describe('Leghe', () => {
 
     const switcher = page.getByRole('button', { name: /Lega attiva: Lega del giovedì/ });
     await expect(switcher).toBeVisible({ timeout: 15_000 });
-    await expect(switcher).toContainText('Presidente');
+    await expect(switcher.getByLabel('Pubblica')).toBeVisible();
     const leagues = await db.collection('leagues').where('name', '==', 'Lega del giovedì').get();
     expect(leagues.size).toBe(1);
     expect(leagues.docs[0].data()).toMatchObject({ visibility: 'public', createdBy: 'p-1' });
@@ -365,4 +368,27 @@ test.describe('Super admin della piattaforma', () => {
     await expect.poll(roleOf, { timeout: 15_000 }).toBe(0);
     await expect(card.getByRole('list', { name: 'Admin della piattaforma' })).not.toContainText('Admin piattaforma');
   });
+});
+
+/** Membri e ruoli: fino a 15 l'elenco è nella pagina; oltre, una riga che apre la finestra (ricerca + ruoli). */
+test('Membri e ruoli con più di 15 membri: si aprono in una finestra con la ricerca', async ({ page }) => {
+  await seedMatchDay();
+  const now = new Date().toISOString();
+  for (let i = 1; i <= 6; i++) {
+    await db.doc(`leagues/calcettari/players/extra${i}`).set({ id: `extra${i}`, userId: `extra${i}`, user_id: `extra${i}`, full_name: `Membro Extra ${i}`, leagueRole: 'PLAYER', role: 'player', isActivePlayer: true, is_guest: false, stats: {}, overall_rating: 6, created_at: now, updated_at: now });
+  }
+  await loginAsAdmin(page);
+  await page.goto('/settings?sezione=lega');
+  const row = page.getByRole('button', { name: /Membri e ruoli \(17\)/ });
+  await expect(row).toBeVisible({ timeout: 20_000 });
+  // nella pagina non c'è l'elenco lungo
+  await expect(page.getByRole('combobox', { name: 'Ruolo di Test Uno' })).toHaveCount(0);
+  await row.click();
+  const win = page.getByRole('dialog');
+  await expect(win.getByRole('heading', { name: 'Membri e ruoli' })).toBeVisible();
+  await win.getByPlaceholder(/Cerca/).fill('extra 3');
+  await expect(win.getByText('Membro Extra 3')).toBeVisible();
+  await expect(win.getByText('Membro Extra 4')).toHaveCount(0);
+  await win.getByRole('combobox', { name: 'Ruolo di Membro Extra 3' }).selectOption('COLLABORATOR');
+  await expect.poll(async () => (await db.doc('leagues/calcettari/players/extra3').get()).data()?.leagueRole, { timeout: 15_000 }).toBe('COLLABORATOR');
 });

@@ -322,6 +322,9 @@ La colonna **Staff** vale per `SUPER_ADMIN` e `GLOBAL_ADMIN`, salvo dove è indi
   ci si entra **direttamente**, senza invito né approvazione (l'ha scelto il presidente). Una privata si apre solo con l'invito.
   Nell'intestazione, accanto al nome della lega attiva, un'etichetta dice se è **Pubblica** (globo) o **Privata** (lucchetto):
   sul telefono solo l'icona, con il testo completo come suggerimento e per i lettori di schermo ([LeagueSwitcher.tsx](../src/components/league/LeagueSwitcher.tsx)).
+  Il ruolo non è nel selettore (è sotto il nome, accanto alla foto); nell'elenco delle leghe ogni riga ha lo stesso simbolo.
+  **Impostazioni → Lega → Membri e ruoli**: fino a 15 membri l'elenco è nella pagina; oltre, una riga "Membri e ruoli (N)" apre
+  la stessa finestra delle schede (ricerca + ruoli).
 
 **Leghe pubbliche** ([publicLeagues.ts](../src/lib/server/publicLeagues.ts), `GET/POST /api/leagues/public`)
 - `GET`: le leghe `public` e `active` di cui l'account non fa già parte (accesso con email verificata). Per ogni lega: nome,
@@ -329,11 +332,12 @@ La colonna **Staff** vale per `SUPER_ADMIN` e `GLOBAL_ADMIN`, salvo dove è indi
   partite il `defaultFormat`), **OVR medio** dei giocatori che giocano (`null` sotto i 6 giocatori: "Nuova lega"), numero di
   giocatori e di partite giocate. Cache di 5 minuti sul server (costa una lettura per scheda e partita); massimo 30 leghe.
 - **Dove si vedono** ([PublicLeagues.tsx](../src/components/league/PublicLeagues.tsx)):
-  - **pagina `/leagues`** (aperta con e senza lega): tutte le leghe pubbliche attive di cui non si fa parte, con la **barra
-    di ricerca** in alto (per nome, maiuscole e accenti non contano) e "Entra" su ognuna (conferma, poi si apre la lega).
-    Senza leghe: "Non ci sono leghe pubbliche in questo momento.";
-  - **ingresso senza lega**: in alto, le prime 4 e "Vedi tutte e cerca →";
-  - **Home di chi è in una lega**: una card breve ("N leghe aperte a tutti", "Vedi le leghe pubbliche →") **in fondo alla
+  - **finestra "Leghe pubbliche"** (`PublicLeaguesSheet`, come la scheda di un giocatore: dal basso sul telefono, al centro
+    con la pagina sfocata sul PC): tutte le leghe pubbliche attive di cui non si fa parte, con la **barra di ricerca** in alto
+    (per nome, maiuscole e accenti non contano) e "Entra" su ognuna (conferma, poi si apre la lega). Senza leghe: "Non ci sono
+    leghe pubbliche in questo momento.". Non c'è una pagina: il vecchio `/leagues` porta alla Home;
+  - **ingresso senza lega**: in alto, le prime 4 e "Vedi tutte e cerca →", che apre la finestra;
+  - **Home di chi è in una lega**: una card breve ("N leghe aperte a tutti", "Vedi le leghe pubbliche →", apre la finestra) **in fondo alla
     colonna laterale**, mai sopra la partita della lega: sul telefono è l'ultimo blocco della pagina, sul PC sta accanto
     alla partita sotto "Il tuo rendimento" e "Cerco giocatore".
 - `POST { leagueId }`: entra con una scheda nuova (Radar Base, `UNCONFIRMED`) e avvisa i gestori ("Nuovo giocatore in lega · Valori da revisionare", punto 7).

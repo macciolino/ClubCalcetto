@@ -2,13 +2,15 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { collection, doc, onSnapshot, query, where } from 'firebase/firestore';
-import { Copy, Link2, Loader2, LogOut, RefreshCw, Save, Search, Share2, Trash2, UserCheck, Users } from 'lucide-react';
+import { ChevronRight, Copy, Link2, Loader2, LogOut, RefreshCw, Save, Search, Share2, Trash2, UserCheck, Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { db, isFirebaseConfigured } from '@/lib/firebase/config';
 import { lcol } from '@/lib/league/leagueRefs';
 import { useActiveLeague } from '@/lib/context/ActiveLeagueContext';
 import { askConfirm, notify } from '@/components/ui/Feedback';
 import { btn } from '@/components/ui/buttons';
+import { Sheet } from '@/components/ui/Sheet';
+import { surface } from '@/components/ui/surfaces';
 import { LeagueRoleBadge } from '@/components/league/LeagueSwitcher';
 import { DeleteLeagueSheet } from '@/components/league/DeleteLeagueSheet';
 import { fetchInviteCode, inviteUrl, leagueAdminRequest } from '@/lib/services/leagueService';
@@ -263,6 +265,8 @@ function MembersCard({ editable }: { editable: boolean }) {
   const [cards, setCards] = useState<LeagueMemberPlayer[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  // Many members: the list opens in a window (like a player's card), the page keeps one row
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     if (!isFirebaseConfigured) return;
@@ -299,6 +303,74 @@ function MembersCard({ editable }: { editable: boolean }) {
     notify(res === 'ok' ? t(active ? 'playingOn' : 'playingOff', { name: p.full_name }) : t(`errors.${res}`));
   };
 
+  const search = (
+    <label className="relative block">
+      <span className="sr-only">{t('search')}</span>
+      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" aria-hidden="true" />
+      <input
+        type="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder={t('searchPlaceholder')}
+        className={`${field} pl-9`}
+      />
+    </label>
+  );
+
+  const list = (
+    <>
+      {shown.length === 0 && <p className="text-xs text-muted">{t('noResults')}</p>}
+      <ul className="divide-y divide-line">
+        {shown.map((p) => {
+          // A super admin's role and card are changed only by a super admin: everyone else sees a plain badge
+          const canEditRow = editable && (isSuperAdmin || !superIds.has(p.userId || ''));
+          return (
+            <li key={p.id} className="flex items-center gap-3 py-2.5">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-primary truncate">
+                  {p.full_name}
+                  {p.id === member?.id && <span className="ml-1.5 text-xs font-normal text-muted">({t('you')})</span>}
+                </p>
+                {p.isActivePlayer === false && <p className="text-xs text-muted">{t('organiser')}</p>}
+              </div>
+              {canEditRow && (
+                <input
+                  type="checkbox"
+                  checked={p.isActivePlayer !== false}
+                  onChange={(e) => changePlaying(p, e.target.checked)}
+                  disabled={busyId !== null}
+                  aria-label={t('playingOf', { name: p.full_name })}
+                  title={t('playingOf', { name: p.full_name })}
+                  className="h-4 w-4 accent-[rgb(var(--accent-primary))]"
+                />
+              )}
+              {canEditRow ? (
+                <select
+                  value={p.leagueRole}
+                  onChange={(e) => changeRole(p, e.target.value as LeagueRole)}
+                  disabled={busyId !== null}
+                  aria-label={t('roleOf', { name: p.full_name })}
+                  className="rounded-lg border border-line-strong dark:border-line-strong/60 bg-app px-2 py-1.5 text-xs font-semibold text-primary focus:outline-none focus:border-accent"
+                >
+                  {ROLES.map((r) => (
+                    <option key={r} value={r}>
+                      {tr(r)}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <LeagueRoleBadge role={p.leagueRole} />
+              )}
+              {busyId === p.id && <Loader2 className="h-4 w-4 animate-spin text-secondary" aria-hidden="true" />}
+            </li>
+          );
+        })}
+      </ul>
+    </>
+  );
+
+  const many = cards.length > MEMBERS_INLINE;
+
   return (
     <section className={card} aria-labelledby="members-title">
       <div>
@@ -307,69 +379,40 @@ function MembersCard({ editable }: { editable: boolean }) {
         </h2>
         <p className="text-xs text-secondary mt-0.5">{t('intro')}</p>
       </div>
-      {cards.length > 6 && (
-        <label className="relative block">
-          <span className="sr-only">{t('search')}</span>
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" aria-hidden="true" />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t('searchPlaceholder')}
-            className={`${field} pl-9`}
-          />
-        </label>
+      {many ? (
+        /* More than 15 members: one row; the list (search + roles) opens in a window, like a player's card */
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-haspopup="dialog"
+          className={`${surface.rowButton} w-full flex items-center gap-3 px-3.5 py-3 text-left`}
+        >
+          <span className="flex-1 min-w-0">
+            <span className="block text-sm font-semibold text-primary">{t('openList', { count: cards.length })}</span>
+            <span className="block text-xs text-secondary">{t('openListHint')}</span>
+          </span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
+        </button>
+      ) : (
+        <>
+          {cards.length > 6 && search}
+          {list}
+        </>
       )}
-      {shown.length === 0 && <p className="text-xs text-muted">{t('noResults')}</p>}
-      <ul className="divide-y divide-line">
-        {shown.map((p) => {
-          // A super admin's role and card are changed only by a super admin: everyone else sees a plain badge
-          const canEditRow = editable && (isSuperAdmin || !superIds.has(p.userId || ''));
-          return (
-          <li key={p.id} className="flex items-center gap-3 py-2.5">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-primary truncate">
-                {p.full_name}
-                {p.id === member?.id && <span className="ml-1.5 text-xs font-normal text-muted">({t('you')})</span>}
-              </p>
-              {p.isActivePlayer === false && <p className="text-xs text-muted">{t('organiser')}</p>}
-            </div>
-            {canEditRow && (
-              <input
-                type="checkbox"
-                checked={p.isActivePlayer !== false}
-                onChange={(e) => changePlaying(p, e.target.checked)}
-                disabled={busyId !== null}
-                aria-label={t('playingOf', { name: p.full_name })}
-                title={t('playingOf', { name: p.full_name })}
-                className="h-4 w-4 accent-[rgb(var(--accent-primary))]"
-              />
-            )}
-            {canEditRow ? (
-              <select
-                value={p.leagueRole}
-                onChange={(e) => changeRole(p, e.target.value as LeagueRole)}
-                disabled={busyId !== null}
-                aria-label={t('roleOf', { name: p.full_name })}
-                className="rounded-lg border border-line bg-app px-2 py-1.5 text-xs font-semibold text-primary focus:outline-none focus:border-accent"
-              >
-                {ROLES.map((r) => (
-                  <option key={r} value={r}>
-                    {tr(r)}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <LeagueRoleBadge role={p.leagueRole} />
-            )}
-            {busyId === p.id && <Loader2 className="h-4 w-4 animate-spin text-secondary" aria-hidden="true" />}
-          </li>
-          );
-        })}
-      </ul>
+      {many && open && (
+        <Sheet onClose={() => setOpen(false)} title={t('title')} subtitle={t('count', { count: cards.length })}>
+          <div className="space-y-3">
+            {search}
+            {list}
+          </div>
+        </Sheet>
+      )}
     </section>
   );
 }
+
+/** Up to this many members the list stays open in the page; more, it opens in a window. */
+const MEMBERS_INLINE = 15;
 
 /** Name search ignoring case and accents ("nicolo" finds "Nicolò"). */
 const normalizeName = (v: string) =>

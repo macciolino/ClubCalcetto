@@ -22,6 +22,8 @@ const nextConfig = {
       ]),
       // "Il mio account" (2026-11-27) è stato diviso in Profilo e Impostazioni, aperti anche senza lega
       { source: '/account', destination: '/profile', permanent: false },
+      // Le leghe pubbliche si aprono in una finestra (Home e ingresso), non in una pagina
+      { source: '/leagues', destination: '/', permanent: false },
     ];
   },
   // No `images.remotePatterns`: next/image is not used (photos are plain <img>), so the optimizer must not fetch
