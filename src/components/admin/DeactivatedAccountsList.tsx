@@ -31,7 +31,7 @@ export function DeactivatedAccountsList({
           .map((p) => (
           <li
             key={p.id}
-            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card rounded-2xl p-4"
+            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card border border-line-strong dark:border-line-strong/60 rounded-2xl p-4"
           >
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">

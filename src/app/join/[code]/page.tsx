@@ -69,7 +69,7 @@ export default function JoinLeaguePage() {
 
   const shell = (children: React.ReactNode) => (
     <div className="min-h-[60vh] flex items-center justify-center">
-      <section className="w-full max-w-md bg-card rounded-2xl p-6 space-y-4" aria-labelledby="join-title">
+      <section className="w-full max-w-md bg-card border border-line-strong dark:border-line-strong/60 rounded-2xl p-6 space-y-4" aria-labelledby="join-title">
         <LinkIcon className="h-8 w-8 mx-auto text-accent-text" aria-hidden="true" />
         <h1 id="join-title" className="text-xl font-black text-primary text-center">
           {t('title')}

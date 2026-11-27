@@ -77,7 +77,7 @@ export function MatchFormatPicker({
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-4 gap-1.5 rounded-xl bg-app/60 p-1" role="radiogroup" aria-label={t('radioAria')}>
+      <div className="grid grid-cols-4 gap-1.5 rounded-xl bg-app/60 border border-line dark:border-line-strong/40 p-1" role="radiogroup" aria-label={t('radioAria')}>
         {MATCH_FORMATS.map((f) => {
           const active = f === format;
           return (

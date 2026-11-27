@@ -73,7 +73,7 @@ export default function SuperAdminPage() {
   if (isLoading) return <PageSkeleton />;
   if (!isPlatformStaff || leagues === 'forbidden') {
     return (
-      <div className="max-w-md mx-auto bg-card rounded-2xl p-6 text-center space-y-3">
+      <div className="max-w-md mx-auto bg-card border border-line-strong dark:border-line-strong/60 rounded-2xl p-6 text-center space-y-3">
         <p className="text-sm text-secondary">{t('forbidden')}</p>
         <Link href="/" className={textLink}>
           {t('home')} <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -107,7 +107,7 @@ export default function SuperAdminPage() {
           {leagues.length === 0 && <p className="text-sm text-secondary">{t('empty')}</p>}
           <ul className="space-y-2">
             {leagues.map((l) => (
-              <li key={l.id} className="bg-card rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center gap-3" aria-label={l.name}>
+              <li key={l.id} className="bg-card border border-line-strong dark:border-line-strong/60 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center gap-3" aria-label={l.name}>
                 <div className="flex-1 min-w-0 space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h2 className="text-base font-bold text-primary truncate">{l.name}</h2>

@@ -172,7 +172,7 @@ export default function ProfiloPage() {
       </header>
 
       {/* SCHEDA DATI PERSONALI & UPLOAD FOTO */}
-      <form onSubmit={handleSaveProfile} className="bg-card border border-line rounded-2xl p-6 space-y-6">
+      <form onSubmit={handleSaveProfile} className="bg-card border border-line-strong dark:border-line-strong/60 rounded-2xl p-6 space-y-6">
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
           {/* Foto profilo */}
           <div className="flex flex-col items-center space-y-2">
@@ -288,7 +288,7 @@ export default function ProfiloPage() {
       {/* SEZIONE STATISTICHE E BILANCIO PARTITE (AFFIANCATE) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* COLONNA 1: OTTAGONO ABILITÀ STILE FIFA/PES */}
-        <div className="bg-card border border-line rounded-2xl p-5 space-y-4 flex flex-col justify-between">
+        <div className="bg-card border border-line-strong dark:border-line-strong/60 rounded-2xl p-5 space-y-4 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between border-b border-line pb-3">
               <div className="flex items-center gap-2">
@@ -346,14 +346,14 @@ export default function ProfiloPage() {
         </div>
 
         {/* COLONNA 2: LE MIE STATISTICHE GLOBALI */}
-        <div className="bg-card border border-line rounded-2xl p-5 space-y-5">
+        <div className="bg-card border border-line-strong dark:border-line-strong/60 rounded-2xl p-5 space-y-5">
           <div className="border-b border-line pb-3">
             <div className="flex items-center gap-2">
               <Trophy className="h-5 w-5 text-warning" />
               <h2 className="text-base font-bold text-primary">{t('myStats')}</h2>
               {/* Solo la lega attiva: la carriera di tutte le leghe sta nella card "Carriera" */}
               {activeLeagueName && (
-                <span className="ml-auto truncate rounded-full bg-app px-2.5 py-0.5 text-[11px] font-medium text-secondary">
+                <span className="ml-auto truncate rounded-full bg-app border border-line dark:border-line-strong/40 px-2.5 py-0.5 text-[11px] font-medium text-secondary">
                   {t('leagueOnly', { league: activeLeagueName })}
                 </span>
               )}
@@ -400,7 +400,7 @@ export default function ProfiloPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Link
           href="/settings?sezione=notifiche"
-          className="flex items-center justify-between gap-3 bg-card hover:bg-card-hover/80 rounded-2xl p-4 text-sm"
+          className="flex items-center justify-between gap-3 bg-card border border-line-strong dark:border-line-strong/60 hover:bg-card-hover/80 rounded-2xl p-4 text-sm"
         >
           <span>
             <span className="block font-semibold text-primary">{t('notifications')}</span>
@@ -410,7 +410,7 @@ export default function ProfiloPage() {
         </Link>
         <Link
           href="/settings?sezione=account"
-          className="flex items-center justify-between gap-3 bg-card hover:bg-card-hover/80 rounded-2xl p-4 text-sm"
+          className="flex items-center justify-between gap-3 bg-card border border-line-strong dark:border-line-strong/60 hover:bg-card-hover/80 rounded-2xl p-4 text-sm"
         >
           <span>
             <span className="block font-semibold text-primary">{t('account')}</span>

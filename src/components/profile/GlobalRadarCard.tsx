@@ -31,7 +31,7 @@ export function GlobalRadarCard({ baseRadar, summary }: { baseRadar?: unknown; s
   const leagues = summary.leagues.filter((l) => l.stats && Object.keys(l.stats).length > 0);
 
   return (
-    <section aria-labelledby="global-radar-title" className="bg-card border border-line rounded-2xl p-5 space-y-5">
+    <section aria-labelledby="global-radar-title" className="bg-card border border-line-strong dark:border-line-strong/60 rounded-2xl p-5 space-y-5">
       <div>
         <h2 id="global-radar-title" className="text-base font-bold text-primary flex items-center gap-2">
           <Radar className="h-5 w-5 text-accent-text" aria-hidden="true" /> {t('title')}
@@ -40,7 +40,7 @@ export function GlobalRadarCard({ baseRadar, summary }: { baseRadar?: unknown; s
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="rounded-xl bg-app p-4 space-y-2">
+        <div className="rounded-xl bg-app border border-line dark:border-line-strong/40 p-4 space-y-2">
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-sm font-semibold text-primary">{t('base')}</h3>
             {radar && <span className="text-xs font-mono font-bold text-warning tabular-nums">OVR {ovrOf(radar)}</span>}
@@ -55,7 +55,7 @@ export function GlobalRadarCard({ baseRadar, summary }: { baseRadar?: unknown; s
           <p className="text-[11px] text-muted">{t('baseHint')}</p>
         </div>
 
-        <div className="rounded-xl bg-app p-4 space-y-2">
+        <div className="rounded-xl bg-app border border-line dark:border-line-strong/40 p-4 space-y-2">
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-sm font-semibold text-primary">{t('guest')}</h3>
             {guestAverage && <span className="text-xs font-mono font-bold text-warning tabular-nums">OVR {ovrOf(guestAverage)}</span>}

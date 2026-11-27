@@ -47,7 +47,7 @@ export function NotificationGuide() {
   });
 
   return (
-    <section className="bg-card border border-line rounded-2xl p-5 space-y-4" aria-labelledby="notif-guide-title">
+    <section className="bg-card border border-line-strong dark:border-line-strong/60 rounded-2xl p-5 space-y-4" aria-labelledby="notif-guide-title">
       <div className="flex items-center gap-2 border-b border-line pb-3">
         <Bell className="h-5 w-5 text-accent-text" />
         <h2 id="notif-guide-title" className="text-base font-bold text-primary">

@@ -67,7 +67,7 @@ export function PlayerCardFifa({
       type="button"
       onClick={() => onOpen(player)}
       aria-label={`${player.full_name}, ${labels.position(player.position)}, OVR ${ovr}`}
-      className="w-full h-full flex items-center gap-3 rounded-2xl bg-card hover:bg-card-hover/80 px-3.5 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+      className="w-full h-full flex items-center gap-3 rounded-2xl bg-card border border-line-strong dark:border-line-strong/60 hover:bg-card-hover/80 px-3.5 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
     >
       <Avatar player={player} />
       <span className="flex-1 min-w-0">
@@ -187,7 +187,7 @@ export function PlayerDetailSheet({
           const value = form !== 0 ? Number(displayStats[b.name] ?? b.value) : b.value;
           const code = labels.statCode(b.name);
           return (
-            <li key={b.name} className="rounded-xl bg-app/60 px-2 pt-2 pb-2.5 text-center" title={labels.statName(b.name)}>
+            <li key={b.name} className="rounded-xl bg-app/60 border border-line dark:border-line-strong/40 px-2 pt-2 pb-2.5 text-center" title={labels.statName(b.name)}>
               <span className="block text-[10px] font-semibold tracking-wider text-muted">{code}</span>
               <span className="block mt-0.5 text-lg font-semibold text-primary tabular-nums leading-tight">
                 {String(Math.round(value * 10) / 10).replace('.', ',')}
@@ -231,7 +231,7 @@ export function PlayerDetailSheet({
             <span className="bg-red-500" style={{ width: `${(matchStats.lost / matchStats.played) * 100}%` }} />
           </div>
         </div>
-        <dl className="divide-y divide-line rounded-xl bg-app/50 px-3 text-sm">
+        <dl className="divide-y divide-line rounded-xl bg-app/50 border border-line dark:border-line-strong/40 px-3 text-sm">
           {(
             [
               [t('played'), String(matchStats.played)],
@@ -382,7 +382,7 @@ export function PlayerDetailSheet({
       }
     >
       {/* OVR e ultime 5 */}
-      <div className="flex items-center justify-between gap-4 rounded-2xl bg-app/50 px-4 py-3">
+      <div className="flex items-center justify-between gap-4 rounded-2xl bg-app/50 border border-line dark:border-line-strong/40 px-4 py-3">
         <div>
           <span className={`block text-4xl font-bold tabular-nums leading-none ${ovrTone(ovr)}`}>{ovr}</span>
           <span className="mt-1 flex items-center gap-2 text-xs text-secondary">
@@ -413,7 +413,7 @@ export function PlayerDetailSheet({
 
       {/* Telefono e tablet: schede Abilità / Statistiche. PC: le due cose affiancate */}
       <div className="lg:hidden space-y-4">
-        <div className="flex bg-app p-1 rounded-xl text-sm" role="tablist">
+        <div className="flex bg-app border border-line dark:border-line-strong/40 p-1 rounded-xl text-sm" role="tablist">
           {(
             [
               ['radar', t('tabSkills')],

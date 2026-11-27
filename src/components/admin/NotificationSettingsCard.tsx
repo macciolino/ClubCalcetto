@@ -104,7 +104,7 @@ export function NotificationSettingsCard({ defaultOpen = false }: { defaultOpen?
   };
 
   return (
-    <div className="bg-card p-4 sm:p-5 rounded-2xl space-y-4">
+    <div className="bg-card border border-line-strong dark:border-line-strong/60 p-4 sm:p-5 rounded-2xl space-y-4">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}

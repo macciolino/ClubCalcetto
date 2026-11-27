@@ -382,7 +382,7 @@ export function TabOverviewMatch({
   };
 
   // ---------- pannelli ----------
-  const panel = 'bg-card rounded-2xl p-4 sm:p-5 space-y-4';
+  const panel = 'bg-card border border-line-strong dark:border-line-strong/60 rounded-2xl p-4 sm:p-5 space-y-4';
   const inputCls =
     'w-full px-3.5 py-2.5 bg-app border border-line rounded-xl text-primary text-sm focus:outline-none focus:border-accent disabled:opacity-60';
   const visible = (id: TabId) => (tab === id ? '' : 'hidden lg:block');
@@ -395,7 +395,7 @@ export function TabOverviewMatch({
       </h3>
 
       {/* Giorno ufficiale */}
-      <div className="flex items-center justify-between gap-3 rounded-xl bg-app/60 px-4 py-3">
+      <div className="flex items-center justify-between gap-3 rounded-xl bg-app/60 border border-line dark:border-line-strong/40 px-4 py-3">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-primary flex items-center gap-1.5">
             <Star className={`h-4 w-4 ${official ? 'text-warning fill-amber-400' : 'text-muted'}`} /> {t('officialDay')}
@@ -594,7 +594,7 @@ export function TabOverviewMatch({
       </div>
 
       {payers.length === 0 ? (
-        <p className="rounded-xl bg-app/60 py-6 px-4 text-center text-sm text-secondary">
+        <p className="rounded-xl bg-app/60 border border-line dark:border-line-strong/40 py-6 px-4 text-center text-sm text-secondary">
           {t('noStarters')}
         </p>
       ) : (
@@ -626,7 +626,7 @@ export function TabOverviewMatch({
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-1 rounded-xl bg-app/60 p-1" role="radiogroup" aria-label={t('filter')}>
+          <div className="grid grid-cols-2 gap-1 rounded-xl bg-app/60 border border-line dark:border-line-strong/40 p-1" role="radiogroup" aria-label={t('filter')}>
             {(
               [
                 [false, t('filterAll', { count: payers.length })],
@@ -646,7 +646,7 @@ export function TabOverviewMatch({
             ))}
           </div>
 
-          <ul className="rounded-xl bg-app/50 divide-y divide-line overflow-hidden">
+          <ul className="rounded-xl bg-app/50 border border-line dark:border-line-strong/40 divide-y divide-line overflow-hidden">
             {(onlyUnpaid ? unpaid : payers).map((p) => {
               const paid = payments.payments[p.id] === true;
               return (
@@ -686,7 +686,7 @@ export function TabOverviewMatch({
         <Trophy className="h-4 w-4 text-warning" /> {t('resultTitle')}
       </h3>
       {isArchived && (
-        <p className="flex items-start gap-2 rounded-xl bg-app/60 px-3.5 py-2.5 text-sm text-secondary">
+        <p className="flex items-start gap-2 rounded-xl bg-app/60 border border-line dark:border-line-strong/40 px-3.5 py-2.5 text-sm text-secondary">
           <Check className="h-4 w-4 flex-shrink-0 text-accent-text mt-0.5" />
           <span>
             {t('archivedInfo', { white: archived.get(date)?.score_white ?? 0, black: archived.get(date)?.score_black ?? 0 })}{' '}
@@ -705,7 +705,7 @@ export function TabOverviewMatch({
                 [t('black'), teams.black, 'h-2.5 w-9 bg-slate-950 border border-slate-500'],
               ] as const
             ).map(([title, list, oval]) => (
-              <div key={title} className="rounded-xl bg-app/60 p-3 space-y-1 min-w-0">
+              <div key={title} className="rounded-xl bg-app/60 border border-line dark:border-line-strong/40 p-3 space-y-1 min-w-0">
                 <p className="flex items-center gap-2 text-xs font-semibold text-secondary">
                   <span className={`rounded-full ${oval}`} aria-hidden="true" /> {title}
                 </p>
@@ -737,7 +737,7 @@ export function TabOverviewMatch({
           </button>
         </>
       ) : (
-        <div className="rounded-xl bg-app/60 py-8 px-4 text-center space-y-3">
+        <div className="rounded-xl bg-app/60 border border-line dark:border-line-strong/40 py-8 px-4 text-center space-y-3">
           <p className="text-sm font-semibold text-primary">{t('teamsNotReady')}</p>
           <p className="text-sm text-secondary max-w-sm mx-auto">{t('teamsNotReadyText', { label: info.label })}</p>
           <Link href={`/teams?date=${date}`} className={btn.primary}>
@@ -769,8 +769,8 @@ export function TabOverviewMatch({
               aria-checked={selected}
               aria-label={t('dayAria', { date: fmtDate(d), status: stLabel(st), count, max })}
               onClick={() => chooseDay(d)}
-              className={`flex-shrink-0 w-[5.25rem] rounded-2xl px-2 py-2.5 text-center transition-colors ${
-                selected ? 'bg-card-hover ring-2 ring-accent' : 'bg-card hover:bg-card-hover'
+              className={`flex-shrink-0 w-[5.25rem] rounded-2xl border px-2 py-2.5 text-center transition-colors ${
+                selected ? 'border-transparent bg-card-hover ring-2 ring-accent' : 'border-line-strong dark:border-line-strong/60 bg-card hover:bg-card-hover'
               }`}
             >
               <span className="block text-xs font-medium capitalize text-secondary">{shortDayParts(d, locale).weekday}</span>
@@ -795,7 +795,7 @@ export function TabOverviewMatch({
       </div>
 
       {/* 2. Le tre schede (telefono e tablet); su PC i pannelli sono affiancati */}
-      <div className="lg:hidden grid grid-cols-3 gap-1 rounded-2xl bg-card p-1" role="tablist" aria-label={t('tabs.aria')}>
+      <div className="lg:hidden grid grid-cols-3 gap-1 rounded-2xl bg-card border border-line-strong dark:border-line-strong/60 p-1" role="tablist" aria-label={t('tabs.aria')}>
         {TABS.map((tb) => {
           const Icon = tb.icon;
           const active = tab === tb.id;

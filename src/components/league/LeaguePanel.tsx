@@ -14,7 +14,7 @@ import { DeleteLeagueSheet } from '@/components/league/DeleteLeagueSheet';
 import { fetchInviteCode, inviteUrl, leagueAdminRequest } from '@/lib/services/leagueService';
 import { CALCETTARI_LEAGUE_ID, type League, type LeagueMemberPlayer, type LeagueRole, type LeagueVisibility } from '@/types/league';
 
-const card = 'bg-card p-4 sm:p-5 rounded-2xl space-y-3';
+const card = 'bg-card border border-line-strong dark:border-line-strong/60 p-4 sm:p-5 rounded-2xl space-y-3';
 const field = 'w-full rounded-xl border border-line bg-app px-3 py-2.5 text-sm text-primary placeholder:text-muted focus:outline-none focus:border-accent disabled:opacity-60';
 const ROLES: LeagueRole[] = ['PRESIDENT', 'COLLABORATOR', 'PLAYER'];
 

@@ -413,7 +413,7 @@ export default function LoginPage() {
         ) : returning?.askEmail ? (
           /* Account chiuso con Google, email sconosciuta: la chiediamo per avvisare l'admin */
           <form
-            className="bg-card border border-line rounded-2xl p-6 space-y-4 animate-in"
+            className="bg-card border border-line-strong dark:border-line-strong/60 rounded-2xl p-6 space-y-4 animate-in"
             onSubmit={async (e) => {
               e.preventDefault();
               setReturnError('');
@@ -461,7 +461,7 @@ export default function LoginPage() {
           </form>
         ) : returning ? (
           /* Account chiuso che torna: attesa ripristino, decide l'admin */
-          <div className="bg-card border border-line rounded-2xl p-6 space-y-5 animate-in" role="status">
+          <div className="bg-card border border-line-strong dark:border-line-strong/60 rounded-2xl p-6 space-y-5 animate-in" role="status">
             <div className="flex items-start gap-3">
               <span className="flex-shrink-0 h-10 w-10 rounded-full bg-accent/15 flex items-center justify-center">
                 <Hourglass className="h-5 w-5 text-accent-text" />
@@ -487,7 +487,7 @@ export default function LoginPage() {
           </div>
         ) : user && !isEmailVerified ? (
           /* STATO 1: EMAIL DA VERIFICARE */
-          <div className="bg-card border border-line rounded-2xl p-6 space-y-5 animate-in">
+          <div className="bg-card border border-line-strong dark:border-line-strong/60 rounded-2xl p-6 space-y-5 animate-in">
             <div className="flex items-start gap-3">
               <span className="flex-shrink-0 h-10 w-10 rounded-full bg-amber-500/15 flex items-center justify-center">
                 <Mail className="h-5 w-5 text-warning" />
@@ -530,7 +530,7 @@ export default function LoginPage() {
           </div>
         ) : profile ? (
           /* STATO 2: GIÀ COLLEGATO */
-          <div className="bg-card border border-line rounded-2xl p-6 space-y-5 animate-in">
+          <div className="bg-card border border-line-strong dark:border-line-strong/60 rounded-2xl p-6 space-y-5 animate-in">
             <div className="flex items-center gap-3 min-w-0">
               <span className="flex-shrink-0 h-11 w-11 rounded-full bg-accent/15 text-accent-text flex items-center justify-center text-sm font-bold">
                 {profile.full_name
@@ -570,7 +570,7 @@ export default function LoginPage() {
           /* STATO 3: ACCESSO / REGISTRAZIONE */
           <div className="space-y-5">
             {/* Accedi / Registrati */}
-            <div className="flex bg-card border border-line p-1 rounded-xl text-sm" role="tablist" aria-label={t('accessAria')}>
+            <div className="flex bg-card border border-line-strong dark:border-line-strong/60 p-1 rounded-xl text-sm" role="tablist" aria-label={t('accessAria')}>
               {(
                 [
                   ['signin', t('tabSignIn')],

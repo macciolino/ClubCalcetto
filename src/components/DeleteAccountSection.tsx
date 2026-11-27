@@ -26,7 +26,7 @@ export function DeleteAccountSection({ isSuperAdmin }: { isSuperAdmin: boolean }
 
   if (isSuperAdmin) {
     return (
-      <section className="bg-card border border-line rounded-2xl p-5 text-xs text-secondary">
+      <section className="bg-card border border-line-strong dark:border-line-strong/60 rounded-2xl p-5 text-xs text-secondary">
         {t('superCannot')}
       </section>
     );

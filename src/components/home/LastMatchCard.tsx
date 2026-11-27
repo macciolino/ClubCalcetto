@@ -47,7 +47,7 @@ export function LastMatchCard({
 
   return (
     <section
-      className={`bg-card border rounded-2xl p-5 space-y-4 ${mine === 'won' ? 'border-accent/30' : 'border-line'}`}
+      className={`bg-card border rounded-2xl p-5 space-y-4 ${mine === 'won' ? 'border-accent/30' : 'border-line-strong dark:border-line-strong/60'}`}
       aria-labelledby="last-match"
     >
       <div className="flex items-baseline justify-between gap-2">

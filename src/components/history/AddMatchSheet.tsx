@@ -267,14 +267,14 @@ function TeamPicker({
     setGuest('');
   };
   return (
-    <div className="rounded-xl bg-app p-3 space-y-2">
+    <div className="rounded-xl bg-app border border-line dark:border-line-strong/40 p-3 space-y-2">
       <p className="text-sm font-semibold text-primary flex items-center justify-between">
         {title} <span className="text-xs font-normal text-muted tabular-nums">{list.length}/{max}</span>
       </p>
       {list.length > 0 && (
         <ul className="flex flex-wrap gap-1.5">
           {list.map((p) => (
-            <li key={p.id} className="inline-flex items-center gap-1 rounded-full bg-card px-2.5 py-1 text-xs text-primary">
+            <li key={p.id} className="inline-flex items-center gap-1 rounded-full border border-line dark:border-line-strong/40 bg-card px-2.5 py-1 text-xs text-primary">
               {p.name}
               <button type="button" onClick={() => onRemove(p.id)} aria-label={t('removePlayer', { name: p.name })} className="text-muted hover:text-danger">
                 <X className="h-3.5 w-3.5" />

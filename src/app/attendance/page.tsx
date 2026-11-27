@@ -282,7 +282,7 @@ export default function PresenzePage() {
 
       {/* Admin: più giorni al completo, scegli quello ufficiale */}
       {daysWithQuorum.length > 1 && isStrictAdmin && (
-        <section className="rounded-2xl bg-card border border-line p-5 space-y-3">
+        <section className="rounded-2xl bg-card border border-line-strong dark:border-line-strong/60 p-5 space-y-3">
           <div className="flex items-start gap-3">
             <Crown className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
             <div>
@@ -316,7 +316,7 @@ export default function PresenzePage() {
 
       {/* Giorno scelto al completo */}
       {isMatchReady && (
-        <section className="rounded-2xl bg-card border border-line p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <section className="rounded-2xl bg-card border border-line-strong dark:border-line-strong/60 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-base font-semibold text-primary flex items-center gap-2">
               <CheckCircle2 className="h-5 w-5 text-accent-text" /> {t('matchFull')}

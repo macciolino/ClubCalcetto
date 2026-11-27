@@ -284,7 +284,7 @@ export default function HomePage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
       <div className="lg:col-span-2">
       {hasMatch ? (
-        <section className="bg-card border border-line rounded-2xl p-5 sm:p-6 space-y-6" aria-labelledby="next-match">
+        <section className="bg-card border border-line-strong dark:border-line-strong/60 rounded-2xl p-5 sm:p-6 space-y-6" aria-labelledby="next-match">
           {/* Quando e dove */}
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
             <div className="space-y-2 min-w-0">
@@ -372,14 +372,14 @@ export default function HomePage() {
 
           {/* Posti e squadra */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="flex items-center gap-4 rounded-xl bg-app/50 p-4">
+            <div className="flex items-center gap-4 rounded-xl bg-app/50 border border-line dark:border-line-strong/40 p-4">
               <CountRing count={starters.length} max={fmt.players} />
               <div className="text-sm">
                 <p className="font-semibold text-primary">{isFull ? t('full') : t('freeSpots', { count: fmt.players - starters.length })}</p>
                 <p className="text-secondary">{waitlist.length > 0 ? t('waitCount', { count: waitlist.length }) : t('noneWaiting')}</p>
               </div>
             </div>
-            <div className="rounded-xl bg-app/50 p-4 text-sm flex flex-col justify-center gap-1">
+            <div className="rounded-xl bg-app/50 border border-line dark:border-line-strong/40 p-4 text-sm flex flex-col justify-center gap-1">
               {teams && teams.white.length > 0 ? (
                 <>
                   <p className="font-semibold text-primary">
@@ -399,7 +399,7 @@ export default function HomePage() {
           </div>
         </section>
       ) : (
-        <section className="bg-card border border-line rounded-2xl p-6 text-center space-y-3">
+        <section className="bg-card border border-line-strong dark:border-line-strong/60 rounded-2xl p-6 text-center space-y-3">
           <p className="text-sm text-secondary">{t('markDays')}</p>
           <Link href="/attendance" className={btn.primary}>
             {t('goAttendance')} <ArrowRight className="h-4 w-4" />
@@ -411,7 +411,7 @@ export default function HomePage() {
 
       {/* Colonna destra (sotto su telefono): rendimento personale e ultima partita */}
       <aside className="space-y-4">
-        <section className="bg-card border border-line rounded-2xl p-5 space-y-4" aria-labelledby="my-form">
+        <section className="bg-card border border-line-strong dark:border-line-strong/60 rounded-2xl p-5 space-y-4" aria-labelledby="my-form">
           <h2 id="my-form" className="text-base font-semibold text-primary">{t('myForm')}</h2>
           {myStats && myStats.played > 0 ? (
             <>

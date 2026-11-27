@@ -73,7 +73,7 @@ export function Sheet({ onClose, title, subtitle, headerActions, footer, size = 
         role="dialog"
         aria-modal="true"
         aria-labelledby="sheet-title"
-        className={`w-full flex flex-col bg-card border border-line border-b-0 lg:border-b rounded-t-3xl lg:rounded-2xl shadow-2xl sheet-panel ${
+        className={`w-full flex flex-col bg-card border border-line-strong dark:border-line-strong/60 border-b-0 lg:border-b rounded-t-3xl lg:rounded-2xl shadow-2xl sheet-panel ${
           height === 'tall' ? 'h-[80dvh] lg:h-auto' : ''
         } max-h-[90dvh] lg:max-h-[85vh] ${size === 'lg' ? 'lg:max-w-2xl' : 'lg:max-w-lg'}`}
         style={dragY ? { transform: `translateY(${dragY}px)`, transition: 'none' } : undefined}

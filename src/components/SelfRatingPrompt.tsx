@@ -93,7 +93,7 @@ export function SelfRatingPrompt() {
         </>
       }
     >
-      <div className="flex items-center justify-between rounded-xl bg-app/60 px-4 py-3">
+      <div className="flex items-center justify-between rounded-xl bg-app/60 border border-line dark:border-line-strong/40 px-4 py-3">
         <span className="text-sm text-secondary">{t('startOvr')}</span>
         <span className="text-2xl font-bold text-primary tabular-nums">{Math.round(ovrOf(values) * 10)}</span>
       </div>

@@ -95,12 +95,12 @@ export function FormSettingsCard({ show = 'form' }: { show?: 'form' | 'keeper' }
     return (
       <>
       {/* Come gioca il club in porta */}
-      <section className="bg-card rounded-2xl p-4 sm:p-5 space-y-3">
+      <section className="bg-card border border-line-strong dark:border-line-strong/60 rounded-2xl p-4 sm:p-5 space-y-3">
         <div>
           <h3 className="text-base font-semibold text-primary">{t('keeper')}</h3>
           <p className="text-sm text-secondary mt-0.5">{t('keeperHelp')}</p>
         </div>
-        <div className="grid grid-cols-2 gap-1 bg-app p-1 rounded-xl text-sm" role="radiogroup" aria-label={t('keeper')}>
+        <div className="grid grid-cols-2 gap-1 bg-app border border-line dark:border-line-strong/40 p-1 rounded-xl text-sm" role="radiogroup" aria-label={t('keeper')}>
           {([
             ['rotation', t('rotation')],
             ['fixed', t('fixed')],
@@ -132,7 +132,7 @@ export function FormSettingsCard({ show = 'form' }: { show?: 'form' | 'keeper' }
   }
 
   return (
-    <div className="bg-card p-4 sm:p-5 rounded-2xl space-y-4">
+    <div className="bg-card border border-line-strong dark:border-line-strong/60 p-4 sm:p-5 rounded-2xl space-y-4">
       <div>
         <h2 className="text-sm font-bold text-primary flex items-center gap-2">
           <Flame className="h-5 w-5 text-orange-700 dark:text-orange-400 flex-shrink-0" />

@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import path from 'node:path';
 import { surface } from '@/components/ui/surfaces';
 
 /**
@@ -30,5 +32,28 @@ describe('Superfici del design system', () => {
     expect(surface.inset).toMatch(/border-line\b/);
     expect(surface.inset).toMatch(/bg-app/);
     expect(surface.pill).toMatch(/border-line\b/);
+  });
+
+  it('in tutta l’app nessuna card (bg-card + rounded-2xl) resta senza bordo', () => {
+    const files: string[] = [];
+    const walk = (dir: string) =>
+      readdirSync(dir).forEach((f) => {
+        const full = path.join(dir, f);
+        if (statSync(full).isDirectory()) walk(full);
+        else if (full.endsWith('.tsx')) files.push(full);
+      });
+    walk(path.join(process.cwd(), 'src'));
+    const eol = new RegExp('\\r?\\n');
+    const bare: string[] = [];
+    files.forEach((f) =>
+      readFileSync(f, 'utf8')
+        .split(eol)
+        .forEach((line, i) => {
+          if (/(?<![\w/:-])bg-card(?![\w/-])/.test(line) && /(?<![\w-])rounded-2xl(?![\w-])/.test(line) && !/border|surface\./.test(line)) {
+            bare.push(`${path.relative(process.cwd(), f)}:${i + 1}`);
+          }
+        })
+    );
+    expect(bare).toEqual([]);
   });
 });

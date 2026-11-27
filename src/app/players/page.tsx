@@ -361,7 +361,7 @@ ${link}`;
             const [first, ...rest] = (l.p?.full_name || '').trim().split(/\s+/);
             const short = rest.length ? `${first} ${rest[rest.length - 1][0]}.` : first;
             return (
-              <div key={l.key} className="min-w-0 rounded-2xl bg-card px-3 py-3 sm:px-4">
+              <div key={l.key} className="min-w-0 rounded-2xl bg-card border border-line-strong dark:border-line-strong/60 px-3 py-3 sm:px-4">
                 <span className="flex items-center gap-1.5 text-xs text-secondary min-w-0">
                   <span aria-hidden="true">{l.icon}</span>
                   <span className="truncate sm:hidden">{l.titleShort}</span>
@@ -390,7 +390,7 @@ ${link}`;
             placeholder={t('search')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className={`w-full pl-10 ${isClientAdmin ? 'pr-12 lg:pr-4' : 'pr-4'} py-2.5 bg-card border border-line rounded-full text-primary text-sm placeholder:text-muted focus:outline-none focus:border-accent transition-colors`}
+            className={`w-full pl-10 ${isClientAdmin ? 'pr-12 lg:pr-4' : 'pr-4'} py-2.5 bg-card border border-line-strong dark:border-line-strong/60 rounded-full text-primary text-sm placeholder:text-muted focus:outline-none focus:border-accent transition-colors`}
           />
           {isClientAdmin && (
             <button
@@ -410,7 +410,7 @@ ${link}`;
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value as typeof roleFilter)}
             aria-label={t('roleFilter')}
-            className="flex-1 sm:flex-none sm:w-32 min-w-0 bg-card border border-line rounded-xl px-2.5 py-2.5 text-sm text-primary focus:outline-none focus:border-accent"
+            className="flex-1 sm:flex-none sm:w-32 min-w-0 bg-card border border-line-strong dark:border-line-strong/60 rounded-xl px-2.5 py-2.5 text-sm text-primary focus:outline-none focus:border-accent"
           >
             <option value="all">{t('allRoles')}</option>
             {POSITION_ORDER.map((pos) => (
@@ -426,7 +426,7 @@ ${link}`;
               setSortSource('menu');
             }}
             aria-label={t('sortBy')}
-            className="flex-1 sm:flex-none sm:w-36 min-w-0 bg-card border border-line rounded-xl px-2.5 py-2.5 text-sm text-primary focus:outline-none focus:border-accent"
+            className="flex-1 sm:flex-none sm:w-36 min-w-0 bg-card border border-line-strong dark:border-line-strong/60 rounded-xl px-2.5 py-2.5 text-sm text-primary focus:outline-none focus:border-accent"
           >
             <option value="ovr">{t('sortOvr')}</option>
             <option value="goals">{t('sortGoals')}</option>
@@ -441,12 +441,12 @@ ${link}`;
             disabled={players.length < 2}
             aria-label={t('compareTwo')}
             title={t('compareTwo')}
-            className="flex-shrink-0 h-[42px] flex items-center justify-center gap-1.5 px-3 rounded-xl text-sm font-semibold border border-line bg-card text-primary hover:bg-card-hover disabled:opacity-40"
+            className="flex-shrink-0 h-[42px] flex items-center justify-center gap-1.5 px-3 rounded-xl text-sm font-semibold border border-line-strong dark:border-line-strong/60 bg-card text-primary hover:bg-card-hover disabled:opacity-40"
           >
             <GitCompare className="h-4 w-4" />
             <span className="hidden lg:inline">{t('compare')}</span>
           </button>
-          <div className="flex-shrink-0 flex items-center bg-card p-1 rounded-xl border border-line" role="radiogroup" aria-label={t('view')}>
+          <div className="flex-shrink-0 flex items-center bg-card p-1 rounded-xl border border-line-strong dark:border-line-strong/60" role="radiogroup" aria-label={t('view')}>
             {(
               [
                 ['cards', t('viewCards'), LayoutGrid],
@@ -519,7 +519,7 @@ ${link}`;
           {filteredPlayers.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted">{t('noneFound')}</p>
           ) : (
-            <div className="bg-card rounded-2xl overflow-hidden">
+            <div className="bg-card border border-line-strong dark:border-line-strong/60 rounded-2xl overflow-hidden">
               <div className="grid grid-cols-[minmax(0,1fr)_3rem_4.5rem_2.25rem] items-center gap-2 px-3 py-2 border-b border-line text-[11px] font-medium text-muted">
                 <span>{t('count', { count: filteredPlayers.length })}</span>
                 <span className="text-center">{t('role')}</span>
@@ -579,7 +579,7 @@ ${link}`;
           )}
         </div>
 
-        <div className="hidden lg:block bg-card border border-line rounded-2xl overflow-hidden animate-in fade-in duration-200">
+        <div className="hidden lg:block bg-card border border-line-strong dark:border-line-strong/60 rounded-2xl overflow-hidden animate-in fade-in duration-200">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>

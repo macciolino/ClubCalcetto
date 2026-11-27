@@ -711,8 +711,8 @@ function SquadreContent() {
                 type="button"
                 onClick={() => chooseDay(d)}
                 aria-pressed={selected}
-                className={`relative flex-shrink-0 flex flex-col items-center w-[4.5rem] py-2.5 rounded-2xl transition-colors ${
-                  selected ? 'bg-accent text-on-accent' : 'bg-card text-secondary hover:bg-card-hover'
+                className={`relative flex-shrink-0 flex flex-col items-center w-[4.5rem] py-2.5 rounded-2xl border transition-colors ${
+                  selected ? 'border-accent bg-accent text-on-accent' : 'border-line-strong dark:border-line-strong/60 bg-card text-secondary hover:bg-card-hover'
                 }`}
               >
                 {official && (
@@ -754,7 +754,7 @@ function SquadreContent() {
       </section>
 
       {/* 3. Stato della partita + un solo pulsante principale */}
-      <section className="rounded-2xl bg-card border border-line p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <section className="rounded-2xl bg-card border border-line-strong dark:border-line-strong/60 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-start gap-3 min-w-0">
           <span className="mt-0.5 flex-shrink-0">{statusIcon}</span>
           <div className="min-w-0">
@@ -945,7 +945,7 @@ function SquadreContent() {
 
       {/* Campo / modifica manuale (solo admin) */}
       {isClientAdmin && teams && !isCompleted && (
-        <div className="flex items-center gap-1 bg-card border border-line p-1 rounded-xl text-sm" role="tablist">
+        <div className="flex items-center gap-1 bg-card border border-line-strong dark:border-line-strong/60 p-1 rounded-xl text-sm" role="tablist">
           {(
             [
               ['pitch', t('tabPitch'), <Trophy key="t" className="h-4 w-4" />],
@@ -969,7 +969,7 @@ function SquadreContent() {
       )}
 
       {tab === 'manual' && manualDraft && isClientAdmin && !isCompleted ? (
-        <div className="bg-card border border-line rounded-2xl p-5 space-y-4">
+        <div className="bg-card border border-line-strong dark:border-line-strong/60 rounded-2xl p-5 space-y-4">
           <div>
             <h3 className="text-base font-semibold text-primary">{t('manualTitle')}</h3>
             <p className="text-sm text-secondary mt-0.5">{t('manualHint')}</p>
@@ -1034,7 +1034,7 @@ function SquadreContent() {
           </section>
 
           {/* 5. Confronto Bianchi / Neri */}
-          <section className="bg-card border border-line rounded-2xl p-5 space-y-5">
+          <section className="bg-card border border-line-strong dark:border-line-strong/60 rounded-2xl p-5 space-y-5">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
                 <h3 className="text-base font-semibold text-primary">{t('balance')}</h3>
@@ -1094,7 +1094,7 @@ function SquadreContent() {
         </div>
       ) : (
         /* 8. Nessuna squadra: cosa succede adesso */
-        <div className="rounded-2xl bg-card/60 border border-dashed border-line p-8 sm:p-10 text-center space-y-3">
+        <div className="rounded-2xl bg-card border border-dashed border-line-strong dark:border-line-strong/60 p-8 sm:p-10 text-center space-y-3">
           <div className="inline-flex p-3 bg-card-hover text-accent-text rounded-2xl">
             <Trophy className="h-7 w-7" />
           </div>

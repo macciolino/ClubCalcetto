@@ -62,7 +62,7 @@ export const VirtualPitch = forwardRef<HTMLDivElement, VirtualPitchProps>(
     return (
       <div
         ref={ref}
-        className="w-full max-w-lg mx-auto bg-card p-2 sm:p-4 rounded-2xl sm:rounded-3xl border border-line shadow-2xl space-y-2.5 sm:space-y-3"
+        className="w-full max-w-lg mx-auto bg-card p-2 sm:p-4 rounded-2xl sm:rounded-3xl border border-line-strong dark:border-line-strong/60 space-y-2.5 sm:space-y-3"
       >
         {/* INTESTAZIONE ESTERNA: Luogo, Ora, Costo Campo e Quota a persona */}
         {matchInfo && (

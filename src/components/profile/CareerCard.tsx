@@ -11,11 +11,11 @@ import { formatLongDate } from '@/lib/utils/dateUtils';
 import type { HistoryEntry } from '@/lib/utils/career';
 import { GlobalRadarCard } from './GlobalRadarCard';
 
-const pill = 'rounded-full bg-app px-3.5 py-1.5 text-xs text-secondary tabular-nums';
+const pill = 'rounded-full bg-app border border-line dark:border-line-strong/40 px-3.5 py-1.5 text-xs text-secondary tabular-nums';
 const chip = (on: boolean) =>
-  `shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${on ? 'bg-accent text-on-accent' : 'bg-app text-secondary hover:text-primary'}`;
+  `shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${on ? 'bg-accent text-on-accent' : 'bg-app border border-line dark:border-line-strong/40 text-secondary hover:text-primary'}`;
 const num = (v: number, cls: string) => <span className={v > 0 ? cls : 'text-muted'}>{v}</span>;
-const RESULT_TONE = { won: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300', drawn: 'bg-amber-500/15 text-warning', lost: 'bg-rose-500/10 text-danger' };
+const RESULT_TONE = { won: 'border border-emerald-500/25 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300', drawn: 'border border-amber-500/25 bg-amber-500/15 text-warning', lost: 'border border-rose-500/25 bg-rose-500/10 text-danger' };
 const PAGE = 8;
 
 /**
@@ -41,7 +41,7 @@ export function CareerCard({ profileId, showRadar = false, baseRadar }: { profil
     <>
     {/* Profile only: the global radar (Radar Base + ratings as a guest) apart from each league's own radar */}
     {showRadar && career && <GlobalRadarCard baseRadar={baseRadar} summary={career.summary} />}
-    <section aria-labelledby="career-title" className="bg-card border border-line rounded-2xl p-5 space-y-4">
+    <section aria-labelledby="career-title" className="bg-card border border-line-strong dark:border-line-strong/60 rounded-2xl p-5 space-y-4">
       <div>
         <h2 id="career-title" className="text-base font-bold text-primary flex items-center gap-2">
           <Globe2 className="h-5 w-5 text-accent-text" aria-hidden="true" /> {t('title')}
@@ -121,7 +121,7 @@ export function CareerCard({ profileId, showRadar = false, baseRadar }: { profil
 function HistoryRow({ entry: e, date }: { entry: HistoryEntry; date: string }) {
   const t = useTranslations('profile.career');
   return (
-    <li className="flex items-center justify-between gap-3 rounded-xl bg-app px-3 py-2 text-sm">
+    <li className="flex items-center justify-between gap-3 rounded-xl bg-app border border-line dark:border-line-strong/40 px-3 py-2 text-sm">
       <span className="min-w-0">
         <span className="block font-medium text-primary truncate first-letter:uppercase">{date}</span>
         <span className="flex items-center gap-1.5 text-xs text-secondary min-w-0">
@@ -135,7 +135,7 @@ function HistoryRow({ entry: e, date }: { entry: HistoryEntry; date: string }) {
           {e.mvp && <Star className="h-3.5 w-3.5 text-warning fill-amber-400" aria-label={t('mvpLabel')} />}
         </span>
       </span>
-      <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${e.result ? RESULT_TONE[e.result] : 'bg-card text-muted'}`}>
+      <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${e.result ? RESULT_TONE[e.result] : 'border border-line dark:border-line-strong/40 bg-card text-muted'}`}>
         {e.result ? t(`result.${e.result}`) : t('result.pending')}
       </span>
     </li>

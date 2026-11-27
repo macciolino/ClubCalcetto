@@ -107,7 +107,7 @@ export function PlatformFieldsCard() {
       .join(' · ');
 
   return (
-    <section className="bg-card rounded-2xl p-4 sm:p-5 space-y-4" aria-labelledby="catalog-title">
+    <section className="bg-card border border-line-strong dark:border-line-strong/60 rounded-2xl p-4 sm:p-5 space-y-4" aria-labelledby="catalog-title">
       <div>
         <h2 id="catalog-title" className="text-base font-bold text-primary flex items-center gap-2">
           <MapPin className="h-5 w-5 text-accent-text" aria-hidden="true" /> {t('title')}
@@ -122,7 +122,7 @@ export function PlatformFieldsCard() {
           {pending.map((c) => {
             const twins = approved.filter((a) => looksLikeSameField(a, c));
             return (
-              <li key={c.id} className="rounded-xl bg-app/50 p-3.5 space-y-3">
+              <li key={c.id} className="rounded-xl bg-app/50 border border-line dark:border-line-strong/40 p-3.5 space-y-3">
                 <div className="space-y-0.5">
                   <p className="text-sm font-semibold text-primary">{c.name}</p>
                   <p className="text-xs text-secondary">{c.address}</p>
@@ -186,7 +186,7 @@ export function PlatformFieldsCard() {
           <ChevronDown className={`h-4 w-4 transition-transform ${showApproved ? 'rotate-180' : ''}`} aria-hidden="true" />
         </button>
         {showApproved && (
-          <ul className="divide-y divide-line rounded-xl bg-app/50">
+          <ul className="divide-y divide-line rounded-xl bg-app/50 border border-line dark:border-line-strong/40">
             {approved.map((c) => (
               <li key={c.id} className="flex items-start gap-3 px-3.5 py-3">
                 <div className="min-w-0 flex-1">

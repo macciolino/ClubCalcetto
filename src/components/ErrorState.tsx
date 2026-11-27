@@ -24,7 +24,7 @@ export function ErrorState({
   const Icon = kind === 'error' ? AlertCircle : SearchX;
   return (
     <div className="max-w-md mx-auto py-16 text-center space-y-5" role={kind === 'error' ? 'alert' : undefined}>
-      <span className="mx-auto h-14 w-14 rounded-2xl bg-card flex items-center justify-center">
+      <span className="mx-auto h-14 w-14 rounded-2xl bg-card border border-line-strong dark:border-line-strong/60 flex items-center justify-center">
         <Icon className={`h-7 w-7 ${kind === 'error' ? 'text-danger' : 'text-accent-text'}`} />
       </span>
       <div className="space-y-2">

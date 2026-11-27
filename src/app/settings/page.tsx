@@ -198,7 +198,7 @@ function SettingsContent() {
       {groups.map((g) => (
         <section key={g.title} className="space-y-1.5" aria-label={groupTitle(g.title)}>
           <h2 className="px-1 text-xs font-semibold text-muted truncate">{groupTitle(g.title)}</h2>
-          <div className="bg-card rounded-2xl overflow-hidden divide-y divide-line">
+          <div className="bg-card border border-line-strong dark:border-line-strong/60 rounded-2xl overflow-hidden divide-y divide-line">
             {g.items.map((s) => (
               <div key={s.id}>{row(s, withValue)}</div>
             ))}

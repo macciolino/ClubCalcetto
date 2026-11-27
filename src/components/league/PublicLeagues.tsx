@@ -58,11 +58,11 @@ export function PublicLeagues() {
           <Skeleton className="h-32 rounded-2xl" />
         </div>
       ) : leagues === 'error' ? (
-        <p role="alert" className="rounded-2xl border border-line bg-card px-4 py-5 text-sm text-secondary">
+        <p role="alert" className="rounded-2xl border border-line-strong dark:border-line-strong/60 bg-card px-4 py-5 text-sm text-secondary">
           {t('failed')}
         </p>
       ) : leagues.length === 0 ? (
-        <p className="rounded-2xl border border-line bg-card px-4 py-5 text-sm text-secondary">{t('empty')}</p>
+        <p className="rounded-2xl border border-line-strong dark:border-line-strong/60 bg-card px-4 py-5 text-sm text-secondary">{t('empty')}</p>
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2">
           {leagues.map((l) => {
@@ -75,7 +75,7 @@ export function PublicLeagues() {
                   onClick={() => join(l)}
                   disabled={Boolean(busy)}
                   aria-label={t('cardLabel', { name: l.name, format, ovr, players: t('players', { count: l.players }), matches: t('matches', { count: l.matches }) })}
-                  className="w-full text-left space-y-3 rounded-2xl border border-line bg-card p-4 transition-colors hover:border-line-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
+                  className="w-full text-left space-y-3 rounded-2xl border border-line-strong dark:border-line-strong/60 bg-card p-4 transition-colors hover:border-line-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
                 >
                   <span className="flex items-start justify-between gap-3">
                     <span className="min-w-0 text-base font-bold text-primary break-words">{l.name}</span>

@@ -160,7 +160,7 @@ export function PresenceCard({
   return (
     <div
       className={`relative flex flex-col bg-card border rounded-2xl p-5 transition-colors ${
-        day.isToday ? 'border-accent/50' : 'border-line'
+        day.isToday ? 'border-accent/50' : 'border-line-strong dark:border-line-strong/60'
       }`}
     >
       {/* Giorno */}
@@ -350,7 +350,7 @@ export function PresenceCard({
         <div className="mt-4 pt-4 border-t border-line space-y-3">
           <p className="text-xs font-semibold text-secondary">{t('adminHint')}</p>
           {enriched.length === 0 && <p className="text-xs text-muted">{t('noneSigned')}</p>}
-          <ul className="divide-y divide-line rounded-xl bg-app/50">
+          <ul className="divide-y divide-line rounded-xl bg-app/50 border border-line dark:border-line-strong/40">
             {enriched.map((p, i) => {
               const isStarter = p.status === 'confirmed';
               return (
@@ -429,7 +429,7 @@ export function PresenceCard({
                   onSetOverride(actionTarget.id, actionTarget.status === 'confirmed' ? 'waitlist' : 'starter');
                   setActionsFor(null);
                 }}
-                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-app/60 hover:bg-card-hover text-sm font-medium text-primary"
+                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-app/60 border border-line dark:border-line-strong/40 hover:bg-card-hover text-sm font-medium text-primary"
               >
                 {actionTarget.status === 'confirmed' ? (
                   <>
@@ -450,7 +450,7 @@ export function PresenceCard({
                   setActionsFor(null);
                   if (await askConfirm(t('confirmRemove', { name: target.name, day: dayText }))) onRemovePresence(target.id);
                 }}
-                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-app/60 hover:bg-card-hover text-sm font-medium text-danger"
+                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-app/60 border border-line dark:border-line-strong/40 hover:bg-card-hover text-sm font-medium text-danger"
               >
                 <UserX className="h-4 w-4" /> {t('removeFromDay')}
               </button>

@@ -119,7 +119,7 @@ function StatReviewCard({ player, categories, reviewerId }: { player: Profile; c
   };
 
   return (
-    <li className="rounded-2xl bg-app/50 p-4 space-y-3">
+    <li className="rounded-2xl bg-app/50 border border-line dark:border-line-strong/40 p-4 space-y-3">
       <button type="button" onClick={() => setOpen((o) => !o)} className="w-full flex items-center gap-3 text-left" aria-expanded={open}>
         <Avatar name={player.full_name} photo={player.avatar_url} />
         <span className="flex-1 min-w-0">
@@ -347,7 +347,7 @@ export function RequestsBell() {
         {ranked.length === 0 ? (
           <p className="text-sm text-muted">{tr('noGuests')}</p>
         ) : (
-          <ul className="rounded-xl bg-app/50 divide-y divide-line max-h-64 overflow-y-auto">
+          <ul className="rounded-xl bg-app/50 border border-line dark:border-line-strong/40 divide-y divide-line max-h-64 overflow-y-auto">
             {ranked.map(({ g, score }, i) => (
               <li key={g.id} className="flex items-center gap-3 px-3.5 py-2.5">
                 <Avatar name={g.full_name} photo={g.avatar_url} />
@@ -628,7 +628,7 @@ export function RequestsBell() {
                 const m = META[r.type];
                 const Icon = m.icon;
                 return (
-                  <li key={r.id} className="rounded-2xl bg-app/50 p-4 space-y-3">
+                  <li key={r.id} className="rounded-2xl bg-app/50 border border-line dark:border-line-strong/40 p-4 space-y-3">
                     <div className="flex items-start gap-3">
                       <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ${m.tone}`}>
                         <Icon className="h-[18px] w-[18px]" />
@@ -690,7 +690,7 @@ export function RequestsBell() {
               )
             ) : (
               <ul
-                className={`rounded-2xl bg-app/50 divide-y divide-line ${
+                className={`rounded-2xl bg-app/50 border border-line dark:border-line-strong/40 divide-y divide-line ${
                   inbox.length > 10 ? 'max-h-[min(60vh,34rem)] overflow-y-auto overscroll-contain' : 'overflow-hidden'
                 }`}
                 aria-label={tb('listAria', { count: inbox.length })}

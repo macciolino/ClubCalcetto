@@ -59,7 +59,7 @@ export function SettingsBlock({
   children: React.ReactNode;
 }) {
   return (
-    <section className="bg-card rounded-2xl p-4 sm:p-5 space-y-4">
+    <section className="bg-card border border-line-strong dark:border-line-strong/60 rounded-2xl p-4 sm:p-5 space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-base font-semibold text-primary">{title}</h3>
@@ -201,7 +201,7 @@ export function TabClubConfigFields({
             {fields.length === 0 ? (
               <p className="text-sm text-muted">{t('noFields')}</p>
             ) : (
-              <ul className="divide-y divide-line rounded-xl bg-app/50">
+              <ul className="divide-y divide-line rounded-xl bg-app/50 border border-line dark:border-line-strong/40">
                 {fields.map((field) => {
                   const isDefault = defaultFieldId === field.id;
                   return (

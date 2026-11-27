@@ -46,7 +46,7 @@ export function PlatformAdminsCard() {
   };
 
   return (
-    <section aria-labelledby="platform-staff" className="bg-card rounded-2xl p-4 sm:p-5 space-y-4">
+    <section aria-labelledby="platform-staff" className="bg-card border border-line-strong dark:border-line-strong/60 rounded-2xl p-4 sm:p-5 space-y-4">
       <div className="space-y-1">
         <h2 id="platform-staff" className="text-base font-bold text-primary">{t('title')}</h2>
         <p className="text-sm text-secondary">{t('intro')}</p>

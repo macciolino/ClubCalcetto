@@ -98,7 +98,7 @@ export function MvpVoteCard({ date, matchTime, white, black, voterUid, isAdmin =
   const opensLabel = when(opensAt);
 
   return (
-    <section className="bg-card border border-line rounded-2xl p-5 space-y-4" aria-labelledby="mvp-vote-title">
+    <section className="bg-card border border-line-strong dark:border-line-strong/60 rounded-2xl p-5 space-y-4" aria-labelledby="mvp-vote-title">
       <div className="flex items-center justify-between gap-2 border-b border-line pb-3">
         <h3 id="mvp-vote-title" className="text-sm font-bold text-primary flex items-center gap-2">
           <Star className="h-4 w-4 text-warning" /> {t('title')}

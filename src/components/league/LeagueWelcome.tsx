@@ -61,7 +61,7 @@ export function LeagueWelcome() {
 
         <PublicLeagues />
 
-        <section aria-labelledby="welcome-title" className="w-full rounded-2xl border border-line bg-card p-5 sm:p-6 space-y-4 text-center">
+        <section aria-labelledby="welcome-title" className="w-full rounded-2xl border border-line-strong dark:border-line-strong/60 bg-card p-5 sm:p-6 space-y-4 text-center">
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
             <button type="button" onClick={() => setCreating(true)} className={btn.primary}>
               <Plus className="h-4 w-4" aria-hidden="true" /> {t('create')}

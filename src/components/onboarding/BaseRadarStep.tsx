@@ -33,7 +33,7 @@ export function BaseRadarStep() {
   };
 
   return (
-    <section aria-labelledby="radar-title" className="mx-auto w-full max-w-xl rounded-2xl border border-line bg-card p-5 sm:p-7 space-y-5">
+    <section aria-labelledby="radar-title" className="mx-auto w-full max-w-xl rounded-2xl border border-line-strong dark:border-line-strong/60 bg-card p-5 sm:p-7 space-y-5">
       <header className="space-y-1.5">
         <h1 id="radar-title" className="text-2xl font-black text-primary">
           {t('title')}

@@ -243,7 +243,7 @@ export default function HistoryPage() {
                 setPickedDate(null);
               }}
               aria-label={t('season')}
-              className="bg-card border border-line rounded-full pl-3.5 pr-8 py-2 text-sm text-primary focus:outline-none focus:border-accent"
+              className="bg-card border border-line-strong dark:border-line-strong/60 rounded-full pl-3.5 pr-8 py-2 text-sm text-primary focus:outline-none focus:border-accent"
             >
               <option value="all">{t('allSeasons')}</option>
               {seasons.map((y) => (
@@ -298,12 +298,12 @@ export default function HistoryPage() {
               [leaderboard.length, t('chipPlayers', { count: leaderboard.length })],
             ] as const
           ).map(([v, label]) => (
-            <span key={label} className="flex-shrink-0 rounded-full bg-card px-3.5 py-1.5 text-sm text-secondary whitespace-nowrap">
+            <span key={label} className="flex-shrink-0 rounded-full border border-line-strong dark:border-line-strong/60 bg-card px-3.5 py-1.5 text-sm text-secondary whitespace-nowrap">
               <span className="font-semibold text-primary tabular-nums">{v}</span> {label}
             </span>
           ))}
         </div>
-        <div className="flex items-center bg-card p-1 rounded-full border border-line text-sm self-stretch sm:self-auto" role="radiogroup" aria-label={t('view')}>
+        <div className="flex items-center bg-card p-1 rounded-full border border-line-strong dark:border-line-strong/60 text-sm self-stretch sm:self-auto" role="radiogroup" aria-label={t('view')}>
           {(
             [
               ['leaderboard', t('leaderboard'), ListOrdered],
@@ -332,7 +332,7 @@ export default function HistoryPage() {
           <Skeleton className="h-64 w-full rounded-2xl" />
         </div>
       ) : visibleMatches.length === 0 ? (
-        <div className="rounded-2xl bg-card/60 p-8 text-center space-y-2">
+        <div className="rounded-2xl border border-line-strong dark:border-line-strong/60 bg-card p-8 text-center space-y-2">
           <Trophy className="h-8 w-8 text-muted mx-auto" />
           <p className="text-sm text-secondary font-semibold">{t('emptyTitle')}</p>
           <p className="text-sm text-muted">{t('emptyText')}</p>
@@ -350,7 +350,7 @@ export default function HistoryPage() {
                   setSortDir('desc');
                 }}
                 aria-label={t('sortBy')}
-                className="bg-card border border-line rounded-xl px-2.5 py-2 text-sm text-primary focus:outline-none focus:border-accent"
+                className="bg-card border border-line-strong dark:border-line-strong/60 rounded-xl px-2.5 py-2 text-sm text-primary focus:outline-none focus:border-accent"
               >
                 <option value="won">{t('sortWon')}</option>
                 <option value="goals">{t('sortGoals')}</option>
@@ -360,7 +360,7 @@ export default function HistoryPage() {
                 <option value="lost">{t('sortLost')}</option>
               </select>
             </div>
-            <ul className="bg-card rounded-2xl divide-y divide-line overflow-hidden">
+            <ul className="bg-card border border-line-strong dark:border-line-strong/60 rounded-2xl divide-y divide-line overflow-hidden">
               {leaderboard.map((l, idx) => (
                 <li key={l.id}>
                   <button
@@ -394,7 +394,7 @@ export default function HistoryPage() {
           </div>
 
           {/* PC: tabella pulita, intestazioni ordinabili */}
-          <div className="hidden lg:block bg-card rounded-2xl overflow-hidden">
+          <div className="hidden lg:block bg-card border border-line-strong dark:border-line-strong/60 rounded-2xl overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-xs text-secondary border-b border-line">
@@ -457,7 +457,7 @@ export default function HistoryPage() {
             onSelect={setPickedDate}
             maxYear={visibleYear}
           />
-          <ul className="bg-card rounded-2xl divide-y divide-line overflow-hidden">
+          <ul className="bg-card border border-line-strong dark:border-line-strong/60 rounded-2xl divide-y divide-line overflow-hidden">
             {visibleMatches
               .filter((m) => !pickedDate || (m.match_date || m.id) === pickedDate)
               .sort((a, b) => (b.match_date || b.id).localeCompare(a.match_date || a.id))

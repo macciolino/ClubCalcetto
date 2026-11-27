@@ -32,7 +32,7 @@ export function EmailPrivacyCard() {
   };
 
   return (
-    <div className="bg-card p-4 sm:p-5 rounded-2xl space-y-3">
+    <div className="bg-card border border-line-strong dark:border-line-strong/60 p-4 sm:p-5 rounded-2xl space-y-3">
       <div>
         <h2 className="text-sm font-bold text-primary flex items-center gap-2">
           <Lock className="h-5 w-5 text-accent-text" /> {t('title')}

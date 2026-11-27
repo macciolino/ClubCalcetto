@@ -93,7 +93,7 @@ export function FieldCatalogSheet({
         )}
 
         {shown.length > 0 && (
-          <ul className="divide-y divide-line rounded-xl bg-app/50" aria-label={t('listLabel')}>
+          <ul className="divide-y divide-line rounded-xl bg-app/50 border border-line dark:border-line-strong/40" aria-label={t('listLabel')}>
             {shown.map((c) => {
               const inLeague = linked.has(c.id);
               return (
@@ -181,7 +181,7 @@ export function SimilarFieldsSheet({
         </>
       }
     >
-      <ul className="divide-y divide-line rounded-xl bg-app/50">
+      <ul className="divide-y divide-line rounded-xl bg-app/50 border border-line dark:border-line-strong/40">
         {similar.map((c) => (
           <li key={c.id} className="flex items-start gap-3 px-3.5 py-3">
             <div className="min-w-0 flex-1">

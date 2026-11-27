@@ -15,7 +15,7 @@ export function AccountSettings() {
   const isSuper = Boolean(user?.emailVerified && isSuperAdminEmail(user?.email));
   return (
     <div className="space-y-4">
-      <section className="bg-card rounded-2xl p-4 sm:p-5 space-y-4">
+      <section className="bg-card border border-line-strong dark:border-line-strong/60 rounded-2xl p-4 sm:p-5 space-y-4">
         <div>
           <h3 className="text-base font-semibold text-primary">{t('access')}</h3>
           <p className="text-sm text-secondary mt-0.5">

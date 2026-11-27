@@ -126,7 +126,7 @@ export function FeedbackHost() {
             role="alertdialog"
             aria-modal="true"
             aria-describedby="confirm-message"
-            className="w-full lg:max-w-sm bg-card border border-line border-b-0 lg:border-b rounded-t-3xl lg:rounded-2xl px-5 pt-2 lg:pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] lg:pb-5 space-y-5 shadow-2xl sheet-panel"
+            className="w-full lg:max-w-sm bg-card border border-line-strong dark:border-line-strong/60 border-b-0 lg:border-b rounded-t-3xl lg:rounded-2xl px-5 pt-2 lg:pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] lg:pb-5 space-y-5 shadow-2xl sheet-panel"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="lg:hidden mx-auto h-1.5 w-10 rounded-full bg-line-strong" aria-hidden="true" />

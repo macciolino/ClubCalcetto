@@ -77,7 +77,7 @@ export function PlayerCompare({ players, categories, initialA, onClose }: Player
         </div>
 
         {/* Valori a confronto */}
-        <ul className="space-y-1.5 text-sm rounded-xl bg-app/50 p-3">
+        <ul className="space-y-1.5 text-sm rounded-xl bg-app/50 border border-line dark:border-line-strong/40 p-3">
           {categories.map((c) => {
             const va = sa[c.name];
             const vb = sb[c.name];

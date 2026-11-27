@@ -156,8 +156,9 @@ description: ClubCalcetto UI conventions - theme, shared components (tables, dro
 - Surfaces (2026-11-27, Bacheca): every card, section block, list row and empty state has a 1px soft edge, from
   `src/components/ui/surfaces.ts` (`surface.card / row / rowButton / inset / pill / control`), tokens only: light `border-line-strong`,
   dark the same at 60%. Reason: white `bg-card` on `bg-app` has no contrast in the light theme. No shadows. Small blocks inside a card
-  (pills, notes) use the lighter `line` edge. Do not write `bg-card rounded-2xl` by hand on new screens. Older lists of items
-  (player cards, list rows on /players) keep their borderless style until they are moved to `surface.*` (same rule applies).
+  (pills, notes) use the lighter `line` edge. Applied everywhere on 2026-11-27 (all pages and cards, also player cards and lists);
+  `tests/unit/surfaces.test.ts` fails if a `bg-card rounded-2xl` block has no border. New screens: use `surface.*`, or the same
+  classes (`border border-line-strong dark:border-line-strong/60`) when a plain string is simpler.
   Details open in a `Sheet`, never inline (no grid holes).
 - Numbers in tables/lists: normal font with `tabular-nums` (no monospace); zero values in `text-slate-600`, colour only
   for real values (won emerald-400, drawn amber-400, lost red-400). Rare destructive bulk actions live in a "⋯" menu,
