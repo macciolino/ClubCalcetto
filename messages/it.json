@@ -1553,6 +1553,12 @@
   },
   "league": {
     "switcherLabel": "Lega attiva: {name}. Cambia lega",
+    "visibility": {
+      "public": "Pubblica",
+      "private": "Privata",
+      "publicHint": "Lega pubblica: chi non ha una lega la trova all’ingresso e può entrare subito.",
+      "privateHint": "Lega privata: si entra solo con il link di invito."
+    },
     "yourLeagues": "Le tue leghe",
     "current": "Attiva",
     "createNew": "Crea nuova lega",

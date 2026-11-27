@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Check, ChevronDown, Plus, Shield } from 'lucide-react';
+import { Check, ChevronDown, Globe, Lock, Plus, Shield } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Sheet } from '@/components/ui/Sheet';
 import { menu } from '@/components/ui/buttons';
@@ -33,12 +33,33 @@ export function LeagueRoleBadge({ role, platform }: { role: LeagueRole | null; p
 }
 
 /**
+ * Public or private: who can find the league. Public = on the welcome screen of everyone with no league, they join
+ * directly; private = only with the invite link. An icon in the header (the word too from sm), the full sentence as hint.
+ */
+export function LeagueVisibilityBadge({ visibility, compact = false }: { visibility: 'public' | 'private' | null; compact?: boolean }) {
+  const t = useTranslations('league.visibility');
+  if (!visibility) return null;
+  const Icon = visibility === 'public' ? Globe : Lock;
+  const tone = visibility === 'public' ? 'text-accent-text border-accent/30 bg-accent/10' : 'text-secondary border-line-strong bg-card-hover';
+  return (
+    <span
+      title={t(`${visibility}Hint`)}
+      aria-label={t(visibility)}
+      className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide whitespace-nowrap ${tone}`}
+    >
+      <Icon className="h-3 w-3" aria-hidden="true" />
+      {!compact && <span className="hidden sm:inline">{t(visibility)}</span>}
+    </span>
+  );
+}
+
+/**
  * Multi-league step 2: active league next to the logo ("I Calcettari" + role). Tap = list of the user's leagues
  * (bottom sheet on phone and tablet, popover on desktop ≥ 1024px) + "Crea nuova lega".
  */
 export function LeagueSwitcher() {
   const t = useTranslations('league');
-  const { leagues, activeLeagueId, setActiveLeague, leagueRole, isSuperAdmin, isPlatformStaff } = useActiveLeague();
+  const { leagues, activeLeagueId, setActiveLeague, leagueRole, isSuperAdmin, isPlatformStaff, activeVisibility } = useActiveLeague();
   const staffRole = isSuperAdmin ? 'SUPER_ADMIN' : isPlatformStaff ? 'GLOBAL_ADMIN' : null;
   const [open, setOpen] = useState<'popover' | 'sheet' | null>(null);
   const [creating, setCreating] = useState(false);
@@ -100,10 +121,11 @@ export function LeagueSwitcher() {
         onClick={toggle}
         aria-haspopup="menu"
         aria-expanded={open !== null}
-        aria-label={t('switcherLabel', { name: active.name })}
-        className="flex items-center gap-1.5 min-w-0 max-w-[11rem] sm:max-w-[16rem] rounded-full border border-line-strong bg-card/60 pl-3 pr-2 py-1 hover:bg-card-hover transition-colors"
+        aria-label={`${t('switcherLabel', { name: active.name })}${activeVisibility ? ` (${t(`visibility.${activeVisibility}`)})` : ''}`}
+        className="flex items-center gap-1.5 min-w-0 max-w-[13rem] sm:max-w-[22rem] rounded-full border border-line-strong bg-card/60 pl-3 pr-2 py-1 hover:bg-card-hover transition-colors"
       >
         <span className="truncate text-sm font-semibold text-primary">{active.name}</span>
+        <LeagueVisibilityBadge visibility={activeVisibility} />
         <span className="hidden sm:inline-flex">
           <LeagueRoleBadge role={leagueRole} platform={staffRole} />
         </span>

@@ -13,6 +13,11 @@ test.describe('Leghe', () => {
     const switcher = page.getByRole('button', { name: /Lega attiva: I Calcettari/ });
     await expect(switcher).toBeVisible();
     await expect(switcher).toContainText('Presidente');
+    // pubblica o privata, accanto al nome (sul telefono solo l'icona, con il nome per i lettori di schermo)
+    await expect(page.getByRole('button', { name: /Lega attiva: I Calcettari.*\(Privata\)/ })).toBeVisible({ timeout: 15_000 });
+    await expect(switcher.getByLabel('Privata')).toBeVisible();
+    await db.doc('leagues/calcettari').update({ visibility: 'public' });
+    await expect(switcher.getByLabel('Pubblica')).toBeVisible({ timeout: 15_000 });
     await switcher.click();
     const sheet = page.getByRole('dialog');
     await expect(sheet.getByRole('menuitemradio', { name: /I Calcettari/ })).toHaveAttribute('aria-checked', 'true');

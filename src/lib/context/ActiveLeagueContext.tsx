@@ -74,6 +74,8 @@ interface ActiveLeagueValue {
   isPlatformStaff: boolean;
   /** Step 4: the platform super admin suspended the active league (read-only) */
   isSuspended: boolean;
+  /** Visibility of the active league (public = on the welcome screen of everyone with no league), null while loading */
+  activeVisibility: 'public' | 'private' | null;
   isLoading: boolean;
   /** Signed in, the account's leagues are still loading: the active league is not known yet */
   isResolving: boolean;
@@ -169,7 +171,7 @@ export function ActiveLeagueProvider({
 
   // Status of the active league (suspended = read-only banner). Suspended while it is open → another league if
   // there is one (it stays readable from the switcher), otherwise it stays here read-only with the banner.
-  const [status, setStatus] = useState<{ id: string; suspended: boolean } | null>(null);
+  const [status, setStatus] = useState<{ id: string; suspended: boolean; visibility: 'public' | 'private' } | null>(null);
   const tf = useTranslations('league.fallback');
   const leaguesNow = useRef(leagues);
   useEffect(() => {
@@ -182,7 +184,7 @@ export function ActiveLeagueProvider({
       doc(db, 'leagues', activeLeagueId),
       (snap) => {
         const suspended = snap.data()?.status === 'suspended';
-        setStatus({ id: activeLeagueId, suspended });
+        setStatus({ id: activeLeagueId, suspended, visibility: snap.data()?.visibility === 'public' ? 'public' : 'private' });
         const justSuspended = wasSuspended === false && suspended;
         wasSuspended = suspended;
         // Platform staff keep working on a suspended league (they can still write there)
@@ -202,6 +204,7 @@ export function ActiveLeagueProvider({
     );
   }, [activeLeagueId, tf, isPlatformStaff]);
   const isSuspended = Boolean(status && status.id === activeLeagueId && status.suspended);
+  const activeVisibility = status && status.id === activeLeagueId ? status.visibility : null;
 
   // Fallback (no blank pages, no loops of permission errors): the active league disappears from the memberships
   // (taken out of it, or the league was deleted) → the next league, or the welcome screen if none is left.
@@ -251,11 +254,12 @@ export function ActiveLeagueProvider({
       isSuperAdmin,
       isPlatformStaff,
       isSuspended,
+      activeVisibility,
       isLoading: !membershipsReady || !cardReady,
       isResolving: Boolean(uid) && !membershipsReady,
       hasNoLeague: Boolean(uid) && accountReady && membershipsReady && leagues.length === 0,
     }),
-    [leagues, activeLeagueId, setActiveLeague, member, leagueRole, presides, manages, isSuperAdmin, isPlatformStaff, isSuspended, membershipsReady, cardReady, uid, accountReady]
+    [leagues, activeLeagueId, setActiveLeague, member, leagueRole, presides, manages, isSuperAdmin, isPlatformStaff, isSuspended, activeVisibility, membershipsReady, cardReady, uid, accountReady]
   );
 
   return (

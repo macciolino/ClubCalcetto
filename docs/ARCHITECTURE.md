@@ -320,6 +320,8 @@ La colonna **Staff** vale per `SUPER_ADMIN` e `GLOBAL_ADMIN`, salvo dove è indi
 - I parametri dei giocatori sono numeri interi da **1 a 10**: anche il valore iniziale di un nuovo parametro viene riportato in quella scala (`clampStatValue`), con il clic e con Invio nel campo.
 - `visibility` (`private`/`public`): una lega **pubblica** attiva compare nella schermata di benvenuto di chi non ha leghe e
   ci si entra **direttamente**, senza invito né approvazione (l'ha scelto il presidente). Una privata si apre solo con l'invito.
+  Nell'intestazione, accanto al nome della lega attiva, un'etichetta dice se è **Pubblica** (globo) o **Privata** (lucchetto):
+  sul telefono solo l'icona, con il testo completo come suggerimento e per i lettori di schermo ([LeagueSwitcher.tsx](../src/components/league/LeagueSwitcher.tsx)).
 
 **Leghe pubbliche** ([publicLeagues.ts](../src/lib/server/publicLeagues.ts), `GET/POST /api/leagues/public`)
 - `GET`: le leghe `public` e `active` di cui l'account non fa già parte (accesso con email verificata). Per ogni lega: nome,

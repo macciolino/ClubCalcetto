@@ -1553,6 +1553,12 @@
   },
   "league": {
     "switcherLabel": "Active league: {name}. Change league",
+    "visibility": {
+      "public": "Public",
+      "private": "Private",
+      "publicHint": "Public league: whoever has no league finds it on the welcome screen and can join at once.",
+      "privateHint": "Private league: you join only with the invite link."
+    },
     "yourLeagues": "Your leagues",
     "current": "Active",
     "createNew": "Create new league",
