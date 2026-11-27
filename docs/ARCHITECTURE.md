@@ -328,6 +328,14 @@ La colonna **Staff** vale per `SUPER_ADMIN` e `GLOBAL_ADMIN`, salvo dove è indi
   **formato prevalente** (il più frequente tra le partite archiviate, dal formato salvato o dai giocatori in campo; senza
   partite il `defaultFormat`), **OVR medio** dei giocatori che giocano (`null` sotto i 6 giocatori: "Nuova lega"), numero di
   giocatori e di partite giocate. Cache di 5 minuti sul server (costa una lettura per scheda e partita); massimo 30 leghe.
+- **Dove si vedono** ([PublicLeagues.tsx](../src/components/league/PublicLeagues.tsx)):
+  - **pagina `/leagues`** (aperta con e senza lega): tutte le leghe pubbliche attive di cui non si fa parte, con la **barra
+    di ricerca** in alto (per nome, maiuscole e accenti non contano) e "Entra" su ognuna (conferma, poi si apre la lega).
+    Senza leghe: "Non ci sono leghe pubbliche in questo momento.";
+  - **ingresso senza lega**: in alto, le prime 4 e "Vedi tutte e cerca →";
+  - **Home di chi è in una lega**: una card breve ("N leghe aperte a tutti", "Vedi le leghe pubbliche →") **in fondo alla
+    colonna laterale**, mai sopra la partita della lega: sul telefono è l'ultimo blocco della pagina, sul PC sta accanto
+    alla partita sotto "Il tuo rendimento" e "Cerco giocatore".
 - `POST { leagueId }`: entra con una scheda nuova (Radar Base, `UNCONFIRMED`) e avvisa i gestori ("Nuovo giocatore in lega · Valori da revisionare", punto 7).
   Una lega privata, sospesa o inesistente risponde sempre 404 `not_public`. Il server legge le leghe, non le regole: un non
   membro continua a non poterle leggere dall'app.

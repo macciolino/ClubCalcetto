@@ -215,7 +215,7 @@ export function AddMatchSheet({ profiles, archivedDates, closedBy, onClose }: Pr
 
       <section className="space-y-2">
         <h3 className="text-xs font-bold text-secondary">{t('teams')}</h3>
-        <div className="grid gap-3 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           {team('white')}
           {team('black')}
         </div>

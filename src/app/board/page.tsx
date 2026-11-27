@@ -266,7 +266,7 @@ export default function BoardPage() {
         )}
 
         {open === null ? (
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <Skeleton className="h-56 rounded-2xl" />
             <Skeleton className="h-56 rounded-2xl" />
           </div>
@@ -284,7 +284,7 @@ export default function BoardPage() {
             )}
           </div>
         ) : (
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {shown.map((n) => (
               <NoticeCard
                 key={n.id}

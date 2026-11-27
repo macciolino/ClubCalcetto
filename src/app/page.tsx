@@ -27,6 +27,7 @@ import { useLocaleSetting } from '@/i18n/I18nProvider';
 import { effectiveMatchTime, matchCostFor, matchPlace, mvpVotingWindow } from '@/lib/utils/matchUtils';
 import { MatchPlaceInfo } from '@/components/home/MatchPlaceInfo';
 import { LastMatchCard } from '@/components/home/LastMatchCard';
+import { PublicLeaguesHomeCard } from '@/components/league/PublicLeagues';
 import { useDayFormat } from '@/lib/hooks/useMatchFormats';
 import { perHead } from '@/lib/utils/matchFormat';
 import { computeMatchStats } from '@/lib/utils/statUtils';
@@ -458,6 +459,8 @@ export default function HomePage() {
 
         {/* Bacheca "Cerco giocatore": solo quando altre leghe cercano giocatori */}
         <BoardHomeCard leagueId={activeLeagueId} />
+        {/* Leghe pubbliche: mai sopra la partita della lega. Telefono: in fondo alla pagina; PC: in fondo alla colonna laterale */}
+        <PublicLeaguesHomeCard />
       </aside>
       </div>
     </div>

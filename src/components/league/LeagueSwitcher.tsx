@@ -122,7 +122,7 @@ export function LeagueSwitcher() {
         aria-haspopup="menu"
         aria-expanded={open !== null}
         aria-label={`${t('switcherLabel', { name: active.name })}${activeVisibility ? ` (${t(`visibility.${activeVisibility}`)})` : ''}`}
-        className="flex items-center gap-1.5 min-w-0 max-w-[13rem] sm:max-w-[22rem] rounded-full border border-line-strong bg-card/60 pl-3 pr-2 py-1 hover:bg-card-hover transition-colors"
+        className="flex items-center gap-1.5 min-w-0 max-w-[7.75rem] min-[360px]:max-w-[9.5rem] min-[400px]:max-w-[12.5rem] sm:max-w-[22rem] rounded-full border border-line-strong bg-card/60 pl-3 pr-2 py-1 hover:bg-card-hover transition-colors"
       >
         <span className="truncate text-sm font-semibold text-primary">{active.name}</span>
         <LeagueVisibilityBadge visibility={activeVisibility} />

@@ -225,9 +225,9 @@ export default function HistoryPage() {
   return (
     <div className="space-y-5 pb-12">
       {/* Titolo + stagione (e menu admin) sulla stessa riga */}
-      <header className="flex items-center justify-between gap-3 min-h-[2.5rem]">
+      <header className="flex items-center justify-between gap-3 min-h-[2.5rem] min-w-0">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-primary">{t('title')}</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           {/* Partita passata mai archiviata (dimenticata o segnata su carta): gestori e staff, lega non sospesa */}
           {canAddMatch && (
             <button type="button" onClick={() => setAdding(true)} className={`${btnInline.secondary} !px-3 !py-2`} aria-label={t('addMatch')}>
@@ -243,7 +243,7 @@ export default function HistoryPage() {
                 setPickedDate(null);
               }}
               aria-label={t('season')}
-              className="bg-card border border-line-strong dark:border-line-strong/60 rounded-full pl-3.5 pr-8 py-2 text-sm text-primary focus:outline-none focus:border-accent"
+              className="min-w-0 max-w-[9.5rem] sm:max-w-none truncate bg-card border border-line-strong dark:border-line-strong/60 rounded-full pl-3.5 pr-8 py-2 text-sm text-primary focus:outline-none focus:border-accent"
             >
               <option value="all">{t('allSeasons')}</option>
               {seasons.map((y) => (

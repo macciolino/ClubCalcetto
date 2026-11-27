@@ -107,7 +107,7 @@ export function NoticeCard({
   const left = Math.max(0, notice.spotsNeeded - notice.spotsFilled);
 
   return (
-    <article className={`flex flex-col ${surface.card} p-5 gap-3 animate-in`} aria-labelledby={`notice-${notice.id}`}>
+    <article className={`min-w-0 flex flex-col ${surface.card} p-5 gap-3 animate-in`} aria-labelledby={`notice-${notice.id}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-medium text-secondary truncate">{notice.leagueName}</p>

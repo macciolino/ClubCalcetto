@@ -80,7 +80,7 @@ export function ExternalMvpSheet({ spot, onClose }: { spot: MySpot; onClose: () 
               <Star className="h-4 w-4 text-warning" aria-hidden="true" /> {t('score', { white: view.score.white, black: view.score.black })}
             </p>
           )}
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {team(t('white'), view.teams.white)}
             {team(t('black'), view.teams.black)}
           </div>
