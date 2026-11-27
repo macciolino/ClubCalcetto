@@ -6,11 +6,12 @@ import { cleanBaseRadar } from '@/lib/utils/baseRadar';
 export const runtime = 'nodejs';
 
 /**
- * POST { radar } — a NEW account sets its Radar Base (self-assessment) once, right after signing up and before any league:
- * an integer 1–10 for every base parameter (the app starts them all at 6). Saved on the global profile
- * (`baseRadar`); `base_radar_pending` is cleared. It is the starting point of every league card the person joins, where
- * the values stay UNCONFIRMED until a president or collaborator approves them. Only while `base_radar_pending` is true
- * (set by the server at sign-up); clients cannot write these fields themselves (rules).
+ * POST { radar } — the person sets their Radar Base (self-assessment): right after signing up and before any league (the step
+ * of a NEW account) and later, whenever they want, from "Il mio account" (also with no league): an integer 1–10 for every
+ * base parameter (the app starts them all at 6). Saved on the global profile (`baseRadar`); `base_radar_pending` is cleared.
+ * It is the starting point of every NEW league card and the level used when the person plays a match as a guest. It never
+ * touches the values a league already holds for them (each league keeps its own). Only the person changes it, and only
+ * through here: clients cannot write these fields themselves (rules).
  */
 export async function POST(request: Request) {
   if (!isAdminConfigured()) return NextResponse.json({ ok: false, error: 'not_configured' }, { status: 503 });
@@ -20,7 +21,6 @@ export async function POST(request: Request) {
     const ref = adminDb().doc(`profiles/${caller.profileId}`);
     const profile = (await ref.get()).data();
     if (!profile) return NextResponse.json({ ok: false, error: 'no_profile' }, { status: 404 });
-    if (profile.base_radar_pending !== true) return NextResponse.json({ ok: false, error: 'not_pending' }, { status: 409 });
 
     const body = (await request.json().catch(() => ({}))) as { radar?: unknown };
     const radar = cleanBaseRadar(body.radar);

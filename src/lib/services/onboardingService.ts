@@ -5,7 +5,7 @@ import type { PublicLeague } from '@/lib/utils/publicLeagues';
 
 /** Onboarding of a new account: the Radar Base step and the public leagues. Writes go through the server. */
 
-/** Saves the Radar Base (an integer 1–10 for every base parameter). Only while the step is pending. */
+/** Saves the Radar Base (an integer 1–10 for every base parameter): the onboarding step, or "Il mio account" later. */
 export async function saveBaseRadar(radar: Record<string, number>): Promise<boolean> {
   const { data } = await leagueFetch('/api/account/base-radar', { method: 'POST', body: JSON.stringify({ radar }) });
   return data.ok === true;

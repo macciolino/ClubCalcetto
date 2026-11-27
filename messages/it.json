@@ -18,6 +18,7 @@
     "history": "Storico",
     "settings": "Impostazioni",
     "profile": "Profilo",
+    "account": "Il mio account",
     "logout": "Logout",
     "player": "Giocatore",
     "guest": "Ospite",
@@ -895,6 +896,8 @@
     "accountHint": "Esci da tutti i dispositivi, disattiva o elimina",
     "leagueOnly": "Solo {league}",
     "globalRadar": {
+      "editBase": "Modifica il Radar Base",
+      "setBase": "Imposta il Radar Base",
       "title": "Radar globale",
       "subtitle": "Il tuo Radar Base e le valutazioni da ospite, separati dai valori che ogni lega tiene per te.",
       "base": "Radar Base",
@@ -1144,6 +1147,26 @@
     "free": "Le notifiche sono gratuite.",
     "onDevice": "Notifiche su questo dispositivo",
     "howTo": "Come attivarle sul telefono"
+  },
+  "accountPage": {
+    "title": "Il mio account",
+    "subtitle": "Ciò che è tuo, non di una lega: i tuoi valori di partenza, le preferenze, le notifiche e l’accesso.",
+    "back": "Indietro",
+    "backAria": "Torna alla pagina principale",
+    "preferences": "Preferenze",
+    "notifications": "Notifiche su questo dispositivo",
+    "account": "Accesso e account",
+    "radar": {
+      "title": "Il mio Radar Base",
+      "subtitle": "I tuoi valori di partenza sulla piattaforma: li usano le nuove leghe e le partite da ospite.",
+      "subtitleNone": "Non l’hai ancora impostato: parti da 6 in tutto. Salvalo quando vuoi.",
+      "hint": "Cambiarlo non modifica i valori che hai già in una lega: ogni lega tiene i suoi, e li decide chi la gestisce. Vale per le leghe a cui ti unirai e per le partite che giochi da ospite dalla Bacheca.",
+      "ovr": "OVR del Radar Base",
+      "save": "Salva il Radar Base",
+      "saveFirst": "Imposta il Radar Base",
+      "saved": "Radar Base salvato.",
+      "failed": "Non sono riuscito a salvare: riprova."
+    }
   },
   "account": {
     "access": "Accesso",
@@ -1591,6 +1614,7 @@
       "go": "Entra",
       "badCode": "Codice non valido: incolla il link ricevuto o il codice.",
       "logout": "Esci",
+      "account": "Il mio account",
       "board": "Cerca una partita da giocare"
     },
     "join": {

@@ -18,6 +18,7 @@
     "history": "History",
     "settings": "Settings",
     "profile": "Profile",
+    "account": "My account",
     "logout": "Log out",
     "player": "Player",
     "guest": "Guest",
@@ -895,6 +896,8 @@
     "accountHint": "Sign out of all devices, deactivate or delete",
     "leagueOnly": "Only {league}",
     "globalRadar": {
+      "editBase": "Edit the Radar Base",
+      "setBase": "Set the Radar Base",
       "title": "Global radar",
       "subtitle": "Your Radar Base and the guest ratings, kept apart from the values each league holds for you.",
       "base": "Radar Base",
@@ -1144,6 +1147,26 @@
     "free": "Notifications are free.",
     "onDevice": "Notifications on this device",
     "howTo": "How to turn them on on your phone"
+  },
+  "accountPage": {
+    "title": "My account",
+    "subtitle": "What is yours, not a league’s: your starting values, preferences, notifications and sign-in.",
+    "back": "Back",
+    "backAria": "Back to the main page",
+    "preferences": "Preferences",
+    "notifications": "Notifications on this device",
+    "account": "Sign-in and account",
+    "radar": {
+      "title": "My Radar Base",
+      "subtitle": "Your starting values on the platform: new leagues and guest matches use them.",
+      "subtitleNone": "You have not set it yet: everything starts at 6. Save it whenever you like.",
+      "hint": "Changing it does not modify the values you already have in a league: each league keeps its own, decided by who runs it. It applies to the leagues you will join and to the matches you play as a guest from the board.",
+      "ovr": "Radar Base OVR",
+      "save": "Save the Radar Base",
+      "saveFirst": "Set the Radar Base",
+      "saved": "Radar Base saved.",
+      "failed": "Could not save: try again."
+    }
   },
   "account": {
     "access": "Sign-in",
@@ -1591,6 +1614,7 @@
       "go": "Join",
       "badCode": "Invalid code: paste the link you received or the code.",
       "logout": "Sign out",
+      "account": "My account",
       "board": "Find a match to play"
     },
     "join": {

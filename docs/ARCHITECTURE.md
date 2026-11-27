@@ -255,7 +255,8 @@ La colonna **Staff** vale per `SUPER_ADMIN` e `GLOBAL_ADMIN`, salvo dove è indi
      si torna all'invito. Entra come giocatore nuovo, oppure dice "sono io" su un ospite (richiesta da approvare, come sempre).
    - **Senza invito**: la **schermata di benvenuto** ([LeagueWelcome.tsx](../src/components/league/LeagueWelcome.tsx)) con le
      **leghe pubbliche** come card cliccabili (vedi sotto), "Crea una nuova lega", "Unisciti con codice" e la Bacheca. Chi ha
-     giocato partite da esterno ritrova qui la sua **Carriera** (non ha un Profilo, che è di chi ha una lega).
+     giocato partite da esterno ritrova qui la sua **Carriera** (non ha un Profilo, che è di chi ha una lega). Da qui si arriva
+     anche a **"Il mio account"** (`/account`, punto 9).
 6. **Valori sulla scheda di lega** (`ensureLeagueCard`, [baseRadar.ts](../src/lib/utils/baseRadar.ts) `buildCardStats`): ogni
    scheda nuova parte dai valori già **rivisti in un'altra lega** (più affidabili), altrimenti dal **Radar Base** (il parametro
    che la lega ha in più prende il suo default); `stat_status: 'UNCONFIRMED'`, `needs_stat_review: true` e il Radar copiato in
@@ -296,6 +297,17 @@ La colonna **Staff** vale per `SUPER_ADMIN` e `GLOBAL_ADMIN`, salvo dove è indi
      usano la lega dell'avviso o quella attiva e ricontrollano il ruolo lì (`rateExternal` usa `notice.leagueId`).
    - **Nel Profilo** le due cose sono in card distinte: "Radar globale" (con "Radar nelle tue leghe", una riga per lega) e
      "Valori nella lega «…»" (il radar della lega attiva).
+9. **"Il mio account"** (`/account`, [page.tsx](../src/app/account/page.tsx)): ciò che è **della persona e non di una lega**, quindi
+   raggiungibile **anche senza lega** (insieme a `/login`, `/join` e `/board`; Profilo e Impostazioni restano dietro una lega,
+   perché leggono i dati della lega attiva). Contiene: il **Radar Base** modificabile quando si vuole
+   ([RadarBaseCard.tsx](../src/components/account/RadarBaseCard.tsx), `POST /api/account/base-radar`, senza più il vincolo
+   "una sola volta"), lingua, tema e Bacheca, le notifiche di questo dispositivo, esci da tutti i dispositivi e chiusura
+   dell'account. Raggiungibile dal benvenuto ("Il mio account") e dal Profilo ("Modifica il Radar Base"). Cambiare il Radar
+   Base **non tocca** i valori che una lega ha già per la persona: vale per le leghe a cui entrerà e per le partite da ospite.
+   Serve anche agli account nati prima del Radar Base (non hanno lo step iniziale e risultano "Non ancora impostato").
+   **Senza lega la schermata è pulita** ([Navbar.tsx](../src/components/Navbar.tsx), `noLeague`): niente barra delle pagine (in alto e
+   in basso: Home, Presenze, Giocatori, Squadre e Storico porterebbero solo al benvenuto) e il menu utente offre "Il mio
+   account" al posto di Profilo e Impostazioni, che non si aprirebbero. Restano logo, campanella e Logout. Vale anche per la Bacheca.
 
 **Creazione di una lega** (`POST /api/leagues` → [leagueCreation.ts](../src/lib/server/leagueCreation.ts))
 - Serve l'email verificata. Ogni account può creare al massimo 5 leghe (`MAX_LEAGUES_PER_USER`).

@@ -51,7 +51,7 @@ describe('Registrazione: lo step Radar Base', () => {
     expect((await db().doc('profiles/nc').get()).data()).not.toHaveProperty('base_radar_pending');
   });
 
-  it('si salva una sola volta, con 1–10 su ogni parametro; i valori del profilo non cambiano', async () => {
+  it('si salva con 1–10 su ogni parametro; i valori del profilo non cambiano', async () => {
     const u = await outsider('r1', {}, true);
     await call(registered, { isNew: true }, u.token);
     expect((await call(baseRadar, { radar: radar({ Tiro: 11 }) }, u.token)).status).toBe(400);
@@ -65,14 +65,28 @@ describe('Registrazione: lo step Radar Base', () => {
     const p = (await db().doc('profiles/r1').get()).data()!;
     expect(p).toMatchObject({ base_radar_pending: false, baseRadar: radar({ Tiro: 9, Fisico: 3 }), stats: { Tiro: 7 } });
     expect(typeof p.baseRadarAt).toBe('string');
-    // una seconda volta no: è il punto di partenza, non si riscrive da qui
-    expect((await call(baseRadar, { radar: radar() }, u.token)).status).toBe(409);
   });
 
-  it('serve l’accesso; chi non ha lo step in sospeso riceve 409', async () => {
+  it('si può cambiare in ogni momento ("Il mio account"), anche da chi non ha lo step in sospeso; le leghe restano com’erano', async () => {
+    const u = await outsider('r3', { baseRadar: radar({ Tiro: 8 }), stats: { Tiro: 7 } });
+    // una scheda di lega già esistente con i suoi valori (confermati da chi gestisce quella lega)
+    await ldb().doc('players/r3').set({ id: 'r3', userId: 'r3', full_name: 'Nuovo r3', stats: { Tiro: 4 }, overall_rating: 4, stat_status: 'CONFIRMED', leagueRole: 'PLAYER', isActivePlayer: true });
+    expect((await db().doc('profiles/r3').get()).data()).not.toHaveProperty('base_radar_pending');
+
+    const res = await call(baseRadar, { radar: radar({ Tiro: 2, Difesa: 10 }) }, u.token);
+    expect(res.data).toEqual({ ok: true });
+    const p = (await db().doc('profiles/r3').get()).data()!;
+    expect(p.baseRadar).toEqual(radar({ Tiro: 2, Difesa: 10 }));
+    expect(p.base_radar_pending).toBe(false);
+    // e ancora, con un valore non valido: rifiutato e nulla cambia
+    expect((await call(baseRadar, { radar: radar({ Tiro: 0 }) }, u.token)).status).toBe(400);
+    expect((await db().doc('profiles/r3').get()).data()?.baseRadar).toEqual(radar({ Tiro: 2, Difesa: 10 }));
+    // la scheda della lega non si è mossa
+    expect((await ldb().doc('players/r3').get()).data()).toMatchObject({ stats: { Tiro: 4 }, overall_rating: 4, stat_status: 'CONFIRMED' });
+  });
+
+  it('serve l’accesso', async () => {
     expect((await call(baseRadar, { radar: radar() })).status).toBe(401);
-    const u = await outsider('r2');
-    expect((await call(baseRadar, { radar: radar() }, u.token)).status).toBe(409);
   });
 });
 

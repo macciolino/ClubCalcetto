@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowRight, LinkIcon, LogOut, Plus } from 'lucide-react';
+import { ArrowRight, LinkIcon, LogOut, Plus, UserCog } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { BrandLogo } from '@/components/BrandLogo';
 import { btn, textLink } from '@/components/ui/buttons';
@@ -103,9 +103,14 @@ export function LeagueWelcome() {
               {t('board')} <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
           </div>
-          <button type="button" onClick={() => signOut()} className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-secondary">
-            <LogOut className="h-3.5 w-3.5" aria-hidden="true" /> {t('logout')}
-          </button>
+          <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-center sm:gap-5">
+            <Link href="/account" className="inline-flex items-center gap-1.5 text-xs font-semibold text-secondary hover:text-primary">
+              <UserCog className="h-3.5 w-3.5" aria-hidden="true" /> {t('account')}
+            </Link>
+            <button type="button" onClick={() => signOut()} className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-secondary">
+              <LogOut className="h-3.5 w-3.5" aria-hidden="true" /> {t('logout')}
+            </button>
+          </div>
         </section>
 
         {hasSpots && profileId && <CareerCard profileId={profileId} />}

@@ -46,8 +46,8 @@ test.describe('Bacheca "Cerco giocatore"', () => {
     await expect(card.getByText('Portiere', { exact: true })).toBeVisible();
     await expect(card.getByText('1 posto libero')).toBeVisible();
     await expect(card.getByText('8 € a testa')).toBeVisible();
-    // badge sulla voce Bacheca: 1 partita cerca giocatori
-    await expect(other.getByRole('navigation', { name: 'Navigazione principale' }).getByRole('link', { name: /Bacheca/ })).toContainText('1');
+    // chi non ha una lega ha la schermata pulita: nessuna barra delle pagine (e quindi nemmeno il badge sulla voce Bacheca)
+    await expect(other.getByRole('navigation', { name: 'Navigazione principale' })).toHaveCount(0);
     await card.getByRole('button', { name: 'Partecipa alla partita' }).click();
     const join = other.getByRole('dialog');
     await expect(join.getByText('Non entri nella lega', { exact: false })).toBeVisible();

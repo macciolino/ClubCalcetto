@@ -47,7 +47,7 @@ function claimLocalCaches(leagueId: string) {
 }
 
 /** Pages that work without a league (sign-in, invite links, the platform's "Cerco giocatore" board). */
-const NO_LEAGUE_PATHS = ['/login', '/join', '/board'];
+const NO_LEAGUE_PATHS = ['/login', '/join', '/board', '/account'];
 
 export interface LeagueSummary {
   id: string;

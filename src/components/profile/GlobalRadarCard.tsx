@@ -2,7 +2,8 @@
 
 import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import { Radar } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowRight, Radar } from 'lucide-react';
 import { RadarChart } from '@/components/RadarChart';
 import { VerifiedMark } from '@/components/UnconfirmedBadge';
 import { useActiveLeague } from '@/lib/context/ActiveLeagueContext';
@@ -53,6 +54,9 @@ export function GlobalRadarCard({ baseRadar, summary }: { baseRadar?: unknown; s
             <p className="text-xs text-muted">{t('baseNone')}</p>
           )}
           <p className="text-[11px] text-muted">{t('baseHint')}</p>
+          <Link href="/account" className="inline-flex items-center gap-1 text-xs font-semibold text-accent-text hover:opacity-80">
+            {radar ? t('editBase') : t('setBase')} <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+          </Link>
         </div>
 
         <div className="rounded-xl bg-app border border-line dark:border-line-strong/40 p-4 space-y-2">
