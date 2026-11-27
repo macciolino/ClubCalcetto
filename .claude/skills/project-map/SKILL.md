@@ -33,7 +33,7 @@ Checks: `npx tsc --noEmit -p .`, `npm run lint`, `npm run test:unit`, `npm run t
 | `/profile` | Own profile | photo, name, position, radar, global stats, two links: Notifiche and Account (both in Impostazioni) |
 | `/settings` | Settings (+ admin panel) | groups: Tuo account = notifiche (`NotificationGuide`), account (`AccountSettings`: logout everywhere + `DeleteAccountSection`) · Gestione partita = partita · Club = campi, regole, parametri, notifiche-club · Accessi (super admin) = accessi. Old `?sezione=rosa` → accessi (super) or /players (admin). Admin sections rendered by `components/admin/AdminSections.tsx` |
 | `/admin` | old admin panel | now only redirects to `/settings?sezione=partita` (old links keep working) |
-| `/account` | Il mio account | the PERSON's page, reachable also with no league: Radar Base (editable any time), language / theme / board, notifications of this device, sign-out and closing the account; linked from the welcome screen and from the Profile's global radar; with no league the page nav bars are hidden and the user menu shows only "Il mio account" + Logout |
+| (no league) | Entry screen + reduced pages | an account with no league sees `LeagueWelcome` (explains the app, public leagues, features, 3 steps, profile in short) instead of the league's pages; bars: Inizio + Bacheca; `/profile` = `NoLeagueProfile`, `/settings` = account group only; `/account` redirects to `/profile` |
 | `/login` | Google login | |
 
 Admin sections (`src/components/admin/AdminSections.tsx`, shown in Impostazioni): partita = `TabOverviewMatch` (Giorno

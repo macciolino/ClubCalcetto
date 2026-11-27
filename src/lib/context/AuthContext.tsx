@@ -570,11 +570,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isSuperAdmin={isSuperAdmin}
         isPlatformStaff={isStaff}
         accountReady={!isLoading && Boolean(profile)}
-        noLeague={
-          <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-6">
-            <LeagueWelcome />
-          </main>
-        }
+        noLeague={<LeagueWelcome />}
       >
         {children}
       </ActiveLeagueProvider>

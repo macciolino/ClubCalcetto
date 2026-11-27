@@ -18,14 +18,14 @@
     "history": "Storico",
     "settings": "Impostazioni",
     "profile": "Profilo",
-    "account": "Il mio account",
     "logout": "Logout",
     "player": "Giocatore",
     "guest": "Ospite",
     "userMenu": "Menu utente",
     "mainNav": "Navigazione principale",
     "platformConsole": "Console piattaforma",
-    "board": "Bacheca"
+    "board": "Bacheca",
+    "start": "Inizio"
   },
   "language": {
     "label": "Lingua",
@@ -940,6 +940,12 @@
         "lost": "Persa",
         "pending": "In attesa"
       }
+    },
+    "noLeague": {
+      "title": "Profilo",
+      "subtitle": "Il tuo Radar Base e le partite giocate da ospite. Le statistiche di una lega arrivano quando ne fai parte.",
+      "identity": "Chi sei",
+      "noLeague": "Non fai ancora parte di una lega"
     }
   },
   "login": {
@@ -1147,26 +1153,6 @@
     "free": "Le notifiche sono gratuite.",
     "onDevice": "Notifiche su questo dispositivo",
     "howTo": "Come attivarle sul telefono"
-  },
-  "accountPage": {
-    "title": "Il mio account",
-    "subtitle": "Ciò che è tuo, non di una lega: i tuoi valori di partenza, le preferenze, le notifiche e l’accesso.",
-    "back": "Indietro",
-    "backAria": "Torna alla pagina principale",
-    "preferences": "Preferenze",
-    "notifications": "Notifiche su questo dispositivo",
-    "account": "Accesso e account",
-    "radar": {
-      "title": "Il mio Radar Base",
-      "subtitle": "I tuoi valori di partenza sulla piattaforma: li usano le nuove leghe e le partite da ospite.",
-      "subtitleNone": "Non l’hai ancora impostato: parti da 6 in tutto. Salvalo quando vuoi.",
-      "hint": "Cambiarlo non modifica i valori che hai già in una lega: ogni lega tiene i suoi, e li decide chi la gestisce. Vale per le leghe a cui ti unirai e per le partite che giochi da ospite dalla Bacheca.",
-      "ovr": "OVR del Radar Base",
-      "save": "Salva il Radar Base",
-      "saveFirst": "Imposta il Radar Base",
-      "saved": "Radar Base salvato.",
-      "failed": "Non sono riuscito a salvare: riprova."
-    }
   },
   "account": {
     "access": "Accesso",
@@ -1605,17 +1591,63 @@
       }
     },
     "welcome": {
-      "title": "Benvenuto in Club Soccer",
-      "subtitle": "Non fai ancora parte di una lega. Entra in una lega pubblica, creane una per il tuo gruppo o usa l’invito di un amico.",
-      "create": "Crea una nuova lega",
-      "join": "Unisciti con codice o link invito",
+      "eyebrow": "Benvenuto in Club Soccer",
+      "heroTitle": "Il tuo calcetto, senza chat infinite.",
+      "heroSubtitle": "Presenze, squadre equilibrate e statistiche della tua compagnia, tutto in un posto. Entra in una lega o creane una per il tuo gruppo.",
+      "create": "Crea una lega",
+      "invite": "Ho un invito",
       "codeLabel": "Codice o link di invito",
       "codePlaceholder": "Incolla il link o il codice",
       "go": "Entra",
       "badCode": "Codice non valido: incolla il link ricevuto o il codice.",
-      "logout": "Esci",
-      "account": "Il mio account",
-      "board": "Cerca una partita da giocare"
+      "board": "Cerca una partita da giocare",
+      "featuresTitle": "Cosa puoi fare",
+      "features": {
+        "attendance": {
+          "title": "Presenze",
+          "text": "I primi che dicono «ci sono» giocano. Chi è in attesa subentra da solo se qualcuno si ritira."
+        },
+        "teams": {
+          "title": "Squadre equilibrate",
+          "text": "Bianchi contro Neri divisi sul livello di ognuno, con un tocco."
+        },
+        "stats": {
+          "title": "Statistiche e forma",
+          "text": "Gol, MVP, vittorie e lo stato di forma delle ultime partite."
+        },
+        "board": {
+          "title": "Cerco giocatore",
+          "text": "Manca qualcuno? Pubblichi un avviso. Vuoi giocare? Prendi un posto in un’altra lega senza entrarci."
+        }
+      },
+      "stepsTitle": "Come si inizia",
+      "stepDone": "Fatto",
+      "steps": {
+        "radar": {
+          "title": "Imposta il tuo Radar Base",
+          "text": "I tuoi valori di partenza, da 1 a 10: li userà ogni lega in cui entrerai.",
+          "set": "Impostalo",
+          "edit": "Modificalo"
+        },
+        "league": {
+          "title": "Entra in una lega o creane una",
+          "text": "Scegli una lega pubblica qui sopra, usa l’invito di un amico o crea la tua."
+        },
+        "play": {
+          "title": "Segna «ci sono» e gioca",
+          "text": "Le squadre si fanno da sole quando si arriva al numero giusto."
+        }
+      },
+      "profileTitle": "Il tuo profilo",
+      "profileHint": "Radar Base e partite giocate da ospite",
+      "radarOvr": "Radar Base (OVR)",
+      "radarNotSet": "Radar Base da impostare",
+      "guestPlayed": "Partite da ospite",
+      "guestWon": "Vinte",
+      "guestGoals": "Gol",
+      "guestMvp": "MVP",
+      "goProfile": "Vai al profilo",
+      "goSettings": "Impostazioni"
     },
     "join": {
       "title": "Invito alla lega",
@@ -2082,5 +2114,16 @@
       "too_many": "Al massimo {max} giocatori per squadra con questo formato.",
       "duplicate": "Lo stesso giocatore è in tutte e due le squadre."
     }
+  },
+  "radarBase": {
+    "title": "Il mio Radar Base",
+    "subtitle": "I tuoi valori di partenza sulla piattaforma: li usano le nuove leghe e le partite da ospite.",
+    "subtitleNone": "Non l’hai ancora impostato: parti da 6 in tutto.",
+    "hint": "Cambiarlo non modifica i valori che hai già in una lega: ogni lega tiene i suoi, e li decide chi la gestisce. Vale per le leghe a cui ti unirai e per le partite che giochi da ospite dalla Bacheca.",
+    "ovr": "OVR del Radar Base",
+    "save": "Salva il Radar Base",
+    "cancel": "Annulla",
+    "saved": "Radar Base salvato.",
+    "failed": "Non sono riuscito a salvare: riprova."
   }
 }

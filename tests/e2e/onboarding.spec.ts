@@ -61,7 +61,7 @@ test.describe('Nuovo account: Radar Base e leghe pubbliche', () => {
     const acc = await newAccount();
     await loginAs(page, acc.email, acc.password);
     await page.getByRole('button', { name: 'Salva e prosegui' }).click({ timeout: 20_000 });
-    await expect(page.getByRole('heading', { name: 'Benvenuto in Club Soccer' })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('heading', { name: 'Il tuo calcetto, senza chat infinite.' })).toBeVisible({ timeout: 15_000 });
 
     const pubblica = page.getByRole('button', { name: /^Lunedì sera/ });
     await expect(pubblica).toBeVisible({ timeout: 15_000 });
@@ -74,7 +74,7 @@ test.describe('Nuovo account: Radar Base e leghe pubbliche', () => {
     await expect(nuova).toContainText('0 partite giocate');
     // le private non compaiono; restano creare una lega e la Bacheca
     await expect(page.getByRole('button', { name: /Lega riservata/ })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Crea una nuova lega' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Crea una lega' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Cerca una partita da giocare' })).toBeVisible();
 
     // entra: la scheda parte dal Radar Base ed è "Da revisionare"

@@ -18,14 +18,14 @@
     "history": "History",
     "settings": "Settings",
     "profile": "Profile",
-    "account": "My account",
     "logout": "Log out",
     "player": "Player",
     "guest": "Guest",
     "userMenu": "User menu",
     "mainNav": "Main navigation",
     "platformConsole": "Platform console",
-    "board": "Board"
+    "board": "Board",
+    "start": "Start"
   },
   "language": {
     "label": "Language",
@@ -940,6 +940,12 @@
         "lost": "Lost",
         "pending": "Pending"
       }
+    },
+    "noLeague": {
+      "title": "Profile",
+      "subtitle": "Your Radar Base and the matches played as a guest. A league’s stats come when you join one.",
+      "identity": "Who you are",
+      "noLeague": "You are not in a league yet"
     }
   },
   "login": {
@@ -1147,26 +1153,6 @@
     "free": "Notifications are free.",
     "onDevice": "Notifications on this device",
     "howTo": "How to turn them on on your phone"
-  },
-  "accountPage": {
-    "title": "My account",
-    "subtitle": "What is yours, not a league’s: your starting values, preferences, notifications and sign-in.",
-    "back": "Back",
-    "backAria": "Back to the main page",
-    "preferences": "Preferences",
-    "notifications": "Notifications on this device",
-    "account": "Sign-in and account",
-    "radar": {
-      "title": "My Radar Base",
-      "subtitle": "Your starting values on the platform: new leagues and guest matches use them.",
-      "subtitleNone": "You have not set it yet: everything starts at 6. Save it whenever you like.",
-      "hint": "Changing it does not modify the values you already have in a league: each league keeps its own, decided by who runs it. It applies to the leagues you will join and to the matches you play as a guest from the board.",
-      "ovr": "Radar Base OVR",
-      "save": "Save the Radar Base",
-      "saveFirst": "Set the Radar Base",
-      "saved": "Radar Base saved.",
-      "failed": "Could not save: try again."
-    }
   },
   "account": {
     "access": "Sign-in",
@@ -1605,17 +1591,63 @@
       }
     },
     "welcome": {
-      "title": "Welcome to Club Soccer",
-      "subtitle": "You are not in a league yet. Join a public league, create one for your group or use a friend’s invite.",
-      "create": "Create a new league",
-      "join": "Join with invite code or link",
+      "eyebrow": "Welcome to Club Soccer",
+      "heroTitle": "Your five-a-side, without endless chats.",
+      "heroSubtitle": "Attendance, balanced teams and your group’s stats, all in one place. Join a league or create one for your group.",
+      "create": "Create a league",
+      "invite": "I have an invite",
       "codeLabel": "Invite code or link",
       "codePlaceholder": "Paste the link or the code",
       "go": "Join",
       "badCode": "Invalid code: paste the link you received or the code.",
-      "logout": "Sign out",
-      "account": "My account",
-      "board": "Find a match to play"
+      "board": "Find a match to play",
+      "featuresTitle": "What you can do",
+      "features": {
+        "attendance": {
+          "title": "Attendance",
+          "text": "The first who say “I’m in” play. Whoever is waiting moves up by themselves if someone drops out."
+        },
+        "teams": {
+          "title": "Balanced teams",
+          "text": "Whites against Blacks, split on everyone’s level, with one tap."
+        },
+        "stats": {
+          "title": "Stats and form",
+          "text": "Goals, MVPs, wins and the form of the last matches."
+        },
+        "board": {
+          "title": "Looking for players",
+          "text": "Someone missing? Post a notice. Want to play? Take a spot in another league without joining it."
+        }
+      },
+      "stepsTitle": "How to start",
+      "stepDone": "Done",
+      "steps": {
+        "radar": {
+          "title": "Set your Radar Base",
+          "text": "Your starting values, from 1 to 10: every league you join will use them.",
+          "set": "Set it",
+          "edit": "Edit it"
+        },
+        "league": {
+          "title": "Join a league or create one",
+          "text": "Pick a public league above, use a friend’s invite or create your own."
+        },
+        "play": {
+          "title": "Say “I’m in” and play",
+          "text": "Teams are made by themselves when the right number is reached."
+        }
+      },
+      "profileTitle": "Your profile",
+      "profileHint": "Radar Base and matches played as a guest",
+      "radarOvr": "Radar Base (OVR)",
+      "radarNotSet": "Radar Base to set",
+      "guestPlayed": "Guest matches",
+      "guestWon": "Won",
+      "guestGoals": "Goals",
+      "guestMvp": "MVP",
+      "goProfile": "Go to profile",
+      "goSettings": "Settings"
     },
     "join": {
       "title": "League invite",
@@ -2082,5 +2114,16 @@
       "too_many": "At most {max} players per team with this format.",
       "duplicate": "The same player is in both teams."
     }
+  },
+  "radarBase": {
+    "title": "My Radar Base",
+    "subtitle": "Your starting values on the platform: new leagues and guest matches use them.",
+    "subtitleNone": "You have not set it yet: everything starts at 6.",
+    "hint": "Changing it does not modify the values you already have in a league: each league keeps its own, decided by who runs it. It applies to the leagues you will join and to the matches you play as a guest from the board.",
+    "ovr": "Radar Base OVR",
+    "save": "Save the Radar Base",
+    "cancel": "Cancel",
+    "saved": "Radar Base saved.",
+    "failed": "Could not save: try again."
   }
 }

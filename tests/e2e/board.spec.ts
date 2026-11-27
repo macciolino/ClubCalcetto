@@ -46,8 +46,10 @@ test.describe('Bacheca "Cerco giocatore"', () => {
     await expect(card.getByText('Portiere', { exact: true })).toBeVisible();
     await expect(card.getByText('1 posto libero')).toBeVisible();
     await expect(card.getByText('8 € a testa')).toBeVisible();
-    // chi non ha una lega ha la schermata pulita: nessuna barra delle pagine (e quindi nemmeno il badge sulla voce Bacheca)
-    await expect(other.getByRole('navigation', { name: 'Navigazione principale' })).toHaveCount(0);
+    // chi non ha una lega ha la barra ridotta (Inizio e Bacheca), con il badge: 1 partita cerca giocatori
+    const otherNav = other.getByRole('navigation', { name: 'Navigazione principale' });
+    await expect(otherNav.getByRole('link', { name: /Bacheca/ })).toContainText('1');
+    await expect(otherNav.getByRole('link', { name: /Presenze/ })).toHaveCount(0);
     await card.getByRole('button', { name: 'Partecipa alla partita' }).click();
     const join = other.getByRole('dialog');
     await expect(join.getByText('Non entri nella lega', { exact: false })).toBeVisible();
@@ -366,18 +368,25 @@ test('Presidente con la Bacheca nascosta: pubblica dalla partita e vede la sua l
   await expect(page.getByRole('navigation', { name: 'Navigazione principale' }).getByRole('link', { name: /Bacheca/ })).toBeVisible();
 });
 
-/** Chi non ha una lega ma ha giocato da esterno ritrova la sua Carriera nella schermata di benvenuto (non ha un Profilo). */
-test('Senza lega: la Carriera da ospite compare nel benvenuto solo a chi ha partite da esterno', async ({ page }) => {
+/** Chi non ha una lega ma ha giocato da esterno: riepilogo nel benvenuto, Carriera completa nel suo Profilo. */
+test('Senza lega: le partite da ospite nel riepilogo del benvenuto e la Carriera nel Profilo', async ({ page }) => {
   await seedMatchDay();
   const acc = await seedAccountWithoutLeague();
   await loginAs(page, acc.email, acc.password);
-  await expect(page.getByRole('heading', { name: 'Benvenuto in Club Soccer' })).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByRole('heading', { name: 'Carriera' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Il tuo calcetto, senza chat infinite.' })).toBeVisible({ timeout: 15_000 });
+  const summary = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Il tuo profilo' }) });
+  await expect(summary.getByText('Partite da ospite')).toBeVisible();
   await db.doc('profiles/e2e-nolega/spots/x1').set({
     noticeId: 'x1', leagueId: 'calcettari', leagueName: 'I Calcettari', matchId: romeDay(-3), dateTime: new Date(Date.now() - 3 * 86_400_000).toISOString(),
     locationName: 'Campo Test', address: 'Via dei Test 1', format: '5v5', costPerPlayer: 8, roleNeeded: 'ANY', shirtColor: 'DARK', status: 'ACTIVE', joinedAt: 'x',
     result: 'won', goals: 2, mvp: true,
   });
+  // riepilogo: 1 partita da ospite, vinta, 2 gol, MVP
+  await expect(summary.locator('div').filter({ hasText: /^1Partite da ospite$/ })).toBeVisible({ timeout: 15_000 });
+  await expect(summary.locator('div').filter({ hasText: /^2Gol$/ })).toBeVisible();
+  // la Carriera completa sta nel Profilo
+  await summary.getByRole('link', { name: 'Vai al profilo' }).click();
+  await page.waitForURL('**/profile');
   const career = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Carriera' }) });
   await expect(career.getByText('1 partita')).toBeVisible({ timeout: 15_000 });
   await expect(career.getByText('Ospite · I Calcettari')).toBeVisible();

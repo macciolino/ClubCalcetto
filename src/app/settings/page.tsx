@@ -138,7 +138,7 @@ function SettingsContent() {
 
   const raw = params.get('sezione') || '';
   const t = useTranslations('settings');
-  const { leagues: myLeagues, activeLeagueId: currentLeagueId } = useActiveLeague();
+  const { leagues: myLeagues, activeLeagueId: currentLeagueId, hasNoLeague } = useActiveLeague();
   const activeLeagueName = myLeagues.find((l) => l.id === currentLeagueId)?.name;
   // The league group carries the active league's name ("Lega · I Calcettari")
   const groupTitle = (g: SectionDef['group']) => (g === 'league' && activeLeagueName ? `${t('groups.league')} · ${activeLeagueName}` : t(`groups.${g}`));
@@ -156,7 +156,10 @@ function SettingsContent() {
     );
   }
 
-  const visible = SECTIONS.filter((s) => s.access === 'all' || (s.access === 'admin' && admin) || (s.access === 'staff' && isPlatformStaff));
+  // No league: only what is the person's own (notifications, account, language, theme, board)
+  const visible = SECTIONS.filter(
+    (s) => (!hasNoLeague || s.group === 'account') && (s.access === 'all' || (s.access === 'admin' && admin) || (s.access === 'staff' && isPlatformStaff))
+  );
   const wanted = ALIASES[raw] || raw;
   const requested = visible.find((s) => s.id === wanted);
   const current = requested || visible[0];

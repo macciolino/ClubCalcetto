@@ -15,10 +15,14 @@ const LEGACY_ROUTES = [
 const nextConfig = {
   reactStrictMode: true,
   async redirects() {
-    return LEGACY_ROUTES.flatMap(([from, to]) => [
-      { source: `/${from}`, destination: `/${to}`, statusCode: 301 },
-      { source: `/${from}/:path*`, destination: `/${to}/:path*`, statusCode: 301 },
-    ]);
+    return [
+      ...LEGACY_ROUTES.flatMap(([from, to]) => [
+        { source: `/${from}`, destination: `/${to}`, statusCode: 301 },
+        { source: `/${from}/:path*`, destination: `/${to}/:path*`, statusCode: 301 },
+      ]),
+      // "Il mio account" (2026-11-27) è stato diviso in Profilo e Impostazioni, aperti anche senza lega
+      { source: '/account', destination: '/profile', permanent: false },
+    ];
   },
   // No `images.remotePatterns`: next/image is not used (photos are plain <img>), so the optimizer must not fetch
   // images from any site (C5: it turned the app into a free image proxy consuming the Vercel Hobby quota).

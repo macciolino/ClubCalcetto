@@ -47,7 +47,9 @@ function claimLocalCaches(leagueId: string) {
 }
 
 /** Pages that work without a league (sign-in, invite links, the platform's "Cerco giocatore" board). */
-const NO_LEAGUE_PATHS = ['/login', '/join', '/board', '/account'];
+// Pages an account with no league can open: sign-in, invites, the board and its own Profilo / Impostazioni (reduced).
+// Every other page (the league's) shows the welcome screen in its place, with the header and the bars of a league-less account.
+const NO_LEAGUE_PATHS = ['/login', '/join', '/board', '/profile', '/settings'];
 
 export interface LeagueSummary {
   id: string;
@@ -75,9 +77,13 @@ interface ActiveLeagueValue {
   isLoading: boolean;
   /** Signed in, the account's leagues are still loading: the active league is not known yet */
   isResolving: boolean;
+  /** Signed in, everything loaded, and the account belongs to no league (new, or taken out of its last one) */
+  hasNoLeague: boolean;
 }
 
 const ActiveLeagueContext = createContext<ActiveLeagueValue | null>(null);
+/** The welcome screen shown instead of a league page to an account with no league (rendered by LeagueGate, inside <main>) */
+const WelcomeContext = createContext<React.ReactNode>(null);
 
 const readStored = () => {
   try {
@@ -105,7 +111,6 @@ export function ActiveLeagueProvider({
   noLeague: React.ReactNode;
   children: React.ReactNode;
 }) {
-  const pathname = usePathname() || '/';
   const [memberships, setMemberships] = useState<{ uid: string; leagues: LeagueSummary[] } | null>(null);
   const [chosen, setChosen] = useState<string | null>(null);
   const [card, setCard] = useState<{ key: string; member: LeagueMemberPlayer | null } | null>(null);
@@ -248,16 +253,16 @@ export function ActiveLeagueProvider({
       isSuspended,
       isLoading: !membershipsReady || !cardReady,
       isResolving: Boolean(uid) && !membershipsReady,
+      hasNoLeague: Boolean(uid) && accountReady && membershipsReady && leagues.length === 0,
     }),
-    [leagues, activeLeagueId, setActiveLeague, member, leagueRole, presides, manages, isSuperAdmin, isPlatformStaff, isSuspended, membershipsReady, cardReady, uid]
+    [leagues, activeLeagueId, setActiveLeague, member, leagueRole, presides, manages, isSuperAdmin, isPlatformStaff, isSuspended, membershipsReady, cardReady, uid, accountReady]
   );
-
-  const showWelcome =
-    Boolean(uid) && accountReady && membershipsReady && leagues.length === 0 && !NO_LEAGUE_PATHS.some((p) => pathname.startsWith(p));
 
   return (
     <ActiveLeagueContext.Provider value={value}>
-      {showWelcome ? noLeague : <React.Fragment key={activeLeagueId ?? 'none'}>{children}</React.Fragment>}
+      <WelcomeContext.Provider value={noLeague}>
+        <React.Fragment key={activeLeagueId ?? 'none'}>{children}</React.Fragment>
+      </WelcomeContext.Provider>
     </ActiveLeagueContext.Provider>
   );
 }
@@ -269,8 +274,12 @@ export function ActiveLeagueProvider({
  */
 export function LeagueGate({ children }: { children: React.ReactNode }) {
   const ctx = useContext(ActiveLeagueContext);
+  const welcome = useContext(WelcomeContext);
   const pathname = usePathname() || '/';
-  if (ctx?.isResolving && !NO_LEAGUE_PATHS.some((p) => pathname.startsWith(p))) return <PageSkeleton />;
+  const leagueOnly = !NO_LEAGUE_PATHS.some((p) => pathname.startsWith(p));
+  if (ctx?.isResolving && leagueOnly) return <PageSkeleton />;
+  // No league: the league's pages (Home included) show the welcome screen, under the header and the reduced bars
+  if (ctx?.hasNoLeague && leagueOnly) return <>{welcome}</>;
   return <>{children}</>;
 }
 

@@ -2,8 +2,9 @@
 
 import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import Link from 'next/link';
-import { ArrowRight, Radar } from 'lucide-react';
+import { useState } from 'react';
+import { Pencil, Radar } from 'lucide-react';
+import { RadarBaseSheet } from './RadarBaseSheet';
 import { RadarChart } from '@/components/RadarChart';
 import { VerifiedMark } from '@/components/UnconfirmedBadge';
 import { useActiveLeague } from '@/lib/context/ActiveLeagueContext';
@@ -23,6 +24,7 @@ const ovrOf = (stats: Record<string, number>) => Math.round(radarOverall(stats) 
 export function GlobalRadarCard({ baseRadar, summary }: { baseRadar?: unknown; summary: CareerSummary }) {
   const t = useTranslations('profile.globalRadar');
   const { activeLeagueId } = useActiveLeague();
+  const [editing, setEditing] = useState(false);
   const radar = useMemo(() => cleanBaseRadar(baseRadar), [baseRadar]);
   const ratings = useMemo(
     () => summary.external.list.map((s) => s.rating).filter((r): r is NonNullable<typeof r> => Boolean(r)),
@@ -54,9 +56,9 @@ export function GlobalRadarCard({ baseRadar, summary }: { baseRadar?: unknown; s
             <p className="text-xs text-muted">{t('baseNone')}</p>
           )}
           <p className="text-[11px] text-muted">{t('baseHint')}</p>
-          <Link href="/account" className="inline-flex items-center gap-1 text-xs font-semibold text-accent-text hover:opacity-80">
-            {radar ? t('editBase') : t('setBase')} <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-          </Link>
+          <button type="button" onClick={() => setEditing(true)} className="inline-flex items-center gap-1.5 text-xs font-semibold text-accent-text hover:opacity-80">
+            <Pencil className="h-3.5 w-3.5" aria-hidden="true" /> {radar ? t('editBase') : t('setBase')}
+          </button>
         </div>
 
         <div className="rounded-xl bg-app border border-line dark:border-line-strong/40 p-4 space-y-2">
@@ -101,6 +103,7 @@ export function GlobalRadarCard({ baseRadar, summary }: { baseRadar?: unknown; s
         )}
         <p className="text-[11px] text-muted">{t('leaguesHint')}</p>
       </div>
+      {editing && <RadarBaseSheet onClose={() => setEditing(false)} />}
     </section>
   );
 }

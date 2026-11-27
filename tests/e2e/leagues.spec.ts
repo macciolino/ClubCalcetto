@@ -54,9 +54,9 @@ test.describe('Leghe', () => {
   test('senza leghe: benvenuto con "Crea" e "Unisciti"; un codice sbagliato è segnalato', async ({ page }) => {
     const acc = await seedAccountWithoutLeague();
     await loginAs(page, acc.email, acc.password);
-    await expect(page.getByRole('heading', { name: 'Benvenuto in Club Soccer' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Crea una nuova lega' })).toBeVisible();
-    await page.getByRole('button', { name: 'Unisciti con codice o link invito' }).click();
+    await expect(page.getByRole('heading', { name: 'Il tuo calcetto, senza chat infinite.' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Crea una lega' })).toBeVisible();
+    await page.getByRole('button', { name: 'Ho un invito' }).click();
     await page.getByLabel('Codice o link di invito').fill('no');
     await page.getByRole('button', { name: 'Entra', exact: true }).click();
     await expect(page.getByText(/Codice non valido/)).toBeVisible();
@@ -69,11 +69,11 @@ test.describe('Leghe', () => {
   test('senza leghe: crea la prima lega e ci entra', async ({ page }) => {
     const acc = await seedAccountWithoutLeague();
     await loginAs(page, acc.email, acc.password);
-    await page.getByRole('button', { name: 'Crea una nuova lega' }).click();
+    await page.getByRole('button', { name: 'Crea una lega' }).click();
     await page.getByRole('dialog').getByLabel('Nome della lega').fill('I Nuovi');
     await page.getByRole('dialog').getByRole('button', { name: 'Crea la lega' }).click();
     await expect(page.getByRole('button', { name: /Lega attiva: I Nuovi/ })).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole('heading', { name: 'Benvenuto in Club Soccer' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Il tuo calcetto, senza chat infinite.' })).toHaveCount(0);
   });
 });
 

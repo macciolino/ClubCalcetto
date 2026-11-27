@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/context/AuthContext';
 import { useActiveLeague } from '@/lib/context/ActiveLeagueContext';
 import { CareerCard } from '@/components/profile/CareerCard';
+import { NoLeagueProfile } from '@/components/profile/NoLeagueProfile';
 import { FieldPosition, FIELD_POSITIONS, sortStatsByCanonicalOrder } from '@/types/database';
 import { RadarChart } from '@/components/RadarChart';
 import { StatBadge } from '@/components/StatBadge';
@@ -35,7 +36,13 @@ import { btn, textLink } from '@/components/ui/buttons';
 import { useTranslations } from 'next-intl';
 import { usePlayerLabels } from '@/i18n/usePlayerLabels';
 
+/** No league: the person's own profile (global radar, career as a guest); with a league, the page as it always was. */
 export default function ProfiloPage() {
+  const { hasNoLeague } = useActiveLeague();
+  return hasNoLeague ? <NoLeagueProfile /> : <LeagueProfile />;
+}
+
+function LeagueProfile() {
   const { user, profile, isAdmin, updateProfile } = useAuth();
   const [mounted, setMounted] = useState(false);
   const t = useTranslations('profile');

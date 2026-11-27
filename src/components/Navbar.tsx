@@ -18,7 +18,6 @@ import {
   ChevronDown,
   ShieldCheck,
   Megaphone,
-  UserCog,
 } from 'lucide-react';
 import { useActiveLeague } from '@/lib/context/ActiveLeagueContext';
 import { menu } from '@/components/ui/buttons';
@@ -34,9 +33,9 @@ export function Navbar() {
   const t = useTranslations('nav');
   const { user, profile, isAdmin, isPlatformStaff, isSuperAdmin, signOut } = useAuth();
   const { isSuspended, leagueRole, activeLeagueId, leagues, isResolving } = useActiveLeague();
-  // An account that belongs to no league (new, or taken out of its last one): the league's pages (Home, Presenze, Giocatori,
-  // Squadre, Storico, Profilo, Impostazioni) would only show the welcome screen, so they are neither offered nor linked.
-  // It keeps what is its own: Bacheca (from the welcome screen), "Il mio account", notifications, sign-out.
+  // An account that belongs to no league (new, or taken out of its last one): the league's pages (Presenze, Giocatori,
+  // Squadre, Storico) would only show the welcome screen, so the bars offer just "Inizio" (the welcome screen) and the
+  // Bacheca; Profilo and Impostazioni (reduced) stay in the user menu.
   const noLeague = Boolean(user) && !isResolving && leagues.length === 0
   const openNoticeCount = useOpenNoticeCount(Boolean(user), activeLeagueId);
   const { off: boardOff } = useBoardPrefs();
@@ -83,7 +82,12 @@ export function Navbar() {
 
   // "Cerco giocatore": the number of matches looking for players, only when there are some
   const openNotices = openNoticeCount;
-  const navItems: { href: string; label: string; icon: typeof Home; badge?: number }[] = [
+  const navItems: { href: string; label: string; icon: typeof Home; badge?: number }[] = noLeague
+    ? [
+        { href: '/', label: t('start'), icon: Home },
+        ...(boardOff ? [] : [{ href: '/board', label: t('board'), icon: Megaphone, badge: openNotices }]),
+      ]
+    : [
     { href: '/', label: t('home'), icon: Home },
     { href: '/attendance', label: t('attendance'), icon: CalendarDays },
     { href: '/players', label: t('players'), icon: Users },
@@ -168,9 +172,12 @@ export function Navbar() {
                   <div className="text-sm font-semibold text-primary leading-tight max-w-[120px] truncate group-hover:text-accent-text transition-colors">
                     {displayName}
                   </div>
-                  <div className="text-[11px] font-bold uppercase tracking-wider text-accent-text">
-                    {roleLabel}
-                  </div>
+                  {/* Senza lega non c'è un ruolo da mostrare */}
+                  {!noLeague && (
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-accent-text">
+                      {roleLabel}
+                    </div>
+                  )}
                 </div>
                 <ChevronDown
                   className={`h-4 w-4 text-secondary transition-transform ${menuOpen ? 'rotate-180' : ''}`}
@@ -184,30 +191,22 @@ export function Navbar() {
                   role="menu"
                   className={`absolute right-0 top-full mt-2 w-52 z-50 ${menu.panel}`}
                 >
-                  {noLeague ? (
-                    <Link href="/account" role="menuitem" onClick={() => setMenuOpen(false)} className={menu.item}>
-                      <UserCog className="h-4 w-4 text-accent-text" /> {t('account')}
-                    </Link>
-                  ) : (
-                    <>
-                      <Link
-                        href="/profile"
-                        role="menuitem"
-                        onClick={() => setMenuOpen(false)}
-                        className={menu.item}
-                      >
-                        <User className="h-4 w-4 text-accent-text" /> {t('profile')}
-                      </Link>
-                      <Link
-                        href="/settings"
-                        role="menuitem"
-                        onClick={() => setMenuOpen(false)}
-                        className={menu.item}
-                      >
-                        <Settings className="h-4 w-4 text-accent-text" /> {t('settings')}
-                      </Link>
-                    </>
-                  )}
+                  <Link
+                    href="/profile"
+                    role="menuitem"
+                    onClick={() => setMenuOpen(false)}
+                    className={menu.item}
+                  >
+                    <User className="h-4 w-4 text-accent-text" /> {t('profile')}
+                  </Link>
+                  <Link
+                    href="/settings"
+                    role="menuitem"
+                    onClick={() => setMenuOpen(false)}
+                    className={menu.item}
+                  >
+                    <Settings className="h-4 w-4 text-accent-text" /> {t('settings')}
+                  </Link>
                   {/* Platform console (super admin and platform admins), separated from the personal items */}
                   {isPlatformStaff && (
                     <>
@@ -243,8 +242,7 @@ export function Navbar() {
         </div>
       )}
 
-      {/* Menu delle pagine (PC e tablet): sotto l'header, largo come le card. Senza lega non c'è nulla da aprire */}
-      {!noLeague && (
+      {/* Menu delle pagine (PC e tablet): sotto l'header, largo come le card (senza lega: Inizio e Bacheca) */}
       <div className="relative z-10 hidden md:block bg-app/90 backdrop-blur-md">
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 py-3">
         {/* Desktop Navigation */}
@@ -277,11 +275,9 @@ export function Navbar() {
 
       </div>
       </div>
-      )}
       </div>
 
-      {/* Mobile Bottom Navigation Bar (not for an account with no league) */}
-      {!noLeague && (
+      {/* Mobile Bottom Navigation Bar (no league: Inizio and Bacheca) */}
       <div role="navigation" aria-label={t('mainNav')} className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-app/95 backdrop-blur-lg border-t border-line/80 pt-1.5 pb-safe">
         <div className="flex items-center justify-around">
           {navItems.map((item) => {
@@ -311,7 +307,6 @@ export function Navbar() {
           })}
         </div>
       </div>
-      )}
     </>
   );
 }
