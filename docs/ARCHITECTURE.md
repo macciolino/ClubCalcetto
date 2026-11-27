@@ -719,6 +719,10 @@ solo il server: i gestori possono modificare il resto del referto ma non aggiung
   | Chi non gioca | **Organizzatore**, "solo organizza"; interruttore "Gioco anch'io in questa lega" | — |
   | Ospite | **Ospite** | — |
 
+- **Superfici:** card, blocchi di sezione, righe di elenco e stati vuoti hanno un bordo sottile da 1px, preso solo dai token già
+  esistenti ([surfaces.ts](../src/components/ui/surfaces.ts): `line-strong` nel chiaro, lo stesso al 60% nello scuro) e nessuna
+  ombra. Serve perché una card bianca su sfondo `#F8FAFC` non ha contrasto. Applicato alla Bacheca; le altre pagine passano a
+  `surface.*` quando vengono toccate.
 - **Pulsanti:** nascondi le azioni che il ruolo effettivo non permette, usando i permessi **effettivi** di
   `useActiveLeague()` e `useAuth()`, non il ruolo grezzo della scheda. Il server deve comunque rifiutarle.
 - **Errori:** i codici di errore delle API (`forbidden`, `protected`, `suspended`, `name_mismatch`, …) hanno ciascuno

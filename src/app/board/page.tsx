@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { ChevronRight, EyeOff, Megaphone, Plus, SlidersHorizontal, Star, X } from 'lucide-react';
 import { btnInline } from '@/components/ui/buttons';
+import { surface } from '@/components/ui/surfaces';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { askConfirm, notify } from '@/components/ui/Feedback';
 import { NoticeCard, mapsFor, noticeStatusKey, noticeWhen } from '@/components/board/NoticeCard';
@@ -24,9 +25,10 @@ import { NOTICE_ROLES, type MatchNotice, type MySpot } from '@/types/matchNotice
 import type { MatchFormat } from '@/types/database';
 
 const chip = (on: boolean) =>
-  `shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${on ? 'bg-accent text-on-accent' : 'bg-card text-secondary hover:text-primary'}`;
-const select =
-  'shrink-0 w-auto rounded-full bg-card pl-3 pr-7 py-1.5 text-xs font-semibold text-secondary border border-transparent focus:outline-none focus:border-line-strong';
+  `shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+    on ? 'bg-accent text-on-accent border border-accent' : `bg-card text-secondary hover:text-primary ${surface.control}`
+  }`;
+const select = `shrink-0 w-auto rounded-full bg-card pl-3 pr-7 py-1.5 text-xs font-semibold text-secondary ${surface.control} focus:outline-none focus:border-secondary`;
 
 /**
  * "Cerco giocatore": open notices of EVERY league (any verified user takes a spot without joining the league),
@@ -120,7 +122,7 @@ export default function BoardPage() {
       </header>
 
       {prefs.off && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-card px-4 py-3 text-sm text-secondary">
+        <div className={`flex flex-wrap items-center justify-between gap-3 ${surface.card} px-4 py-3 text-sm text-secondary`}>
           <span className="flex items-center gap-2">
             <EyeOff className="h-4 w-4 shrink-0" aria-hidden="true" /> {t('boardOff')}
           </span>
@@ -137,7 +139,7 @@ export default function BoardPage() {
           </h2>
           <ul className="space-y-1.5">
             {upcoming.map((s) => (
-              <li key={s.noticeId} className="flex items-center justify-between gap-3 rounded-xl bg-card px-4 py-3">
+              <li key={s.noticeId} className={`flex items-center justify-between gap-3 ${surface.row} px-4 py-3`}>
                 <span className="min-w-0">
                   <span className="block text-sm font-medium text-primary truncate">
                     {noticeWhen(s.dateTime, locale)} · {s.leagueName}
@@ -150,15 +152,15 @@ export default function BoardPage() {
                   <button
                     type="button"
                     onClick={() => setVoting(s)}
-                    className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-3 py-1.5 text-xs font-semibold text-warning"
+                    className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/15 px-3 py-1.5 text-xs font-semibold text-warning"
                   >
                     <Star className="h-3.5 w-3.5" aria-hidden="true" /> {t('mvp.cta')}
                   </button>
                 ) : (
                   <span className="shrink-0 flex flex-col items-end gap-1.5">
                     <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                        s.status === 'ACTIVE' ? 'bg-accent/15 text-accent-text' : 'bg-rose-500/10 text-danger'
+                      className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                        s.status === 'ACTIVE' ? 'border-accent/30 bg-accent/15 text-accent-text' : 'border-rose-500/30 bg-rose-500/10 text-danger'
                       }`}
                     >
                       {t(s.status === 'CANCELLED' ? 'spotCancelled' : s.status === 'REMOVED' ? 'spotRemoved' : 'spotConfirmed')}
@@ -195,7 +197,7 @@ export default function BoardPage() {
                   <button
                     type="button"
                     onClick={() => setManaging(n.id)}
-                    className="w-full flex items-center gap-3 rounded-xl bg-card hover:bg-card-hover px-4 py-3 text-left"
+                    className={`w-full flex items-center gap-3 ${surface.rowButton} px-4 py-3 text-left`}
                   >
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm font-medium text-primary truncate">
@@ -269,8 +271,8 @@ export default function BoardPage() {
             <Skeleton className="h-56 rounded-2xl" />
           </div>
         ) : shown.length === 0 ? (
-          <div className="rounded-2xl bg-card px-6 py-10 text-center">
-            <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-app">
+          <div className={`${surface.card} px-6 py-10 text-center`}>
+            <span className="mx-auto grid h-12 w-12 place-items-center rounded-full border border-line bg-app">
               <Megaphone className="h-5 w-5 text-muted" aria-hidden="true" />
             </span>
             <p className="mt-3 text-sm font-semibold text-primary">{filtered ? t('emptyFiltered') : t('empty')}</p>

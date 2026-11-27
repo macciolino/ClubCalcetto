@@ -153,8 +153,12 @@ description: ClubCalcetto UI conventions - theme, shared components (tables, dro
   which are reserved for won/drawn/lost and starter/waiting).
 - OVR: always `ovrDisplay(overall, form)` (×10) coloured with `ovrTone()` (80+ emerald-400, 70-79 white, < 70 slate-400),
   everywhere it appears (cards, lists, table, detail). No "OVR" label repeated on each card.
-- Lists of items (player cards, list rows) have NO border: surface `bg-slate-900` + hover `bg-slate-800/80`.
-  Borders only on inputs/selects. Details open in a `Sheet`, never inline (no grid holes).
+- Surfaces (2026-11-27, Bacheca): every card, section block, list row and empty state has a 1px soft edge, from
+  `src/components/ui/surfaces.ts` (`surface.card / row / rowButton / inset / pill / control`), tokens only: light `border-line-strong`,
+  dark the same at 60%. Reason: white `bg-card` on `bg-app` has no contrast in the light theme. No shadows. Small blocks inside a card
+  (pills, notes) use the lighter `line` edge. Do not write `bg-card rounded-2xl` by hand on new screens. Older lists of items
+  (player cards, list rows on /players) keep their borderless style until they are moved to `surface.*` (same rule applies).
+  Details open in a `Sheet`, never inline (no grid holes).
 - Numbers in tables/lists: normal font with `tabular-nums` (no monospace); zero values in `text-slate-600`, colour only
   for real values (won emerald-400, drawn amber-400, lost red-400). Rare destructive bulk actions live in a "⋯" menu,
   never as a big red button on the page.

@@ -38,6 +38,7 @@ You are an expert UI/UX designer and full-stack developer collaborating on "Club
 
 ## Where these rules live in the code
 - Buttons / CTAs: `src/components/ui/buttons.ts` (`btn.*`, `btnInline.*`, `textLink`, `menu.*`, `presenceBtn`).
+- Cards, rows, empty states: `src/components/ui/surfaces.ts` (`surface.*`): 1px soft edge from the existing tokens (light `line-strong`, dark `line-strong/60`), no shadow.
 - Modals: `src/components/ui/Sheet.tsx` (footer: put the secondary button first and the primary last — on phone the stack is reversed, so the primary is on top) and the confirm dialog in `src/components/ui/Feedback.tsx`.
 - Form tracker: `src/components/FormDots.tsx`.
 - Match day page: `src/components/admin/TabOverviewMatch.tsx` (day selector + 3 tabs, panels side by side ≥1024px).

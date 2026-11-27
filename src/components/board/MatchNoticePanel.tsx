@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { ArrowRight, Ban, Lock, Pencil, UserSearch } from 'lucide-react';
 import { btn, btnInline, textLink } from '@/components/ui/buttons';
+import { surface } from '@/components/ui/surfaces';
 import { useActiveLeague } from '@/lib/context/ActiveLeagueContext';
 import { subscribeMatchNotices } from '@/lib/services/matchNoticeService';
 import { FORMAT_INFO } from '@/lib/utils/matchFormat';
@@ -64,7 +65,7 @@ export function MatchNoticePanel({ date, time, field, location, format, totalCos
           <UserSearch className="h-4 w-4 text-accent-text" aria-hidden="true" /> {t('title')}
         </p>
         {current && (
-          <span className="rounded-full bg-app px-2.5 py-1 text-xs text-secondary">
+          <span className={`rounded-full bg-app px-2.5 py-1 text-xs text-secondary ${surface.pill}`}>
             {tb(`status.${noticeStatusKey(current)}`)} · {tb('spotsOf', { filled: current.spotsFilled, total: current.spotsNeeded })}
           </span>
         )}

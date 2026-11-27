@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { Check, EyeOff, MapPin, Navigation, UserPlus } from 'lucide-react';
 import { btn } from '@/components/ui/buttons';
+import { surface } from '@/components/ui/surfaces';
 import { useLocaleSetting } from '@/i18n/I18nProvider';
 import { FORMAT_INFO } from '@/lib/utils/matchFormat';
 import { fieldMapsUrl } from '@/lib/utils/matchUtils';
@@ -38,7 +39,7 @@ export function RoleBadge({ role }: { role: NoticeRole }) {
   const t = useTranslations('board');
   const keeper = role === 'GOALKEEPER' || role === 'ROTATION_GOALKEEPER';
   return (
-    <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${keeper ? 'bg-sky-500/15 text-sky-700 dark:text-sky-300' : 'bg-app text-secondary'}`}>
+    <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${keeper ? 'border border-sky-500/30 bg-sky-500/15 text-sky-700 dark:text-sky-300' : `bg-app text-secondary ${surface.pill}`}`}>
       {t(`roles.${role}`)}
     </span>
   );
@@ -48,7 +49,7 @@ export function RoleBadge({ role }: { role: NoticeRole }) {
 export function ShirtBadge({ color }: { color: ShirtColor }) {
   const t = useTranslations('board');
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-app px-2.5 py-1 text-xs text-secondary">
+    <span className={`inline-flex items-center gap-1.5 rounded-full bg-app px-2.5 py-1 text-xs text-secondary ${surface.pill}`}>
       <span
         aria-hidden="true"
         className={`h-3 w-3 rounded-full ${color === 'DARK' ? 'bg-slate-950 ring-1 ring-slate-600' : 'bg-white ring-1 ring-line-strong'}`}
@@ -62,7 +63,7 @@ export function ShirtBadge({ color }: { color: ShirtColor }) {
 export function NoticeFacts({ notice }: { notice: Pick<MatchNotice, 'format' | 'roleNeeded' | 'shirtColor'> }) {
   return (
     <div className="flex flex-wrap gap-1.5">
-      <span className="rounded-full bg-app px-2.5 py-1 text-xs font-semibold text-primary">{FORMAT_INFO[notice.format]?.label || notice.format}</span>
+      <span className={`rounded-full bg-app px-2.5 py-1 text-xs font-semibold text-primary ${surface.pill}`}>{FORMAT_INFO[notice.format]?.label || notice.format}</span>
       <RoleBadge role={notice.roleNeeded} />
       <ShirtBadge color={notice.shirtColor} />
     </div>
@@ -106,7 +107,7 @@ export function NoticeCard({
   const left = Math.max(0, notice.spotsNeeded - notice.spotsFilled);
 
   return (
-    <article className="flex flex-col rounded-2xl bg-card p-5 gap-3 animate-in" aria-labelledby={`notice-${notice.id}`}>
+    <article className={`flex flex-col ${surface.card} p-5 gap-3 animate-in`} aria-labelledby={`notice-${notice.id}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-medium text-secondary truncate">{notice.leagueName}</p>
@@ -114,7 +115,7 @@ export function NoticeCard({
             {noticeWhen(notice.dateTime, locale)}
           </h2>
         </div>
-        <span className="shrink-0 rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-warning tabular-nums">
+        <span className="shrink-0 rounded-full border border-amber-500/30 bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-warning tabular-nums">
           {t('spotsFree', { count: left })}
         </span>
       </div>

@@ -6,6 +6,7 @@ import { Ban, Check, Lock, Mail, Pencil, Star, UserMinus } from 'lucide-react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { Sheet, sheetBtn } from '@/components/ui/Sheet';
+import { surface } from '@/components/ui/surfaces';
 import { askConfirm, notify } from '@/components/ui/Feedback';
 import { useLocaleSetting } from '@/i18n/I18nProvider';
 import {
@@ -73,7 +74,7 @@ export function ApplicantsList({ notice }: { notice: MatchNotice }) {
     <div className="space-y-2">
       <ul className="space-y-1">
         {applicants.map((a) => (
-          <li key={a.profileId} className="rounded-xl bg-app px-3 py-2 space-y-2">
+          <li key={a.profileId} className={`${surface.inset} px-3 py-2 space-y-2`}>
             <div className="flex items-center justify-between gap-3">
               <span className="min-w-0">
                 <span className="block font-medium text-primary truncate">{a.displayName}</span>
